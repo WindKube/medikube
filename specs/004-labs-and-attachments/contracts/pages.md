@@ -70,7 +70,7 @@ these are what the landmark assertion exercises.
 
 ## 3. Page-action routes
 
-Neither navigable pages nor part of the public API. Each appears in `medigo routes` with
+Neither navigable pages nor part of the public API. Each appears in `medikube routes` with
 `Kind: page_action`, is **deliberately excluded** from `api/openapi.json`, has no ARIA landmark,
 and **declares the Playwright spec that exercises it**. `e2e/routes.gate.spec.ts` fails the build
 if that spec does not exist or does not reference the route.
@@ -112,7 +112,7 @@ img-src 'self'; frame-src 'self';           <-- added by this phase
 frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'
 ```
 
-`frame-src 'self'` is required because the inline document viewer frames MediGo's own
+`frame-src 'self'` is required because the inline document viewer frames MediKube's own
 `/api/v1/attachments/{id}?disposition=inline` route. It is additive: no directive the constitution
 names is weakened, no external origin is admitted, and the framed response carries its own far
 tighter policy (`attachments.md` §3.1).
@@ -127,7 +127,7 @@ under `script-src 'self'`, and each failure logs a CSP violation that would fail
 
 ## 5. Route inventory delta
 
-`medigo routes` after this phase emits, for this phase:
+`medikube routes` after this phase emits, for this phase:
 
 | Kind | Count | Gated by |
 |---|---|---|

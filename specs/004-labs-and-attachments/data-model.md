@@ -16,7 +16,7 @@ not name, `plan.md`'s Deviations table records why.
    (`RelationField{CollectionId: patients, Required: true, MaxSelect: 1, CascadeDelete: true}`).
    There is no other route to a patient.
 4. **All five API rules are `nil` on every collection in this phase.** Superuser-only. Asserted at
-   boot; MediGo refuses to start otherwise.
+   boot; MediKube refuses to start otherwise.
 5. **Every `FileField` is `Protected: true`.** Asserted at boot. After this phase there are exactly
    two: `patients.photo` and `attachments.file`.
 6. Enum fields are `core.SelectField{MaxSelect: 1}` **and** a Go string type with `Valid()` in
@@ -103,11 +103,11 @@ A pure return value of `labs.Summarise` (research D-07). Never a column.
 ## 2. `catalog_lab_tests` — read-only reference data
 
 Not patient-scoped. Contains nothing about any person (FR-043). This is the only collection in
-MediGo whose list operation does not require `?patient=`.
+MediKube whose list operation does not require `?patient=`.
 
 | Field | Type | Req | Constraints / notes |
 |---|---|---|---|
-| `loinc_code` | text | no | ≤ 40. May be empty for a MediGo-added entry that has no LOINC code; unique **when non-empty** |
+| `loinc_code` | text | no | ≤ 40. May be empty for a MediKube-added entry that has no LOINC code; unique **when non-empty** |
 | `name` | text | **yes** | 1..300. The standard name (FR-036) |
 | `short_name` | text | no | ≤ 60 |
 | `default_unit` | text | no | ≤ 40 |
@@ -222,7 +222,7 @@ not come back yet — and is presented as awaiting a result, not as an error.
 
 ### 3.4 State transitions
 
-`status` follows `OrderStatus` and is free to move between any two values; MediGo does not police a
+`status` follows `OrderStatus` and is free to move between any two values; MediKube does not police a
 workflow it cannot observe. The transition that *is* policed is the panel/scalar shape:
 
 ```
@@ -337,7 +337,7 @@ the following are computed on read by pure functions:
 
 ## 5. `attachments` — the file collection
 
-The first collection since `patients.photo` to hold bytes, and the only collection in MediGo with a
+The first collection since `patients.photo` to hold bytes, and the only collection in MediKube with a
 `deleted_at`.
 
 | Field | Type | Req | Constraints / notes |
@@ -345,7 +345,7 @@ The first collection since `patients.photo` to hold bytes, and the only collecti
 | `patient` | relation → patients | **yes** | MaxSelect 1, CascadeDelete. **The authorization anchor** |
 | `owner_kind` | select | **yes** | one of the fifteen registered `kind.Kind` values |
 | `owner_id` | text | **yes** | exactly 15 chars, `^[a-z0-9]{15}$`. No foreign key (research D-13) |
-| `file` | file | **yes** | MaxSelect 1, **`Protected: true`**, `MaxSize` from `MEDIGO_FILES_MAX_UPLOAD_BYTES`, `MimeTypes` from `MEDIGO_FILES_ALLOWED_MIME`, `Thumbs: ["160x160t","1024x1024f"]` |
+| `file` | file | **yes** | MaxSelect 1, **`Protected: true`**, `MaxSize` from `MEDIKUBE_FILES_MAX_UPLOAD_BYTES`, `MimeTypes` from `MEDIKUBE_FILES_ALLOWED_MIME`, `Thumbs: ["160x160t","1024x1024f"]` |
 | `original_name` | text | **yes** | ≤ 255. **PHI** — patients name files after conditions |
 | `size_bytes` | number | **yes** | > 0 (FR-054) |
 | `mime` | text | **yes** | ≤ 120. **Sniffed server-side**, never taken from the client (FR-051) |
@@ -371,8 +371,8 @@ CREATE INDEX idx_attachments_trash   ON attachments (deleted_at)
 | Rule | Error | Requirement |
 |---|---|---|
 | `size_bytes > 0` | `422 empty_file` | FR-054 |
-| `size_bytes <= MEDIGO_FILES_MAX_UPLOAD_BYTES` | `413 payload_too_large`, message states the limit | FR-053 |
-| sniffed `mime ∈ MEDIGO_FILES_ALLOWED_MIME` | `415 unsupported_media_type`, message names the accepted types | FR-051, FR-052 |
+| `size_bytes <= MEDIKUBE_FILES_MAX_UPLOAD_BYTES` | `413 payload_too_large`, message states the limit | FR-053 |
+| sniffed `mime ∈ MEDIKUBE_FILES_ALLOWED_MIME` | `415 unsupported_media_type`, message names the accepted types | FR-051, FR-052 |
 | `owner_kind ∈ kind.Kind` | `422 invalid_value` | FR-049 |
 | `owner_id` resolves in `owner_kind`'s collection **and** belongs to `patient` | `404 not_found`, disclosing nothing | FR-050, FR-072, concurrency edge case |
 | `original_name` non-empty, ≤ 255 | `422` | FR-050 |
@@ -439,7 +439,7 @@ retrievable by an authorized caller until purge, and every such retrieval is aud
 | `audit_events.action` | no change — `create update delete read_sensitive access_denied` already cover this phase. `read_sensitive` is written **only** when the resolved grant is not the reader's own ownership (FR-076, 005 [D-25](../005-sharing-and-collaboration/research.md#d-25)); `access_denied` is unconditional | FR-073, FR-076, FR-077 |
 | `encounters.lab_results`, `treatments.lab_results` | no schema change; they become populated | FR-044, FR-046, research D-28 |
 | `search_index` | gains `lab_result` rows via the registry hook. **No attachment rows** | FR-009, research D-23 |
-| `internal/config.Config` | `+ Labs.MaxSeriesPoints` (`MEDIGO_LABS_MAX_SERIES_POINTS`, default 500); `Files.AllowedMIME` default set (research D-14); `Files.MaxUploadBytes` default 33554432 | FR-034, FR-052, FR-053 |
+| `internal/config.Config` | `+ Labs.MaxSeriesPoints` (`MEDIKUBE_LABS_MAX_SERIES_POINTS`, default 500); `Files.AllowedMIME` default set (research D-14); `Files.MaxUploadBytes` default 33554432 | FR-034, FR-052, FR-053 |
 | CSP | pages gain `frame-src 'self'`; attachment responses carry their own, tighter policy | FR-057, FR-058, research D-16 |
 | Boot assertions | `Protected: true` now verified on **two** file fields | Constitution VII |
 
@@ -469,8 +469,8 @@ this phase — twenty-one actions, twenty-seven target kinds — so a value this
 migration declared is a red test, not a `SelectField` validation failure on a live instance
 (ANALYSIS C1).
 
-**Seeding is a migration, not `medigo seed`** (research D-11), so a production instance that has
-never been seeded still has the catalogue. `medigo seed` adds *patient data* only: lab results,
+**Seeding is a migration, not `medikube seed`** (research D-11), so a production instance that has
+never been seeded still has the catalogue. `medikube seed` adds *patient data* only: lab results,
 components and documents for the demo patient, plus a second patient deliberately left empty so
 the Playwright gate exercises three empty states.
 

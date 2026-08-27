@@ -24,7 +24,7 @@ implementable, testable and demonstrable after the Foundational phase.
 
 ## Path conventions
 
-All paths are relative to `/Users/krzysztof.wiatrzyk/private/monorepo/medigo`.
+All paths are relative to `/Users/krzysztof.wiatrzyk/private/monorepo/medikube`.
 
 `<kind>` package directories use the Go-identifier form of the kind:
 `allergy condition encounter procedure treatment symptom vitals immunization injury insurance
@@ -42,8 +42,8 @@ collections. Nothing here touches domain logic.
 - [ ] T003 [P] Extend `.golangci.yml` `forbidigo` with the Datastar inline-script family (`ExecuteScript`, `ConsoleLog`, `ConsoleError`, `Redirect`, `Redirectf`, `DispatchCustomEvent`, `ReplaceURL`, `ReplaceURLQuerystring`, `Prefetch`) and a `depguard` deny of `internal/web/views` from `internal/service/**`
 - [ ] T004 [P] Add a Datastar Pro-attribute allowlist lint step to `Taskfile.yaml` (`task lint:datastar`) scanning `internal/web/views/**/*.templ` for `data-persist`, `data-query-string`, `data-replace-url`, `data-scroll-into-view`, `data-view-transition`, `data-custom-validity`, `data-animate`, `data-match-media`, `data-on-raf`, `data-on-resize`, `@clipboard`, `@fit`, and for the v0 delimiter form `data-on-<event>`
 - [ ] T005 [P] Add the `task test:scale` wrapper to `Taskfile.yaml` for the build-tagged scale suite. **`task test:phileak` already exists** — phase 001 created it with the harness (T006, T089, T235); this phase extends the harness, not the wrapper (cross-artifact finding M6)
-- [ ] T006 [P] Add `medigo/**` exclusions for the new generated artefacts to `/Users/krzysztof.wiatrzyk/private/monorepo/.dockerignore` if any are missing (verify `medigo/**/*_templ.go`, `medigo/internal/web/static/app.css`, `medigo/pb_data/` are present)
-- [ ] T007 Create the fixture regeneration task `task fixture:regen` in `Taskfile.yaml` that runs the migrations against a clean database plus `medigo seed` and rewrites `internal/testdata/pb_data`, and document in `quickstart.md` §6 that forgetting it makes every integration test run against the old schema
+- [ ] T006 [P] Add `medikube/**` exclusions for the new generated artefacts to `/Users/krzysztof.wiatrzyk/private/monorepo/.dockerignore` if any are missing (verify `medikube/**/*_templ.go`, `medikube/internal/web/static/app.css`, `medikube/pb_data/` are present)
+- [ ] T007 Create the fixture regeneration task `task fixture:regen` in `Taskfile.yaml` that runs the migrations against a clean database plus `medikube seed` and rewrites `internal/testdata/pb_data`, and document in `quickstart.md` §6 that forgetting it makes every integration test run against the old schema
 
 **Checkpoint**: linters and tasks in place. No production code has changed.
 
@@ -79,7 +79,7 @@ to `search_index`, and every kind's tests run the shared contract suites.
 
 - [ ] T022 Implement `internal/records/recordstest/repositorycontract.go` — a `testify/suite` covering `Get`/`List`/`Save`/`Delete`: not-found, foreign-patient returns `ErrNotFound`, version/If-Match semantics, cursor stability under a concurrent insert, null-primary-date ordering last, and cascade removal when the patient is deleted. Parameterised by a factory so it runs against a real repository and against a fake
 - [ ] T023 Implement `internal/records/recordstest/kindcontract.go` — a suite covering registration completeness, the six operations `listRecords`, `listRecordsOfKind`, `createRecord`, `getRecord`, `updateRecord`, `deleteRecord` applied to the kind (FR-001), `patient` required on create and refused on patch so a record can be filed against nobody and can never be re-filed (FR-002), a `notes` field present on every kind and bounded at the documented length (FR-003), DTO round-trip under `encoding/json/v2`, the declared default sort, the authorization matrix (owner succeeds; stranger receives a `404` byte-identical to a non-existent id; unauthenticated receives `401` with no patient information, FR-083), an audit row emitted carrying no content, a `search_index` row written on create and removed on delete, and a realtime event published carrying IDs only
-- [ ] T024 [P] Implement `internal/records/recordstest/fixtures.go` — a per-kind fixture builder producing a minimal-required-fields record and a fully-populated record, used by both suites and by `medigo seed`
+- [ ] T024 [P] Implement `internal/records/recordstest/fixtures.go` — a per-kind fixture builder producing a minimal-required-fields record and a fully-populated record, used by both suites and by `medikube seed`
 
 ### Blocking collections and shared machinery
 
@@ -139,7 +139,7 @@ distinguished; and that a second account can reach none of them.
 - [ ] T055 [P] [US1] Implement DTOs `internal/web/api/allergy.go`, `condition.go`, `emergencycontact.go` and the codecs `internal/service/<kind>/adapter.go` for the three kinds
 - [ ] T056 [P] [US1] Implement templ components `internal/web/views/records/allergy.templ`, `condition.templ`, `emergencycontact.templ` (Row/List/Detail, create drawer opened by a Datastar signal, no `/new` route)
 - [ ] T057 [US1] Register the three kinds in `internal/records/kinds/allergy.go`, `condition.go`, `emergencycontact.go` with their filters (`status`, `severity`, `critical`, `active`, `is_active`, `is_primary`), default sorts, `SearchFields`, `Basis` and seed fixture ids
-- [ ] T058 [US1] Extend `internal/cli/seed.go` with deterministic allergy, condition and emergency-contact fixtures, including one critical allergy and one resolved condition, and wire the three kinds into `internal/di` providers in `cmd/medigo/main.go`
+- [ ] T058 [US1] Extend `internal/cli/seed.go` with deterministic allergy, condition and emergency-contact fixtures, including one critical allergy and one resolved condition, and wire the three kinds into `internal/di` providers in `cmd/medikube/main.go`
 - [ ] T059 [P] [US1] Add Playwright smoke cases for `/allergies`, `/allergies/{id}`, `/conditions`, `/conditions/{id}`, `/emergency-contacts`, `/emergency-contacts/{id}` at 1440×900 and 390×844 in `e2e/specs/records.spec.ts`, asserting the shell landmarks, each page's own landmark, `body[data-signals]`, and zero console errors / page errors / failed requests
 - [ ] T060 [US1] Regenerate `api/openapi.json` (`task openapi`), confirm `git diff --exit-code api/openapi.json` is clean after committing, and confirm `task routes` lists the six new page routes
 
@@ -181,7 +181,7 @@ scheduled view and the completed one does not.
 - [ ] T078 [P] [US2] Implement DTOs `internal/web/api/encounter.go`, `procedure.go`, `treatment.go` and the three `adapter.go` codecs
 - [ ] T079 [P] [US2] Implement `internal/web/views/records/encounter.templ`, `procedure.templ`, `treatment.templ`
 - [ ] T080 [US2] Register the three kinds in `internal/records/kinds/encounter.go`, `procedure.go`, `treatment.go` with filters (`visit_type`, `priority`, `condition`, `status`, `scheduled`, `ongoing`), default sorts, `SearchFields` and `Basis`
-- [ ] T081 [US2] Extend `internal/cli/seed.go` with encounter, procedure (one scheduled-future, one completed-past) and treatment fixtures, and add the three providers in `cmd/medigo/main.go`
+- [ ] T081 [US2] Extend `internal/cli/seed.go` with encounter, procedure (one scheduled-future, one completed-past) and treatment fixtures, and add the three providers in `cmd/medikube/main.go`
 - [ ] T082 [P] [US2] Add Playwright smoke cases for `/encounters`, `/encounters/{id}`, `/procedures`, `/procedures/{id}`, `/treatments`, `/treatments/{id}` at both viewports in `e2e/specs/records.spec.ts`
 
 **Checkpoint**: US1 and US2 are both independently demonstrable.
@@ -221,7 +221,7 @@ refused with the acceptable range named.
 - [ ] T098 [P] [US3] Implement DTOs `internal/web/api/symptom.go` and `vitals.go`, plus the two `adapter.go` codecs
 - [ ] T099 [US3] Implement the presentation-edge unit conversion in `internal/web/api/units.go` — read the actor's `unit_system` from the request context and convert on encode and decode. **No conversion in the service, the repository or the database** (research D-15)
 - [ ] T100 [P] [US3] Implement `internal/web/views/records/symptom.templ` and `vitals.templ`
-- [ ] T101 [US3] Register both kinds in `internal/records/kinds/symptom.go` and `vitals.go`, extend `internal/cli/seed.go` with four episodes of one symptom name and six measurement sets spanning two months, and add the providers in `cmd/medigo/main.go`
+- [ ] T101 [US3] Register both kinds in `internal/records/kinds/symptom.go` and `vitals.go`, extend `internal/cli/seed.go` with four episodes of one symptom name and six measurement sets spanning two months, and add the providers in `cmd/medikube/main.go`
 - [ ] T102 [P] [US3] Add Playwright smoke cases for `/symptoms`, `/symptoms/{id}`, `/vitals`, `/vitals/{id}` at both viewports in `e2e/specs/records.spec.ts`
 
 **Checkpoint**: US1–US3 independently demonstrable.
@@ -255,7 +255,7 @@ extended in passing.
 - [ ] T113 [P] [US4] Implement `internal/service/injury/{service.go,ports.go,query.go,patch.go}` + `injurytest/fake.go`
 - [ ] T114 [P] [US4] Implement `internal/store/migrations/<ts>_immunizations.go` + `internal/store/immunization/{repo.go,mapper.go}`, and `internal/store/migrations/<ts>_injuries.go` (including the four link fields to conditions, medications, procedures and treatments, FR-042) + `internal/store/injury/{repo.go,mapper.go}`
 - [ ] T115 [P] [US4] Implement DTOs `internal/web/api/immunization.go`, `injury.go`, their `adapter.go` codecs, and views `internal/web/views/records/immunization.templ`, `injury.templ`
-- [ ] T116 [US4] Register both kinds in `internal/records/kinds/immunization.go` and `injury.go` with their filters (`type`, `status`, `severity`, `laterality`, `unresolved`), extend `internal/cli/seed.go` — **leaving `/immunizations` empty on one seeded patient** so the empty-state path is exercised (`contracts/pages.md` §5) — and add the providers in `cmd/medigo/main.go`
+- [ ] T116 [US4] Register both kinds in `internal/records/kinds/immunization.go` and `injury.go` with their filters (`type`, `status`, `severity`, `laterality`, `unresolved`), extend `internal/cli/seed.go` — **leaving `/immunizations` empty on one seeded patient** so the empty-state path is exercised (`contracts/pages.md` §5) — and add the providers in `cmd/medikube/main.go`
 - [ ] T117 [P] [US4] Add Playwright smoke cases for `/immunizations`, `/immunizations/{id}`, `/injuries`, `/injuries/{id}` at both viewports in `e2e/specs/records.spec.ts`, including the empty-state assertion for `/immunizations`
 
 **Checkpoint**: US1–US4 independently demonstrable.
@@ -292,7 +292,7 @@ service can be listed with each row stating which it is.
 - [ ] T131 [P] [US5] Implement `internal/service/equipment/{service.go,ports.go,query.go,patch.go,servicedue.go}` with the overdue/due-soon basis function, plus `equipmenttest/fake.go`
 - [ ] T132 [P] [US5] Implement `internal/store/migrations/<ts>_insurances.go` (including the partial unique index) + `internal/store/insurance/{repo.go,mapper.go}`, and extend the equipment schema created in T077 with its remaining fields + `internal/store/equipment/{repo.go,mapper.go}`
 - [ ] T133 [P] [US5] Implement DTOs `internal/web/api/insurance.go`, `equipment.go`, their `adapter.go` codecs, and views `internal/web/views/records/insurance.templ`, `equipment.templ`
-- [ ] T134 [US5] Register both kinds in `internal/records/kinds/insurance.go` and `equipment.go` with their filters and basis functions, extend `internal/cli/seed.go` (one policy expiring in 45 days, one primary; one piece of equipment overdue, one due in 20 days; **`/equipment` left empty for one seeded patient**), add the providers in `cmd/medigo/main.go`, and add Playwright smoke cases for `/insurance`, `/insurance/{id}`, `/equipment`, `/equipment/{id}` in `e2e/specs/records.spec.ts`
+- [ ] T134 [US5] Register both kinds in `internal/records/kinds/insurance.go` and `equipment.go` with their filters and basis functions, extend `internal/cli/seed.go` (one policy expiring in 45 days, one primary; one piece of equipment overdue, one due in 20 days; **`/equipment` left empty for one seeded patient**), add the providers in `cmd/medikube/main.go`, and add Playwright smoke cases for `/insurance`, `/insurance/{id}`, `/equipment`, `/equipment/{id}` in `e2e/specs/records.spec.ts`
 
 **Checkpoint**: US1–US5 independently demonstrable — every record type in the phase now exists
 except family history.
@@ -425,14 +425,14 @@ timeline interleaves kinds in date order and can be narrowed by kind and date ra
 - [ ] T181 [P] [US9] Failing authorization tests in `internal/web/api/timeline_http_test.go`: a record the actor is not entitled to see is absent from the timeline and from every status view, and its absence discloses nothing (FR-082, SC-004, US9-5)
 - [ ] T182 [P] [US9] Failing templ render tests in `internal/web/views/timeline/timeline_templ_test.go`: each entry states its kind, its identifying summary and its date; undated entries render under an explicit "Date not recorded" group; the narrowing chips are visible and removable (FR-076, FR-077, US9-3)
 - [ ] T183 [P] [US9] Failing empty-state tests in `internal/web/views/timeline/empty_templ_test.go` and `internal/records/emptystate_test.go`: a patient with nothing recorded gets a helpful empty state on the timeline and on **every** status view — never a blank screen, a row of zeros or an error (FR-080, US9-4)
-- [ ] T183a [P] [US9] Failing tests in `internal/httproute/registry_test.go` and `internal/records/statusviews_test.go` for the **`SmokeVariants`** field added to the page spec (`contracts/pages.md` §3.5, cross-artifact finding **L2**): every variant is a concrete URL on an already-registered page route with **no unbound `{param}`**; variants are emitted inside their route's entry by `medigo routes` and are **not** counted as pages (the total stays 29); and **every entry in the `internal/records/statusviews.go` catalogue has a variant** — a status view added without one fails the build, which is the whole point
+- [ ] T183a [P] [US9] Failing tests in `internal/httproute/registry_test.go` and `internal/records/statusviews_test.go` for the **`SmokeVariants`** field added to the page spec (`contracts/pages.md` §3.5, cross-artifact finding **L2**): every variant is a concrete URL on an already-registered page route with **no unbound `{param}`**; variants are emitted inside their route's entry by `medikube routes` and are **not** counted as pages (the total stays 29); and **every entry in the `internal/records/statusviews.go` catalogue has a variant** — a status view added without one fails the build, which is the whole point
 - [ ] T184 [P] [US9] Failing scale test in `internal/store/timeline/scale_test.go` (build tag `scale`): any list page, any status view and the timeline render within 2 s at 50,000 records spread across every kind (SC-002, FR-089)
 
 ### Implementation for User Story 9
 
 - [ ] T185 [P] [US9] Implement `internal/service/timeline/{service.go,ports.go}` reading the cross-kind list, and `internal/store/timeline/repo.go` with the null-last ordering
 - [ ] T186 [US9] Implement the `criteria` echo and the per-row `basis` population in `internal/records/filters.go` and `internal/web/api/criteria.go`, and verify every kind's registered `Basis` function against `contracts/records-clinical.md` §1
-- [ ] T186a [US9] Implement `internal/records/statusviews.go` — the seven-entry catalogue of `contracts/pages.md` §3.5 as the **single** source read by both the filter implementation and the `SmokeVariants` registration — plus the `SmokeVariants []string` field on the page spec in `internal/httproute` **[EDIT of phase 001]** and its emission in `medigo routes` (depends on T183a)
+- [ ] T186a [US9] Implement `internal/records/statusviews.go` — the seven-entry catalogue of `contracts/pages.md` §3.5 as the **single** source read by both the filter implementation and the `SmokeVariants` registration — plus the `SmokeVariants []string` field on the page spec in `internal/httproute` **[EDIT of phase 001]** and its emission in `medikube routes` (depends on T183a)
 - [ ] T187 [US9] Implement `internal/web/views/timeline/timeline.templ` and the `/timeline` page handler in `internal/web/page/timeline.go` with landmark `region[name="Timeline"]`, requiring `?patient=` and rendering an explicit "choose a person" state without one
 - [ ] T188 [US9] Wire the per-kind counts and recent activity on the phase-002 patient chart to include all fourteen kinds from the registry rather than a second hand-maintained set (FR-015, FR-090) — **discharges SC-010**, and give each kind's block on the chart the same create action its list screen offers, naming the person it will be filed against (FR-009), in `internal/web/page/patient.go`
 - [ ] T189 [P] [US9] Add `e2e/specs/timeline.spec.ts` covering `/timeline` at both viewports plus the empty-state case; extend `e2e/routes.gate.spec.ts` to visit **every `SmokeVariants` entry** of every registered page route with the same seven assertions at both viewports — which is how the seven status views enter the browser gate (FR-080, L2) — and seed `/injuries?unresolved=true` and `/insurance?expiring_within_days=60` **empty**, so the empty state is what the landmark assertion exercises; confirm `task routes` lists `/timeline` and its variants and that the gate fails when a catalogue entry has no variant
@@ -477,7 +477,7 @@ story is in.
 
 - [ ] T199 Run `task openapi`, commit `api/openapi.json`, and confirm `internal/openapi/gate_test.go` passes: every registered `operationId` appears in the committed document and vice versa — phase 001's `listRecords`, `listRecordsOfKind`, `createRecord`, `getRecord`, `updateRecord`, `deleteRecord`, now serving fourteen kinds, plus this phase's `listTags`, `createTag`, `updateTag`, `deleteTag`, `listCourseMedications`, `upsertCourseMedication`, `deleteCourseMedication` and `search` — and the fourteen-branch `oneOf` for the record family carries a `kind` discriminator on every branch
 - [ ] T200 Confirm `internal/records/registry_completeness_test.go` passes for all fourteen kinds and **fails** when a kind is deliberately stripped of its smoke case, its `SearchFields` or its default sort — prove the gate goes red, do not assume it (Principle VIII's standard applied to the gate itself)
-- [ ] T201 Confirm `e2e/routes.gate.spec.ts` derives its route list from `medigo routes` and **fails** when a page route is added without a smoke case, **and when a status-view catalogue entry has no `SmokeVariants` entry**; prove both by temporarily adding a bare route and a bare catalogue entry (SC-015, L2)
+- [ ] T201 Confirm `e2e/routes.gate.spec.ts` derives its route list from `medikube routes` and **fails** when a page route is added without a smoke case, **and when a status-view catalogue entry has no `SmokeVariants` entry**; prove both by temporarily adding a bare route and a bare catalogue entry (SC-015, L2)
 - [ ] T202 Run `golangci-lint run` to zero findings, including the new `depguard` boundary (no `internal/service/**` or `internal/domain/**` file imports PocketBase, `net/http` or templ), `forbidigo` (`app.Logger()`, `fmt.Print*`, `log.*`, `OnRecord*Request`, the Datastar inline-script family) and the `forbid-kind-switch` analyzer from T002
 
 ### Cross-cutting correctness
@@ -500,7 +500,7 @@ story is in.
 - [ ] T214 [P] Run `task test:scale` and record the measured numbers in `specs/003-clinical-records/quickstart.md` §5: any list page, status view and the timeline within 2 s, and the first page of grouped search within 3 s, at 50,000 records, with the per-symptom episode counts, the per-kind chart counts and the tag usage counts all still correct and all still derived (SC-002, SC-003, FR-090)
 - [ ] T215 [P] Add `e2e/specs/keyboard.spec.ts` — keyboard-only record → correct → relate → tag → delete for one kind per user story (condition, encounter, vitals, immunization, insurance, family member) at both viewports, asserting a visible focus indicator at every step and that focus is never lost into a closed drawer (SC-018)
 - [ ] T216 Regenerate and commit the test fixture data dir (`task fixture:regen` → `internal/testdata/pb_data`), run the full CI sequence locally (`task check`, `task openapi` + clean diff, `task routes`, `task test:e2e`, container build), and confirm every step is green
-- [ ] T217 Update `medigo/CLAUDE.md` and the PocketBase-upgrade checklist with this phase's two additions: re-run `registry_completeness_test.go` and the per-collection lockdown scenarios on every PocketBase upgrade (risk R8); state the phase's Complexity Tracking entries in the pull-request description as the workflow requires
+- [ ] T217 Update `medikube/CLAUDE.md` and the PocketBase-upgrade checklist with this phase's two additions: re-run `registry_completeness_test.go` and the per-collection lockdown scenarios on every PocketBase upgrade (risk R8); state the phase's Complexity Tracking entries in the pull-request description as the workflow requires
 - [ ] T217a Write `specs/003-clinical-records/traceability.md` — the mechanical join, generated from `spec.md` and `tasks.md` rather than written by hand: one row per functional requirement (all 94) naming the task ids that satisfy it and the named test that proves it, one row per acceptance scenario naming its test, and one row per success criterion (all 18) naming its task or its exit criterion. **A functional requirement with no task, or a success criterion that is neither mapped nor marked `[outcome metric]` in `spec.md`, fails the phase** (cross-artifact finding M7)
 
 ---
@@ -600,7 +600,7 @@ Once Foundational is green, US1–US5 touch **disjoint** files: their own
 `internal/domain/clinical/<kind>.go`, `internal/service/<kind>/`, `internal/store/<kind>/`,
 `internal/web/api/<kind>.go` and `internal/web/views/records/<kind>.templ`. The only shared files
 are `internal/records/kinds/` (one file per kind — still disjoint), `internal/cli/seed.go` and
-`cmd/medigo/main.go`. Those last two are append-only per kind and should be landed as the final
+`cmd/medikube/main.go`. Those last two are append-only per kind and should be landed as the final
 task of each story to keep the merge trivial. US7 and US10 can run alongside them on entirely
 separate paths.
 
@@ -639,8 +639,8 @@ Each story below adds value without breaking the ones before it, and each ends w
 - `[P]` means different files with no incomplete dependency.
 - Tests must be observed **red** before their implementation task begins; a test that was never red
   proves nothing.
-- Commit after each task or logical group, Conventional Commits scoped `medigo`
-  (e.g. `feat(medigo): register the condition record kind`).
+- Commit after each task or logical group, Conventional Commits scoped `medikube`
+  (e.g. `feat(medikube): register the condition record kind`).
 - One `tests.TestApp` per `ApiScenario`, **never shared** — `bindUIExtensions` re-enters on every
   `OnServe` and the handler chain grows until the stack overflows.
 - Any migration added means `task fixture:regen` before the integration tests are trusted.

@@ -1,7 +1,7 @@
 # Contract: pages and the browser gate
 
 **Pages added: 29.** 26 from the kind registry (13 kinds × 2) plus `/tags`, `/search` and
-`/timeline`. Every one is emitted by `medigo routes` with `Page: true`, and
+`/timeline`. Every one is emitted by `medikube routes` with `Page: true`, and
 `e2e/routes.gate.spec.ts` fails the build if any registered page route has no smoke case
 (FR-093, SC-015).
 
@@ -97,7 +97,7 @@ SmokeVariants []string   // additional concrete URLs on THIS route that the gate
 - Each variant is a full, concrete URL on an already-registered page route — **no unbound
   `{param}`**, patient id substituted from the seed, asserted by the same registry gate that
   asserts `SmokeURL` is concrete.
-- Variants are **not** counted as pages: `medigo routes` emits them inside their route's entry, the
+- Variants are **not** counted as pages: `medikube routes` emits them inside their route's entry, the
   page total stays **29**, and the OpenAPI document is untouched.
 - `internal/records/statusviews.go` declares the catalogue above **once**, and both the filter
   implementation (T186) and the variants read from it — so a status view added later cannot be
@@ -120,7 +120,7 @@ At **1440×900** and **390×844**, for every route above:
 6. **zero** uncaught page errors
 7. **zero** failed network requests
 
-Detail routes substitute an id from the deterministic `medigo seed` fixture.
+Detail routes substitute an id from the deterministic `medikube seed` fixture.
 
 ---
 

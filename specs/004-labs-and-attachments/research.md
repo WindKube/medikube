@@ -237,7 +237,7 @@ untestable without a database.
 
 ## D-08
 
-**Decision.** `MEDIGO_LABS_MAX_SERIES_POINTS`, default **500**. When a series query would return
+**Decision.** `MEDIKUBE_LABS_MAX_SERIES_POINTS`, default **500**. When a series query would return
 more, the **most recent** N readings are returned and the response carries `capped: true`,
 `cap_limit`, and the `range_start`/`range_end` actually used. The summary is computed **over the
 returned window only**, and the view states both facts.
@@ -257,7 +257,7 @@ see 2021.
 
 ## D-09
 
-**Decision.** **No value is converted between units anywhere in MediGo**, and this is enforced
+**Decision.** **No value is converted between units anywhere in MediKube**, and this is enforced
 structurally rather than by review: a `depguard` rule denies `internal/domain/clinical/units`
 (phase 003's SI converter) to `internal/domain/labs/**`, `internal/service/lab*/**` and
 `internal/store/lab*/**`. A conversion cannot be added to the lab path by accident, and adding one
@@ -267,7 +267,7 @@ on purpose requires editing `.golangci.yml` in the same commit, which is a visib
 silently is how a laboratory history becomes actively misleading, and no conversion table is
 trustworthy across every test in the catalogue."* Upstream's own API documents the bug being worked
 around (domain-clinical §24: the `?unit=` parameter exists so that "values recorded in different
-units are not merged"). Constitution IX says a claim MediGo makes about itself is machine-checked
+units are not merged"). Constitution IX says a claim MediKube makes about itself is machine-checked
 or it is not made; this is that check.
 
 **Alternatives considered.** *(a) A conversion table for the common pairs (mg/dL ↔ mmol/L).* Each
@@ -301,7 +301,7 @@ makes every date optional.
 
 ## D-11
 
-**Decision.** `catalog_lab_tests` is created and populated by a **migration**, not by `medigo seed`.
+**Decision.** `catalog_lab_tests` is created and populated by a **migration**, not by `medikube seed`.
 The vendored LOINC-derived extract lives at `assets/catalog/lab-tests.json`, is embedded with
 `embed.FS`, and the migration's `up` performs an idempotent upsert keyed on `loinc_code` so
 re-running it on an instance that already holds data is safe. The collection is read-only to every
@@ -315,15 +315,15 @@ the UI says so plainly while manual entry continues to work (FR-042, and the spe
 failure edge case).
 
 **Rationale.** FR-036 says the catalogue *ships with the instance*; a production instance that has
-never run `medigo seed` must still have it, so it belongs in a migration. FR-037 makes it read-only
+never run `medikube seed` must still have it, so it belongs in a migration. FR-037 makes it read-only
 — and read-only enforced by "there is no route" is stronger than read-only enforced by a check
 inside a route that exists. FR-043 makes it non-PHI, which is why it is the one resource in the
 application whose list does not require `?patient=`.
 
-**Alternatives considered.** *(a) Seed it in `medigo seed`.* Then production instances have an
+**Alternatives considered.** *(a) Seed it in `medikube seed`.* Then production instances have an
 empty catalogue and US4 silently does nothing. *(b) Ship it as a static JSON asset queried in Go.*
 Loses `?q=`, `?category=` and pagination, and puts a linear scan of ~2,000 entries behind an
-interactive box. *(c) Fetch it from LOINC at boot.* Constitution VII: MediGo makes no outbound
+interactive box. *(c) Fetch it from LOINC at boot.* Constitution VII: MediKube makes no outbound
 request the operator did not configure.
 
 ---
@@ -391,7 +391,7 @@ declared `Content-Type` and never inferred from the file name (FR-051). Sniffing
 | `image/heic` / `image/heif` | `ftypheic`, `ftypheix`, `ftypmif1`, `ftypmsf1` at offset 4 |
 | `image/tiff` | `II\x2a\x00` or `MM\x00\x2a` at 0 |
 
-The sniffed type is then compared against `MEDIGO_FILES_ALLOWED_MIME`; anything not on the list is
+The sniffed type is then compared against `MEDIKUBE_FILES_ALLOWED_MIME`; anything not on the list is
 `415` naming the accepted types (FR-052).
 
 **One consequence is stated rather than discovered: a `.csv` sniffs as `text/plain`.** There is no
@@ -421,7 +421,7 @@ default type list forbids.
 
 ## D-15
 
-**Decision.** The per-document size limit (`MEDIGO_FILES_MAX_UPLOAD_BYTES`, default **32 MiB**) is
+**Decision.** The per-document size limit (`MEDIKUBE_FILES_MAX_UPLOAD_BYTES`, default **32 MiB**) is
 enforced at three layers, in this order:
 
 1. **`http.MaxBytesReader`** wraps the request body before `ParseMultipartForm` is reached, so the
@@ -453,7 +453,7 @@ operator has accepted":
 
 1. **The default allowlist contains no active type** — no `text/html`, no `image/svg+xml`, no
    `application/xml`, no JavaScript.
-2. **The set of types MediGo will serve `inline` is a compile-time constant** in
+2. **The set of types MediKube will serve `inline` is a compile-time constant** in
    `internal/domain/files/mime.go`: `application/pdf`, `image/jpeg`, `image/png`, `image/gif`,
    `image/webp`, `text/plain`. An operator can widen what is *accepted*; nobody can widen what is
    *inlined*. Anything else is offered as a download only (FR-057), and a request for
@@ -468,7 +468,7 @@ operator has accepted":
    attachment there is. A PDF is inert without a script context, and `script-src 'none'` plus
    `object-src 'none'` remain in force.
 
-**A consequence for the application's own CSP.** The inline viewer frames MediGo's own attachment
+**A consequence for the application's own CSP.** The inline viewer frames MediKube's own attachment
 route, so the page CSP gains `frame-src 'self'`, and the attachment response's `frame-ancestors` is
 `'self'` rather than the pages' `'none'`. Both are additive and narrow: no directive the
 constitution names is weakened, and the framed response is locked down harder than any page in the
@@ -480,7 +480,7 @@ attachments are served from the application's own origin, so an active type that
 through would be same-origin.
 
 **Alternatives considered.** *(a) A separate origin for attachments.* The textbook answer, and
-genuinely better — rejected because MediGo is single-instance with one `PublicURL`, so it means a
+genuinely better — rejected because MediKube is single-instance with one `PublicURL`, so it means a
 second certificate, a second cookie domain and a second CSP surface for one iframe. Recorded here
 so the trade-off is visible rather than forgotten. *(b) Force `attachment` disposition for
 everything.* Contradicts FR-057 and US2 scenario 6. *(c) Rely on the allowlist alone.* The
@@ -500,7 +500,7 @@ assumptions already state. A generation failure is logged once, leaves `has_prev
 
 `attachments.has_preview` is a stored boolean written by that callback.
 
-**Rationale.** Constitution VII requires eager thumbnails because MediGo bypasses `/api/files/`,
+**Rationale.** Constitution VII requires eager thumbnails because MediKube bypasses `/api/files/`,
 where PocketBase's lazy thumbnailer lives (pocketbase.md §9). `OnComplete` keeps image decoding out
 of the write transaction. The type restriction closes shared-design risk **R5** with the
 conservative answer: HEIC has no cgo-free decoder at all, TIFF's availability in PocketBase's
@@ -512,7 +512,7 @@ a red gate the first time generation fails. FR-060 is satisfied regardless: the 
 the same handler, through the same authorization call, with the same audit row as the original.
 
 **Alternatives considered.** *(a) Lazy generation in the download route.* Re-implements the
-thundering-herd machinery (singleflight plus a weighted semaphore) that PocketBase has and MediGo
+thundering-herd machinery (singleflight plus a weighted semaphore) that PocketBase has and MediKube
 would be bypassing. *(b) Attempt a thumbnail for every type and let it fail.* Same outcome, plus a
 decode attempt per upload of a 32 MiB PDF. *(c) A PDF first-page preview.* Needs a renderer; the
 spec explicitly does not promise it.
@@ -548,18 +548,18 @@ column and a self-relation.* Document version history, which the spec explicitly
 
 ## D-19
 
-**Decision.** `attachments.deleted_at` is the only soft-delete column in MediGo. It is set by
+**Decision.** `attachments.deleted_at` is the only soft-delete column in MediKube. It is set by
 `DELETE /api/v1/attachments/{id}` (which requires a confirmation in the UI, FR-063), by the replace
 flow (D-18), and by the record-deletion cleanup hook (FR-067). A trashed attachment is excluded
 from every list unless `?deleted=true`, and its content remains retrievable by the owner until it
 is purged (FR-065's "offered the chance to download a copy before it is purged").
 
-**The purge** is one `app.Cron()` entry, `medigo_attachment_maintenance`, running daily. It:
-hard-deletes every attachment whose `deleted_at` is older than `MEDIGO_RETENTION_TRASH_DAYS`
+**The purge** is one `app.Cron()` entry, `medikube_attachment_maintenance`, running daily. It:
+hard-deletes every attachment whose `deleted_at` is older than `MEDIKUBE_RETENTION_TRASH_DAYS`
 (default 30) — PocketBase removes the blob and the thumbnails with the record; runs the orphan
 sweep from D-13; and refreshes the storage gauge from D-21. A failure is logged, counted, and
 retried on the next run; each row is its own delete, so a partial run leaves rows wholly in the
-trash and never half-deleted (the spec's environment-failure edge case). `medigo purge` runs the
+trash and never half-deleted (the spec's environment-failure edge case). `medikube purge` runs the
 same function once, from the CLI.
 
 Each purged document writes one `delete`/`attachment` audit row, and so does each quarantined orphan
@@ -615,7 +615,7 @@ showing 25 previews produces 25 audit rows **only when the viewer is not the own
 case, an account holder browsing their own library, produces none. The worst case is therefore a
 share recipient or a superuser browsing somebody else's library: at the spec's 2,000-document
 scale, ~2,000 rows of roughly 100 bytes, and that is exactly the traffic the trail exists to record.
-The mitigations are the existing `MEDIGO_RETENTION_AUDIT_DAYS` (730) and the audit purge cron phase
+The mitigations are the existing `MEDIKUBE_RETENTION_AUDIT_DAYS` (730) and the audit purge cron phase
 001 already runs; no new mechanism is introduced.
 
 **Rationale.** FR-060 says a preview is protected exactly as strictly as the document, and a
@@ -641,7 +641,7 @@ the CSP, and inflates every listing response by ~33% of the preview bytes.
 `{documents, bytes, trashed_documents, trashed_bytes}` — trashed counted separately, as FR-071
 requires. It costs one aggregate query and adds **no** operation. The instance-wide total is an
 operator concern and belongs to phase 006's `GET /api/v1/admin/system`; this phase publishes it as
-the Prometheus gauge `medigo_files_bytes_total`, refreshed by the maintenance cron, **with no
+the Prometheus gauge `medikube_files_bytes_total`, refreshed by the maintenance cron, **with no
 patient, user or kind label** — that would be unbounded cardinality and PHI in the monitoring
 system (Constitution VI).
 
@@ -711,7 +711,7 @@ base64 contents (frontend.md, "Other v1.0 semantic changes that will bite"). At 
 that is ~43 MiB of base64 held as a JavaScript string, posted as a JSON body — over the request
 body limit before the file is read, three times the memory, and it makes SC-004's byte-for-byte
 guarantee depend on a base64 round trip in two languages. A native form post also gives the browser
-its own upload progress, which the spec's scale edge case asks for, without MediGo implementing a
+its own upload progress, which the spec's scale edge case asks for, without MediKube implementing a
 progress mechanism.
 
 **Alternatives considered.** *(a) Base64 through Datastar anyway.* The arithmetic above.
@@ -726,7 +726,7 @@ it directly.* Puts redirect semantics and HTML into the JSON API — see D-25.
 **Decision.** `internal/httproute` gains a fourth route class, `KindPageAction`, alongside
 `KindAPI`, `KindPage` and `KindExternal`. A `page_action` route is a page-layer route that is not a
 navigable page: it renders an HTML fragment or performs a form action. It appears in
-`medigo routes`, is **deliberately excluded** from `api/openapi.json`, has no ARIA landmark, and
+`medikube routes`, is **deliberately excluded** from `api/openapi.json`, has no ARIA landmark, and
 **must declare the Playwright spec file that exercises it**. `e2e/routes.gate.spec.ts` fails the
 build if that file does not exist or does not reference the route.
 

@@ -58,7 +58,7 @@ populated. The two cannot drift because the migration reads `All()`.
 **Rationale.** FR-012 requires exactly this, and the spec's own Decisions section states why:
 "Four ladders instead of a dozen near-duplicates is what makes a cross-type timeline and a
 cross-type status view possible at all." Shared design contract §1.0 rule 6 mandates the
-one-source-of-truth mechanism. MediGo *chooses* these vocabularies — only six of upstream's enums
+one-source-of-truth mechanism. MediKube *chooses* these vocabularies — only six of upstream's enums
 were ever declared, the rest lived in Pydantic validators (domain-clinical.md §0), so there is no
 compatibility obligation.
 
@@ -117,7 +117,7 @@ Shared design contract §6.2 names the domain as the validation authority and fo
 handlers, templ components, repositories and PocketBase hooks.
 
 **Alternatives considered.** PocketBase field constraints as the primary check: they fail one at a
-time, produce PocketBase's error shape rather than MediGo's envelope, and cannot express
+time, produce PocketBase's error shape rather than MediKube's envelope, and cannot express
 cross-field rules. They remain the third layer — the last line of defence, never the only one.
 
 ---
@@ -297,7 +297,7 @@ type that carry identifying meaning, together with notes".
 `GET /api/v1/search?q=&patient=&kinds=&tags=&match=&from=&to=&status=&limit=&cursor=` returns
 **one group per kind, each group carrying its own `items`, `next_cursor` and `has_more`**.
 Matching is `LIKE '%term%'` over `title` and `body`. Ordering within a group is
-`occurred_on DESC, id DESC`. **MediGo does not claim relevance ranking.**
+`occurred_on DESC, id DESC`. **MediKube does not claim relevance ranking.**
 
 `?patient=` is mandatory; its absence is `400 patient_required` and there is no fallback to the
 active patient.
@@ -331,8 +331,8 @@ meet SC-003 at 50,000 records.
 
 **Decision.** The term is never written to a log line, a span attribute, a metric label, a Sentry
 event, an audit row or a URL that reaches a log. Concretely: the search handler logs
-`term_len` and `result_count`, never `term`; the span carries `medigo.op=search` and
-`medigo.result`, never the term; the metric is `medigo_records_search_total{outcome}` with no term
+`term_len` and `result_count`, never `term`; the span carries `medikube.op=search` and
+`medikube.result`, never the term; the metric is `medikube_records_search_total{outcome}` with no term
 dimension; the audit row for a search is `action=read_sensitive, target_kind=search, target_id=""`.
 Both values exist by the time that row is written: `read_sensitive` is declared by phase 001's
 `audit_events` migration and `search` by this phase's `audit_vocab` migration (D-19), and the
@@ -408,7 +408,7 @@ nothing is not a reading"), and **systolic and diastolic are both-or-neither wit
 `diastolic < systolic`** (FR-036).
 
 **Rationale.** FR-033–FR-037. Shared design contract §1.5 notes "upstream had zero numeric bounds
-on any vital" — the ranges are MediGo's, chosen and documented. US3 scenario 6 requires two
+on any vital" — the ranges are MediKube's, chosen and documented. US3 scenario 6 requires two
 household members with different unit preferences to see the same underlying reading in their own
 units with neither view altering what was recorded; that is only true if storage is canonical and
 conversion is at the edge.

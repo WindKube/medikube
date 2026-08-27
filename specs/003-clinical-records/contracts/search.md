@@ -47,7 +47,7 @@ GET /api/v1/search        search
 - Ordering **within** a group is `occurred_on DESC, id DESC`, nulls last (FR-073, research D-06).
   Group order is the registry's declared kind order — stable, and not a relevance signal.
 - **`snippet` is always `null` in this phase.** The field exists so phase 004 can populate it
-  without a wire change; MediGo does not highlight matches and does not claim relevance ranking
+  without a wire change; MediKube does not highlight matches and does not claim relevance ranking
   (FR-073).
 - `criteria` echoes the narrowing so the page can render removable chips — and note that it echoes
   `q_present`, **not `q`**: the term is never reflected into a body that could be logged

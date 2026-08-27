@@ -87,7 +87,7 @@ metric, span or Sentry event (FR-079), and a test asserts the asymmetry.
 | 409 | `retention_expired` | restore attempted after the retention window closed |
 | 409 | `owner_record_missing` | restore attempted when the owning record no longer exists |
 | 412 | `version_mismatch` | stale `If-Match` on a lab result |
-| 413 | `payload_too_large` | a document over `MEDIGO_FILES_MAX_UPLOAD_BYTES`; the message states the limit |
+| 413 | `payload_too_large` | a document over `MEDIKUBE_FILES_MAX_UPLOAD_BYTES`; the message states the limit |
 | 415 | `unsupported_media_type` | not `application/json` where JSON is required; a document whose **sniffed** type is not accepted — the message names the accepted types |
 | 422 | `validation_failed` | domain validation, unknown field, duplicate key — with `fields[]` |
 | 428 | `precondition_required` | `PATCH`/`DELETE` on a lab result with no `If-Match` |

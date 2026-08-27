@@ -14,7 +14,7 @@ from its *phase table*, and the one place it departs from a route's shape)
 
 ## Summary
 
-This phase adds the two things MediGo's chart is missing and cannot fake: **a laboratory history
+This phase adds the two things MediKube's chart is missing and cannot fake: **a laboratory history
 whose individual lines are real, comparable values**, and **the paperwork that hangs off every
 record in the application**.
 
@@ -25,7 +25,7 @@ array inside the lab result's own payload with replace-set semantics, so they ad
 Trending is derived — nothing about a series is stored apart from the readings it is computed
 from, so correcting a reading corrects the comparison. Attachments are the first collection since
 `patients.photo` to hold bytes, which makes Constitution VII's file rules — `Protected: true`,
-MediGo-owned serving routes, no file tokens, eager thumbnails — load-bearing for the first time at
+MediKube-owned serving routes, no file tokens, eager thumbnails — load-bearing for the first time at
 scale.
 
 The technical spine, stated plainly:
@@ -51,7 +51,7 @@ The technical spine, stated plainly:
   documents exist (FR-049).
 - **Files never leave through PocketBase.** `attachments.file` is `Protected: true`; the boot
   assertion that already covers `patients.photo` now covers two fields; content is streamed from
-  MediGo's own `/api/v1/attachments/{id}` through `app.NewFilesystem()`, authorized by the service,
+  MediKube's own `/api/v1/attachments/{id}` through `app.NewFilesystem()`, authorized by the service,
   audited on every success, and never addressed by a token in a URL.
 - **One thing in this phase is deliberately not Datastar.** A 32 MiB file cannot go through
   `data-bind` on a file input: Datastar v1 shapes that signal as `{name, contents, mime}[]` with
@@ -60,7 +60,7 @@ The technical spine, stated plainly:
   single transport exception in the application and it is recorded in Complexity Tracking.
 
 **Nine operations, four pages, four page-action routes, four collections.** Phase 004 is the
-phase where MediGo starts holding files, and the whole plan is arranged around not getting that
+phase where MediKube starts holding files, and the whole plan is arranged around not getting that
 wrong.
 
 ---
@@ -80,15 +80,15 @@ files, 15 of them under `core/` and `apis/`. `GOTOOLCHAIN=local go build` on 1.2
 | `github.com/pocketbase/pocketbase` | v0.40.1 | 4 new collections as reversible Go migrations; `app.NewFilesystem()` for file storage, `fsys.Serve` for streaming with Range/ETag, `fsys.CreateThumb` for eager previews; `RunInTransaction` for the component replace-set and the replace-document flow; `TxInfo().OnComplete` for post-commit thumbnailing; `app.Cron()` for the retention purge; `app.DB()` for the two analytics queries; `tests.ApiScenario` |
 | `github.com/a-h/templ` | v0.3.1020 | lab result row/list/detail, the component table, the trend page and its inline-SVG chart, the document library, the upload form, the catalogue suggestion listbox |
 | `github.com/starfederation/datastar-go` | v1.2.2 | catalogue autocomplete, component-row add/remove, filter and paging fragments, live lab-result lists on the existing `/api/v1/streams/records`. **Not** used for the file upload itself (research D-24) |
-| `github.com/caarlos0/env/v11` | v11.4.1 | one new knob, `MEDIGO_LABS_MAX_SERIES_POINTS`; reuses `MEDIGO_FILES_*` and `MEDIGO_RETENTION_TRASH_DAYS` from phase 001 |
+| `github.com/caarlos0/env/v11` | v11.4.1 | one new knob, `MEDIKUBE_LABS_MAX_SERIES_POINTS`; reuses `MEDIKUBE_FILES_*` and `MEDIKUBE_RETENTION_TRASH_DAYS` from phase 001 |
 | `github.com/rs/zerolog` | v1.35.1 | the only logger; PHI-redacting `MarshalZerologObject` on `LabResult`, `Component`, `Attachment` |
 | `github.com/getsentry/sentry-go` | v0.48.0 | errors and panics only, scrubbed; a storage write failure reports a code, never a path or a file name |
-| `github.com/prometheus/client_golang` | latest pinned | `medigo_files_*` and `medigo_labs_*`; label sets bounded, **no patient id and no file name ever becomes a label** |
+| `github.com/prometheus/client_golang` | latest pinned | `medikube_files_*` and `medikube_labs_*`; label sets bounded, **no patient id and no file name ever becomes a label** |
 | `go.opentelemetry.io/otel` | latest pinned | `service.attachment.*`, `service.labresult.*`, `store.lab_components.*` spans |
 | `github.com/samber/do` | v2 | container providers for the four new services |
 | `github.com/samber/lo` | v1.53.0 | sparingly, per Principle IV |
 | `github.com/stretchr/testify` | v1.12.0 | the only assertion library |
-| `github.com/spf13/cobra` | **transitive — pinned once in [001's plan](../001-walking-skeleton/plan.md#technical-context), never a direct `require`** | via PocketBase's `RootCmd`; `medigo seed` gains lab results, components and documents; `medigo purge` gains the trash sweep. The version is whatever `pocketbase@v0.40.1`'s `go.mod` requires and is not restated here (cross-artifact finding M2) |
+| `github.com/spf13/cobra` | **transitive — pinned once in [001's plan](../001-walking-skeleton/plan.md#technical-context), never a direct `require`** | via PocketBase's `RootCmd`; `medikube seed` gains lab results, components and documents; `medikube purge` gains the trash sweep. The version is whatever `pocketbase@v0.40.1`'s `go.mod` requires and is not restated here (cross-artifact finding M2) |
 | `modernc.org/sqlite` | v1.57.0 | transitive via PocketBase; pure Go, so `CGO_ENABLED=0` holds |
 
 **Forbidden and absent**: gin, huma, viper, `samber/mo`, `samber/ro`, `samber/slog-zerolog`, any
@@ -132,7 +132,7 @@ Plus two build-tagged suites inherited from phase 003 and extended here: `test:s
 the runtime image.
 
 **Project Type**: single server-rendered Go web application, a project inside the monorepo at
-`/medigo`, image `ghcr.io/windkube/medigo`.
+`/medikube`, image `ghcr.io/windkube/medikube`.
 
 **Performance Goals** (from the spec's success criteria — these are the acceptance bar, not
 aspirations):
@@ -161,7 +161,7 @@ aspirations):
 - CSP: the application's own pages keep `default-src 'self'`, `script-src 'self' 'unsafe-eval'`,
   no `unsafe-inline`, no external origins, `frame-ancestors 'none'`, `object-src 'none'`,
   `base-uri 'self'`, and **gain `frame-src 'self'`** so the inline document viewer can frame
-  MediGo's own attachment route. Attachment responses carry their own, much tighter CSP
+  MediKube's own attachment route. Attachment responses carry their own, much tighter CSP
   (research D-16).
 - Records are **hard** deleted. `deleted_at` exists on `attachments` and on nothing else — that is
   Constitution VII's files-only soft delete, landing here for the first time.
@@ -201,7 +201,7 @@ Explicit YAGNI decisions taken and recorded:
 - **No document version history.** Replace keeps exactly one prior copy, for exactly the retention
   window, and the spec says so.
 - **No per-account or per-person storage quota.** Storage is reported, not rationed.
-- **No OCR, no document parsing, no external DMS sync.** Out of scope for MediGo entirely.
+- **No OCR, no document parsing, no external DMS sync.** Out of scope for MediKube entirely.
 - **No unit conversion table.** Not deferred — forbidden, and enforced by a lint rule.
 - **No `deleted_reason` column.** Nothing in the spec filters on why a document was trashed.
 - **No document ordering column.** Listings are chronological, which is what FR-069 asks for.
@@ -291,9 +291,9 @@ characters, which is exactly the FR about non-Latin and right-to-left file names
 Scheduling is `app.Cron()`. Four collections arrive as reversible Go migrations; schema is never
 changed in the admin UI.
 
-The one place MediGo deliberately does **not** use PocketBase is the file *route*: `/api/files/`
+The one place MediKube deliberately does **not** use PocketBase is the file *route*: `/api/files/`
 serves an unprotected field to anonymous callers and 404s a protected one under nil `ViewRule`, so
-it is unusable in both directions. Files are served from MediGo's own `/api/v1` route through the
+it is unusable in both directions. Files are served from MediKube's own `/api/v1` route through the
 filesystem abstraction, authorized by the service. PocketBase's file-token mechanism is not called
 — a credential in a URL is a PHI leak, and FR-074 says so independently.
 
@@ -317,10 +317,10 @@ may name their own file to them, and a test asserts that the same file name does
 the log line, the span, the metric or the Sentry event produced by the same refusal. That
 asymmetry is the single most likely place for this phase to leak, and it is tested directly.
 
-New metrics, all with bounded label sets: `medigo_files_uploads_total{outcome,reason}`,
-`medigo_files_bytes_total` (a gauge refreshed by the same cron as the purge, instance-wide, **no
-patient label**), `medigo_files_serve_duration_seconds{disposition,outcome}`,
-`medigo_labs_series_points` (histogram), `medigo_labs_series_capped_total`. No file name, patient
+New metrics, all with bounded label sets: `medikube_files_uploads_total{outcome,reason}`,
+`medikube_files_bytes_total` (a gauge refreshed by the same cron as the purge, instance-wide, **no
+patient label**), `medikube_files_serve_duration_seconds{disposition,outcome}`,
+`medikube_labs_series_points` (histogram), `medikube_labs_series_capped_total`. No file name, patient
 id, attachment id, test name or unit is ever a label value.
 
 Datastar's `ConsoleLog`/`ConsoleError` remain banned by `forbidigo`.
@@ -348,7 +348,7 @@ This principle outranks every other and this phase is where it bites, so the dis
   `contracts/widened-authorization.md`; the reasoning and the volume consequence are in research
   D-20.
 - **Nothing uploaded can run.** The accepted-type allowlist excludes every active type by default;
-  the set of types MediGo will serve inline is a **compile-time constant that an operator cannot
+  the set of types MediKube will serve inline is a **compile-time constant that an operator cannot
   widen**; and every attachment response carries `X-Content-Type-Options: nosniff` plus its own
   `Content-Security-Policy: default-src 'none'; …` (research D-16).
 - **404, never 403**, for everything patient-scoped, including a document, its preview, a lab
@@ -363,7 +363,7 @@ This principle outranks every other and this phase is where it bites, so the dis
 - **No outbound request.** `filesystem.NewFileFromURL` is never called and a `forbidigo` pattern
   makes calling it a build failure.
 
-One consequence must be stated rather than discovered: the inline document viewer frames MediGo's
+One consequence must be stated rather than discovered: the inline document viewer frames MediKube's
 own attachment route, so the application's page CSP gains `frame-src 'self'`. That is additive —
 it weakens none of the directives the constitution names — and the framed response is itself
 locked down far harder than any page.
@@ -372,7 +372,7 @@ locked down far harder than any page.
 
 Four new pages, each covered at 1440×900 and 390×844, asserting 200, the four shell landmarks plus
 the page's own landmark, `body[data-signals]` present, zero console errors, zero page errors and
-zero failed network requests. The route list comes from `medigo routes`, so a page added without a
+zero failed network requests. The route list comes from `medikube routes`, so a page added without a
 smoke case fails the build.
 
 Three things in this phase are unusually good at making a smoke gate go falsely red, and each has a
@@ -400,7 +400,7 @@ Five gates, all `go test` or CI steps, all failing the build:
    (FR-084, SC-016).
 2. `internal/records/registry_completeness_test.go` — now asserts fifteen kinds fully wired, and
    additionally that every registered kind has an attachment-cleanup hook bound (the FR-049 gate).
-3. `e2e/routes.gate.spec.ts` — every route emitted by `medigo routes` with `Page: true` has a
+3. `e2e/routes.gate.spec.ts` — every route emitted by `medikube routes` with `Page: true` has a
    smoke case; every route with `Kind: page_action` names an existing spec that references it.
 4. `internal/platform/pb/assertions_test.go` — all five API rules `nil` on all **26** collections, and
    `Protected: true` on both file fields; the app refuses to boot otherwise.
@@ -455,15 +455,15 @@ specs/004-labs-and-attachments/
 └── tasks.md             # Phase 2 output (/speckit-tasks)
 ```
 
-### Source Code (repository root `/medigo`)
+### Source Code (repository root `/medikube`)
 
 Only paths this phase **creates** or **touches**. `[NEW]` = created here, `[EDIT]` = modified.
 
 ```text
-medigo/
-├── cmd/medigo/main.go                                       [EDIT] register 4 services + the purge cron in the container
+medikube/
+├── cmd/medikube/main.go                                     [EDIT] register 4 services + the purge cron in the container
 │
-├── internal/config/config.go                                [EDIT] +MEDIGO_LABS_MAX_SERIES_POINTS; FILES_ALLOWED_MIME default set
+├── internal/config/config.go                                [EDIT] +MEDIKUBE_LABS_MAX_SERIES_POINTS; FILES_ALLOWED_MIME default set
 ├── internal/config/config_test.go                           [EDIT] defaults, validation, the accepted-type parse
 │
 ├── internal/domain/
@@ -537,7 +537,7 @@ medigo/
 │       └── ids/ids.go                                       [EDIT] deterministic ids for the new components
 │
 ├── internal/httproute/registry.go                           [EDIT] +KindPageAction and its gate metadata
-├── internal/cli/{seed.go,purge.go,routes.go}                [EDIT] seed labs+documents; `medigo purge` runs the sweep once
+├── internal/cli/{seed.go,purge.go,routes.go}                [EDIT] seed labs+documents; `medikube purge` runs the sweep once
 ├── internal/testsupport/
 │   ├── phileak/exercise.go                                  [EDIT] +file names, descriptions, test names, values, ranges
 │   ├── scale/generate.go                                    [EDIT] +5,000 results, +100-component panel, +500 readings, +2,000 documents
@@ -597,4 +597,4 @@ phase's.
 | **Three derived columns** — `lab_results.sort_date`, `lab_results.is_panel`, `lab_components.canonical_name` (plus `attachments.has_preview`), against Principle I's dislike of stored derivations | Each removes a per-query computation that a gate depends on. `sort_date` makes FR-008's four-level COALESCE ordering a plain indexed column, which is what makes SC-011 (5,000 results, every page in 2 s) reachable. `canonical_name` is the grouping key for every trend query (FR-025) and normalising 100,000 rows per query is not a plan. `is_panel` and `has_preview` are read by list renderers that must not do extra I/O per row. All four have **exactly one writer** — the domain, inside the same `Save` that writes the source fields — so none can drift, and each is asserted by a repository contract test that mutates a source field and re-reads the derivation. | **(a) Compute at query time.** `ORDER BY COALESCE(resulted_on, collected_on, ordered_on, created)` cannot use a plain index; an expression index would work in SQLite but PocketBase's `AddIndex` path for expression indexes is unverified, and betting a performance gate on unverified framework behaviour is how a phase fails late. **(b) Compute in Go after fetching.** Requires fetching all 5,000 rows to order 25 of them, which is the exact failure SC-011 describes. **(c) A materialised view.** SQLite has none; a trigger is a second writer in a language nobody in this codebase reviews. |
 | **`attachments.owner_kind` + `owner_id` — polymorphic ownership with no foreign key**, against Principle II's preference for real relations and Principle I's preference for the boring thing | FR-049 requires that a record kind added in a future phase inherits document support **without that kind having been anticipated by this phase**. That is a structural requirement, not a convenience. The integrity risk is closed three ways: the cleanup hook is bound by `records.Register` itself, so a kind cannot be registered without it (asserted by `registry_completeness_test.go`); every write validates `owner_id` against `owner_kind`'s collection *and* against the same patient, inside the transaction; and a nightly orphan sweep in the same cron as the purge reports and quarantines anything that slipped. It also keeps file fields confined to two collections, which is what keeps the `Protected: true` boot assertion trivially auditable. | **(a) Fifteen nullable relation columns.** A schema migration on every future kind, fourteen always-null columns per row, and fifteen indexes; and it still needs a discriminator to know which one to read. **(b) A join table per kind.** Fifteen collections and fifteen cleanup hooks. **(c) Attach documents to the patient only, with a free-text label.** Loses FR-070 (open the record this belongs to) and makes FR-067 (record deletion trashes its documents) unimplementable. |
 | **Two hand-written SQL queries through `app.DB()`** in `internal/store/labtrend/sql.go`, bypassing the typed-repository shape every other store package uses | FR-024 needs "every distinct component ever recorded for this person, once, with its latest value, unit, status, reading count and latest date" — a `GROUP BY canonical_name` with a per-group latest, over a join to the parent for the patient scope and the date. FR-026 needs the readings of one component ordered by the parent's date. Through PocketBase's record API both are N+1: one query per distinct component name, of which a four-year chart has dozens. At the 100,000-component-row target that is minutes, and SC-003 allows two seconds. The queries are confined to one file, are fully parameterised (`dbx` named bindings; **no string interpolation of `q`, `canonical_name` or `unit` — ever**), take their `patient` value from the `access.Grant` and never from the raw request, and are covered by integration tests against a real test app plus an injection test that feeds `%'; DROP TABLE` shaped input through every text parameter. | **(a) The record API plus in-Go grouping.** Fetch every component row for the patient to group 40 of them — the SC-003 failure again. **(b) A denormalised `component_rollup` collection.** A genuine cache with a second writer, which is what Principle I is for. **(c) Store the trend.** Contradicts the spec outright: *"Nothing about it is stored separately from the readings it is computed from, so correcting a reading corrects the comparison."* |
-| **A fourth route class, `KindPageAction`**, for four page-layer routes that are neither navigable pages nor public API: `POST /documents/upload`, `GET /documents/list`, `GET /lab-results/component-suggest`, `GET /labs/trends/series` | Two independent forces produce them. **(1) The upload cannot be Datastar.** `data-bind` on a file input produces a `{name, contents, mime}[]` signal with base64 contents; at the 32 MiB limit that is ~43 MiB of JSON held in browser memory and posted as a request body, which exceeds the body limit before the file is even read. The upload is therefore a native `<form enctype="multipart/form-data">` posting to a page-layer action that answers `303`. **(2) Datastar patches HTML, and the API returns JSON.** A filter, a page change, a post-delete refresh and an autocomplete listbox all need server-rendered HTML fragments; `/api/v1` is JSON-in/JSON-out by convention rule 14 and must stay that way. Making these a *declared class* rather than untracked handlers is what keeps Principle IX honest: each appears in `medigo routes`, is excluded from OpenAPI deliberately rather than accidentally, and must name the Playwright spec that exercises it or the gate fails. | **(a) Content-negotiate inside `/api/v1`.** Puts browser redirect semantics and HTML rendering into the JSON API, breaks the "two shapes per resource, both in OpenAPI" rule, and makes the OpenAPI document lie about what the route returns. **(b) Serve fragments from the page route under a magic query parameter.** A hidden mode on a gated route: the smoke gate covers the page and silently never covers the fragment. **(c) Base64 the upload through Datastar anyway.** Fails at the request body limit, triples memory, and makes SC-004's byte-for-byte guarantee depend on a base64 round trip in two languages. **(d) A second origin for attachments.** Would be the textbook answer to the inline-viewing risk, but MediGo is single-instance with one `PublicURL`; a second origin means a second certificate, a second cookie domain and a second CSP surface for one iframe. |
+| **A fourth route class, `KindPageAction`**, for four page-layer routes that are neither navigable pages nor public API: `POST /documents/upload`, `GET /documents/list`, `GET /lab-results/component-suggest`, `GET /labs/trends/series` | Two independent forces produce them. **(1) The upload cannot be Datastar.** `data-bind` on a file input produces a `{name, contents, mime}[]` signal with base64 contents; at the 32 MiB limit that is ~43 MiB of JSON held in browser memory and posted as a request body, which exceeds the body limit before the file is even read. The upload is therefore a native `<form enctype="multipart/form-data">` posting to a page-layer action that answers `303`. **(2) Datastar patches HTML, and the API returns JSON.** A filter, a page change, a post-delete refresh and an autocomplete listbox all need server-rendered HTML fragments; `/api/v1` is JSON-in/JSON-out by convention rule 14 and must stay that way. Making these a *declared class* rather than untracked handlers is what keeps Principle IX honest: each appears in `medikube routes`, is excluded from OpenAPI deliberately rather than accidentally, and must name the Playwright spec that exercises it or the gate fails. | **(a) Content-negotiate inside `/api/v1`.** Puts browser redirect semantics and HTML rendering into the JSON API, breaks the "two shapes per resource, both in OpenAPI" rule, and makes the OpenAPI document lie about what the route returns. **(b) Serve fragments from the page route under a magic query parameter.** A hidden mode on a gated route: the smoke gate covers the page and silently never covers the fragment. **(c) Base64 the upload through Datastar anyway.** Fails at the request body limit, triples memory, and makes SC-004's byte-for-byte guarantee depend on a base64 round trip in two languages. **(d) A second origin for attachments.** Would be the textbook answer to the inline-viewing risk, but MediKube is single-instance with one `PublicURL`; a second origin means a second certificate, a second cookie domain and a second CSP surface for one iframe. |

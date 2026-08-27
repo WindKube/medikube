@@ -12,7 +12,7 @@
 
 ## Summary
 
-This phase turns MediGo from "an application that holds medications for a person" into a
+This phase turns MediKube from "an application that holds medications for a person" into a
 complete clinical chart. It registers **thirteen new record kinds** — allergy, condition,
 encounter, procedure, treatment, symptom, vitals, immunization, injury, insurance, equipment,
 emergency contact and family member — into the record-kind registry that phase 001 built,
@@ -58,15 +58,15 @@ declares `go 1.27` and imports the Go 1.27 stdlib package `encoding/json/v2` in 
 | `github.com/pocketbase/pocketbase` | v0.40.1 | 16 new collections as Go migrations; `RunInTransaction`; post-commit model hooks; cascade delete; multi-relation + back-relation traversal |
 | `github.com/a-h/templ` | v0.3.1020 | 3 components per kind (Row/List/Detail) + tag manager, search, timeline pages |
 | `github.com/starfederation/datastar-go` | v1.2.2 | Create/edit drawers, link editors, live list patches via the phase-001 SSE bridge |
-| `github.com/caarlos0/env/v11` | v11.4.1 | `MEDIGO_SEARCH_*` and `MEDIGO_LIST_*` knobs only if genuinely required (default: none added) |
+| `github.com/caarlos0/env/v11` | v11.4.1 | `MEDIKUBE_SEARCH_*` and `MEDIKUBE_LIST_*` knobs only if genuinely required (default: none added) |
 | `github.com/rs/zerolog` | v1.35.1 | the only logger; PHI-redacting `MarshalZerologObject` on 13 new entities |
 | `github.com/getsentry/sentry-go` | v0.48.0 | errors/panics only, scrubbed |
-| `github.com/prometheus/client_golang` | latest pinned | `medigo_records_*` counters; `kind` label now bounded at 14 values |
+| `github.com/prometheus/client_golang` | latest pinned | `medikube_records_*` counters; `kind` label now bounded at 14 values |
 | `go.opentelemetry.io/otel` | latest pinned | `service.<kind>.<Method>` and `store.<collection>.<op>` spans |
 | `github.com/samber/do` | v2 | container providers for 13 new services |
 | `github.com/samber/lo` | v1.53.0 | sparingly, per Principle IV |
 | `github.com/stretchr/testify` | v1.12.0 | the only assertion library |
-| `github.com/spf13/cobra` | **transitive — pinned once in [001's plan](../001-walking-skeleton/plan.md#technical-context), never a direct `require`** | reached only via PocketBase's `RootCmd`, which already is a `*cobra.Command`; `medigo seed` gains 13 kinds. The version is whatever `pocketbase@v0.40.1`'s `go.mod` requires and is not restated here (cross-artifact finding M2) |
+| `github.com/spf13/cobra` | **transitive — pinned once in [001's plan](../001-walking-skeleton/plan.md#technical-context), never a direct `require`** | reached only via PocketBase's `RootCmd`, which already is a `*cobra.Command`; `medikube seed` gains 13 kinds. The version is whatever `pocketbase@v0.40.1`'s `go.mod` requires and is not restated here (cross-artifact finding M2) |
 | `modernc.org/sqlite` | v1.57.0 | transitive via PocketBase; pure Go, so `CGO_ENABLED=0` holds |
 
 **Forbidden and absent**: gin, huma, viper, `samber/mo`, `samber/ro`, `samber/slog-zerolog`, any
@@ -90,7 +90,7 @@ unit against hand-written fakes with `t.Parallel()`; integration against a throw
 No Node.js in the runtime image.
 
 **Project Type**: single server-rendered Go web application, a project inside the
-`windkube` monorepo at `/medigo`, image `ghcr.io/windkube/medigo`.
+`windkube` monorepo at `/medikube`, image `ghcr.io/windkube/medikube`.
 
 **Performance Goals** (from the spec's success criteria, and they are the acceptance bar):
 
@@ -229,7 +229,7 @@ normal user.
 
 zerolog only. Every one of the 13 new domain entities implements `MarshalZerologObject` emitting
 **only** its opaque id and patient id, so logging one by accident cannot leak a diagnosis, a
-member number or a note (FR-086, SC-012). The `medigo_records_*` metric family adds a `kind`
+member number or a note (FR-086, SC-012). The `medikube_records_*` metric family adds a `kind`
 metric label bounded at 14 values; no patient id, record id, tag name or search term ever becomes
 a metric label value. **FR-075 gets its own gate**: a `forbidigo`-style check plus a runtime test asserts the
 search term never reaches a log line, a span attribute, a metric label or a Sentry event.
@@ -260,14 +260,14 @@ recorder and the Sentry transport, and asserts zero sentinel occurrences.
 
 29 new pages, each covered at 1440×900 and 390×844, asserting 200, the four shell landmarks plus
 the page's own landmark, `body[data-signals]` present, and zero console errors / page errors /
-failed requests. The route list is derived from `medigo routes`, so a page added without a smoke
+failed requests. The route list is derived from `medikube routes`, so a page added without a smoke
 case fails the build (FR-093, SC-015). The seeded instance deliberately leaves several of these
 pages empty so the `@EmptyState` path is what the landmark assertion exercises — that is the most
 common way a smoke gate goes falsely green *or* falsely red.
 
 **The seven status views enter the gate too, and they are not seven more pages.** FR-078's views
 are query strings on kind lists (`/conditions?active=true`, …) because FR-079 requires exactly
-that, so `medigo routes` would not list them and the gate — which is derived from that inventory —
+that, so `medikube routes` would not list them and the gate — which is derived from that inventory —
 would not visit them, while FR-080 demands a helpful empty state on **every** one. The page spec
 therefore gains one optional field, `SmokeVariants []string`: additional **concrete** URLs on an
 already-registered route that the gate must also visit, emitted inside their route's entry, not
@@ -288,7 +288,7 @@ Four gates, all `go test` or CI steps, all failing the build:
 2. `internal/records/registry_completeness_test.go` — every `kind.Kind` value has a registry
    entry, an OpenAPI `oneOf` branch with a `kind` discriminator, exactly two page routes, a
    default sort, a searchable-field declaration, a seed fixture and two smoke cases.
-3. `e2e/routes.gate.spec.ts` — every route emitted by `medigo routes` with `Page: true` has a
+3. `e2e/routes.gate.spec.ts` — every route emitted by `medikube routes` with `Page: true` has a
    smoke case, **and every `SmokeVariants` entry on it is visited too**; an uncovered route, or a
    status-view catalogue entry with no variant, fails.
 4. golangci-lint v2 with `depguard` (import boundary) and `forbidigo` (`app.Logger()`,
@@ -332,7 +332,7 @@ specs/003-clinical-records/
 └── tasks.md             # Phase 2 output (/speckit-tasks)
 ```
 
-### Source Code (repository root `/medigo`)
+### Source Code (repository root `/medikube`)
 
 Only paths this phase **creates** or **touches** are listed. `[NEW]` = created here,
 `[EDIT]` = an existing file this phase modifies. `<kind>` expands to the thirteen kinds:
@@ -340,8 +340,8 @@ Only paths this phase **creates** or **touches** are listed. `[NEW]` = created h
 equipment emergencycontact familymember`.
 
 ```text
-medigo/
-├── cmd/medigo/main.go                                  [EDIT] register 13 services in the container
+medikube/
+├── cmd/medikube/main.go                                [EDIT] register 13 services in the container
 │
 ├── internal/domain/
 │   ├── kind/kind.go                                    [EDIT] +13 Kind values, path segments, plural labels
@@ -455,7 +455,7 @@ ordinary collection matched with `LIKE` rather than an FTS5 virtual table with a
 | `medication` is phase 003 | It was delivered in 001 and is only **extended** here | Phase 001's charter. This phase adds its `tags` relation and it becomes a link target. |
 | `immunization.catalog_vaccine` relation, `catalog_vaccines` collection | Not built | Phase 003's spec explicitly defers a standardised vaccine library: *"nothing in this phase's requirements needs it, and adding it here would be work done ahead of a requirement."* The field is left out of the collection entirely rather than added and left null — adding it later is one reversible migration. |
 | the contract's page inventory across all phases | **±0**: `/timeline` is added by this phase and SHARED-DESIGN §3.1 already counts it inside the authoritative **58**. When this plan was first written the contract listed 57 and this row claimed +1; the contract has since absorbed `/timeline` (and 005's `/invite/{token}`) into its reconciliation — *"56 + 2 = 58"* — so **the delta against the contract as published is zero** and this row records a page this phase originates, not a page it ships beyond the inventory (corrected 2026-08-27, ANALYSIS N6). | FR-076/077 require a narrowable cross-kind chronological view; no existing page can carry it (the dashboard's landmark and purpose are phase 001's). Cost: 1 route, 2 smoke cases, 0 API operations — it reads the existing `GET /api/v1/records`. |
-| `search_index` is an **FTS5 virtual table** created by a raw SQL migration, kept in step by the post-commit hooks and rebuilt by **`medigo reindex`** (§1.2) | An **ordinary PocketBase collection** (`data-model.md` §5.3) matched with `LIKE '%term%'` over `title` and `body`, ordered by `occurred_on DESC, id DESC`. **No FTS5 virtual table, and no `reindex` subcommand** — the CLI keeps 001's six (`001/contracts/cli.md`) | FR-073 forbids claiming relevance ranking, and ranking is the only thing FTS5 buys; with results ordered by date there is nothing for `rank` to do. So the FTS5 route would charge this phase a raw SQL migration PocketBase's migrations cannot model, a second maintenance path beside the post-commit hooks, and a seventh CLI subcommand — for a column FR-073 forbids reading. **The reason is not availability**: risk R3 is CLOSED (VERIFIED-SOURCE-FACTS FACT 11 — FTS5, `MATCH` and `rank` all work in `modernc.org/sqlite` v1.57.0, the version PocketBase v0.40.1 pulls), and §1.2 says **MAY**, not MUST. An earlier draft of `contracts/search.md` and of research D-11 gave "FTS5 availability is unverified" as the reason; the dossier refutes it and this row replaces it (deviation recorded 2026-08-27, ANALYSIS N12). Revisit only if a future spec asks for ranking; SHARED-DESIGN §1.2 records what that would cost. |
+| `search_index` is an **FTS5 virtual table** created by a raw SQL migration, kept in step by the post-commit hooks and rebuilt by **`medikube reindex`** (§1.2) | An **ordinary PocketBase collection** (`data-model.md` §5.3) matched with `LIKE '%term%'` over `title` and `body`, ordered by `occurred_on DESC, id DESC`. **No FTS5 virtual table, and no `reindex` subcommand** — the CLI keeps 001's six (`001/contracts/cli.md`) | FR-073 forbids claiming relevance ranking, and ranking is the only thing FTS5 buys; with results ordered by date there is nothing for `rank` to do. So the FTS5 route would charge this phase a raw SQL migration PocketBase's migrations cannot model, a second maintenance path beside the post-commit hooks, and a seventh CLI subcommand — for a column FR-073 forbids reading. **The reason is not availability**: risk R3 is CLOSED (VERIFIED-SOURCE-FACTS FACT 11 — FTS5, `MATCH` and `rank` all work in `modernc.org/sqlite` v1.57.0, the version PocketBase v0.40.1 pulls), and §1.2 says **MAY**, not MUST. An earlier draft of `contracts/search.md` and of research D-11 gave "FTS5 availability is unverified" as the reason; the dossier refutes it and this row replaces it (deviation recorded 2026-08-27, ANALYSIS N12). Revisit only if a future spec asks for ranking; SHARED-DESIGN §1.2 records what that would cost. |
 | `audit_events.action` / `.target_kind` vocabularies | Extended, additively, by **two target-kind values only** | Phase 001 declares the contract's complete vocabulary, so the thirteen new record kinds and `access_denied` are already there — `access_denied` arrives with `audit_events` in 001 (001 research D-20) rather than here, so refusals are not encoded two ways either side of this phase, and FR-084 is satisfied by a value that already exists. This phase adds `tag` (tags are auditable resources, FR-059) and `search` (the target kind of a search's row, D-12). The migration's test asserts the **complete** set after this phase — twenty-one actions, twenty-seven target kinds — never a delta. Closes cross-artifact findings **C1**, **M1** and **L3**. |
 
 Net effect of **this phase** on the contract's headline numbers: operations **±0** (none added or

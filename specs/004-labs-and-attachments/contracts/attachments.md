@@ -20,7 +20,7 @@ stream. Replacement is not a seventh operation either — it is `POST /attachmen
 
 ## 1. `POST /api/v1/attachments`
 
-`Content-Type: multipart/form-data`. This is one of exactly two non-JSON operations in MediGo.
+`Content-Type: multipart/form-data`. This is one of exactly two non-JSON operations in MediKube.
 
 | Part | Required | Notes |
 |---|---|---|
@@ -41,7 +41,7 @@ stream. Replacement is not a seventh operation either — it is `POST /attachmen
 | body size, via `http.MaxBytesReader` **before** the multipart parse | 1 | `413 payload_too_large`, message states the limit in bytes; **nothing is stored and nothing is spilled to disk** (FR-053) |
 | `size_bytes > 0` | 2 | `422`, code `empty_file` (FR-054) |
 | **type sniffed from the content**, never from the part's `Content-Type` and never from the file name | 3 | — |
-| sniffed type ∈ `MEDIGO_FILES_ALLOWED_MIME` | 4 | `415`, code `unsupported_file_type`, message **names the accepted types** (FR-052) |
+| sniffed type ∈ `MEDIKUBE_FILES_ALLOWED_MIME` | 4 | `415`, code `unsupported_file_type`, message **names the accepted types** (FR-052) |
 | `owner_kind` is a registered kind | 5 | `422`, `invalid_value` |
 | `owner_id` resolves in `owner_kind`'s collection **and** belongs to `patient` | 6 | `404 not_found`, disclosing nothing (FR-050) |
 | the actor may reach `patient` | 0 (first) | `404 not_found` |
@@ -147,7 +147,7 @@ With `?usage=true`:
 
 Trashed documents are counted **separately**, never folded into the live total (FR-071). The
 instance-wide total is an operator concern and belongs to phase 006's `/api/v1/admin/system`; this
-phase publishes it as the unlabelled Prometheus gauge `medigo_files_bytes_total`.
+phase publishes it as the unlabelled Prometheus gauge `medikube_files_bytes_total`.
 
 ### 2.3 Paging and scale
 
@@ -221,7 +221,7 @@ is `404` — the client should not have asked, and the list DTO told it not to.
 | an unknown `size` value | `400 bad_request` |
 
 **A document's address is not a credential** (FR-074): there is no `?token=`, no signed URL and no
-`e.Auth.NewFileToken()` call anywhere in MediGo — a `forbidigo` pattern makes calling it a build
+`e.Auth.NewFileToken()` call anywhere in MediKube — a `forbidigo` pattern makes calling it a build
 failure. Possessing the URL gives nothing to anyone who could not already reach that patient.
 
 ### 3.6 Audit
@@ -264,7 +264,7 @@ is `404`.
 ## 5. `DELETE /api/v1/attachments/{id}`
 
 `204`. Sets `deleted_at = now`. The document stops being listed with its record and in the library,
-and remains recoverable for `MEDIGO_RETENTION_TRASH_DAYS` (default **30**) — a window the UI states
+and remains recoverable for `MEDIKUBE_RETENTION_TRASH_DAYS` (default **30**) — a window the UI states
 at the moment the account holder confirms (FR-063).
 
 `?purge=true` is hard: the row, the blob and the thumbnails go, permanently, before the window has
@@ -310,14 +310,14 @@ document back and its content is no longer stored** (FR-066, SC-007).
 
 ## 7. Scheduled maintenance (not an operation)
 
-One `app.Cron()` entry, `medigo_attachment_maintenance`, daily, also runnable once as
-`medigo purge`:
+One `app.Cron()` entry, `medikube_attachment_maintenance`, daily, also runnable once as
+`medikube purge`:
 
 1. hard-delete every attachment whose `deleted_at` is older than the retention window; PocketBase
    removes the blob and the thumbnails with the record (FR-066);
 2. sweep for orphans — rows whose `(owner_kind, owner_id)` no longer resolves — and move them to
    the trash, reporting the count as a gauge (research D-13);
-3. refresh `medigo_files_bytes_total`.
+3. refresh `medikube_files_bytes_total`.
 
 A failure is logged, counted and retried on the next run. Each row is its own delete, so documents
 remain **wholly** in the trash rather than half-deleted (edge case: environment failures).
@@ -333,7 +333,7 @@ deleting and purging auditable, and a cron purge is still a purge. Step 3 writes
 writes therefore fills `request_id` from the **run id** on the job's context, minted by the same
 helper that mints request ids, and carried on that run's zerolog lines — so "which purge deleted
 this document" is one query (001 [data-model](../../001-walking-skeleton/data-model.md) §3, 001
-T240). All rows of one run share one `run_id`. `medigo purge`, which runs the same function from
+T240). All rows of one run share one `run_id`. `medikube purge`, which runs the same function from
 the CLI, mints its own the same way.
 
 ---

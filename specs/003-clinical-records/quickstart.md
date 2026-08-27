@@ -18,7 +18,7 @@ go version        # must print go1.27.x — NOT 1.26.5
 go1.27"*. Unset it.
 
 ```bash
-cd /Users/krzysztof.wiatrzyk/private/monorepo/medigo
+cd /Users/krzysztof.wiatrzyk/private/monorepo/medikube
 unset GOTOOLCHAIN
 task install:tailwind          # pinned standalone binary; note the x64-not-amd64 asset name
 task install:golangci-lint     # v2; v1 does not understand Go 1.27
@@ -57,7 +57,7 @@ field is served to anonymous callers.
 ## 2. Seed a chart worth looking at
 
 ```bash
-task seed                      # medigo seed — deterministic, idempotent
+task seed                      # medikube seed — deterministic, idempotent
 ```
 
 The seed creates the Playwright test user, three patients, and records across every one of the
@@ -211,7 +211,7 @@ task check                       # gen + vet + lint + test
 task test                        # go test -race -count=1 ./...
 task openapi                     # regenerate api/openapi.json
 git diff --exit-code api/openapi.json     # MUST be clean — an unintended API change is a diff
-task routes                      # medigo routes -> the JSON inventory
+task routes                      # medikube routes -> the JSON inventory
 task test:e2e                    # Playwright, both viewports
 ```
 
@@ -221,7 +221,7 @@ Four gates fail the build independently:
 |---|---|
 | `internal/openapi/gate_test.go` | a registered `operationId` is missing from `api/openapi.json`, or vice versa |
 | `internal/records/registry_completeness_test.go` | a `kind.Kind` value lacks a registry entry, a `oneOf` branch with a `kind` discriminator, two page routes, a default sort, a searchable-field declaration, a seed fixture or two smoke cases |
-| `e2e/routes.gate.spec.ts` | a route from `medigo routes` with `Page: true` has no smoke case |
+| `e2e/routes.gate.spec.ts` | a route from `medikube routes` with `Page: true` has no smoke case |
 | `golangci-lint run` | `depguard` (a service or domain package imported PocketBase, `net/http` or templ), `forbidigo` (`app.Logger()`, `fmt.Print*`, `log.*`, `OnRecord*Request`, the Datastar inline-script family, a Datastar Pro attribute) |
 
 Occasional / nightly:
