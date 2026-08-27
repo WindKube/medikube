@@ -29,3 +29,9 @@ jobs:
       # job is fast enough to run on every push.
       - name: Structural assertions over specs/
         run: bash scripts/check-spec-structure.sh
+
+      # Separate step so the summary says which of the two failed. The guard needs
+      # the full history only in the sense that it reads the index; the shallow
+      # checkout above is enough because it greps tracked files at this commit.
+      - name: The old project name has not come back
+        run: bash scripts/check-naming.sh

@@ -57,11 +57,17 @@ tasks:
     desc: The test tier
     cmds:
       - task: test:specs
+      - task: test:naming
 
   test:specs:
     desc: Structural assertions over specs/
     cmds:
       - bash scripts/check-spec-structure.sh
+
+  test:naming:
+    desc: The old project name has not come back
+    cmds:
+      - bash scripts/check-naming.sh
 
   ci:
     desc: Everything CI runs

@@ -92,6 +92,15 @@ repos:
         always_run: true
         pass_filenames: false
 
+      # Whole-corpus for the same reason: the old name can reappear in any file,
+      # including one this commit does not touch.
+      - id: check-naming
+        name: the old project name is gone
+        entry: scripts/check-naming.sh
+        language: script
+        always_run: true
+        pass_filenames: false
+
       # The half check-spec-structure.sh cannot do: cross-file heading anchors.
       # A renamed heading breaks every `#d-NN` citation pointing at it and
       # nothing else in this list would notice.
