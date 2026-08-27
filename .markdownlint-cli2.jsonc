@@ -1,0 +1,67 @@
+// Lint rules for a corpus of hand-written specification prose. The point of the
+// gate is to catch markup that renders WRONG, not to impose a house prose style:
+// every rule turned off below is one this corpus violates on purpose, and every
+// rule left on is one whose violations were genuine defects in the source.
+{
+  "config": {
+    "default": true,
+
+    // Specs quote OpenAPI paths, Go struct tags and enum value sets in table
+    // cells that cannot be wrapped, and the prose is hard-wrapped by hand at
+    // whatever width the sentence wanted.
+    "MD013": false,
+
+    // Table pipe padding is inconsistent across ~2700 rows because the tables
+    // were written by hand at different times. MD055/MD056 stay on, so a table
+    // that is actually broken still fails; this only drops the cosmetic half.
+    "MD060": false,
+
+    // Tabs are legitimate inside the quoted Go, SQL and shell samples. Outside
+    // a code block a tab is an accident, so the rule keeps that half.
+    "MD010": { "code_blocks": false },
+
+    // Many fences hold directory trees, HTTP wire dumps and terminal output,
+    // none of which has an info string worth inventing.
+    "MD040": false,
+
+    // "**Source:**", "**Decision:**", "**Mandatory test.**" are lead-ins to the
+    // paragraph that follows, not section titles; making them headings would put
+    // them in the document outline where they do not belong.
+    "MD036": false,
+
+    // Every entity section repeats "### Foreign keys", "### Enums", "### Notes".
+    // That parallel structure is the readable thing here.
+    "MD024": false,
+
+    // Headings are written as questions and as sentences ("## 0. CRITICAL CAVEAT
+    // ON ENUMS — read this first").
+    "MD026": false,
+
+    // Ordered lists are written both 1./2./3. and all-1., and the specs
+    // interleave prose and fences between items where renumbering is noise.
+    "MD029": false,
+
+    // Contract and research files open with front matter or a lead paragraph
+    // before their first heading.
+    "MD041": false,
+
+    // A few long documents carry more than one top-level title because they
+    // concatenate sections that were drafted separately.
+    "MD025": false,
+
+    // Inline HTML is used for the handful of anchors and <br> line breaks inside
+    // table cells that Markdown cannot express.
+    "MD033": false,
+
+    // Bullet characters vary between documents; consistency here buys nothing.
+    "MD004": false
+  },
+
+  // Scaffolding vendored by the Specify CLI. It is rewritten wholesale on every
+  // `specify` refresh, so any fix made here is lost and any failure here is not
+  // ours to fix.
+  "ignores": [
+    ".specify/**",
+    ".claude/**"
+  ]
+}

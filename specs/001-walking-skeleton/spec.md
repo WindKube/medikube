@@ -224,6 +224,7 @@ A maintainer of MediGo needs the build to fail when somebody adds a page without
 - **FR-012**: The system MUST NOT allow a person to set or change their own permission tier or account status, through sign-up or through editing their profile.
 - **FR-013**: The system MUST allow a person to delete their own account, requiring re-entry of their password and an explicitly typed confirmation, and MUST state plainly beforehand that the action cannot be undone.
 - **FR-014**: Account deletion MUST permanently remove the account and every medication recorded under it, after which those credentials MUST NOT sign in and none of that person's clinical data MUST remain retrievable anywhere in the system.
+
 #### Recovering an account and confirming its address
 
 *(Added after the first five requirement groups were numbered, so these five carry the next free

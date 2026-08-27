@@ -31,6 +31,7 @@ preamble makes the constitution supreme and itself binding only "until it is ame
 specification that has been written, clarified and accepted is that amendment for scope purposes.
 
 **Alternatives considered.**
+
 - *Follow SHARED-DESIGN's table and treat this phase as reference-and-catalogs.* Rejected: it
   would leave `002-patient-core/spec.md`, an accepted specification with 56 functional
   requirements, unimplemented by any phase.
@@ -38,6 +39,7 @@ specification that has been written, clarified and accepted is that amendment fo
   table is affected, and this decision records the mapping.
 
 **Consequences to carry forward.**
+
 - Tags, `catalog_lab_tests` and `catalog_vaccines` belonged to no phase when D-25 was written.
   All three are now settled: `tags` went to phase 003, `catalog_lab_tests` to phase 004, and
   `catalog_vaccines` was **dropped from the suite entirely** (SHARED-DESIGN §1.3, amendment
@@ -182,6 +184,7 @@ one asserting the pointer is null after the delete.
 
 **Decision.** `users.active_patient` is consulted in exactly three places, all of them
 presentation:
+
 1. rendering the switcher's current selection,
 2. redirecting a bare `/medications` to `/medications?patient={active}`,
 3. pre-filling the `patient` field on a create form.
@@ -226,6 +229,7 @@ This is a deliberate, recorded weakening of SHARED-DESIGN §6.2's third validati
 carried in the plan's Complexity Tracking table as **CT-2**.
 
 **Alternatives considered.**
+
 - *Fabricate a placeholder date of birth* (e.g. 1900-01-01). Rejected on principle: writing a value
   nobody supplied into a medical record is worse than an honest null, and FR-006 derives a
   displayed age from it — a fabricated birth date becomes a fabricated age on a clinical screen.
@@ -295,6 +299,7 @@ deletes a self-record is the cascade, which is the path FR-051 wants to allow.
 ### D-13 — The re-attribution runs as raw SQL inside the single migration transaction
 
 **Decision.** Migration `1756200600_medications_repoint.go`, in order:
+
 1. add `medications.patient` as a **non-required, non-cascading** relation;
 2. for every `users` row without a self-record patient, insert one per D-10 (via `app.Save`, so
    validation and hooks apply);
@@ -322,6 +327,7 @@ left without a person") enforced by construction rather than by hope.
 Step 5 must follow step 3: `Required: true` on a column with empty values fails validation.
 
 **Alternatives considered.**
+
 - *Per-record `Save`.* Rejected on audit-noise and cost.
 - *A global "hooks off" toggle for the duration.* Rejected — a hidden mode is precisely what
   Principle I forbids, and it would be reachable at runtime.
@@ -375,6 +381,7 @@ half-migrating — loud, which is what we want.
 ### D-16 — `Protected: true`, MediGo-owned route, eager thumbnails, no file token
 
 **Decision.**
+
 ```go
 &core.FileField{
     Name: "photo", MaxSelect: 1, Protected: true,
@@ -383,6 +390,7 @@ half-migrating — loud, which is what we want.
     Thumbs:    []string{"100x100t", "400x400f"},
 }
 ```
+
 Bytes are served only from `GET /api/v1/patients/{id}/photo?size=…` after
 `access.Authorizer.Patient(...)` succeeds, streamed through `app.NewFilesystem()` →
 `fsys.Serve(w, r, key, name)`. PocketBase's `/api/files/` route and its file-token mechanism are
@@ -413,6 +421,7 @@ thumbs anywhere else would orphan them on replace. `fsys.CreateThumb` is
 `tools/filesystem/filesystem.go:612` and is wrapped in `routine.SafeWrap` against decoder panics.
 
 **Alternatives considered.**
+
 - *Serve through PB's route with a file token.* Rejected by constitution VII: a credential in a URL
   lands in logs, proxies and referrer headers.
 - *Generate thumbs lazily in MediGo's own route.* Rejected: it makes the first list render slow and
@@ -512,12 +521,14 @@ rejected, it puts a decision in the view layer.
 activity entries, computed on every request. No counter column, no cache, no summary table.
 
 Counts come from a consumer-declared 1-method port:
+
 ```go
 // internal/service/patient
 type RecordCounter interface {
     CountByKind(ctx context.Context, patientID string) (map[kind.Kind]int, error)
 }
 ```
+
 implemented once over `internal/records`' registry — one `SELECT COUNT(*) WHERE patient = ?` per
 registered kind, each hitting that collection's `(patient)` index. One kind exists today; fifteen
 will by phase 004.
@@ -601,9 +612,11 @@ index (D-24).
 
 **Decision.** `GET /api/v1/practitioners/{id}` and `GET /api/v1/facilities/{id}` return a `usage`
 object:
+
 ```json
 "usage": { "patients": 1, "records": 12 }
 ```
+
 The delete confirmation dialog reads it from the detail response it already has.
 
 **Rationale.** FR-040 requires the warning "before they delete a directory entry"; the UI already

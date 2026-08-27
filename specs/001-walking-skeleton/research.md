@@ -34,6 +34,7 @@ makes it binding "until it is amended"; the accepted charters are that amendment
 purposes.
 
 **Alternatives considered.**
+
 - *Follow the contract's table and rebuild this phase around allergies and patients.* Rejected:
   it orphans `001-walking-skeleton/spec.md` — 72 requirements, 15 success criteria, six user
   stories, and the best-written document in the suite — and it contradicts phase 002's plan,
@@ -746,6 +747,7 @@ A forged or tampered cursor is `400 invalid_cursor` and writes an `access_denied
 ### D-26 — Validation in three layers, with exactly one authority
 
 **Decision.**
+
 1. **Decode** (`internal/web/dto.go`): shape only. Unknown fields, wrong types, malformed dates →
    `422` before any business code runs.
 2. **Domain** (`internal/domain/**`): **the authority.** `Validate()` returns a
@@ -915,6 +917,7 @@ storage credentials).
 
 **Decision.** At boot, MediGo warns loudly — a distinct, repeated, unmissable `WARN` block — when
 any of the following holds, and re-warns on every start until all are fixed:
+
 - `len(app.Settings().SuperuserIPs) == 0` — the IP allowlist is unconfigured;
 - the superusers collection's `MFA.Enabled` is false;
 - the superusers collection's `MFA.Rule` is non-empty;
@@ -1049,6 +1052,7 @@ not run; and `connect-src`/`form-action 'self'` block exfiltration while `object
 
 **Two rules keep it safe and both are lint-enforced, because they are what the compensation
 rests on:**
+
 1. **Never interpolate user data into a `data-*` expression** — not `data-text`, not `data-on:*`,
    not `data-signals`. User data reaches the client as a signal *value* or as escaped text
    content, never as expression source. A CI check greps for templ interpolation `{ ... }` inside
@@ -1139,6 +1143,7 @@ throws, which is exactly the class of bug this gate is for. The ignore list is e
 and every future entry carries a comment.
 
 **Two traps that will look like real failures:**
+
 - `waitUntil: 'networkidle'` **hangs forever** on any page holding an SSE stream — the stream
   never goes idle. The gate uses `domcontentloaded` plus an explicit landmark assertion, which is
   what Playwright's auto-waiting is for anyway.
@@ -1182,6 +1187,7 @@ that case must be stored, displayed and searched as text and never interpreted.
 ### D-40 — Monorepo integration, and the five Dockerfile traps that are not obvious
 
 **Decision.** In the same commit that creates the project:
+
 - `/.dockerignore` gains `!medigo/` in the allowlist block, plus `medigo/medigo`, `medigo/.bin/`,
   `medigo/**/*_templ.go`, `medigo/internal/web/static/app.css`, `medigo/pb_data/`,
   `medigo/**/*.db`, `medigo/**/*.db-wal`, `medigo/**/*.db-shm`.
@@ -1200,6 +1206,7 @@ and shadow what that stage produces. `pb_data/` must never enter a build context
 holds the live database and, in later phases, uploaded medical records.
 
 **The five traps, all of them recorded in `arc-ui` and all of which MediGo hits identically:**
+
 1. **The build context is the repository root**, unconditionally, because that is what the shared
    workflow passes. Every `COPY` must be project-prefixed (`COPY medigo/go.mod medigo/go.sum ./`).
    A bare `COPY go.mod ./` works locally and breaks in CI, and is the likeliest single miss in

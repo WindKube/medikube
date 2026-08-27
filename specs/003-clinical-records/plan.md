@@ -93,6 +93,7 @@ No Node.js in the runtime image.
 `windkube` monorepo at `/medigo`, image `ghcr.io/windkube/medigo`.
 
 **Performance Goals** (from the spec's success criteria, and they are the acceptance bar):
+
 - SC-002: any kind list page, any status view and the cross-type timeline render within **2 s**
   for a patient holding **50,000 records** spread across every kind.
 - SC-003: the first page of grouped search results within **3 s** at that same scale, with 100%
@@ -104,6 +105,7 @@ No Node.js in the runtime image.
 - SC-007: renaming a tag carried by 500 records across ≥8 kinds is one row update.
 
 **Constraints**:
+
 - No cgo, one binary, no runtime Node, no CDN fetch, no outbound request the operator did not
   configure (FR-088).
 - CSP: `script-src 'self' 'unsafe-eval'`; every other directive strict. No inline `<script>`, so
@@ -280,6 +282,7 @@ is asserted by Playwright keyboard-driven specs with a visible-focus assertion.
 ### IX. Compliance Is A Build Gate, Not A README Paragraph — **PASS**
 
 Four gates, all `go test` or CI steps, all failing the build:
+
 1. `internal/openapi/gate_test.go` — the route registry and the committed `api/openapi.json`
    agree on every `operationId`; the regenerated document is byte-identical to the committed one.
 2. `internal/records/registry_completeness_test.go` — every `kind.Kind` value has a registry

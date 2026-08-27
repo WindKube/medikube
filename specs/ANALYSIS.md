@@ -236,7 +236,7 @@ characters, compact timestamp). Two compositions in phase 006 break that budget:
 1. **The safety copy.** `006/contracts/admin-backups.md:203` — `app.CreateBackup(ctx,
    "medigo_safety_<rfc3339>_<name>")`, where `<name>` is the archive being restored, itself
    `medigo_<rfc3339>.zip` per `:73`. Spelling `<rfc3339>` literally (`2026-08-27T12:00:00Z`, 20
-   chars) gives `14 + 20 + 1 + 31 = ` **66 characters**. That name is written into `target_id` by the
+   chars) gives `14 + 20 + 1 + 31 =` **66 characters**. That name is written into `target_id` by the
    journal-replayed `backup_create` row (`admin-backups.md:220`, research D-23, T191) — the row that
    exists specifically to survive the restore. With the compact timestamp 001 exemplifies it is 54
    and fits; the suite never says which spelling wins.
@@ -268,6 +268,7 @@ notification stream all add the unanswered-invitation badge to the primary nav, 
 The `#notice-region` repair rewrote §2 as:
 
 > ## 2. Shell change
+>
 > **None.** This phase adds no element to `internal/web/views/shell/layout.templ`.
 
 Twenty-two lines later, `005/contracts/pages.md:62`:
@@ -287,8 +288,8 @@ that gets a settled decision re-opened — a reader who spots the contradiction 
 
 *Fix*: §2 becomes *"**No new region.** This phase adds no live region, no landmark and no patch
 target to `shell/layout.templ`; the one change to that file is §3's unanswered-invitation badge
-inside the existing primary nav."* Then `plan.md:512` reads `[EDIT] invitation badge in
-#primary-nav; notices patch into 001's #toast`, and T136's rationale becomes *"prove this phase
+inside the existing primary nav."* Then `plan.md:512` reads `[EDIT] invitation badge in #primary-nav;
+notices patch into 001's #toast`, and T136's rationale becomes *"prove this phase
 added no landmark and no live region"*.
 
 ### Low
@@ -296,7 +297,6 @@ added no landmark and no live region"*.
 **N4 — Two stale finding-id citations and one deviation row whose archaeology does not reconcile.**
 
 > **CLOSED 2026-08-27.** `001/tasks.md:172` and `:180` now cite **H1**. The two deviation rows in `001/plan.md` carrying unreconstructable pre-amendment figures are stamped as provenance-only; their current-state halves (22 operations, 9 pages + 3 error views) were already correct and agree with §2.3 and §3.1.
-
 
 - `001/tasks.md:172` and `:180` still cite the singular/plural medication-path drift as
   *"cross-artifact finding H2"*. The settled id is **H1**; `001/plan.md:533`, `:821` and

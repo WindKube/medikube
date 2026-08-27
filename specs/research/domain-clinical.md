@@ -154,6 +154,7 @@ fields; the first does not. Both are served, from different routers, for the sam
 be able to update them. Same for `weight` (992) and `physician_id` (`exclusiveMinimum` on update only).
 
 ### Foreign keys
+
 - `physician_id` → Practitioner. **N:1**, optional.
 - `owner_user_id` → User. **N:1**, required.
 - Patient is the parent of every clinical entity: **1:N** to all of allergies, conditions,
@@ -161,6 +162,7 @@ be able to update them. Same for `weight` (992) and `physician_id` (`exclusiveMi
   insurance, medical equipment, emergency contacts, lab results.
 
 ### Related endpoints / derived shapes
+
 - `PatientListResponse`: `patients[]`, `total_count`, `owned_count`, `shared_count`.
 - `PatientDashboardStats`: `patient_id`, `total_records`, `active_medications`, `total_lab_results`,
   `total_procedures`, `total_treatments`, `total_conditions`, `total_allergies`,
@@ -194,6 +196,7 @@ and `is_active` (only a stored boolean on emergency contacts / specialties / sha
 No `created_at` / `updated_at` in the response.
 
 ### Enums
+
 - **`severity`** — DERIVED: `mild`, `moderate`, `severe`, `life-threatening`.
   Evidence: `GET /api/v1/allergies/patient/{id}/critical` is documented as
   *"Get critical (**severe and life-threatening**) allergies for a patient."*, and `InjuryCreate.severity`
@@ -202,15 +205,18 @@ No `created_at` / `updated_at` in the response.
   dedicated `/patient/{id}/active` endpoint. Filterable via `?status=`.
 
 ### Foreign keys
+
 - `patient_id` → Patient. **N:1**, required.
 - `medication_id` → Medication. **N:1**, optional — *"ID of the medication causing this allergy"*.
   A single direct FK, **not** a link table: an allergy can name at most one culprit medication.
 
 ### Nested read shape
+
 `AllergyWithRelations` = `AllergyResponse` + `patient` (full `PatientResponse`) + `medication`
 (full `MedicationResponse`). Full objects inlined, not summaries.
 
 ### Endpoints
+
 `POST|GET /allergies/`, `GET|PUT|DELETE /allergies/{id}`,
 `GET /allergies/patient/{pid}/active`, `/critical`, `/check/{allergen}` (untyped 200 —
 *"Check if a patient has any active allergies to a specific allergen"*),
@@ -244,12 +250,14 @@ the required one; `condition_name` is optional and nullable. Nothing in the spec
 `condition_name` is vestigial.
 
 ### Enums
+
 - **`status`** — DERIVED: `active`, `inactive`, `resolved`, `chronic`, `recurrence`.
   Evidence: required with **no default** (so the client must always supply it), `/patient/{id}/active`
   endpoint, `?active_only=` on `/conditions/dropdown`, `?status=` filter.
 - **`severity`** — DERIVED: `mild`, `moderate`, `severe`, `life-threatening` (same ladder as allergy/injury).
 
 ### Foreign keys
+
 - `patient_id` → Patient. **N:1** required.
 - `practitioner_id` → Practitioner. **N:1** optional (diagnosing clinician).
 - **Inbound**, as a direct FK on the child: `Encounter.condition_id`, `Procedure.condition_id`,
@@ -257,7 +265,9 @@ the required one; `condition_name` is optional and nullable. Nothing in the spec
 - **Many-to-many** via link tables: Medication, Lab Result, Injury, Symptom (§27).
 
 ### Nested read shape
+
 `ConditionWithRelations` = fields + `patient` (untyped object) + `practitioner` (untyped object)
+
 + `treatments` (untyped array). Note this one uses untyped `object` where `AllergyWithRelations`
 used typed refs — the nesting strategy is per-endpoint improvisation.
 
@@ -295,6 +305,7 @@ The widest clinical entity, and the only one carrying a reminder/scheduling subs
 `allergen` gets 200 and `procedure_name` gets 300.
 
 ### Enums
+
 - **`medication_type`** — DERIVED: `prescription`, `otc`, `supplement`, `herbal`. Evidence: default
   `"prescription"`; no other signal in the document.
 - **`status`** — DERIVED: `active`, `stopped`, `on-hold`, `completed`, `cancelled`. Evidence:
@@ -307,6 +318,7 @@ The widest clinical entity, and the only one carrying a reminder/scheduling subs
 - **`frequency`** is deliberately free text upstream — dose-schedule modelling was never attempted.
 
 ### Foreign keys
+
 - `patient_id` → Patient **N:1** required.
 - `practitioner_id` → Practitioner **N:1** optional.
 - `pharmacy_id` → Pharmacy **N:1** optional.
@@ -314,10 +326,12 @@ The widest clinical entity, and the only one carrying a reminder/scheduling subs
 - **Many-to-many:** Condition, Lab Result, Treatment, Injury, Symptom (§27).
 
 ### Nested read shape
+
 `MedicationResponseWithNested` = fields + `practitioner` (typed `Practitioner`) + `pharmacy` (typed
 `Pharmacy`).
 
 ### `GET /medications/{id}/treatments` — the reverse of a link table, with its own DTO tree
+
 `MedicationTreatmentResponse`: `id`, `treatment_id`, `medication_id`, `specific_dosage`,
 `specific_frequency`, `specific_duration`, `timing_instructions`, `relevance_note`,
 `specific_prescriber_id`, `specific_pharmacy_id`, `specific_start_date`, `specific_end_date`,
@@ -353,21 +367,25 @@ Three purpose-built schemas to render one join in one direction.
 `reason` is required and unbounded; `chief_complaint` is optional. They mean the same thing.
 
 ### Enums
+
 - **`visit_type`** — DERIVED: `office`, `telehealth`, `urgent-care`, `emergency`, `inpatient`,
   `follow-up`, `annual`, `other`. Nothing in the spec constrains this.
 - **`priority`** — DERIVED: `routine`, `urgent`, `emergency`. Nothing in the spec constrains this.
 
 ### Foreign keys
+
 - `patient_id` → Patient **N:1** required.
 - `practitioner_id` → Practitioner **N:1** optional.
 - `condition_id` → Condition **N:1** optional.
 - **Many-to-many:** Lab Result (bidirectional route pair), Treatment (§27).
 
 ### Nested read shape
+
 `EncounterWithRelations` = fields + `patient_name` (string) + `practitioner_name` (string).
 A **third** nesting style: flattened denormalised name strings rather than nested objects.
 
 ### Endpoints
+
 `POST|GET /encounters/`, `GET|PUT|DELETE /encounters/{id}`,
 `GET /encounters/patient/{pid}/recent?days=30`,
 duplicate lists `/encounters/patients/{pid}/encounters/` and `/patients/{pid}/encounters/`.
@@ -401,6 +419,7 @@ duplicate lists `/encounters/patients/{pid}/encounters/` and `/patients/{pid}/en
 Every field is prefixed `procedure_*` inside a resource already called `procedure`. Four times.
 
 ### Enums
+
 - **`status`** — DERIVED: `scheduled`, `in-progress`, `completed`, `cancelled`, `postponed`.
   Evidence: `GET /procedures/scheduled` exists; `?status=` filter; required with no default.
 - **`procedure_setting`** — DOCUMENTED (description): `outpatient`, `inpatient`, `office`.
@@ -411,11 +430,13 @@ Every field is prefixed `procedure_*` inside a resource already called `procedur
 - **`anesthesia_type`** — DERIVED: `none`, `local`, `regional`, `sedation`, `general`.
 
 ### Foreign keys
+
 - `patient_id` → Patient **N:1** required; `practitioner_id` → Practitioner **N:1** optional;
   `condition_id` → Condition **N:1** optional.
 - **Many-to-many:** Lab Result, Injury (§27).
 
 ### Nested read shape
+
 `ProcedureWithRelations` = fields + `patient` (typed `PatientResponse`) + `practitioner`
 (typed `PractitionerSummary`). A **fourth** nesting style — full patient, summary practitioner.
 
@@ -448,6 +469,7 @@ Every field is prefixed `procedure_*` inside a resource already called `procedur
 ("Category of treatment"), different `maxLength` (300 vs 200), and both are optional free text.
 
 ### Enums
+
 - **`mode`** — DOCUMENTED: `simple`, `advanced`. Default `simple`. This is a **UI-complexity flag
   persisted as domain data**: `advanced` mode unlocks the treatment↔medication/encounter/equipment/
   lab-result link editors. Presentation state in the database.
@@ -456,6 +478,7 @@ Every field is prefixed `procedure_*` inside a resource already called `procedur
 - **`treatment_category`** — DOCUMENTED (exemplary): `inpatient`, `outpatient`.
 
 ### Foreign keys
+
 - `patient_id` → Patient **N:1** required; `practitioner_id` **N:1** optional;
   `condition_id` → Condition **N:1** optional.
 - **Many-to-many:** Encounter, Medical Equipment, Lab Result, Medication, Injury, Symptom (§27).
@@ -463,6 +486,7 @@ Every field is prefixed `procedure_*` inside a resource already called `procedur
   touch it.
 
 ### Nested read shape
+
 `TreatmentWithRelations` = fields + `patient` + `practitioner` + `condition`, all untyped `object`.
 
 ---
@@ -492,6 +516,7 @@ computed count.
 | `tags` | array&lt;string&gt; | opt | yes | — | *(no default `[]` here, unlike every other entity)* |
 
 ### Enums
+
 - **`status`** — DERIVED: `active`, `resolved`, `monitoring`, `inactive`. Default `"active"`,
   `?status=` filter, plus a `resolved_date` field implying a `resolved` state.
 - **`category`** — DERIVED: `pain`, `respiratory`, `gastrointestinal`, `neurological`,
@@ -499,11 +524,13 @@ computed count.
   Nothing in the spec constrains it.
 
 ### Foreign keys
+
 - `patient_id` → Patient **N:1** required.
 - **1:N** to Symptom Occurrence.
 - **Many-to-many:** Condition, Medication (with a relationship type), Treatment (§27).
 
 ### Endpoints
+
 `POST|GET /symptoms/` (`?status=`, `?search=`), `GET|PUT|DELETE /symptoms/{id}`,
 `GET /symptoms/stats` (untyped object), `GET /symptoms/timeline?start_date&end_date` (untyped array),
 occurrence sub-resource, and six `link-*`/`unlink-*` routes (§27).
@@ -537,6 +564,7 @@ occurrence sub-resource, and six `link-*`/`unlink-*` routes (§27).
 No `patient_id`, no `tags`.
 
 ### Enums
+
 - **`severity`** — DERIVED: `mild`, `moderate`, `severe`. The MCP server's own symptom-intake prompt
   says: *"How severe was it? Take the user's own word for it (for example "mild", "moderate", "severe")."*
   Note this is a **3-value** ladder, not the 4-value allergy/injury one.
@@ -548,6 +576,7 @@ No `patient_id`, no `tags`.
 - **`pain_scale`** — integer 0–10 intended, **unvalidated**.
 
 ### Foreign keys
+
 - `symptom_id` → Symptom **N:1** required (implicitly, via path).
 
 ---
@@ -593,6 +622,7 @@ a vitals record is not type-safe.
 **`bmi` is stored, not derived**, even though `weight` and `height` are on the same row.
 
 ### Enums
+
 - **`glucose_context`** — DOCUMENTED (query-param description, three separate endpoints):
   `fasting`, `before_meal`, `after_meal`, `random`.
 - **`vital_type`** (filter parameter, not a stored field) — DOCUMENTED: `blood_pressure`,
@@ -607,10 +637,12 @@ a vitals record is not type-safe.
   presentation concern.
 
 ### Foreign keys
+
 - `patient_id` → Patient **N:1** required; `practitioner_id` → Practitioner **N:1** optional.
 - **No link tables at all.** Vitals connect to nothing else.
 
 ### Derived / aggregate shapes
+
 - `VitalsStats`: `total_readings`, `latest_reading_date`, `avg_systolic_bp`, `avg_diastolic_bp`,
   `avg_heart_rate`, `avg_temperature`, `current_temperature`, `current_weight`, `current_bmi`,
   `weight_change`, `current_blood_glucose`, `current_a1c`. All computed.
@@ -654,17 +686,20 @@ and you *read back* `standardized_vaccine_id` (a surrogate FK). The server resol
 (e.g., user converted to free-text)"* — so this is an explicit tri-state PATCH field.
 
 ### Enums
+
 - **`route`** — DERIVED: `intramuscular`, `subcutaneous`, `intradermal`, `oral`, `intranasal`.
   `maxLength 50`, otherwise unconstrained.
 - **`site`** — DERIVED: `left-arm`, `right-arm`, `left-thigh`, `right-thigh`, `left-deltoid`,
   `right-deltoid`, `oral`, `nasal`, `other`. Unconstrained upstream.
 
 ### Foreign keys
+
 - `patient_id` → Patient **N:1** required; `practitioner_id` **N:1** optional.
 - `standardized_vaccine_id` → Standardized Vaccine **N:1** optional (catalog).
 - No link tables.
 
 ### Derived shapes — the immunization *history* endpoint
+
 `GET /immunizations/patient/{pid}/history?start_date&end_date` → `ImmunizationHistoryResponse`:
 
 | Field | Type | Notes |
@@ -674,6 +709,7 @@ and you *read back* `standardized_vaccine_id` (a surrogate FK). The server resol
 | `unmatched_count` | integer | **computed**, `minimum 0`, default `0` |
 
 `ImmunizationHistoryItem` = `ImmunizationResponse` + three computed fields:
+
 - `components`: array&lt;string&gt; — *"Canonical disease keys this immunization covers (e.g. ["Polio"],
   ["Diphtheria","Tetanus","Pertussis"]). Sourced from the library's disease_keys, not raw antigen
   labels, so combination and single-disease vaccines bucket consistently."*
@@ -708,18 +744,21 @@ and you *read back* `standardized_vaccine_id` (a surrogate FK). The server resol
 | `tags` | array&lt;string&gt; | opt | yes | — | default `[]` |
 
 ### Enums — the only clinical entity that documents its own
+
 - **`laterality`** — DOCUMENTED: `left`, `right`, `bilateral`, `not_applicable`.
 - **`severity`** — DOCUMENTED: `mild`, `moderate`, `severe`, `life-threatening`.
 - **`status`** — DOCUMENTED: `active`, `healing`, `resolved`, `chronic`. Default `active`.
   (Also repeated in the `?status=` filter description on `GET /injuries/`.)
 
 ### Foreign keys
+
 - `patient_id` → Patient **N:1** required; `practitioner_id` **N:1** optional.
 - `injury_type_id` → Injury Type **N:1** optional.
 - **Many-to-many:** Condition, Medication, Procedure, Treatment (§27) — four link tables, all
   carrying only `relevance_note`.
 
 ### Nested read shape
+
 `InjuryWithRelations` = fields + `injury_type` (typed `InjuryTypeResponse`) + `practitioner`
 (untyped object).
 
@@ -774,6 +813,7 @@ Two untyped JSON columns (`coverage_details`, `contact_info`) with no declared i
 in the document. Whatever the frontend puts in them is the schema.
 
 ### Enums
+
 - **`insurance_type`** — DERIVED: `medical`, `dental`, `vision`, `prescription`, `other`. Required,
   no default, unconstrained. (The frontend certainly has a fixed list; the API does not express it.)
 - **`status`** — DERIVED: `active`, `inactive`, `expired`, `pending`. Default `"active"`; there is a
@@ -781,11 +821,13 @@ in the document. Whatever the frontend puts in them is the schema.
 - **`relationship_to_holder`** — DERIVED: `self`, `spouse`, `child`, `dependent`, `other`.
 
 ### Foreign keys
+
 - `patient_id` → Patient **N:1** required. No link tables, no practitioner.
 - `is_primary` is a per-patient singleton flag enforced by `PATCH /insurances/{id}/set-primary`
   (the same pattern as emergency contacts).
 
 ### Endpoints
+
 `POST|GET /insurances/`, `GET|PUT|DELETE /insurances/{id}`,
 `GET /insurances/expiring?days=` → `Insurance[]` (*"Get insurance records expiring within specified
 days"* — computed server-side from `expiration_date`; **no `days_until_expiry` field is returned**),
@@ -817,6 +859,7 @@ days"* — computed server-side from `expiration_date`; **no `days_until_expiry`
 | `tags` | array&lt;string&gt; | opt | yes | — | default `[]` |
 
 ### Enums
+
 - **`status`** — DERIVED: `active`, `inactive`, `maintenance`, `retired`. Default `"active"`,
   `?status=` filter, `/medical-equipment/active` endpoint.
 - **`equipment_type`** — DERIVED: `cpap`, `nebulizer`, `wheelchair`, `walker`, `glucose-meter`,
@@ -824,10 +867,12 @@ days"* — computed server-side from `expiration_date`; **no `days_until_expiry`
   otherwise unconstrained, and `?equipment_type=` filterable.
 
 ### Foreign keys
+
 - `patient_id` → Patient **N:1** required; `practitioner_id` **N:1** optional.
 - **Many-to-many:** Treatment (§27) — the only link table equipment participates in.
 
 ### Endpoints
+
 `GET /medical-equipment/needing-service` — *"Get equipment that needs service soon (within 30 days
 or overdue)"*. Computed from `next_service_date`; **returns plain `MedicalEquipmentResponse[]` with
 no `days_until_service` / `is_overdue` field**. The 30-day window is hard-coded server-side (no
@@ -854,10 +899,12 @@ no `days_until_service` / `is_overdue` field**. The 30-day window is hard-coded 
 No timestamps.
 
 ### Enums
+
 - **`relationship`** — DERIVED: `spouse`, `partner`, `parent`, `child`, `sibling`, `friend`,
   `guardian`, `caregiver`, `other`. `maxLength 50` free text upstream.
 
 ### Foreign keys
+
 - `patient_id` → Patient **N:1** required. Nothing else.
 - `is_primary` singleton per patient, enforced by `POST /emergency-contacts/{id}/set-primary`;
   `GET /emergency-contacts/patient/{pid}/primary` reads it back.
@@ -893,6 +940,7 @@ normalisation, exactly like `condition_name`/`diagnosis`.
 `PractitionerSummary` = {`id`, `name`, `specialty`}.
 
 ### Foreign keys
+
 - `specialty_id` → Medical Specialty **N:1 required**. The only *required* FK to a reference table
   in the whole clinical model.
 - `practice_id` → Practice **N:1** optional.
@@ -926,6 +974,7 @@ six concepts into columns. Two different modelling choices for one concept in on
 (integer, default `0`, **computed**).
 
 ### Foreign keys
+
 - **1:N** to Practitioner (via `Practitioner.practice_id`).
 - Endpoints: `POST|GET /practices/` (`?search=`), `GET /practices/summary`,
   `GET /practices/search/by-name?name=`, `GET|PUT|DELETE /practices/{id}`.
@@ -961,6 +1010,7 @@ one validated. `drive_through`/`twenty_four_hour` are `boolean | null` with defa
 pointless tri-state.
 
 ### Foreign keys
+
 - **Inbound N:1** from Medication (`pharmacy_id`) and from the treatment↔medication link
   (`specific_pharmacy_id`). No outbound FKs.
 - Endpoints: `POST|GET /pharmacies/`, `GET|PUT|DELETE /pharmacies/{id}`. No search endpoint.
@@ -1020,6 +1070,7 @@ result stores its value on itself; a panel stores values on children. `is_panel`
 **it cannot be changed after creation** (not in the Update schema).
 
 ### Enums
+
 - **`status`** — DERIVED: `ordered`, `in-progress`, `completed`, `cancelled`. Default `"ordered"`.
   `EncounterLabResultWithDetails.lab_result_status` echoes it for display.
 - **`test_category`** — DERIVED: `blood-work`, `imaging`, `pathology`, `microbiology`, `genetics`,
@@ -1029,15 +1080,18 @@ result stores its value on itself; a panel stores values on children. `is_panel`
 - **`test_type`** — DERIVED: `routine`, `follow-up`, `emergency`, `screening`. Unconstrained.
 
 ### Foreign keys
+
 - `patient_id` → Patient **N:1** required; `practitioner_id` → Practitioner **N:1** optional.
 - **1:N** to Lab Test Component; **1:N** to Lab Result File (legacy) / Entity File (current).
 - **Many-to-many:** Condition, Medication, Procedure, Treatment, Encounter (§27) — five link
   tables, the most of any entity after Treatment.
 
 ### Nested read shape
+
 `LabResultWithRelations` = fields + `patient_name` + `practitioner_name` + `files[]` (untyped, default `[]`).
 
 ### Lab Result File (legacy parallel file table)
+
 `LabResultFileResponse`: `id`, `lab_result_id` (REQ), `file_name` (REQ), `file_path` (REQ),
 `file_type`, `file_size`, `description`, `uploaded_at` (`date-time`).
 **This exists alongside the generic `EntityFileResponse`** (which covers all 13 `EntityType`s
@@ -1077,6 +1131,7 @@ file subsystems, one of them lab-only.
 spread across columns with no cross-field validation declared.
 
 ### Enums
+
 - **`status`** — DOCUMENTED (endpoint description): the abnormal set is `high`, `low`, `critical`,
   `abnormal` — *"Get all abnormal test results (high, low, critical, abnormal)"*. Add `normal` and
   the full DERIVED set is `normal`, `high`, `low`, `critical`, `abnormal`. Filterable via
@@ -1090,9 +1145,11 @@ spread across columns with no cross-field validation declared.
   (probably plus `insufficient_data`).
 
 ### Foreign keys
+
 - `lab_result_id` → Lab Result **N:1** required. Nothing else. No link tables.
 
 ### Derived / analytic shapes (all computed, read-only)
+
 - `LabTestComponentForStack` = component + parent's `completed_date`, `ordered_date`, `facility`.
 - `LabTestComponentTrendResponse`: `test_name`, `unit`, `category`, `data_points[]`, `statistics`,
   `is_aggregated` (default `false`), `aggregation_period`, `result_type`.
@@ -1122,6 +1179,7 @@ plotted mg/dL and mmol/L on one axis.
 ## 25. Standardized catalogs (read-only reference libraries)
 
 ### 25.1 Standardized Test (`StandardizedTestResponse`)
+
 | Field | Type | Req | Nullable |
 |---|---|---|---|
 | `id` | integer | REQ | no |
@@ -1143,6 +1201,7 @@ Endpoints: `/standardized-tests/search`, `/autocomplete` (→ `AutocompleteOptio
 Maintained via `/admin/maintenance/test-library/{info,reload,sync}`.
 
 ### 25.2 Standardized Vaccine (`StandardizedVaccineResponse`)
+
 | Field | Type | Req | Nullable |
 |---|---|---|---|
 | `id` | integer | REQ | no |
@@ -1170,6 +1229,7 @@ un-normalisable free text, and cross-record trending/deduplication is impossible
 ## 26. Tags
 
 There is **no Tag entity schema** in the document. Tags are:
+
 1. a `array<string>` column on 11 clinical entities (§1.5), and
 2. a separate "user tags registry" row with an `id` and a `color`, exposed only through verbs.
 
@@ -1185,6 +1245,7 @@ Endpoints (all responses untyped `object`/`array<string>`):
 `DELETE /tags/delete?tag`, `PATCH /tags/{tag_id}/color`.
 
 Two enum-ish things here:
+
 - **`match_mode`** — DOCUMENTED: `any` (OR) / `all` (AND). Default `"any"`. The same concept is
   spelled `tag_match_all` (boolean) on every entity list endpoint. **Two encodings of one filter.**
 - **`entity_types`** — DECLARED as a *default array value* on `/tags/popular` and `/tags/search`:
@@ -1235,6 +1296,7 @@ fourteen declare them **optional and nullable**. One more inconsistency in a tab
 otherwise pure boilerplate.
 
 ### 27.2 Relationship payload enums
+
 - **`symptom_medications.relationship_type`** — DERIVED, default `"related_to"`. Plausible full set
   given the clinical meaning: `related_to`, `treats`, `causes`, `worsens`. **The only link table with
   a semantic type**, and the only one that needs one: a medication can *treat* a symptom or *cause*
@@ -1245,6 +1307,7 @@ otherwise pure boilerplate.
   `follow-up`, `final`, `check-in`.
 
 ### 27.3 The bidirectional-route duplication
+
 Three pairs are reachable from **both** sides with **different DTOs for the same rows**:
 
 | Table | Left-side route + DTO | Right-side route + DTO |
@@ -1259,6 +1322,7 @@ Every one of these pairs writes the same table. That's ~8 extra schemas and ~10 
 purchasing exactly nothing.
 
 ### 27.4 Also note: two link tables are *not* modelled as links
+
 - `Allergy.medication_id` — a plain N:1 FK where a link table would be more consistent (an allergy
   to a drug *class* affects many medication records).
 - `Injury.treatment_received` (free text) sits **beside** the `injury_treatments` link table. The
@@ -1358,12 +1422,14 @@ DECLARED or DOCUMENTED upstream. Every one of these becomes a PocketBase `select
 (single-select unless noted) **and** a Go string-typed constant set with a `Valid()` method.
 
 ### Severity — ONE ladder, used everywhere
+
 `mild` · `moderate` · `severe` · `life_threatening`
 (upstream spells it `life-threatening`; MediGo standardises on snake_case for all enum values.)
 Used by: allergies, conditions, injuries, symptom occurrences. Symptom occurrences upstream only
 used 3 values; the 4th is simply never selected there. **One enum, four entities.**
 
 ### Clinical lifecycle status — ONE ladder per shape
+
 - **Ongoing-condition shape** (conditions, allergies, symptoms, injuries):
   `active` · `inactive` · `resolved` · `chronic`*
   (injuries additionally use `healing` — DOCUMENTED — which MediGo keeps as a 5th value on this set.)
@@ -1377,6 +1443,7 @@ used 3 values; the 4th is simply never selected there. **One enum, four entities
   (equipment reads `stopped` as "retired"; MediGo adds `retired`* for equipment only.)
 
 ### Per-entity enums
+
 | Entity.field | Values | Tier |
 |---|---|---|
 | `injury.laterality` | `left`, `right`, `bilateral`, `not_applicable` | DOCUMENTED |
@@ -1527,6 +1594,7 @@ These are cheap and they are all real bugs:
 ## R6 — Delete presentation state from the domain
 
 Three fields are UI state that leaked into Postgres:
+
 - `treatment.mode` (`simple`|`advanced`) — a form-complexity toggle. Under R2 the "advanced" link
   editors are just optional relations; a treatment with no links *is* the simple case. Delete.
 - `lab_test_component.display_order` — belongs in the client, or is `test_code` ordering from the
@@ -1553,6 +1621,7 @@ no update, with an `is_system` flag), `standardized_tests` (read-only, admin-syn
 `standardized_vaccines` (read-only, admin-synced).
 
 MediGo: **two** shapes.
+
 - **Catalogs** (read-only, seeded/synced): `standardized_tests`, `standardized_vaccines`. Keep both;
   they are genuinely valuable (the vaccine one powers `diseases_index`, the test one powers unit and
   ref-range prefill). Full CRUD is admin-only via PocketBase's own UI.
@@ -1614,6 +1683,7 @@ those endpoints in favour of one list endpoint with filters:
 ## R12 — Where upstream is right, keep it
 
 Not everything needs reimagining:
+
 - **Symptom / SymptomOccurrence split** is correct and is the only entity modelled as
   definition + episodes. Extend the pattern rather than flattening it.
 - **LabResult / LabTestComponent split** with `is_panel` is correct. Make `is_panel` derived
@@ -1629,4 +1699,3 @@ Not everything needs reimagining:
 - **The `effective_*` COALESCE** on treatment↔medication is real domain logic. Port it.
 - **`Practice.locations` as an embedded array** is right for a practice with three offices. Apply
   the same to Pharmacy (which flattens the identical six fields into columns) rather than the reverse.
-

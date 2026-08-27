@@ -20,11 +20,13 @@ body; every read/update/delete derives it from the stored record. A list without
 ## `setActivePatient` — `PUT /api/v1/me/active-patient`
 
 **Body**
+
 ```json
 { "patient": "pat_abc123def4567" }   // or { "patient": null } to clear
 ```
 
 **200**
+
 ```json
 { "active_patient": { /* PatientSummary */ } }   // or { "active_patient": null }
 ```
@@ -48,6 +50,7 @@ same handler responds with the re-rendered `@PatientSwitcher` component as plain
 Datastar treats as an element patch. No SSE, no inline script, no Pro attribute (research D-33).
 
 **Mandatory tests**
+
 - Set → read `GET /api/v1/me` → the pointer is there (FR-013).
 - Sign out, sign in, `GET /api/v1/me` → still there (US3-2, SC-014).
 - Account B setting Account A's patient → 404, and B's pointer is unchanged (US3-5).
@@ -67,6 +70,7 @@ Adds to phase 001's response:
 ```
 
 **Resolution rules**
+
 - The pointer resolves to `null` when the patient no longer exists — which PocketBase has already
   done for us by unsetting the relation on delete (research D-07) — or when the actor no longer
   owns it. FR-017.

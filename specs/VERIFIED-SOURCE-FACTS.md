@@ -33,6 +33,7 @@ go version go1.27.0 linux/arm64                 # 33MB binary, builds clean
 ```
 
 Evidence:
+
 - `github.com/pocketbase/pocketbase@v0.40.1/go.mod` line 3 declares `go 1.27`.
 - **67 non-test `.go` files** import the Go 1.27 stdlib package
   `encoding/json/v2`; **15 of those are in `core/` and `apis/`**, so it is
@@ -41,12 +42,14 @@ Evidence:
 - No build tags, no fallback path.
 
 ### Consequence
+
 MediGo MUST be `go 1.27`, not the 1.26.5 house standard that `arc-ui`, `gmod`,
 `appbase` and `medikeep-mcp` share. MediGo is the first project in this monorepo
 off that standard, and that is a deliberate, documented divergence forced by the
 PocketBase decision.
 
 Required changes:
+
 - `go.mod`: `go 1.27` plus a `toolchain go1.27.x` line.
 - Dockerfile: `ARG GO_VERSION=1.27`.
 - CI: do **NOT** set `GOTOOLCHAIN=local`, or the build fails with the
@@ -76,6 +79,7 @@ DataMaxIdleConns, AuxMaxOpenConns, AuxMaxIdleConns, IsDev.
 **Neither exposes a Logger or slog.Handler field.**
 
 `core/base.go:1472 initLogger()` hardcodes:
+
 ```go
 handler := logger.NewBatchHandler(logger.BatchOptions{
     Level: getLoggerMinLevel(app),
@@ -85,9 +89,11 @@ handler := logger.NewBatchHandler(logger.BatchOptions{
 })
 app.logger = slog.New(handler)     // core/base.go:1536 — private field
 ```
+
 `app.logger` is unexported and `Logger()` (core/base.go:378) just returns it.
 
 ### Consequences for the locked "zerolog primary, bridged into PB" decision
+
 - Injecting a zerolog-backed slog.Handler into PocketBase is **impossible** in
   v0.40.1 without forking. Decision as literally stated is not achievable.
 - What IS achievable, and what the plan must say instead:
@@ -110,6 +116,7 @@ An earlier revision of this file concluded the bridge was "unachievable without
 a fork" and that MaxDays=0 was the answer. Both halves were wrong.
 
 **(a) Decorate the exported embedded interface.** `pocketbase.go` declares:
+
 ```go
 type PocketBase struct {
 	core.App              // <- EXPORTED embedded interface field
@@ -117,6 +124,7 @@ type PocketBase struct {
 	RootCmd *cobra.Command
 }
 ```
+
 so `pb.App = &loggedApp{App: pb.App, logger: zerologBackedSlog}` is legal and
 redirects the entire request path — `Start()` passes `pb` itself into the serve
 command, and `apis.NewRouter` does `event.App = app`. Verified SAFE: grepping
@@ -147,6 +155,7 @@ checklist item to re-verify both mechanisms.
 
 `apis.NewRouter` (apis/base.go:19) hardcodes every built-in binding with
 **no opt-out flag**:
+
 ```go
 apiGroup := pbRouter.Group("/api")
 bindSettingsApi(app, apiGroup); bindCollectionApi(app, apiGroup)
@@ -158,6 +167,7 @@ bindHealthApi(app, apiGroup); bindSQLApi(app, apiGroup)
 ```
 
 Record **CRUD** routes (apis/record_crud.go) — the ones to lock down:
+
 ```
 GET    /api/collections/{collection}/records
 GET    /api/collections/{collection}/records/{id}
@@ -168,6 +178,7 @@ DELETE /api/collections/{collection}/records/{id}
 
 Record **AUTH** routes (apis/record_auth.go) — these MUST stay reachable and
 live under the SAME `/api/collections/` prefix:
+
 ```
 GET  /api/collections/{collection}/auth-methods
 POST /api/collections/{collection}/auth-refresh
@@ -187,6 +198,7 @@ GET|POST /api/oauth2-redirect
 
 **A blanket 403/404 on `/api/collections/*` would kill PocketBase native auth,
 which is the locked auth decision.** The lockdown must therefore be either:
+
 - (preferred, idiomatic) set all five API rules (list/view/create/update/delete)
   to `nil` on every collection => superuser-only. Auth routes consult
   `authRule`/`manageRule`, NOT the CRUD rules, so login keeps working and the
@@ -219,10 +231,12 @@ compression is wanted, bind it per-group and exclude SSE routes.
 ## FACT 4 — Datastar v1 API surface (v0.x names are DEAD).
 
 `datastar/consts.go` defines exactly TWO event types:
+
 ```go
 EventTypePatchElements EventType = "datastar-patch-elements"
 EventTypePatchSignals  EventType = "datastar-patch-signals"
 ```
+
 The v0.x names (`datastar-merge-fragments`, `datastar-merge-signals`,
 `datastar-remove-fragments`, `datastar-remove-signals`,
 `datastar-execute-script`) **no longer exist**. Any tutorial using them is
@@ -233,6 +247,7 @@ stale. `ExecuteScript` and `RemoveElement` are now implemented ON TOP of
 `prepend`, `append`, `before`, `after`.
 
 Verified public API:
+
 ```go
 func NewSSE(w http.ResponseWriter, r *http.Request, opts ...SSEOption) *ServerSentEventGenerator
 func ReadSignals(r *http.Request, signals any) error
@@ -303,6 +318,7 @@ first-run installer page — relevant for deterministic Playwright fixtures.
 calls `TempDirClone(config.DataDir)` and then `app.Bootstrap()`. So **every
 test app is a filesystem clone of a fixture data dir into a temp dir**. That
 means:
+
 - Tests ARE isolated from each other and from the fixture, so `t.Parallel()` is
   safe.
 - The cost per test app is a directory copy plus a SQLite bootstrap — cheap but
@@ -354,6 +370,7 @@ registry anyway. The document is BUILT from that registry rather than reflected
 out of the router.
 
 Verified end to end:
+
 ```
 OpenAPI document VALIDATES after marshal -> load round trip
 document bytes: 1212
@@ -362,6 +379,7 @@ discriminator: kind map[allergies:... emergency-contacts:...]
 ```
 
 What the probe actually did, which is the shape phase 001 should implement:
+
 1. Declared a registry of record kinds, each carrying its own fully typed
    object schema — `allergies` (allergen, severity enum) and
    `emergency-contacts` (full_name, relationship).
@@ -381,6 +399,7 @@ What the probe actually did, which is the shape phase 001 should implement:
    the build.
 
 API notes for whoever writes this, both of which cost a compile error first:
+
 - `Discriminator.Mapping` is `map[string]openapi3.MappingRef`, NOT
   `map[string]string`.
 - `MappingRef` is a struct (an alias of `SchemaRef`), so the value is
@@ -403,7 +422,7 @@ unverified. Both are readable from Go in v0.40.1 — but a plan that assumes the
 sit together will be wrong.
 
 **IP allowlist — on GLOBAL settings.**
-`core/settings_model.go:125` — `SuperuserIPs []string \`json:"superuserIPs"\``.
+`core/settings_model.go:125` — `` SuperuserIPs []string `json:"superuserIPs"` ``.
 Boot check: `len(app.Settings().SuperuserIPs) == 0` -> warn.
 It is validated as `IPOrSubnet`, so CIDR ranges are accepted.
 It is also enforced in two places already seen in this codebase: the router's
@@ -412,6 +431,7 @@ auth on a file request from a non-allowlisted IP.
 
 **MFA — on the SUPERUSERS AUTH COLLECTION, not on settings.**
 `core/collection_model_auth_options.go:348`:
+
 ```go
 type MFAConfig struct {
 	Enabled  bool   `json:"enabled"`
@@ -419,11 +439,13 @@ type MFAConfig struct {
 	Rule     string `json:"rule"`     // optional filter; empty = everyone
 }
 ```
+
 reached via the auth collection's `MFA MFAConfig` field (line 132). Boot check:
 find the superusers collection by `core.CollectionNameSuperusers` and read
 `collection.MFA.Enabled`.
 
 Two consequences worth putting in the plan:
+
 - PocketBase refuses to enable MFA unless the collection has **at least two auth
   methods** enabled (`validation_mfa_not_enough_auths`, line ~201). So "turn on
   superuser MFA" is not a single toggle — the instance must also have a second

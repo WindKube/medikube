@@ -368,6 +368,7 @@ must navigate to it.
 Ordered by the phase that first needs it. Nothing here is optional under Principle VIII.
 
 **Phase 001, shell:**
+
 - [ ] Skip link as the first focusable element
 - [ ] `<header id="app-header">` **outside** `<main>` (§5.2 #1)
 - [ ] `<nav id="primary-nav" aria-label="Primary">` inside the sidebar `<aside>`
@@ -380,6 +381,7 @@ Ordered by the phase that first needs it. Nothing here is optional under Princip
 - [ ] Focus-visible ring, defined once, on every interactive element (the comp defines none)
 
 **Phase 001, every page:**
+
 - [ ] One `<h1>` per page, and a heading outline that does not skip levels — the comp has zero
       headings
 - [ ] Page body wrapped in `<section aria-label="…">` / `<article aria-label="…">` using the
@@ -387,30 +389,36 @@ Ordered by the phase that first needs it. Nothing here is optional under Princip
 - [ ] `<title>` matching the gate's expectation
 
 **Phase 001, record list pages:**
+
 - [ ] Real `<table>` / `<thead>` / `<th scope="col">` / `<td>` for the record table. The comp's
       CSS grid gives a screen reader an undifferentiated stream of text with no column
       association. Visual identity is preserved with `display:grid` on table elements if needed.
 - [ ] Sort and filter controls as real form controls
 
 **Phase 001, forms:**
+
 - [ ] `<form>`, `<label for>`, `<input>` throughout — the comp contains none of these
 - [ ] Error text associated by `aria-describedby`
 - [ ] Auth pages designed (§5.1) — 5 of phase 001's 9 pages have no comp
 
 **Phase 003:**
+
 - [ ] Tags, Search and Timeline pages designed
 - [ ] Search field in the topbar navigates to `/search`
 
 **Phase 004:**
+
 - [ ] Trend chart accessible alternative. The comp's bar chart is seven bare `<div>`s with no
       values, no axes and no text alternative; a lab trend that a person cannot read with a
       screen reader fails the phase's own accessibility posture.
 
 **Phase 006:**
+
 - [ ] Operator surface designed (5 pages)
 - [ ] Report detail page designed
 
 **All phases:**
+
 - [ ] Responsive behaviour. The comp is a fixed 1320×880 desktop frame — `height:100vh`,
       `overflow:hidden`, a fixed 248px sidebar and 4-column grids. **The gate runs every page at
       390×844 as well as 1440×900.** No mobile layout exists for anything. This is the largest

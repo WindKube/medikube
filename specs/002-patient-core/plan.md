@@ -99,6 +99,7 @@ hypermedia interactivity (templ + Datastar), and a hand-written JSON API. One mo
 no separate frontend build service, no Node at runtime.
 
 **Performance Goals**:
+
 - SC-004: patient chart summary — header, per-kind counts, recent activity — within **2 s** for a
   patient holding 50,000 records. Budget: one indexed `COUNT(*)` per registered kind (one kind
   today, fifteen by phase 004) plus one `LIMIT 10` read of `audit_events` on
@@ -112,6 +113,7 @@ no separate frontend build service, no Node at runtime.
   write transaction but inside the request.
 
 **Constraints**:
+
 - Single instance by construction; no horizontal scaling, no broker abstraction over the realtime
   hub (constitution Technology Constraints).
 - `CGO_ENABLED=0`; nothing in this phase may add a cgo dependency (relevant: image decoding is
@@ -449,7 +451,7 @@ what changes is which phase owns a piece, one operation's existence, and one env
 |---|---|---|
 | Patients, multi-patient switching and the patient chart are **phase 001**, and phase 001 is the `foundation` phase | They land **here**, and phase 001 ships accounts and medications instead | Phase 001's charter governs, and its own plan records the mirror-image decision: *"Phase 001 owns accounts and medications as its single kind. Patients arrive in 002."* This is the single largest relocation in the suite, and it is why this phase exists at all. The design — `patients` as the ownership anchor, `users.active_patient` as a non-authoritative pointer, the photo through MediGo's own route — is the contract's, verbatim. |
 | Phase 002 is 19 operations | **20** — the contract's 19 plus `getPatientChart`, `GET /api/v1/patients/{id}/summary` (operation **93** in the contract's additive numbering) | FR-029 and FR-030 require the chart header, the per-kind tile counts and the figures the delete confirmation must state, in one authorized read. Without it the chart page is one request per registered kind — 1 today, 15 by phase 004 — each re-running the same authorization for the same patient. One round trip instead of fifteen, and one place where the counts are decided. Contract operation total moves by **+1**; §2.3 records 93. |
-| Every list envelope carries `total` **only** under `?count=true` (§2.1 rule 5) | `GET /api/v1/patients` returns `total` and `owned_count` **unconditionally** | FR-010 requires the list itself to state how many people there are, and a household is tens of rows — the count is a `COUNT(*)` over a handful of ids, not the open-ended scan rule 5 exists to prevent. It is the **one** documented exception in the phase; every other list in this phase and every list in phases 003–006 follows rule 5 unchanged. `owned_count` is in the envelope from the start so phase 005 adds `shared_count` without changing the shape. [research D-29](./research.md#d-29). |
+| Every list envelope carries `total` **only** under `?count=true` (§2.1 rule 5) | `GET /api/v1/patients` returns `total` and `owned_count` **unconditionally** | FR-010 requires the list itself to state how many people there are, and a household is tens of rows — the count is a `COUNT(*)` over a handful of ids, not the open-ended scan rule 5 exists to prevent. It is the **one** documented exception in the phase; every other list in this phase and every list in phases 003–006 follows rule 5 unchanged. `owned_count` is in the envelope from the start so phase 005 adds `shared_count` without changing the shape. [research D-29](./research.md#d-29--cursor-pagination-with-explicit-sort-keys-per-new-list). |
 | The record kind path segment, per contract rule 2, is the plural generated from one Go constant | Corrected to `/api/v1/records/**medications**` throughout this phase's contracts and quickstart | An earlier draft of this phase used the singular `/records/medication`. The constant is created in phase 001, so the spelling is settled there, and phase 003's kind registry already declares the plural. Closes cross-artifact finding **H1**; phase 001's plan records the same correction from its side (its research D-05). |
 | `tags` and the `/tags` page are phase 002 | Not built here; **phase 003 owns them** | This phase's specification contains no requirement for tagging, and phase 003's US7 owns it end to end. Phase 003's own deviation table records the receiving half. |
 | `catalog_lab_tests` is phase 002 | Not built here; **phase 004 owns it** | Nothing in this phase's requirements needs a laboratory test catalogue, and phase 004 builds it where the results that use it live. Phase 004's plan records the receiving half. |

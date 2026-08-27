@@ -108,6 +108,7 @@ References from `practitioners.facility` and `medications.pharmacy` are **unset,
 | 412 / 404 / 401 | as elsewhere | |
 
 **Mandatory tests**
+
 - A facility referenced by a practitioner and by a medication's `pharmacy` is deleted → both
   survive with an empty reference.
 - Account B → 404 for every one of the five operations against Account A's ids (FR-037, SC-014).

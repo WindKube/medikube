@@ -23,6 +23,7 @@ Three operations. Requirements covered: FR-008, FR-009, FR-044, FR-045, FR-046, 
 
 **Request**: `multipart/form-data`, one part named `photo`.
 **Response 200**:
+
 ```json
 { "photo_url": "/api/v1/patients/pat_abc/photo?size=100x100t",
   "sizes": ["original", "100x100t", "400x400f"],
@@ -52,6 +53,7 @@ A filename is PHI (constitution VII). The handler maps the PB validation error i
 envelope with a fixed, PHI-free message.
 
 **Mandatory tests**
+
 - A `.png` file renamed to `.jpg` is accepted (sniffed as PNG, PNG is allowed).
 - A PDF renamed to `photo.jpg` is **rejected 415** and nothing lands on the filesystem.
 - The 415 response body and the captured zerolog stream contain **no substring** of the uploaded
@@ -93,6 +95,7 @@ phase 005's [`contracts/widened-authorization.md`](../../005-sharing-and-collabo
 §"Where `read_sensitive` is written" and governs here too (FR-045, 005 D-25).
 
 **Mandatory tests**
+
 - Anonymous `GET` → 401, and the body contains no patient information (FR-043).
 - Account B → 404, identical body to a nonexistent id (SC-005).
 - No route anywhere in `medigo routes` serves patient files without going through the authorizer —

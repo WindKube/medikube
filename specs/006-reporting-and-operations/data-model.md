@@ -365,19 +365,23 @@ template name (FR-117).
 Five, each with a real `down` (VERIFIED-SOURCE-FACTS FACT 8 makes both functions structural).
 
 ### `1757xxx100_report_templates.go`
+
 Creates the collection of §1 with all five API rules `nil` and the three indexes of §1.1.
 `down` drops it. **Reversible.**
 
 ### `1757xxx200_export_jobs.go`
+
 Creates the collection of §2 with all five API rules `nil`, the three indexes of §2.1, and
 `artifact` as a `FileField` with `Protected: true`. `down` drops it — **and the migration file
 documents that dropping it destroys any artifact still stored**, which is the reversibility note
 Principle IX requires. **Reversible with a documented data loss.**
 
 ### `1757xxx300_users_must_change_password.go`
+
 Adds the bool with default `false`. `down` removes the field. **Reversible.**
 
 ### `1757xxx400_audit_vocab_ops.go`
+
 Adds the `affected` column of §4.0, extends `audit_events.action` by the ten values of §4.1 and
 `target_kind` by `report_template`. `down` removes all three **and the file documents that rows
 already carrying a removed value would fail validation on their next write** — they are never
@@ -386,6 +390,7 @@ asserts the **complete** vocabulary after this phase, thirty-six actions and twe
 kinds, never a delta. **Reversible with a documented caveat.**
 
 ### ~~`1757xxx500_audit_page_indexes.go`~~ — **not created**
+
 There is no audit-index migration in this phase. §4.3 says why: the four indexes the reader
 needs are created wide enough on purpose by 001 and 002, and re-creating them here would collide
 by name on `idx_audit_target` and fail `CREATE INDEX` at first boot. T034 asserts the four with

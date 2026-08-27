@@ -183,6 +183,7 @@ func (s *recordService) Create(ctx context.Context, in CreateRecordInput) (*Reco
 ```
 
 Two things make this safe:
+
 - `zerolog.Ctx(ctx)` returns a disabled logger, never nil, when nothing is attached
   (`rs/zerolog/ctx.go`) — so tests and background jobs don't panic.
 - Set `zerolog.DefaultContextLogger = &base` at boot so a ctx-less path still logs somewhere
@@ -957,6 +958,7 @@ func (m *Metrics) Registry() *prometheus.Registry { return m.reg }
 ```
 
 **Deliberately NOT metrics:**
+
 - Anything labelled by `patient_id`, `user_id`, `record_id`, filename, or tag name. That is
   unbounded and it is also PII in your monitoring system, which is a much worse problem than a
   cardinality bill.
@@ -1863,6 +1865,7 @@ classic `*string` vs `sql.NullString` problem. Medical records have real nullabl
 (end_date on a medication, a lab reference range).
 
 **But even there, reject it**, because:
+
 - `*T` already expresses it, is stdlib, and marshals correctly with `encoding/json`.
 - `mo.Option[T]` needs custom `MarshalJSON`/`UnmarshalJSON` handling to round-trip through your
   DTOs and OpenAPI generation, and PocketBase's field types (`types.JSONMap`, `types.DateTime`)
@@ -1967,6 +1970,7 @@ not exposed on `ServeConfig`. Any request still running after 1s has its connect
 mid-response.
 
 For MediGo that is a real problem:
+
 - attachment uploads/downloads of a scanned lab PDF,
 - `REPORTING/export` generating a multi-patient PDF,
 - `backup/restore` operations,
@@ -2063,6 +2067,7 @@ func (h *HealthHandler) Ready(e *core.RequestEvent) error {
 ```
 
 **Rules:**
+
 - **Liveness must not check dependencies.** A DB blip should not get your container killed and
   restarted into the same blip. Liveness = "the process is not deadlocked".
 - **Readiness must check dependencies and must respect the drain flag.** This is the only

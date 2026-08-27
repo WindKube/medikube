@@ -305,6 +305,7 @@ handler; that is a timeout in a request thread holding a SQLite connection.
 ### 1.3 Reference collections
 
 #### `practitioners` — Phase 002.
+
 `owner` (relation → users, cascade, required — reference data is per-user, not global),
 `name` (text 1..200, required), `specialty` (select — MediGo vocabulary of 42 values, seeded from
 the standard specialty list, `other` included), `facility` (relation → facilities, MaxSelect 1),
@@ -312,6 +313,7 @@ the standard specialty list, `other` included), `facility` (relation → facilit
 Unique index `(owner, LOWER(name), specialty)`.
 
 #### `facilities` — Phase 002.
+
 `owner` (relation → users, cascade, required), `kind` (select: `practice pharmacy hospital lab
 imaging other`, required), `name` (text 1..200, required), `brand` (text ≤120),
 `street` `city` `region` `postal_code` `country` (text), `phone` `fax` (text ≤40), `email` (email),
@@ -321,6 +323,7 @@ Upstream's `PracticeLocationSchema[]` embedded array is dropped: a second locati
 facility row, which is what every query wanted anyway.
 
 #### `catalog_lab_tests` — Phase 004. Read-only, seeded from a vendored LOINC-derived extract.
+
 `loinc_code` (text, unique index), `name` (text, required), `short_name` (text),
 `default_unit` (text), `category` (select — the lab category vocabulary), `synonyms` (json `[]string`),
 `is_common` (bool), `ref_low` `ref_high` (number, optional).
@@ -517,12 +520,14 @@ the two must never be conflated in a roll-up.
     uniqueness indexes where they matter and by a disabled submit button where they do not.
     (Explicit YAGNI decision under Principle I.)
 12. **Error envelope**, always, on every non-2xx:
+
     ```json
     { "error": { "code": "validation_failed",
                  "message": "human-readable, PHI-free",
                  "request_id": "…",
                  "fields": [ { "field": "dosage", "code": "required", "message": "…" } ] } }
     ```
+
 13. **A resource the caller may not see returns `404`, not `403`** — for anything patient-scoped,
     existence is itself PHI. `403` is reserved for operations on resources whose existence is
     already known to the caller (e.g. editing a patient shared to you at `view`).
@@ -1354,6 +1359,7 @@ type Page[T any] struct {
 	Total      *int    `json:"total,omitempty"` // only when ?count=true
 }
 ```
+
 Cursors are opaque, HMAC-signed, and encode `(sort keys, last values, last id)` — never an offset,
 so a concurrent insert cannot duplicate or skip a row. `limit` default 25, max 100. Every list
 endpoint in the API, without exception, uses this shape; `GET /api/v1/search` uses **one per

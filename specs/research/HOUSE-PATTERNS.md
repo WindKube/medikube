@@ -90,6 +90,7 @@ package permitted to import `github.com/pocketbase/pocketbase/...`.
 `docker:build`, `docker:up`, `docker:down`, `clean`.
 
 Notes worth carrying over verbatim:
+
 - `vet`, `lint`, `test` and `build` all declare `deps: [gen]`, so generated code
   is never stale.
 - `test` runs `go test -race -count=1 ./...`.
@@ -109,6 +110,7 @@ subcommands, and a `test:e2e` task for the Playwright gate.
 ## Dockerfile pattern — four stages, all traps documented
 
 arc-ui's Dockerfile is the template. Stages:
+
 1. `deps` — `--platform=$BUILDPLATFORM golang:${GO_VERSION}-bookworm`, copies
    only `go.mod`/`go.sum` then `go mod download`, so editing source does not
    re-download the module graph. The `tool` directive means this ALSO fetches
@@ -123,6 +125,7 @@ arc-ui's Dockerfile is the template. Stages:
    `VOLUME ["/data"]`, exec-form `ENTRYPOINT`.
 
 **The traps arc-ui documents, which MediGo will hit identically:**
+
 - The Tailwind release asset for x86_64 is named `x64`, NOT `amd64`. Docker's
   `$BUILDARCH` says `amd64`, so the unmapped URL 404s and the failure reads like
   a network blip. Map it explicitly.
@@ -164,6 +167,7 @@ container build fails with a misleading "file not found".
 
 It is a **deny-everything-then-readmit allowlist** (`*` first). A project that
 is not readmitted is invisible to the build. Current allowlist:
+
 ```
 !go-modules/
 !technologia/
@@ -171,7 +175,9 @@ is not readmitted is invisible to the build. Current allowlist:
 !gmod/
 !arc-ui/
 ```
+
 Add `!medigo/` to that block. Then, mirroring the arc-ui entries, add:
+
 ```
 medigo/medigo
 medigo/.bin/
@@ -182,6 +188,7 @@ medigo/**/*.db
 medigo/**/*.db-wal
 medigo/**/*.db-shm
 ```
+
 The `*_templ.go`, `app.css` and database exclusions exist because the image
 regenerates them in the generate stage — a host-built copy in the context would
 be copied over the source tree and shadow what that stage produces. `pb_data/`
@@ -191,6 +198,7 @@ the live database and uploaded files.
 ### 2. `/Users/krzysztof.wiatrzyk/private/monorepo/.github/workflows/build-image.yaml`
 
 Add `medigo` to the `workflow_dispatch.inputs.project-name.options` list:
+
 ```yaml
         options:
           - technologia
@@ -199,6 +207,7 @@ Add `medigo` to the `workflow_dispatch.inputs.project-name.options` list:
           - arc-ui
           - medigo
 ```
+
 Nothing else in the workflow needs changing — it is generic, keyed on
 `inputs.project-name`, builds `context: .` with
 `file: <project>/Dockerfile`, builds amd64 and arm64 on native Blacksmith
@@ -211,6 +220,7 @@ The workflow's sparse-checkout includes `${{ inputs.project-name }}` and
 ## Commit convention
 
 Conventional Commits with a project scope. Real examples from `git log`:
+
 ```
 docs(specs): record what the claudy decomposition actually did
 ci: build catalog images from the repository root
@@ -218,6 +228,7 @@ feat(gmod): new project owning the Modules catalog
 feat(appbase): own the Applications catalog end to end
 fix(technologia): block SSRF in logo uploads
 ```
+
 MediGo's scope is `medigo`, e.g. `feat(medigo): embed PocketBase and serve the
 medication list`.
 

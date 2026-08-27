@@ -33,6 +33,7 @@ The default sort becomes `-started_on, -created`, backed by
 `idx_medications_patient_start (patient, started_on DESC, id)`.
 
 **Mandatory tests**
+
 - Patient X has 3 medications, patient Y (same account) has 2 → the list for X returns exactly 3
   and none of Y's (US2-2, SC-007).
 - No `?patient=` → 400, and the response mentions no patient (FR-016).

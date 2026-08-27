@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# There is no compiler in this repository, so the tiers are not the usual ones.
+# "lint" is the four linters below; "build" is the links job, because a docs
+# build succeeds exactly when every relative link, image and heading anchor
+# resolves; "test" is the corpus assertions in spec-tests.yaml.
+#
+# Every job only reads the checkout. Nothing writes a comment, a package or a
+# check, so no job raises this.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  markdown:
+    name: Markdown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+      # Pinned to the exact version .pre-commit-config.yaml installs. A
+      # markdownlint minor release adds rules, so an unpinned CI would reject
+      # prose that the hook had just accepted on the author's machine.
+      - name: markdownlint-cli2
+        run: npx --yes markdownlint-cli2@0.23.2 "**/*.md"
+
+  yaml:
+    name: YAML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      # pipx, not pip: Ubuntu's Python is externally managed (PEP 668) and
+      # refuses a bare `pip install`. Version tracks the pre-commit hook's rev.
+      - name: Install yamllint
+        run: pipx install yamllint==1.38.0
+      - name: yamllint
+        run: yamllint --strict -c .yamllint.yaml .
+
+  links:
+    name: Link integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          # The same command `task lint:links` runs. Everything else — offline
+          # mode, fragment checking, the vendored paths to skip — is in
+          # lychee.toml so the two cannot drift.
+          args: --config lychee.toml --no-progress --offline .
+          # The action's default already, but stated so that bumping the action
+          # for a bug fix cannot quietly move the checker underneath us.
+          lycheeVersion: v0.24.2
+
+  shell:
+    name: Shell
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      # The runner image ships a shellcheck, but an unpinned one: it moves when
+      # GitHub rebuilds the image, which is exactly the "green branch turns red
+      # for reasons nobody changed" that mise.toml pins against. Same version.
+      - name: Install shellcheck
+        env:
+          SHELLCHECK_VERSION: v0.11.0
+        run: |
+          set -euo pipefail
+          base=https://github.com/koalaman/shellcheck/releases/download
+          curl -sSfL "$base/$SHELLCHECK_VERSION/shellcheck-$SHELLCHECK_VERSION.linux.$(uname -m).tar.xz" |
+            tar -xJ -C "$RUNNER_TEMP" "shellcheck-$SHELLCHECK_VERSION/shellcheck"
+          echo "$RUNNER_TEMP/shellcheck-$SHELLCHECK_VERSION" >> "$GITHUB_PATH"
+      # Full default severity, and the vendored Specify scripts included: they are
+      # committed here and `specify` runs them, so a masked failure in them is
+      # this repository's bug. .shellcheckrc carries the one suppression.
+      - name: shellcheck
+        run: shellcheck scripts/*.sh .specify/scripts/bash/*.sh

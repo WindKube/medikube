@@ -83,6 +83,7 @@ with field code `unknown_field`, and the same test covers both.
 password rules to publish.
 
 **200**
+
 ```json
 { "registration_open": false,
   "password_rules": { "min_length": 8, "max_length": 200,
@@ -124,7 +125,7 @@ nothing about anybody.
   refused with `same_as_email` / `same_as_name`.
 - **FR-036**: writes one `create` / `user` audit row and one `login` / `user` row.
 
-**The conflict message names no address.** "That address cannot be used" rather than "amara@x.test
+**The conflict message names no address.** "That address cannot be used" rather than "`amara@x.test`
 is already registered": the second confirms to an anonymous caller that a specific person has an
 account here, which on a self-hosted medical instance is a disclosure. The registering person
 already knows which address they typed.
@@ -220,7 +221,6 @@ Writes a `logout` / `user` audit row.
 **Mandatory test.** Sign in from two sessions; sign out from one; assert the other's next request
 is `401`, and that it lands on the sign-in page rather than on a broken page (Edge Cases: "A
 person signs out in one place while another place has a list open").
-
 
 ---
 

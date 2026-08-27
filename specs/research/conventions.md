@@ -86,6 +86,7 @@ medigo/
 
 **`cmd/<binary>/`** — one directory named exactly after the binary, which is named exactly
 after the project directory. Never `cmd/server`, never `cmd/app`.
+
 - `appbase/cmd/appbase/` holds `main.go` + one file per cobra subcommand: `admin.go`,
   `category.go`, `enqueue.go`, `image.go`, `mcp.go`, `records.go`, `worker.go`.
 - `arc-ui/cmd/arc-ui/` keeps everything in `main.go` (it has only `serve`, `version`,
@@ -98,6 +99,7 @@ after the project directory. Never `cmd/server`, never `cmd/app`.
 **`internal/<name>/`** — flat, single-word, all-lowercase package names. No `internal/pkg/`,
 no `internal/domain/service/impl/`. Deeper nesting appears only where a generator or an API
 version forces it:
+
 - `arc-ui/internal/store/ent/schema/` (ent generator)
 - `arc-ui/internal/arcapi/v1alpha1/` (K8s API versioning)
 - `medikeep-mcp/internal/gen/coverage/` (one sub-concern of the generator)
@@ -126,6 +128,7 @@ import (
 s, err := Open(t.Context(), path, zerolog.Nop())
 require.NoError(t, err, "Open")
 ```
+
 Note `t.Context()` (Go 1.24+), `t.TempDir()`, `zerolog.Nop()` for silent loggers, and
 package-level fixed instants (`var base = time.Date(2026, 3, 4, 12, 0, 0, 0, time.UTC)`)
 so assertions are deterministic.
@@ -151,6 +154,7 @@ and guarded by a `gen:check` diff task.
 //go:embed all:static
 var staticFS embed.FS
 ```
+
 `go:embed` on a directory is a **compile-time error if the directory is empty**. Since
 `app.css` is gitignored, a fresh clone would not build. arc-ui commits
 `internal/web/static/.gitkeep` to prevent that, and uses the `all:` prefix so embed does
@@ -213,11 +217,13 @@ arc-ui and medikeep-mcp have no `replace` either.
 > module in this monorepo."
 
 **`tool` directive (arc-ui only, and recommended for MediGo):**
+
 ```go
 tool (
 	github.com/a-h/templ/cmd/templ
 )
 ```
+
 This pins the templ *generator* to the same version as the templ *runtime library*, so
 `go tool templ generate` can never drift from what the code links against. appbase instead
 does `go install …/templ@v0.3.1020` and has to keep two version strings in sync by hand (in
@@ -438,10 +444,12 @@ carry an `install:golangci-lint` task pinning to `github.com/golangci/golangci-l
   (medikeep-mcp). Use `BIN`.
 - `GO_BUILD_FLAGS: "-trimpath"` — every project.
 - Version stamping (arc-ui + medikeep-mcp):
+
   ```yaml
   VERSION:
     sh: git describe --tags --always --dirty 2>/dev/null || echo dev
   ```
+
   with `-ldflags="-s -w -X main.version={{.VERSION}}"`. The comment in arc-ui:
   *"A dirty or tagless tree is honestly labelled `dev` rather than pretending to be a
   release."*
@@ -450,6 +458,7 @@ carry an `install:golangci-lint` task pinning to `github.com/golangci/golangci-l
 - `deps: [gen]` on `vet`, `lint`, `test`, `build` — generated code must exist first.
 - `status:` guards on every `install:*` task so re-running is a no-op.
 - **`docker:build` uses `dir: ..`**, with the comment stating why:
+
   ```yaml
   # The image is built from the repository root, because that is the context CI
   # passes (`context: .`, `file: medigo/Dockerfile`) and the COPY paths in the
@@ -460,6 +469,7 @@ carry an `install:golangci-lint` task pinning to `github.com/golangci/golangci-l
     cmds:
       - docker build -f medigo/Dockerfile --build-arg VERSION={{.VERSION}} -t {{.BIN}}:local .
   ```
+
 - Gate tasks are **deliberately not fingerprinted** with `sources:`/`generates:`.
   medikeep-mcp's comment:
   > *"Deliberately not fingerprinted with sources/generates: `gen:check` is a build gate,
@@ -473,20 +483,24 @@ Three files:
 - `medikeep-mcp/cmd/gen-tools/main.go` — `-mode=generate` rewrites the registry;
   `-mode=coverage` runs the set arithmetic and exits non-zero on a gap.
 - `medikeep-mcp/internal/gen/coverage/coverage.go` — pure set arithmetic on strings:
+
   ```
   covered    = BUILT ∩ SPEC
   missing    = SPEC − BUILT − EXCLUDED   → fail
   orphaned   = BUILT − SPEC              → fail
   stale_excl = EXCLUDED − SPEC           → fail
   ```
+
 - `medikeep-mcp/cmd/gen-tools/coverage_test.go` — **the gate that guards the gate**. It
   asserts BUILT was read out of the *compiled* registry and not re-derived from the spec,
   using sort order as the discriminator:
+
   ```go
   if sort.StringsAreSorted(got) {
       t.Fatal("built ids are in operationId order, which is spec order, not registry order")
   }
   ```
+
   With a comment stating the failure mode being prevented: *"Re-deriving it from the spec
   would make `task api:coverage` a tautology: it would report full coverage against a
   registry that had never been generated at all."*
@@ -529,11 +543,13 @@ ARG TAILWIND_VERSION=v4.1.14
   4. `runtime` — distroless.
 - **Cross-compilation, not QEMU.** Every non-final stage is
   `FROM --platform=$BUILDPLATFORM …`, with `ARG TARGETOS` / `ARG TARGETARCH`:
+
   ```dockerfile
   RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
       go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" \
         -o /out/medigo ./cmd/medigo
   ```
+
   arc-ui's reason: *"Emulating an arm64 builder to run templ and Tailwind costs minutes of
   wall clock and OOMs regularly, for zero benefit — both generators only ever emit source."*
   **PocketBase note:** PocketBase v0.40.1 uses `modernc.org/sqlite` (pure Go), so
@@ -552,12 +568,14 @@ ARG TAILWIND_VERSION=v4.1.14
   > runAsNonRoot and image has non-numeric user' on those runtimes."*
 - **Writable data directory on distroless.** There is no shell and no `mkdir`, so it must
   be built in the build stage and copied:
+
   ```dockerfile
   RUN install -d -m 0755 -o 65532 -g 65532 /pb_data
   ...
   COPY --from=build --chown=65532:65532 /pb_data /pb_data
   VOLUME ["/pb_data"]
   ```
+
   MediGo needs this for PocketBase's data directory.
 - **No `HEALTHCHECK` on distroless** — no curl, no wget, no shell. arc-ui instead ships a
   `arc-ui healthcheck` cobra subcommand that probes `/healthz` and exits non-zero, and
@@ -565,6 +583,7 @@ ARG TAILWIND_VERSION=v4.1.14
   add a `medigo healthcheck` subcommand for the same reason.**
 - **Exec-form `ENTRYPOINT`/`CMD` only** — no shell to interpret shell form.
 - **`ENV` defaults in the image** so the container is runnable with no env file:
+
   ```dockerfile
   ENV MEDIGO_HTTP_ADDR=0.0.0.0:8080 \
       MEDIGO_PB_DATA_DIR=/pb_data
@@ -578,20 +597,24 @@ ARG TAILWIND_VERSION=v4.1.14
 - **The Tailwind arch trap, twice** (once in the Taskfile, once in the Dockerfile): the
   release asset for x86_64 is named `x64`, **not** `amd64`. An unmapped `uname -m` /
   `$BUILDARCH` 404s and the failure reads like a network blip:
+
   ```sh
   arch="${BUILDARCH}"; case "${arch}" in amd64) arch=x64 ;; arm64) arch=arm64 ;; esac
   ```
+
 - **The Tailwind source-scanning trap** (`arc-ui/assets/input.css`): Tailwind v4
   auto-detects sources by walking the project and **deliberately skips anything
   `.gitignore` excludes**. `*_templ.go` is gitignored, so on a clean tree auto-detection
   finds no class names and silently emits a stylesheet with none of the app's utilities —
   the page renders unstyled and nothing errors. Fix with explicit `@source` directives
   pointing at the `.templ` **sources** and at any `.go` file that builds class names:
+
   ```css
   @import "tailwindcss";
   @source "../internal/web/**/*.templ";
   @source "../internal/web/*.go";
   ```
+
 - **Build context is the repository root.** Non-negotiable — see §6.
 
 ---
@@ -709,6 +732,7 @@ on:
 ```
 
 Everything downstream is already parameterised on `inputs.project-name`:
+
 - sparse-checkout takes `${{ inputs.project-name }}` **and** `go-modules` (MediGo does not
   need go-modules, but it comes along harmlessly);
 - the Dockerfile presence check reads `${{ inputs.project-name }}/${{ inputs.dockerfile }}`;
@@ -806,6 +830,7 @@ is kept in sync so the two cannot disagree. Copying that habit is fine; relying 
   prose", `## Local development` with the exact task sequence, and `## Docker` explaining
   the repo-root build context.
 - **Config: one flat struct, env only.** `arc-ui/internal/config/config.go`:
+
   ```go
   // Package config loads and validates the process configuration from the
   // environment. Everything is a single flat struct so the full surface is
@@ -818,6 +843,7 @@ is kept in sync so the two cannot disagree. Copying that habit is fine; relying 
   }
   func Load() (Config, []Warning, error)
   ```
+
   Loaded with `env.ParseAs[Config]()`, **validated at boot** (a bad `LOG_FORMAT` refuses to
   start), and returning a separate `[]Warning` for non-fatal problems *"instead of logging
   directly so the caller controls where they go"*. MediGo's prefix is `MEDIGO_`. Variables
@@ -825,15 +851,18 @@ is kept in sync so the two cannot disagree. Copying that habit is fine; relying 
   arc-ui's `KUBE_API_URL`, appbase's `HATCHET_CLIENT_TOKEN` / `AI_GATEWAY_URL` /
   `GITHUB_APP_ID`.
 - **Logging: constructor, not a global.**
+
   ```go
   // Package logging builds the process logger. The logger is passed explicitly
   // to whatever needs it rather than living in a package-level global.
   func New(level, format string) zerolog.Logger
   ```
+
   `console` for humans, JSON on **stderr** otherwise, `zerolog.TimeFieldFormat = time.RFC3339`,
   and a `.Str("service", "medigo")` field on every line.
 - **Interfaces are declared at the consumer**, narrow, with a comment saying why the seam
   exists. `arc-ui/internal/web/stream.go`:
+
   ```go
   // EventSource fetches recent Kubernetes events for one runner pod.
   //
@@ -843,6 +872,7 @@ is kept in sync so the two cannot disagree. Copying that habit is fine; relying 
       Events(ctx context.Context, r fleet.Runner) ([]fleet.Event, error)
   }
   ```
+
 - **Every non-obvious decision carries a comment stating the failure mode it prevents**,
   not what the code does. This is the single most distinctive house habit — it appears in
   the Dockerfiles, the Taskfiles, `.dockerignore`, `.gitignore`, `compose.yaml`, and the

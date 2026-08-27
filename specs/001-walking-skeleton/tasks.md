@@ -428,6 +428,7 @@ exists.
 lockdown holds, and the log stream is pure zerolog. User stories can now start in parallel.
 
 ---
+
 ## Phase 3: User Story 1 — Keep an accurate medication list (Priority: P1) 🎯 MVP
 
 **Goal**: one clinical record kind proving every layer — domain, store, service, the generic
@@ -908,6 +909,7 @@ row; grep the whole captured log stream and find no medication name.
 eight of US3's acceptance scenarios pass.
 
 ---
+
 ## Phase 6: User Story 4 — Find my way around without getting lost (Priority: P4)
 
 **Goal**: one shell, four landmarks, on every page, at both viewports, proven by a render gate
@@ -1167,6 +1169,7 @@ scenarios pass.
   the phase complete.
 
 ---
+
 ## Dependencies & Execution Order
 
 ### Phase dependencies

@@ -85,9 +85,11 @@ requirement it proves.
 4. Open a profile and upload a photograph. It appears in the list and in the switcher at a small
    size — that thumbnail was generated at upload, not on demand (FR-009).
 5. Replace the photograph. The old one is gone from disk, thumbnails included:
+
    ```bash
    find ./pb_data/storage -path '*thumbs_*' | sort     # exactly two files per patient with a photo
    ```
+
 6. Open a profile that has only a name and a date of birth. Missing details read as **absent** —
    not "0", not "unknown", not a blank box (FR-030, US1-6).
 

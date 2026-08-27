@@ -105,6 +105,7 @@ calls. The complete free set is:
 attr  bind  class  computed  effect  indicator  init  json-signals  on
 on-intersect  on-interval  on-signal-patch  ref  show  signals  style  text
 ```
+
 plus actions `peek`, `setAll`, `toggleAll`, `get`, `post`, `put`, `patch`, `delete`,
 plus watchers `datastar-patch-elements`, `datastar-patch-signals`,
 plus the bare markers `data-ignore`, `data-ignore-morph`, `data-preserve-attr`,
@@ -254,7 +255,7 @@ Data-line keys, defaults, and omission rules (from `elements.go`):
 | `namespace` | `html` | not empty and not `html` |
 | `useViewTransition` | `false` | true |
 | `viewTransitionSelector` | `document` | set **and** `useViewTransition` is true |
-| `elements` | *(required except for `remove`)* | non-empty; **one `data: elements ` line per `\n`** |
+| `elements` | *(required except for `remove`)* | non-empty; **one `data: elements` line per `\n`** |
 
 **Modes** (bundle's own list: `["remove","outer","inner","replace","prepend","append","before","after"]`):
 
@@ -715,6 +716,7 @@ running — or kill it with `SIGKILL` — you commit dev-mode generated code tha
 files you just gitignored. Symptom: works locally, blank/garbled HTML in Docker.
 
 Mitigations, both cheap, put both in:
+
 1. `.gitignore` the `_templ.txt` files (above), so the breakage is loud rather than subtle.
 2. Make `templ:check` a pre-push hook and a required CI job — it catches dev-mode output because the
    regenerated production file won't match.
@@ -1803,6 +1805,7 @@ gap you can close with effort; closing it means writing a second, form-post-base
 > there is no SEO requirement, no crawler requirement, and no anonymous-reader requirement.
 >
 > **Required mitigations, since JS is mandatory:**
+>
 > 1. A `<noscript>` block on every page stating plainly that JavaScript is required, styled to be
 >    readable without the stylesheet.
 > 2. All content is real server-rendered HTML in the initial response — never an empty shell

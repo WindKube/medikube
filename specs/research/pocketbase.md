@@ -66,6 +66,7 @@ including `tools/router/router.go`, `tools/router/event.go` (i.e. `BindBody`), `
 
 **Recommended resolution:** move the locked toolchain to **Go 1.27.x** and put
 `toolchain go1.27.x` in MediGo's `go.mod`. The alternatives are all worse:
+
 - pin PocketBase to v0.39.x (loses v0.40's backup improvements, `Record.GetInt64`, the log
   data-size cap, the `filesystem.NewWriter`/`OnNewWriter`/`OnDelete` hooks, and puts you on a
   branch that upstream will stop patching) — this is the only real fallback if 1.27 is
@@ -1222,6 +1223,7 @@ supports it nowhere for MediGo's users.**
 
 > **Recommended resolution: drop native realtime entirely and use Datastar SSE for 100% of
 > realtime.** This is a simplification, not a loss:
+>
 > - The lockdown and native realtime are fundamentally incompatible — you'd have to re-open
 >   `ListRule`/`ViewRule` to make it work, which defeats the entire API design.
 > - Native realtime speaks raw collection records — exactly the shape MediGo is trying not to
@@ -1267,6 +1269,7 @@ For an app storing medical scans, lab PDFs and insurance documents this is a dat
 waiting to happen.
 
 > **Recommended resolution for #2 and #3 together:**
+>
 > 1. **`Protected: true` on every single `FileField` in MediGo. No exceptions.** Make it a
 >    boot-time assertion like the rules check above. This closes #3.
 > 2. **Serve files from your own `/api/v1` route** using the filesystem abstraction directly
@@ -2194,6 +2197,7 @@ app.OnBootstrap().BindFunc(func(e *core.BootstrapEvent) error {
 ```
 
 With `MaxDays = 0`:
+
 - `BeforeAddFunc` returns `false` → the log never enters the batch.
 - `WriteFunc` early-returns → no `_logs` INSERTs, no aux-DB write amplification.
 - In dev mode `printLog` still writes to stdout **before** the `MaxDays` check — that's fine

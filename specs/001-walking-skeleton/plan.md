@@ -143,6 +143,7 @@ hypermedia interactivity (templ + Datastar), and a hand-written JSON API. One mo
 no separate frontend service, no companion process, no CDN fetch at runtime.
 
 **Performance Goals**:
+
 - SC-002: a 1,000-medication list is narrowable to any single entry within 10 s of interaction,
   and **every page of that list renders within 2 s**. Budget: one indexed keyset query on
   `(owner, started_on DESC, id)`, `LIMIT 26`, no `COUNT(*)` unless `?count=true` is passed.
@@ -156,6 +157,7 @@ no separate frontend service, no companion process, no CDN fetch at runtime.
   than the first, which is what a keyset cursor buys and an `OFFSET` would not.
 
 **Constraints**:
+
 - **Single instance by construction.** The realtime hub is in-process and SQLite is single-writer.
   The hub MUST NOT be abstracted behind a broker interface "in case" — Principle I forbids the
   speculative seam and the hub has exactly one consumer.

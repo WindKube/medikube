@@ -23,6 +23,7 @@ liveness probe and nothing more, and MediGo does not build on it.
 **Public. Touches no database. Touches no filesystem. Answers about the process and nothing else.**
 
 **200**
+
 ```json
 { "status": "ok", "version": "1.2.3", "started_at": "2026-08-27T09:14:02Z" }
 ```
@@ -45,18 +46,21 @@ separate route; this payload is where the version lives (Principle I).
 **Public.** Answers whether the instance can serve.
 
 **200**
+
 ```json
 { "status": "ready",
   "checks": { "database": "ok", "migrations": "ok", "storage": "ok" } }
 ```
 
 **503**
+
 ```json
 { "status": "not_ready",
   "checks": { "database": "error", "migrations": "ok", "storage": "ok" } }
 ```
 
 **503 while draining**
+
 ```json
 { "status": "draining", "checks": {} }
 ```

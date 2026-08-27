@@ -992,6 +992,7 @@ I checked whether the route list can be recovered from the router after the
 fact. **It cannot.**
 
 - PocketBase's `RouterGroup.children` is **unexported**:
+
   ```go
   type RouterGroup[T hook.Resolver] struct {
       excludedMiddlewares map[string]struct{}
@@ -1000,6 +1001,7 @@ fact. **It cannot.**
       Middlewares []*hook.Handler[T]
   }
   ```
+
 - `Router.BuildMux()` returns an `http.Handler`, and Go 1.27's `http.ServeMux`
   still exposes **no** pattern-enumeration API (only `Handler(*Request)`, which
   requires you to already know the path).

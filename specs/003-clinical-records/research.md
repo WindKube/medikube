@@ -31,6 +31,7 @@ rather than an assumption: `internal/records/registry_completeness_test.go` fail
 open when this phase starts, the phase is blocked — it is not a thing to discover at task T140.
 
 **Alternatives considered.**
+
 - *Per-kind route families* (`/api/v1/conditions`, `/api/v1/procedures`, …): 13 × 5 = 65 new
   operations, taking the project from 90 to ~150 and breaking §2.1's budget. Rejected.
 - *A single untyped `/api/v1/records` with a free-form body*: destroys the typed-DTO guarantee in
@@ -62,6 +63,7 @@ were ever declared, the rest lived in Pydantic validators (domain-clinical.md §
 compatibility obligation.
 
 **Alternatives considered.**
+
 - *Per-kind status enums* (upstream's shape): makes FR-078's cross-kind status views and FR-076's
   timeline require a per-kind translation table. Rejected.
 - *User-extensible vocabularies*: FR-012 forbids extension by ordinary use, and the spec's
@@ -130,6 +132,7 @@ entry (`records.Filters`), and the generic list handler validates the query agai
 condition, medication, treatment).
 
 Two mechanisms answer "state the basis":
+
 1. **Envelope echo** — every list response carries `"criteria"`, the server's resolved narrowing,
    which the page renders as removable chips.
 2. **Per-row basis** — `Summary.basis: []string` is populated by the kind's `Basis()` function for
@@ -209,6 +212,7 @@ PocketBase relation behaviour — a relation field is one row of truth and Pocke
 cleans references — so building link tables would be building a bug.
 
 **Alternatives considered.**
+
 - *A generic polymorphic `record_links` table*: needs `(from_kind, from_id, to_kind, to_id)` with
   no foreign keys, loses cascade cleanup, and reintroduces the exact orphan class the shared
   design contract accepted for `attachments` only under protest. Rejected.
@@ -314,6 +318,7 @@ block over a per-type limit. FR-070's mandatory patient is shared design contrac
 meet SC-003 at 50,000 records.
 
 **Alternatives considered.**
+
 - *FTS5*: available (R3 CLOSED, FACT 11) and rejected on cost — it buys ranking FR-073 forbids,
   and charges a raw SQL migration, a separate maintenance path and a rebuild command for it.
   Revisit only if a future spec asks for ranking.
@@ -376,6 +381,7 @@ Decisions section names upstream's two-level model as the thing being deleted: "
 can quietly go stale."
 
 **Alternatives considered.**
+
 - *A `symptom_definitions` header row with maintained counters*: upstream's model. It is the only
   two-level model in the application, it obliges the user to define before recording, and SC-016's
   "immediately after an episode is deleted" is exactly where maintained counters fail. Rejected.
@@ -408,6 +414,7 @@ units with neither view altering what was recorded; that is only true if storage
 conversion is at the edge.
 
 **Alternatives considered.**
+
 - *Store the value with its unit*: every comparison, every trend and every range check needs a
   conversion first, and FR-089's 50,000-record list would convert per row per request.
 - *Convert in the service*: the service would need the viewing user's preferences, which makes it
@@ -505,6 +512,7 @@ subscriber**, renders the kind's `Row` component and patches it by
 `ids.RecordRow(kind, id)`. No new stream endpoint.
 
 Two regression assertions this phase adds:
+
 1. `internal/web/stream/deadline_test.go` — asserts the stream handler was constructed by
    `newStream()` and that the `*http.Server` `WriteTimeout` override is in place, because
    PocketBase's hardcoded 5-minute `WriteTimeout` kills every long-lived SSE stream and **passes
@@ -573,6 +581,7 @@ retried into passing" applies to slow ones too.
 
 **Decision.** `internal/records/recordstest` provides two `testify/suite` suites run against every
 implementation:
+
 - `RepositoryContract(t, factory)` — Get/List/Save/Delete semantics, cursor stability under
   concurrent insert, `ErrNotFound` on a foreign patient, version/If-Match behaviour, cascade on
   patient delete. Run against each of the 13 real repositories **and** each of the 13 fakes.

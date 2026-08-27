@@ -157,6 +157,7 @@ applies to `patients.primary_practitioner` and `medications.practitioner`.
 | 401 | no session | |
 
 **Mandatory tests**
+
 - Create a practitioner, name it as a patient's `primary_practitioner` and as a medication's
   `practitioner`, delete it → both records still exist, both references are now empty (US5-5).
 - The `usage` numbers reported before the delete equal the number of records actually modified.

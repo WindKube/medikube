@@ -91,6 +91,7 @@ MediGo's users.
 **Evidence.**
 
 - `apis/realtime.go:605-613` builds its authorization map directly from the CRUD rules:
+
   ```go
   subscriptionRuleMap := map[string]*string{
       (collection.Name + "/" + record.Id + "?"): collection.ViewRule,
@@ -98,6 +99,7 @@ MediGo's users.
       ...
   }
   ```
+
 - `core/record_query.go:599-612` — `CanAccessRecord`: superuser → true; **`accessRule == nil` →
   false**; `*accessRule == ""` → true.
 - Therefore `ListRule = ViewRule = nil` (the lockdown) means every broadcast is **skipped** in
@@ -144,6 +146,7 @@ This is a Principle VII (Patient Privacy) violation of the data-breach class, an
 does nothing about it.
 
 **Evidence.** `apis/file.go:109` — verified by direct read:
+
 ```go
 // check whether the request is authorized to view the protected file
 if fileField.Protected {
@@ -153,6 +156,7 @@ if fileField.Protected {
     }
 }
 ```
+
 **There is no `else`.** For a `FileField` with `Protected: false`,
 `GET /api/files/{collection}/{recordId}/{filename}` serves the blob to anyone — no token, no
 auth, no rule evaluation. The only protection is a random 10-character filename suffix, i.e.
@@ -202,6 +206,7 @@ The locked decision says both *"a slog.Handler bridges PocketBase's internal log
 conflict, and the constitution has already picked the losing side.
 
 **Evidence.** `core/base.go:1472-1536` `initLogger()`, verified by direct read:
+
 ```go
 BeforeAddFunc: func(ctx context.Context, log *logger.Log) bool {
     if app.IsDev() { printLog(log); ... }
@@ -213,6 +218,7 @@ WriteFunc: func(ctx context.Context, logs []*logger.Log) error {
     ...
 },
 ```
+
 With `MaxDays = 0` the log never even enters the batch. In production (`IsDev() == false`)
 `printLog` does not run either. So PocketBase's internal logs go **nowhere**: backup failures,
 mailer failures, cron errors, OAuth2 failures, WAL checkpoint warnings — all silently dropped.
@@ -232,9 +238,11 @@ two mechanisms cover *disjoint* sets of log lines and compose cleanly.
 **(a) Decorate the embedded `core.App` interface field.** Verified: `pocketbase.go:33-44`
 declares `type PocketBase struct { core.App; ...; RootCmd *cobra.Command }` — an **exported
 embedded interface field named `App`**. So:
+
 ```go
 pb.App = &LoggedApp{App: pb.App, logger: slog.New(zerolog.NewSlogHandler(zl))}
 ```
+
 redirects `Logger()` for the whole request path. Verified end to end:
 `Start()` (`pocketbase.go:170`) does `cmd.NewServeCommand(pb, ...)` passing **`pb` itself**;
 `apis/base.go:24` does `event.App = app`. Because `pb` is a pointer and `App` is a mutable
@@ -249,12 +257,14 @@ volume, synchronously, with request correlation.
 `LogsTableName = "_logs"`; `WriteFunc` persists via `txApp.AuxSave(model)` →
 `(*BaseApp).save` → `(*BaseApp).create`, which triggers the **tagged** `OnModelCreate()` hook
 (`core/db.go`). So:
+
 ```go
 app.OnModelCreate("_logs").BindFunc(func(e *core.ModelEvent) error {
     emitToZerolog(e.Model)
     return nil          // deliberately NOT e.Next() -> the INSERT never happens
 })
 ```
+
 The `_logs` table stays permanently empty — the locked "disable `_logs`" intent is satisfied —
 while the lines still reach zerolog. Covers the tail (b) exists for: `BaseApp`-internal warnings,
 and anything inside `RunInTransaction`, because `core/db_tx.go:53` does `clone := *app` on the
@@ -280,11 +290,13 @@ one non-existent injection point everybody looked for.
 ### C5 — `domain-platform`'s "API rules as defence-in-depth" reopens the auto-CRUD API — **FRICTION**
 
 **The conflict.** `domain-platform.md` §A5 proposes:
+
 ```
 // patients.viewRule
 owner = @request.auth.id ||
 @collection.shares.patient ?= id && @collection.shares.grantee ?= @request.auth.id && ...
 ```
+
 and §D4 repeats it ("mirrored into PB API rules as defence-in-depth"). `pocketbase.md` §7
 requires **all five rules `nil`** plus a boot assertion that *fails startup* on any non-nil rule.
 These cannot both be true.
@@ -447,6 +459,7 @@ for most of them.
 ### C9 — PocketBase's 5-minute `WriteTimeout` silently kills every SSE stream — **FRICTION**
 
 **Evidence.** `apis/serve.go:145-160`, verified by direct read:
+
 ```go
 server := &http.Server{
     // higher defaults to accommodate large file uploads/downloads
@@ -455,6 +468,7 @@ server := &http.Server{
     ...
 }
 ```
+
 It is a struct literal with no config field. `datastar.NewSSE` sets `Cache-Control`,
 `Content-Type` and `Connection` and flushes — it **never touches the write deadline**. So every
 long-lived Datastar stream dies at exactly five minutes with a write error and the client
@@ -500,11 +514,13 @@ non-functional, and it fills the console with CSP violations, **failing the zero
 Playwright gate on every route**.
 
 **Resolution.** Record it in the constitution as an **accepted risk**, not a config footnote:
+
 ```
 default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self';
 img-src 'self' data: blob:; connect-src 'self'; form-action 'self';
 frame-ancestors 'none'; base-uri 'none'; object-src 'none'
 ```
+
 What bounds the risk: `'unsafe-eval'` does not itself create an injection vector, and **every
 Datastar expression is server-authored templ output** — expression text never comes from user
 input. The compensating controls that matter are that `'unsafe-inline'` is **not** granted (so
@@ -735,6 +751,7 @@ architecture and cannot be made from the dossiers.
 Seven phases. Each is independently shippable and independently verifiable.
 
 ### 1 — `walking-skeleton`
+
 **Goal.** One clinical record type works end to end on embedded PocketBase, with every
 cross-cutting decision proven and gated, so later phases only add domain.
 
@@ -757,6 +774,7 @@ seed` / `routes` / `openapi` / `healthcheck` Cobra subcommands; `.golangci.yml` 
 **Depends on:** nothing.
 
 ### 2 — `reference-and-catalogs`
+
 **Goal.** Every lookup entity the clinical records depend on exists, with MediGo's canonical
 enums defined rather than inherited.
 
@@ -769,6 +787,7 @@ uniqueness as collection indexes (`AddIndex`, since PB has no per-field `Unique`
 **Depends on:** `walking-skeleton`.
 
 ### 3 — `clinical-records`
+
 **Goal.** All 13 clinical record types and the multi-patient model, on one canonical route shape.
 
 **Deliverables.** Patient CRUD + `is_self_record` + the `active_patient` pointer + patient
@@ -783,6 +802,7 @@ round-trips lossily).
 **Depends on:** `walking-skeleton`, `reference-and-catalogs`.
 
 ### 4 — `labs-and-attachments`
+
 **Goal.** Labs and files, with file serving that does not leak PHI.
 
 **Deliverables.** Lab results + lab test components + standardized test catalog wiring; **all
@@ -794,6 +814,7 @@ spec about SQLite FTS limits.
 **Depends on:** `clinical-records`.
 
 ### 5 — `sharing-and-invitations`
+
 **Goal.** The one thing that must be built well: row-level access, unified.
 
 **Deliverables.** A single resource-generic `shares` collection (`ResourceKind` = patient |
@@ -808,6 +829,7 @@ as performing **no authorization at all**, is not reproduced.
 **Depends on:** `clinical-records`.
 
 ### 6 — `reporting-and-ops`
+
 **Goal.** Export, audit and the operational surface — mostly by *not* building it.
 
 **Deliverables.** Custom reports + async export in the documented portable format the
@@ -821,6 +843,7 @@ error boundaries to ship home).
 **Depends on:** `sharing-and-invitations`, `labs-and-attachments`.
 
 ### 7 — `hardening-and-release`
+
 **Goal.** Prove the whole thing holds under the gates before it touches real medical data.
 
 **Deliverables.** The realtime SSE hub generalized across every subsystem with per-event

@@ -120,6 +120,7 @@ pointers. `samber/mo` is forbidden and `*T`/`**T` is stdlib, marshals correctly 
 | `count` | `true` to include `total` | — |
 
 **200**
+
 ```json
 { "items": [ /* MedicationSummary */ ],
   "next_cursor": "eyJrIjoi…" }

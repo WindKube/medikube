@@ -43,22 +43,26 @@ Defined once in `internal/domain/clinical/vocab.go` as string types with `Valid(
 `All() []string`. All values `snake_case`.
 
 ### `Severity` — one ladder for four kinds
+
 `mild` · `moderate` · `severe` · `life_threatening`
 Used by: allergy, condition, injury, symptom, and `FamilyCondition`.
 **No catch-all**: the ladder is complete and ordered; an `other` would break the ordering that
 FR-018 depends on.
 
 ### `ConditionStatus` — the "is it still going on" ladder
+
 `active` · `healing` · `inactive` · `resolved` · `chronic`
 Used by: allergy, condition, injury, symptom, and `FamilyCondition`.
 **No catch-all**: complete.
 
 ### `OrderStatus` — the ordered-event ladder
+
 `ordered` · `scheduled` · `in_progress` · `completed` · `cancelled`
 Used by: procedure (and lab_result in phase 004). Procedures use `scheduled`; labs use `ordered`.
 **No catch-all**: complete.
 
 ### `TherapyStatus` — the course-of-therapy ladder
+
 `active` · `on_hold` · `completed` · `stopped` · `cancelled`
 Used by: medication (phase 001), treatment, equipment.
 **No catch-all**: complete.
@@ -293,6 +297,7 @@ Index: `idx_symptoms_patient_at (patient, occurred_at, id)`, `idx_symptoms_patie
 Index: `idx_vitals_patient_at (patient, recorded_at, id)`.
 
 **Cross-field rules**
+
 - **FR-034**: at least one of the thirteen measurement fields must be non-null. A set with none is
   refused with `code: at_least_one_measurement`.
 - **FR-036**: `systolic_mmhg` and `diastolic_mmhg` are both-or-neither, and
@@ -501,8 +506,9 @@ Additive vocabulary extension only (research D-19). Phase 001's migration declar
 design contract's **complete** vocabulary — twenty actions and twenty-three target kinds,
 including all fifteen record kinds — so the thirteen kinds this phase builds are already declared
 and this phase adds only the two values the contract does not name:
+
 - `target_kind` gains **`tag`** (a tag is an auditable resource, FR-059) and **`search`** (the
-  target kind of the row a search writes, [D-12](./research.md#d-12)). The thirteen new record
+  target kind of the row a search writes, [D-12](./research.md#d-12--fr-075-the-search-term-is-a-first-class-secret)). The thirteen new record
   kinds are **already present** from phase 001 and are asserted, not added.
 - `action` gains **nothing**. `access_denied` arrives with `audit_events` in phase 001
   (001 plan post-design re-check item 2, 001 research D-20), not here, so that refusals are not
@@ -531,6 +537,7 @@ severity       Severity
 status         ConditionStatus
 notes          text ≤2000    PHI
 ```
+
 List max 50 entries. Each entry validated independently; **all** offences reported together.
 
 ### 6.2 `Coverage` — `insurances.coverage`
@@ -544,6 +551,7 @@ copay_er           decimal ≥0
 coinsurance_pct    number 0..100
 currency           text, ISO-4217 3-letter uppercase, required when any amount is present (FR-044)
 ```
+
 Money is stored as a string-encoded decimal in JSON and handled as an integer minor unit in Go —
 never `float64`. FR-044 requires "each with a stated currency", so an amount without `currency` is
 `422`.
