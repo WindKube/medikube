@@ -1,10 +1,10 @@
-# MediGo — Visual Design Specification
+# MediKube — Visual Design Specification
 
 **Status**: imported, reconciled, **not implemented**. No phase task in this suite has been
 started against it.
 **Source**: Claude Design project `MediKeep UI design`
 (`8811aba8-5354-421e-b27c-1c24e6a14751`), file `MediKeep.dc.html`, imported 2026-08-27.
-**Stored in this repository at**: `design/source/MediKeep.dc.html` (the comp, verbatim),
+**Stored in this repository at**: `design/source/MediKube.dc.html` (the comp, app-name strings aside),
 `design/source/support.js` (the preview runtime, quarantined — see §0.2),
 `design/tokens.css` (tokens extracted from the comp; wired into nothing).
 **Sits beside**: [`SHARED-DESIGN.md`](./SHARED-DESIGN.md) and
@@ -15,7 +15,7 @@ session scratchpad on 2026-08-27, and the nine dossiers under
 ## 0. What this document is, and what it is not
 
 This is the **visual** contract: colour, type, spacing, radii, density, and the component
-vocabulary the product is drawn from. It is authoritative on how MediGo **looks**.
+vocabulary the product is drawn from. It is authoritative on how MediKube **looks**.
 
 It is **not** authoritative on:
 
@@ -24,7 +24,7 @@ It is **not** authoritative on:
 - **Which pages exist** — the six phase charters own that. This design covers 20 of the
   suite's 58 page routes (§5.1).
 - **What the product does** — the phase `spec.md` files own that. This design draws several
-  features MediGo has explicitly declined to build (§5.3).
+  features MediKube has explicitly declined to build (§5.3).
 
 Precedence, unchanged: the constitution → [`VERIFIED-SOURCE-FACTS.md`](./VERIFIED-SOURCE-FACTS.md) → [`SHARED-DESIGN.md`](./SHARED-DESIGN.md) →
 the phase charters → **this document**, on visual questions only.
@@ -49,7 +49,7 @@ field is a `<div>` containing the text "Search records…". The patient switcher
 ending in a `▾` character.
 
 This is entirely normal output for a design tool, and it is **not** a criticism of the design.
-It is the single most important fact in this document, because MediGo gates every page on
+It is the single most important fact in this document, because MediKube gates every page on
 landmark assertions under Principle VIII, and **a faithful one-to-one translation of this comp
 would fail that gate on all 58 pages and be unusable with a screen reader.** Structure is not
 "polish to add later"; under this constitution it is the deliverable. §6 lists what has to be
@@ -67,7 +67,7 @@ and re-rendered locally for reference. It must never be vendored, imported, serv
 copied into `internal/web/static/`. It carries no design content: three hex colours, all of them
 its own error-overlay chrome.
 
-MediGo's front end is templ + Datastar + Tailwind, per the constitution. Nothing in the comp
+MediKube's front end is templ + Datastar + Tailwind, per the constitution. Nothing in the comp
 changes that.
 
 ---
@@ -285,17 +285,17 @@ implementer must resolve **before** writing `shell/layout.templ`.
 | 7 | No skip link | `<a href="#main">Skip to main content</a>` first in the body | Add it. |
 | 8 | No page-level landmark; page titles are styled `<div>`s | Every page asserts its own `region[name="…"]` or `article[name="…"]` **and non-empty** | Every page body becomes a `<section aria-label="…">` or `<article aria-label="…">` with the exact literal from §3.1. |
 
-### 5.3 Features drawn that MediGo has declined to build
+### 5.3 Features drawn that MediKube has declined to build
 
 Each of these is in the comp and has **no home** in any of the six phases. None is a defect in
-the design — the comp was drawn from MediKeep, and MediGo deliberately scoped some of MediKeep
+the design — the comp was drawn from MediKeep, and MediKube deliberately scoped some of MediKeep
 away. But an implementer working from the comp will build them by accident unless it is written
 down.
 
 | Drawn | Status in the suite |
 |---|---|
 | **Entire "Notifications" screen** — Discord, SMTP, Gotify and webhook channels, per-event delivery toggles | **Explicitly out of scope, twice.** 005: "Delivery over chat services, push services or arbitrary webhooks, digests, and per-event delivery preferences are not part of this phase **and are not planned for one**." 006 repeats it. Notices are in-application and by invitation email only. **Do not build this screen.** |
-| **"Next appointment" card** with Reschedule / Details | MediGo's `encounters` record visits that **already happened**. There is no scheduling, no booking, no calendar. The comp's most prominent dashboard element is a feature the product does not have. |
+| **"Next appointment" card** with Reschedule / Details | MediKube's `encounters` record visits that **already happened**. There is no scheduling, no booking, no calendar. The comp's most prominent dashboard element is a feature the product does not have. |
 | **"Today's medications"** with dose times, and "2 medication reminders" in the greeting | **Orphaned — see §5.4.** Phase 001 defers medication reminders to "a later phase"; no later phase claims them, and 005 and 006 both rule out the delivery mechanism they would need. |
 | **"Next refill · 9 days"** stat card | No refill tracking anywhere in the suite. |
 | **Dropzone: "auto-parses lab results"** | Phase 004 stores attachments and records lab results; it does not parse, OCR or extract anything from an uploaded document. |
@@ -450,18 +450,18 @@ None of these blocks phase 001 from starting; each blocks something later.
 
 ## 8. Repository integration
 
-`medigo/design/` is reference material: the comp, the quarantined preview runtime and the token
-file. So is the whole of `medigo/specs/` and `medigo/.specify/` — roughly **1.2 MB of markdown**
+`medikube/design/` is reference material: the comp, the quarantined preview runtime and the token
+file. So is the whole of `medikube/specs/` and `medikube/.specify/` — roughly **1.2 MB of markdown**
 after the design dossiers moved in on 2026-08-27. **No build stage reads any of it**, and it must
 be excluded from the Docker build context the way `arc-ui/docs/` and `arc-ui/chart/` already are.
 
-Phase 001's task T011 adds `!medigo/` to the monorepo allowlist in `/.dockerignore`; it must also
+Phase 001's task T011 adds `!medikube/` to the monorepo allowlist in `/.dockerignore`; it must also
 add:
 
 ```
-medigo/design/
-medigo/specs/
-medigo/.specify/
+medikube/design/
+medikube/specs/
+medikube/.specify/
 ```
 
 Two reasons, and the first is the sharp one. `design/source/support.js` is **57 KB of React**, and

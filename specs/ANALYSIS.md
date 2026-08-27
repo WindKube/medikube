@@ -1,4 +1,4 @@
-# MediGo specification suite — final readiness report
+# MediKube specification suite — final readiness report
 
 **Run**: 2026-08-27, closing pass. Supersedes every earlier revision of this file.
 **Scope**: `specs/001`–`specs/006`, `.specify/memory/constitution.md` v1.3.0, the cross-phase design
@@ -42,7 +42,7 @@ where four sites still instructed an implementer to write the audit-index migrat
 `006/data-model.md` §4.3 forbids in bold, which would have failed `CREATE INDEX` at first boot —
 is closed: the migration entry, its plan tree line and its `highest_applied` sample are gone, T034
 is now an `EXPLAIN QUERY PLAN` assertion with no migration, and D-52 cites the four indexes that
-actually exist. **N2** — the restore safety copy computing to 66 characters against a `Max 64`
+actually exist. **N2** — the restore safety copy computing to 70 characters against a `Max 64`
 column — is closed by making every archive timestamp compact rather than RFC3339 (the longest
 composed name is now 54) and by bounding op 86's uploaded key to 64. A colon is not a legal
 filename character on Windows or a clean S3 key either, so the compact form was the right call
@@ -112,7 +112,7 @@ table's own claimed count exactly.
 
 | # | Repair | Holds | Evidence, and what would have contradicted it |
 |---|---|---|---|
-| R1 | `audit_events.target_id` widened `≤15` → `≤64`, with a bounded "never a name" exception | **yes** | `001/data-model.md:267` reads `≤64` and states the exception for `target_kind ∈ {system, backup, export}` with the reason. `001/tasks.md:258` (T070a) asserts `Max 64` and `:264` (T071) creates it at `Max 64`. **`grep -rn '≤15\|Max 15\|15 characters' specs/` returns zero** — no surviving `≤15` anywhere. Every job name written (`medigo_purge_artifacts` 22, `medigo_purge_audit` 18, `medigo_storage_refresh` 22, `medigo_attachment_maintenance` 29) fits. `006/data-model.md:294-300` restates 001's rule rather than re-deriving it. **One composition still overflows — non-blocking N2.** |
+| R1 | `audit_events.target_id` widened `≤15` → `≤64`, with a bounded "never a name" exception | **yes** | `001/data-model.md:267` reads `≤64` and states the exception for `target_kind ∈ {system, backup, export}` with the reason. `001/tasks.md:258` (T070a) asserts `Max 64` and `:264` (T071) creates it at `Max 64`. **`grep -rn '≤15\|Max 15\|15 characters' specs/` returns zero** — no surviving `≤15` anywhere. Every job name written (`medikube_purge_artifacts` 24, `medikube_purge_audit` 20, `medikube_storage_refresh` 24, `medikube_attachment_maintenance` 31) fits. `006/data-model.md:294-300` restates 001's rule rather than re-deriving it. **One composition still overflows — non-blocking N2.** |
 | R2 | `request_id` stays `Required`; background runs mint a `run_id` from the same helper | **yes** | `001/data-model.md:268` states it with the failure it prevents. Propagated to `001/plan.md:412`, T070a (`Max 64` **and `Required`**), T071, T231 (the bare-`context.Background()` case), T240 (`Record` resolves from run id when there is no request). **Every background audit writer in the suite is covered**: 001's retention purge (`data-model.md:268`, T231/T240), 002's backfill (T074), 004's attachment purge and orphan sweep (T093, T107), 005's tidy pass (`005/data-model.md:227-231`, T111, T116), 006's job envelope (T052, T053), scheduled archive (T183), boot-time journal replay (T191, `admin-backups.md:225-229`) and audit purge (T219). 003 has no background audit writer (`grep -i cron specs/003-clinical-records/` → one rejected-alternative line). **Zero audit write sites left with neither an HTTP request nor a run id.** |
 | R3 | Signed-out pages **do** carry `navigation[name="Primary"]` | **yes** | `001/contracts/pages.md:38-46` now reads *"Signed-out pages render the same shell, navigation landmark included… on **every** page in the application; what changes signed out is its contents"*, and names `/invite/{token}` as the reason it cannot be conditional. The smoke assertion at `:131` reads *"the four shell landmarks are present, **signed in or out**"*. That now agrees with `001/spec.md:274` (FR-043), `001/plan.md:466`, `001/tasks.md:920` (T249), `contracts/pages.md:120` (all three error views in the full shell) and `005/contracts/pages.md:26`. No "three, signed out" survives. |
 | R4 | `#notice-region` is dead at all seven 005 sites; 005 makes no `layout.templ` edit for it | **yes** | `grep -rn 'notice-region' specs/` returns **one** line — `005/contracts/pages.md:47`, explaining why it is *not* added. `005/plan.md:309` and `:512` (`[UNCHANGED]`), `005/tasks.md:316` (T124), `:322` (T127), `:339` (T136) and `005/contracts/streams-notifications.md:24` all now name `#toast`. `#live-region` returns zero hits. **But §2's blanket "None" overshot — non-blocking N3.** |
@@ -134,7 +134,7 @@ table's own claimed count exactly.
 |---|---|---|
 | 6 | FR ids in `spec.md` vs cited in `tasks.md`, per phase | **100% both ways, all six phases.** `comm` on sorted unique ids: both differences empty for 001 (77), 002 (56), 003 (94), 004 (85), 005 (80), 006 (137). No document cites an FR its phase does not define. |
 | 7 | Every SC either cited by a task or marked `[outcome metric]` | **complete.** Uncited SCs: 001 {SC-001}, 002 {SC-001}, 003 {SC-001}, 004 {SC-001}, 005 {SC-001, SC-002}, 006 {SC-001}. Every one of those seven carries `[outcome metric]` in its own spec, and no other SC does. The nine-uncited-SC gap of the previous round is closed: `004` SC-007 and SC-012 and `006` SC-003, SC-015, SC-026, SC-027 are now cited by real tasks. |
-| 8 | **Semantic** discharge — the cited task actually does the work | **16 requirements read in full across all six phases; all 16 genuinely discharge.** 001: FR-003 → T191/T192 (case-insensitive unique index + the enumeration-safe duplicate response), FR-037 → T232/T234 (immutability through every path, configurable retention), FR-054 → T240/T244 (the correlation id on every line and on the background row), FR-067 → T268 (the smoke list shells out to `medigo routes --json`). 002: FR-004 → T045/T049/T059 (partial unique index refuses a second self-record even under a direct write), FR-029 → T109 (kind/action/time and `target_exists: false`, no name or value). 003: FR-073 → T165 (`occurred_on DESC, id DESC`, nulls last, no ranking claim), FR-059 → T136/T142 (both ends of the relation, kind + summary + openable link). 004: FR-074 → T005/T095 (a `forbidigo` gate on `NewFileToken` plus the three-way authorization matrix), FR-077 → T093/T096. 005: FR-033 → T111 (idempotent tidy, terminal invitations removed while their audit rows survive), FR-023 → T036/T050/T104 (the preview DTO has no field for a name). 006: FR-101 → T183, FR-114 → T061/T165 (a reflection test that fails the build if a free-text field is added). **The FR-035 defect class is fixed at its source**: `006/tasks.md:249` (T114) now names its own former miscitation in the task text, and FR-035 is discharged by T118a, T118b and T122a, which actually put `data/report_templates.json` into the archive. SC-007 is discharged by the new T114a, both halves. |
+| 8 | **Semantic** discharge — the cited task actually does the work | **16 requirements read in full across all six phases; all 16 genuinely discharge.** 001: FR-003 → T191/T192 (case-insensitive unique index + the enumeration-safe duplicate response), FR-037 → T232/T234 (immutability through every path, configurable retention), FR-054 → T240/T244 (the correlation id on every line and on the background row), FR-067 → T268 (the smoke list shells out to `medikube routes --json`). 002: FR-004 → T045/T049/T059 (partial unique index refuses a second self-record even under a direct write), FR-029 → T109 (kind/action/time and `target_exists: false`, no name or value). 003: FR-073 → T165 (`occurred_on DESC, id DESC`, nulls last, no ranking claim), FR-059 → T136/T142 (both ends of the relation, kind + summary + openable link). 004: FR-074 → T005/T095 (a `forbidigo` gate on `NewFileToken` plus the three-way authorization matrix), FR-077 → T093/T096. 005: FR-033 → T111 (idempotent tidy, terminal invitations removed while their audit rows survive), FR-023 → T036/T050/T104 (the preview DTO has no field for a name). 006: FR-101 → T183, FR-114 → T061/T165 (a reflection test that fails the build if a free-text field is added). **The FR-035 defect class is fixed at its source**: `006/tasks.md:249` (T114) now names its own former miscitation in the task text, and FR-035 is discharged by T118a, T118b and T122a, which actually put `data/report_templates.json` into the archive. SC-007 is discharged by the new T114a, both halves. |
 | 9 | Acceptance-scenario citations | **zero overflows suite-wide.** Every `USn AS-m` citation in all six task lists checked against that story's own scenario count (001: 9/12/8/8/9/8; 002: 8/6/6/6/6/6; 003: 7/5/6/5/5/6/5/5/5/4; 004: 13/16/12/8/7; 005: 9/8/7/7/10/6; 006: 15/15/13/12/16/13/15/11/12). The previous round's `US6 AS-14` dangler is gone, and 006's scrambled US3 block is corrected — T110→AS-10, T112→AS-6/7/9, T113→AS-12, T114→AS-3, T114a→AS-4/AS-5. |
 | 10 | Task-id integrity | **clean.** Zero dangling `depends on` targets and zero forward dependencies in any phase. |
 | 11 | Section cross-references | **clean.** Every `<file>.md §N` and `SHARED-DESIGN §N` reference in the suite machine-resolves to a heading that exists. The previous round's one failure (`001/contracts/records.md:249` → `pages.md` §4) is repaired — it now names the section by title. |
@@ -225,20 +225,20 @@ to cite the four that exist. `006/tasks.md:120` (T048) already reads correctly a
 
 **N2 — Two archive names can exceed the `≤64` `target_id` that the widening repair sized, and one of
 
-> **CLOSED 2026-08-27.** Every archive timestamp is compact `<YYYYMMDDHHMMSS>`, never RFC3339 — the longest composed name, `medigo_safety_20260827120000_medigo_20260827120000.zip`, is **54**. Op 86 now normalises and bounds the uploaded storage key to 64 before storing, since that key is what `backup_upload` writes into `target_id`. `001/data-model.md:267` now shows the arithmetic that sizes the column rather than asserting "~40". Verified: zero `<rfc3339>` archive names remain.
+> **CLOSED 2026-08-27.** Every archive timestamp is compact `<YYYYMMDDHHMMSS>`, never RFC3339 — the longest composed name, `medikube_safety_20260827120000_medikube_20260827120000.zip`, is **58**. Op 86 now normalises and bounds the uploaded storage key to 64 before storing, since that key is what `backup_upload` writes into `target_id`. `001/data-model.md:267` now shows the arithmetic that sizes the column rather than asserting "~40". Verified: zero `<rfc3339>` archive names remain.
 
 them is not bounded at all.**
 
 `001/data-model.md:267` sized the column at 64 on the stated basis that *"a PocketBase record id is
-15 and an archive name is ~40"*, exemplified as `pb_backup_medigo_20260827120000.zip` (35
+15 and an archive name is ~40"*, exemplified as `pb_backup_medikube_20260827120000.zip` (37
 characters, compact timestamp). Two compositions in phase 006 break that budget:
 
 1. **The safety copy.** `006/contracts/admin-backups.md:203` — `app.CreateBackup(ctx,
-   "medigo_safety_<rfc3339>_<name>")`, where `<name>` is the archive being restored, itself
-   `medigo_<rfc3339>.zip` per `:73`. Spelling `<rfc3339>` literally (`2026-08-27T12:00:00Z`, 20
-   chars) gives `14 + 20 + 1 + 31 =` **66 characters**. That name is written into `target_id` by the
+   "medikube_safety_<rfc3339>_<name>")`, where `<name>` is the archive being restored, itself
+   `medikube_<rfc3339>.zip` per `:73`. Spelling `<rfc3339>` literally (`2026-08-27T12:00:00Z`, 20
+   chars) gives `16 + 20 + 1 + 33 =` **70 characters**. That name is written into `target_id` by the
    journal-replayed `backup_create` row (`admin-backups.md:220`, research D-23, T191) — the row that
-   exists specifically to survive the restore. With the compact timestamp 001 exemplifies it is 54
+   exists specifically to survive the restore. With the compact timestamp 001 exemplifies it is 58
    and fits; the suite never says which spelling wins.
 2. **An uploaded archive.** `006/research.md:931` states plainly that *"an uploaded archive can be
    named anything"*, and op 86's validation (`admin-backups.md:100-102`) bounds only zip-ness,
@@ -251,8 +251,8 @@ place in the product where losing the row also loses the account of what happene
 **Why it is not blocking**: phase 001 is unaffected — it writes ids and empty strings — and the fix
 is an engineering choice the documents already lean toward, not a product decision.
 
-*Fix*: state the archive timestamp format once, compactly (`medigo_YYYYMMDDHHMMSS.zip`,
-`medigo_safety_YYYYMMDDHHMMSS_<name>`), and bound or normalise the upload key in op 86's validation
+*Fix*: state the archive timestamp format once, compactly (`medikube_YYYYMMDDHHMMSS.zip`,
+`medikube_safety_YYYYMMDDHHMMSS_<name>`), and bound or normalise the upload key in op 86's validation
 list so `<name>` has a stated maximum. Then add the arithmetic to `001/data-model.md:267`'s sizing
 sentence so the next reader can check it.
 
@@ -357,7 +357,7 @@ finding ids — repaired but for the two sites in N4. O10 `#notice-region` — d
 route-table arithmetic. O12 op 4's history. O14 the "belong to no phase yet" claim. O15 the last
 "label".
 
-Also closed this round without being raised: the `medigo reindex` / FTS5 contradiction
+Also closed this round without being raised: the `medikube reindex` / FTS5 contradiction
 (`003/plan.md:466` now records the deviation and states that risk R3 is **CLOSED** on
 VERIFIED-SOURCE-FACTS FACT 11, so availability is *not* the reason — FR-073 declining ranking is);
 `SHARED-DESIGN` §3.1's terminology block, now past tense with *"`Labels`, `Label`, `Appointments`
@@ -390,7 +390,7 @@ stated at source with the failure it prevents.
   are dead names.
 - `004`'s **T037 is deliberately vacant** and documented as such.
 - Search is `LIKE` over an ordinary `search_index` collection, **not** FTS5 — because FR-073
-  declines relevance ranking, not because FTS5 is unavailable. `medigo reindex` is not built.
+  declines relevance ranking, not because FTS5 is unavailable. `medikube reindex` is not built.
 - Roll-ups are computed once in `SHARED-DESIGN` §§1.6/2.3/3.1: **30 collections, 94 operations,
   58 pages + 3 error views + 7 page-action routes, 15 record kinds**. Cite them; never re-derive.
 
