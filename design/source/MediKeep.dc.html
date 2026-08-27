@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-thumb { background: #d4ddd9; border-radius: 8px; border: 2px solid #fff; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</helmet>
+<div style="display:flex; height:100vh; width:100%; background:#f5f7f6; font-family:'Hanken Grotesk',system-ui,sans-serif; color:#1f2a27; -webkit-font-smoothing:antialiased; overflow:hidden;">
+
+  <!-- SIDEBAR -->
+  <aside style="width:248px; flex-shrink:0; background:#ffffff; border-right:1px solid #e4e9e7; display:flex; flex-direction:column; height:100vh;">
+    <div style="display:flex; align-items:center; gap:11px; padding:22px 22px 16px;">
+      <div style="width:34px; height:34px; border-radius:10px; background:#3f6f63; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:17px;">M</div>
+      <div>
+        <div style="font-weight:700; font-size:16px; letter-spacing:-0.2px;">MediKeep</div>
+        <div style="font-size:11px; color:#8a978f; margin-top:1px;">Personal health record</div>
+      </div>
+    </div>
+
+    <nav style="flex:1; overflow-y:auto; padding:0 12px 10px;">
+      <sc-for list="{{ navGroups }}" as="g" hint-placeholder-count="4">
+        <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.7px; color:#a9b3ae; font-weight:700; padding:14px 12px 5px;">{{ g.heading }}</div>
+        <sc-for list="{{ g.items }}" as="item" hint-placeholder-count="3">
+          <button onClick="{{ item.onClick }}" style="display:flex; align-items:center; gap:12px; width:100%; text-align:left; border:none; cursor:pointer; font-family:inherit; font-size:13.5px; padding:9px 12px; border-radius:10px; margin-bottom:1px; font-weight:{{ item.weight }}; color:{{ item.color }}; background:{{ item.bg }};">
+            <span style="width:18px; display:inline-flex; justify-content:center; font-size:14px;">{{ item.icon }}</span>
+            <span>{{ item.label }}</span>
+          </button>
+        </sc-for>
+      </sc-for>
+    </nav>
+
+    <div style="padding:12px; border-top:1px solid #eef2f0;">
+      <div style="padding:11px; background:#f5f7f6; border-radius:13px; display:flex; align-items:center; gap:11px;">
+        <div style="width:36px; height:36px; border-radius:50%; background:#9cb8ae; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:600; font-size:13px;">SL</div>
+        <div style="min-width:0; flex:1;">
+          <div style="font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Sarah Lin</div>
+          <div style="font-size:11px; color:#8a978f;">Account &amp; settings</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main style="flex:1; min-width:0; display:flex; flex-direction:column; height:100vh;">
+    <!-- TOPBAR -->
+    <header style="height:66px; flex-shrink:0; background:#fff; border-bottom:1px solid #e4e9e7; display:flex; align-items:center; gap:16px; padding:0 30px;">
+      <div style="font-size:17px; font-weight:600; letter-spacing:-0.3px;">{{ pageTitle }}</div>
+      <div style="display:flex; align-items:center; gap:8px; background:#f5f7f6; border:1px solid #e4e9e7; border-radius:10px; padding:7px 12px; margin-left:8px;">
+        <span style="width:22px; height:22px; border-radius:50%; background:#9cb8ae; color:#fff; font-size:10px; font-weight:600; display:flex; align-items:center; justify-content:center;">SL</span>
+        <span style="font-size:12.5px; font-weight:600;">Sarah Lin</span>
+        <span style="font-size:11px; color:#8a978f;">Self ▾</span>
+      </div>
+      <div style="margin-left:auto; display:flex; align-items:center; gap:11px;">
+        <div style="display:flex; align-items:center; gap:8px; background:#f5f7f6; border:1px solid #e4e9e7; border-radius:10px; padding:8px 13px; width:210px; color:#8a978f; font-size:13px;">
+          <span>⌕</span><span>Search records…</span>
+        </div>
+        <button style="width:38px; height:38px; border:1px solid #e4e9e7; background:#fff; border-radius:10px; font-size:15px; cursor:pointer; color:#5f6f6a;">⊙</button>
+        <button style="width:38px; height:38px; border:none; background:#3f6f63; border-radius:10px; font-size:15px; cursor:pointer; color:#fff;">＋</button>
+      </div>
+    </header>
+
+    <div style="overflow-y:auto; flex:1;">
+    <div style="padding:28px 30px 48px;">
+
+      <!-- ============ DASHBOARD ============ -->
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="margin-bottom:22px;">
+          <div style="font-family:'Newsreader',serif; font-size:27px; font-weight:500; letter-spacing:-0.4px;">Good morning, Sarah.</div>
+          <div style="color:#5f6f6a; font-size:14px; margin-top:4px;">Everything looks steady today — 2 medication reminders and 1 upcoming appointment.</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin-bottom:16px;">
+          <sc-for list="{{ statCards }}" as="s" hint-placeholder-count="4">
+            <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; padding:17px;">
+              <div style="font-size:12.5px; color:#8a978f; font-weight:500;">{{ s.label }}</div>
+              <div style="display:flex; align-items:baseline; gap:6px; margin-top:9px;">
+                <span style="font-size:26px; font-weight:700; letter-spacing:-0.5px;">{{ s.value }}</span>
+                <span style="font-size:12px; color:#7c8a83;">{{ s.unit }}</span>
+              </div>
+              <div style="display:inline-block; margin-top:10px; font-size:11px; font-weight:600; padding:3px 9px; border-radius:7px; color:{{ s.tagColor }}; background:{{ s.tagBg }};">{{ s.tag }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1.6fr 1fr; gap:15px;">
+          <div style="display:flex; flex-direction:column; gap:15px;">
+            <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; padding:19px 21px;">
+              <div style="display:flex; align-items:center; margin-bottom:12px;">
+                <div style="font-size:15px; font-weight:600;">Today's medications</div>
+                <div style="margin-left:auto; font-size:12.5px; color:#3f6f63; font-weight:500; cursor:pointer;">View all</div>
+              </div>
+              <sc-for list="{{ todayMeds }}" as="m" hint-placeholder-count="3">
+                <div style="display:flex; align-items:center; gap:13px; padding:11px 0; border-top:1px solid #eef2f0;">
+                  <div style="width:9px; height:9px; border-radius:50%; background:{{ m.dot }}; flex-shrink:0;"></div>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:14px; font-weight:600;">{{ m.name }}</div>
+                    <div style="font-size:12px; color:#8a978f;">{{ m.detail }}</div>
+                  </div>
+                  <div style="font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:8px; color:{{ m.tColor }}; background:{{ m.tBg }};">{{ m.time }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; padding:19px 21px;">
+              <div style="font-size:15px; font-weight:600; margin-bottom:4px;">Blood pressure</div>
+              <div style="font-size:12.5px; color:#8a978f; margin-bottom:16px;">Last 7 readings · mmHg</div>
+              <div style="display:flex; align-items:flex-end; gap:14px; height:118px;">
+                <sc-for list="{{ bpBars }}" as="b" hint-placeholder-count="7">
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end;">
+                    <div style="width:100%; max-width:26px; height:{{ b.h }}; background:#9cb8ae; border-radius:7px 7px 4px 4px;"></div>
+                    <div style="font-size:10.5px; color:#a3aea9;">{{ b.day }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:15px;">
+            <div style="background:#3f6f63; color:#fff; border-radius:15px; padding:19px 21px;">
+              <div style="font-size:12.5px; opacity:0.8; font-weight:500;">Next appointment</div>
+              <div style="font-family:'Newsreader',serif; font-size:21px; margin-top:8px;">Dr. Patel · Cardiology</div>
+              <div style="font-size:13px; opacity:0.85; margin-top:6px;">Thu, June 26 · 10:30 AM</div>
+              <div style="margin-top:15px; display:flex; gap:9px;">
+                <div style="background:rgba(255,255,255,0.18); border-radius:9px; padding:8px 14px; font-size:12.5px; font-weight:500; cursor:pointer;">Reschedule</div>
+                <div style="background:#fff; color:#3f6f63; border-radius:9px; padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">Details</div>
+              </div>
+            </div>
+
+            <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; padding:19px 21px;">
+              <div style="font-size:15px; font-weight:600; margin-bottom:10px;">Recent activity</div>
+              <sc-for list="{{ activity }}" as="a" hint-placeholder-count="4">
+                <div style="display:flex; gap:12px; padding:8px 0;">
+                  <div style="width:8px; height:8px; border-radius:50%; background:#e7ad6b; margin-top:6px; flex-shrink:0;"></div>
+                  <div>
+                    <div style="font-size:13px; font-weight:500;">{{ a.text }}</div>
+                    <div style="font-size:11.5px; color:#a3aea9;">{{ a.when }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ PATIENTS ============ -->
+      <sc-if value="{{ isPatients }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="display:flex; align-items:flex-end; margin-bottom:20px;">
+          <div>
+            <div style="font-family:'Newsreader',serif; font-size:24px; font-weight:500;">Patients</div>
+            <div style="color:#5f6f6a; font-size:13.5px; margin-top:3px;">Records are organized by patient. You manage 4 profiles.</div>
+          </div>
+          <button style="margin-left:auto; background:#3f6f63; color:#fff; border:none; border-radius:10px; padding:10px 16px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;">＋ Add patient</button>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:15px;">
+          <sc-for list="{{ patients }}" as="p" hint-placeholder-count="4">
+            <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; padding:20px;">
+              <div style="display:flex; align-items:center; gap:13px; margin-bottom:15px;">
+                <div style="width:46px; height:46px; border-radius:50%; background:{{ p.color }}; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:16px;">{{ p.initials }}</div>
+                <div>
+                  <div style="font-size:15px; font-weight:600;">{{ p.name }}</div>
+                  <div style="font-size:12px; color:#8a978f;">{{ p.relation }} · {{ p.age }}</div>
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; padding-top:13px; border-top:1px solid #eef2f0;">
+                <div><div style="font-size:17px; font-weight:700;">{{ p.records }}</div><div style="font-size:11px; color:#8a978f;">records</div></div>
+                <div><div style="font-size:17px; font-weight:700;">{{ p.meds }}</div><div style="font-size:11px; color:#8a978f;">meds</div></div>
+                <div><div style="font-size:17px; font-weight:700;">{{ p.alerts }}</div><div style="font-size:11px; color:#8a978f;">alerts</div></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ GENERIC RECORDS ============ -->
+      <sc-if value="{{ isGeneric }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="display:flex; align-items:flex-end; margin-bottom:18px;">
+          <div>
+            <div style="font-family:'Newsreader',serif; font-size:24px; font-weight:500;">{{ secTitle }}</div>
+            <div style="color:#5f6f6a; font-size:13.5px; margin-top:3px;">{{ secSubtitle }}</div>
+          </div>
+          <button style="margin-left:auto; background:#3f6f63; color:#fff; border:none; border-radius:10px; padding:10px 16px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;">{{ secAddLabel }}</button>
+        </div>
+        <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; overflow:hidden;">
+          <div style="display:grid; grid-template-columns:{{ gridCols }}; padding:13px 22px; font-size:11px; color:#8a978f; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; background:#fafbfb; border-bottom:1px solid #eef2f0;">
+            <sc-for list="{{ secCols }}" as="col" hint-placeholder-count="4">
+              <div>{{ col.label }}</div>
+            </sc-for>
+          </div>
+          <sc-for list="{{ secRows }}" as="row" hint-placeholder-count="5">
+            <div style="display:grid; grid-template-columns:{{ gridCols }}; padding:14px 22px; border-top:1px solid #f1f4f3; align-items:center;">
+              <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="4">
+                <div style="display:flex; flex-direction:column; min-width:0; padding-right:12px;">
+                  <span style="font-size:13.5px; line-height:1.3; font-weight:{{ c.weight }}; color:{{ c.color }}; background:{{ c.bg }}; padding:{{ c.pad }}; border-radius:{{ c.radius }}; display:{{ c.disp }}; width:fit-content; max-width:100%;">{{ c.text }}</span>
+                  <span style="font-size:12px; color:#9aa6a0; margin-top:2px;">{{ c.sub }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ DOCUMENTS ============ -->
+      <sc-if value="{{ isDocuments }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="font-family:'Newsreader',serif; font-size:24px; font-weight:500; margin-bottom:4px;">Documents</div>
+        <div style="color:#5f6f6a; font-size:13.5px; margin-bottom:18px;">Lab PDFs, scans, and uploads — tag them to keep things findable.</div>
+        <div style="border:1.5px dashed #c8d4ce; border-radius:15px; background:#fbfcfc; padding:30px; text-align:center; margin-bottom:16px;">
+          <div style="font-size:22px; color:#9cb8ae; margin-bottom:6px;">⬆</div>
+          <div style="font-size:14px; font-weight:600;">Drop files to upload</div>
+          <div style="font-size:12.5px; color:#8a978f; margin-top:3px;">PDF, JPG, PNG up to 25 MB · auto-parses lab results</div>
+        </div>
+        <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; overflow:hidden;">
+          <div style="display:grid; grid-template-columns:2.2fr 1.2fr 1.6fr 1fr; padding:13px 22px; font-size:11px; color:#8a978f; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; background:#fafbfb; border-bottom:1px solid #eef2f0;">
+            <div>Document</div><div>Type</div><div>Tags</div><div>Date</div>
+          </div>
+          <sc-for list="{{ documents }}" as="d" hint-placeholder-count="4">
+            <div style="display:grid; grid-template-columns:2.2fr 1.2fr 1.6fr 1fr; padding:14px 22px; border-top:1px solid #f1f4f3; align-items:center;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:36px; height:36px; border-radius:9px; background:#eef3f1; display:flex; align-items:center; justify-content:center; font-size:14px; color:#3f6f63;">▦</div>
+                <div><div style="font-size:13.5px; font-weight:600;">{{ d.name }}</div><div style="font-size:11.5px; color:#9aa6a0;">{{ d.size }}</div></div>
+              </div>
+              <div style="font-size:13px; color:#5f6f6a;">{{ d.type }}</div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <sc-for list="{{ d.tags }}" as="t" hint-placeholder-count="2">
+                  <span style="font-size:11px; font-weight:500; padding:3px 9px; border-radius:7px; background:#eef3f1; color:#3f6f63;">{{ t }}</span>
+                </sc-for>
+              </div>
+              <div style="font-size:12.5px; color:#8a978f;">{{ d.date }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ SHARING ============ -->
+      <sc-if value="{{ isSharing }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="font-family:'Newsreader',serif; font-size:24px; font-weight:500; margin-bottom:4px;">Sharing</div>
+        <div style="color:#5f6f6a; font-size:13.5px; margin-bottom:18px;">Share patient records or family history with people you trust.</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:15px;">
+          <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; padding:20px;">
+            <div style="font-size:15px; font-weight:600; margin-bottom:4px;">Shared with others</div>
+            <div style="font-size:12.5px; color:#8a978f; margin-bottom:8px;">People who can see your patients</div>
+            <sc-for list="{{ shares }}" as="s" hint-placeholder-count="3">
+              <div style="display:flex; align-items:center; gap:12px; padding:12px 0; border-top:1px solid #eef2f0;">
+                <div style="width:34px; height:34px; border-radius:50%; background:#9cb8ae; color:#fff; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center;">{{ s.initials }}</div>
+                <div style="flex:1;"><div style="font-size:13.5px; font-weight:600;">{{ s.name }}</div><div style="font-size:11.5px; color:#8a978f;">{{ s.patient }}</div></div>
+                <span style="font-size:11px; font-weight:600; padding:4px 10px; border-radius:7px; color:{{ s.color }}; background:{{ s.bg }};">{{ s.level }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; padding:20px;">
+            <div style="font-size:15px; font-weight:600; margin-bottom:4px;">Pending invitations</div>
+            <div style="font-size:12.5px; color:#8a978f; margin-bottom:8px;">Waiting for a response</div>
+            <sc-for list="{{ invites }}" as="i" hint-placeholder-count="2">
+              <div style="display:flex; align-items:center; gap:12px; padding:12px 0; border-top:1px solid #eef2f0;">
+                <div style="width:34px; height:34px; border-radius:50%; background:#e7ad6b; color:#fff; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center;">{{ i.initials }}</div>
+                <div style="flex:1;"><div style="font-size:13.5px; font-weight:600;">{{ i.name }}</div><div style="font-size:11.5px; color:#8a978f;">{{ i.detail }}</div></div>
+                <span style="font-size:11px; font-weight:600; padding:4px 10px; border-radius:7px; color:#a06a2c; background:#faf0e2;">Pending</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; padding:20px;">
+          <div style="display:flex; align-items:center; margin-bottom:6px;">
+            <div style="font-size:15px; font-weight:600;">Family history sharing</div>
+            <span style="margin-left:10px; font-size:11px; font-weight:600; padding:3px 9px; border-radius:7px; color:#5f6f6a; background:#eef2f0;">View-only</span>
+          </div>
+          <div style="font-size:12.5px; color:#8a978f; margin-bottom:6px;">Share hereditary health info without sharing a whole record.</div>
+          <sc-for list="{{ familyShares }}" as="f" hint-placeholder-count="2">
+            <div style="display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid #eef2f0;">
+              <div style="width:8px; height:8px; border-radius:50%; background:#9cb8ae;"></div>
+              <div style="flex:1; font-size:13.5px; font-weight:500;">{{ f.member }}</div>
+              <div style="font-size:12.5px; color:#8a978f;">shared with {{ f.with }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ REPORT BUILDER ============ -->
+      <sc-if value="{{ isReport }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="font-family:'Newsreader',serif; font-size:24px; font-weight:500; margin-bottom:4px;">Report builder</div>
+        <div style="color:#5f6f6a; font-size:13.5px; margin-bottom:18px;">Assemble a shareable health summary for your provider.</div>
+        <div style="display:grid; grid-template-columns:1.3fr 1fr; gap:15px;">
+          <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; padding:21px;">
+            <div style="font-size:14px; font-weight:600; margin-bottom:13px;">Include records</div>
+            <sc-for list="{{ reportItems }}" as="r" hint-placeholder-count="6">
+              <div onClick="{{ r.onClick }}" style="display:flex; align-items:center; gap:13px; padding:12px 13px; border:1px solid {{ r.borderColor }}; background:{{ r.bg }}; border-radius:11px; margin-bottom:8px; cursor:pointer;">
+                <div style="width:22px; height:22px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; background:{{ r.checkBg }}; border:1.5px solid {{ r.checkBorder }};">{{ r.check }}</div>
+                <div style="flex:1;"><div style="font-size:13.5px; font-weight:600;">{{ r.label }}</div><div style="font-size:12px; color:#8a978f;">{{ r.detail }}</div></div>
+              </div>
+            </sc-for>
+            <div style="margin-top:15px; display:flex; gap:10px; align-items:center;">
+              <div style="font-size:13px; color:#5f6f6a;">Date range</div>
+              <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+                <div style="border:1px solid #e4e9e7; border-radius:9px; padding:8px 13px; font-size:12.5px;">Jan 2026</div>
+                <div style="color:#a3aea9;">→</div>
+                <div style="border:1px solid #e4e9e7; border-radius:9px; padding:8px 13px; font-size:12.5px;">Jun 2026</div>
+              </div>
+            </div>
+          </div>
+          <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; padding:21px; display:flex; flex-direction:column;">
+            <div style="font-size:14px; font-weight:600; margin-bottom:13px;">Preview</div>
+            <div style="flex:1; border:1px dashed #d4ddd9; border-radius:12px; background:repeating-linear-gradient(135deg,#fbfcfc,#fbfcfc 10px,#f6f8f7 10px,#f6f8f7 20px); padding:20px; min-height:230px;">
+              <div style="font-family:'Newsreader',serif; font-size:17px;">Health Summary</div>
+              <div style="font-size:11.5px; color:#8a978f; margin-bottom:14px;">Sarah Lin · {{ selectedCount }} sections selected</div>
+              <div style="height:9px; width:70%; background:#e7ece9; border-radius:4px; margin-bottom:8px;"></div>
+              <div style="height:9px; width:90%; background:#e7ece9; border-radius:4px; margin-bottom:8px;"></div>
+              <div style="height:9px; width:55%; background:#e7ece9; border-radius:4px; margin-bottom:18px;"></div>
+              <div style="height:9px; width:80%; background:#eef2f0; border-radius:4px; margin-bottom:8px;"></div>
+              <div style="height:9px; width:65%; background:#eef2f0; border-radius:4px;"></div>
+            </div>
+            <button style="margin-top:15px; background:#3f6f63; color:#fff; border:none; border-radius:11px; padding:13px; font-size:13.5px; font-weight:600; cursor:pointer; font-family:inherit;">Generate PDF report</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ NOTIFICATIONS ============ -->
+      <sc-if value="{{ isNotifications }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="font-family:'Newsreader',serif; font-size:24px; font-weight:500; margin-bottom:4px;">Notifications</div>
+        <div style="color:#5f6f6a; font-size:13.5px; margin-bottom:18px;">Get alerts through the channels you already use.</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+          <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; padding:20px;">
+            <div style="font-size:15px; font-weight:600; margin-bottom:6px;">Channels</div>
+            <sc-for list="{{ channels }}" as="c" hint-placeholder-count="4">
+              <div style="display:flex; align-items:center; gap:12px; padding:13px 0; border-top:1px solid #eef2f0;">
+                <div style="width:34px; height:34px; border-radius:9px; background:#eef3f1; color:#3f6f63; display:flex; align-items:center; justify-content:center; font-size:14px;">{{ c.icon }}</div>
+                <div style="flex:1;"><div style="font-size:13.5px; font-weight:600;">{{ c.name }}</div><div style="font-size:11.5px; color:#8a978f;">{{ c.detail }}</div></div>
+                <span style="font-size:11px; font-weight:600; padding:4px 10px; border-radius:7px; color:{{ c.color }}; background:{{ c.bg }};">{{ c.status }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; padding:20px;">
+            <div style="font-size:15px; font-weight:600; margin-bottom:6px;">Alert me about</div>
+            <sc-for list="{{ notifEvents }}" as="e" hint-placeholder-count="4">
+              <div onClick="{{ e.onClick }}" style="display:flex; align-items:center; gap:12px; padding:13px 0; border-top:1px solid #eef2f0; cursor:pointer;">
+                <div style="flex:1; font-size:13.5px; font-weight:500;">{{ e.label }}</div>
+                <div style="width:40px; height:23px; border-radius:12px; padding:2px; background:{{ e.track }}; display:flex; justify-content:{{ e.justify }};">
+                  <div style="width:19px; height:19px; border-radius:50%; background:#fff;"></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ SETTINGS ============ -->
+      <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="font-family:'Newsreader',serif; font-size:24px; font-weight:500; margin-bottom:18px;">Settings</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+          <sc-for list="{{ settingsCards }}" as="sc" hint-placeholder-count="4">
+            <div style="background:#fff; border:1px solid #e4e9e7; border-radius:15px; padding:20px;">
+              <div style="font-size:15px; font-weight:600; margin-bottom:4px;">{{ sc.title }}</div>
+              <div style="font-size:12.5px; color:#8a978f; margin-bottom:6px;">{{ sc.subtitle }}</div>
+              <sc-for list="{{ sc.rows }}" as="r" hint-placeholder-count="3">
+                <div style="display:flex; align-items:center; padding:12px 0; border-top:1px solid #eef2f0;">
+                  <div style="flex:1;"><div style="font-size:13.5px; font-weight:500;">{{ r.label }}</div><div style="font-size:11.5px; color:#9aa6a0;">{{ r.value }}</div></div>
+                  <span style="font-size:12.5px; color:#3f6f63; font-weight:600; cursor:pointer;">{{ r.action }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1320,&quot;height&quot;:880}}">
+class Component extends DCLogic {
+  state = {
+    screen: 'dashboard',
+    report: { meds:true, labs:true, vitals:true, conditions:true, allergies:false, immunizations:false },
+    events: { backup:true, invite:true, revoke:false, password:true },
+  };
+
+  renderVals() {
+    const screen = this.state.screen;
+    const C = {
+      green:['#3f6f63','#e7f0ec'], blue:['#3a5a8c','#eef3f8'], amber:['#a06a2c','#faf0e2'],
+      red:['#b85c4a','#f8e9e6'], gray:['#5f6f6a','#eef2f0'], purple:['#6b4f8c','#f1ecf6'],
+    };
+    const badge = (text, key) => ({ text, weight:'600', color:C[key][0], bg:C[key][1], pad:'4px 10px', radius:'7px', disp:'inline-block', sub:'' });
+    const cell = (text, sub='') => ({ text, weight:'600', color:'#1f2a27', bg:'transparent', pad:'0', radius:'0', disp:'block', sub });
+    const muted = (text, sub='') => ({ text, weight:'400', color:'#5f6f6a', bg:'transparent', pad:'0', radius:'0', disp:'block', sub });
+
+    // ---------- generic record sections ----------
+    const sections = {
+      medications: { title:'Medications', subtitle:'5 active · 2 as-needed', add:'＋ Add medication',
+        cols:['Medication','Dosage','Schedule','Prescriber','Status'], fr:'2fr 1fr 1.3fr 1.3fr 1fr',
+        rows:[
+          [cell('Lisinopril','ACE inhibitor'), muted('10 mg'), muted('Once daily · AM'), muted('Dr. Patel'), badge('Active','green')],
+          [cell('Metformin','Biguanide'), muted('500 mg'), muted('Twice daily'), muted('Dr. Okafor'), badge('Active','green')],
+          [cell('Atorvastatin','Statin'), muted('20 mg'), muted('Once daily · PM'), muted('Dr. Patel'), badge('Active','green')],
+          [cell('Levothyroxine','Thyroid'), muted('50 mcg'), muted('Once daily · AM'), muted('Dr. Reyes'), badge('Active','green')],
+          [cell('Ibuprofen','NSAID'), muted('400 mg'), muted('As needed'), muted('—'), badge('As needed','gray')],
+        ] },
+      conditions: { title:'Conditions', subtitle:'3 active conditions', add:'＋ Add condition',
+        cols:['Condition','Status','Diagnosed','Notes'], fr:'1.5fr 1fr 1fr 2fr',
+        rows:[
+          [cell('Hypertension'), badge('Stable','green'), muted('Mar 2021'), muted('Managed with Lisinopril')],
+          [cell('Type 2 diabetes'), badge('Chronic','amber'), muted('Jul 2022'), muted('A1C trending down')],
+          [cell('Hypothyroidism'), badge('Stable','green'), muted('Jan 2019'), muted('Levothyroxine 50 mcg')],
+        ] },
+      allergies: { title:'Allergies', subtitle:'4 recorded · 2 severe', add:'＋ Add allergy',
+        cols:['Allergen','Reaction','Severity','Noted'], fr:'1.4fr 1.8fr 1fr 1fr',
+        rows:[
+          [cell('Penicillin'), muted('Hives, swelling'), badge('Severe','red'), muted('2018')],
+          [cell('Peanuts'), muted('Anaphylaxis'), badge('Life-threatening','red'), muted('Childhood')],
+          [cell('Pollen'), muted('Sneezing, congestion'), badge('Mild','amber'), muted('2020')],
+          [cell('Latex'), muted('Skin irritation'), badge('Moderate','amber'), muted('2021')],
+        ] },
+      vitals: { title:'Vitals', subtitle:'Latest readings · updated today', add:'＋ Log reading',
+        cols:['Measurement','Latest','Date','Trend'], fr:'1.6fr 1fr 1fr 1fr',
+        rows:[
+          [cell('Blood pressure'), cell('118/76 mmHg'), muted('Jun 24'), badge('↓ improving','green')],
+          [cell('Resting heart rate'), cell('64 bpm'), muted('Jun 24'), badge('stable','gray')],
+          [cell('Weight'), cell('148 lbs'), muted('Jun 22'), badge('↓ 2 lbs','green')],
+          [cell('Blood glucose'), cell('94 mg/dL'), muted('Jun 23'), badge('normal','green')],
+          [cell('Oxygen saturation'), cell('98%'), muted('Jun 20'), badge('normal','green')],
+        ] },
+      labs: { title:'Lab Results', subtitle:'Lipid panel · June 18, 2026', add:'＋ Upload lab',
+        cols:['Test','Result','Reference','Flag'], fr:'2fr 1.2fr 1.2fr 1.2fr',
+        rows:[
+          [cell('Total cholesterol'), cell('182 mg/dL'), muted('< 200'), badge('Normal','green')],
+          [cell('LDL cholesterol'), cell('104 mg/dL'), muted('< 100'), badge('Slightly high','amber')],
+          [cell('HDL cholesterol'), cell('58 mg/dL'), muted('> 40'), badge('Normal','green')],
+          [cell('Fasting glucose'), cell('94 mg/dL'), muted('70–99'), badge('Normal','green')],
+          [cell('Hemoglobin A1C'), cell('5.6 %'), muted('< 5.7'), badge('Normal','green')],
+          [cell('Vitamin D'), cell('28 ng/mL'), muted('30–100'), badge('Low','red')],
+        ] },
+      treatments: { title:'Treatments', subtitle:'Treatment plans & therapies', add:'＋ Add treatment',
+        cols:['Treatment','Type','Schedule','Practitioner','Status'], fr:'1.8fr 1.2fr 1.2fr 1.3fr 1fr',
+        rows:[
+          [cell('Cardiac rehab'), muted('Physical therapy'), muted('2× weekly'), muted('Dr. Patel'), badge('Active','green')],
+          [cell('Diabetes plan','3 linked meds'), muted('Treatment plan'), muted('Ongoing'), muted('Dr. Okafor'), badge('In progress','blue')],
+          [cell('Knee strengthening'), muted('Physical therapy'), muted('Daily'), muted('PT Alvarez'), badge('Completed','gray')],
+        ] },
+      procedures: { title:'Procedures', subtitle:'Surgical & diagnostic history', add:'＋ Add procedure',
+        cols:['Procedure','Type','Date','Outcome','Status'], fr:'1.8fr 1.2fr 1fr 1.2fr 1fr',
+        rows:[
+          [cell('Colonoscopy','CPT 45380'), muted('Diagnostic'), muted('Apr 2025'), muted('Successful'), badge('Completed','green')],
+          [cell('Echocardiogram'), muted('Diagnostic'), muted('Feb 2026'), muted('Abnormal'), badge('Completed','amber')],
+          [cell('Cataract evaluation'), muted('Preventive'), muted('Aug 2026'), muted('Pending'), badge('Scheduled','blue')],
+        ] },
+      immunizations: { title:'Immunizations', subtitle:'Vaccination history', add:'＋ Add immunization',
+        cols:['Vaccine','Manufacturer','Date','Site','Dose'], fr:'1.8fr 1.4fr 1fr 1.2fr 0.8fr',
+        rows:[
+          [cell('Influenza','Flublok 2025-26'), muted('Sanofi'), muted('Oct 2025'), muted('Left deltoid'), muted('1')],
+          [cell('COVID-19'), muted('Pfizer-BioNTech'), muted('Sep 2025'), muted('Right arm'), muted('5')],
+          [cell('Tdap'), muted('GSK'), muted('Mar 2023'), muted('Left arm'), muted('1')],
+          [cell('Shingles (Shingrix)'), muted('GSK'), muted('Jan 2024'), muted('Left deltoid'), muted('2')],
+        ] },
+      injuries: { title:'Injuries', subtitle:'Injury & recovery tracking', add:'＋ Add injury',
+        cols:['Injury','Body part','Severity','Date','Status'], fr:'1.6fr 1.2fr 1fr 1fr 1fr',
+        rows:[
+          [cell('Ankle sprain','Right, lateral'), muted('Ankle'), badge('Moderate','amber'), muted('May 2026'), badge('Healing','blue')],
+          [cell('Wrist fracture'), muted('Left wrist'), badge('Severe','red'), muted('Nov 2024'), badge('Resolved','green')],
+          [cell('Lower back strain'), muted('Lumbar'), badge('Mild','amber'), muted('Jan 2026'), badge('Chronic','gray')],
+        ] },
+      symptoms: { title:'Symptoms', subtitle:'Defined symptoms & occurrences', add:'＋ Add symptom',
+        cols:['Symptom','Category','Last occurrence','Occurrences','Status'], fr:'1.6fr 1.2fr 1.3fr 1fr 1fr',
+        rows:[
+          [cell('Migraine'), muted('Neurological'), muted('Jun 19'), muted('12'), badge('Recurring','amber')],
+          [cell('Fatigue'), muted('General'), muted('Jun 22'), muted('8'), badge('Active','blue')],
+          [cell('Joint stiffness'), muted('Musculoskeletal'), muted('Jun 10'), muted('5'), badge('Resolved','green')],
+        ] },
+      encounters: { title:'Encounters', subtitle:'Visits & provider interactions', add:'＋ Add encounter',
+        cols:['Reason','Provider','Date','Location','Priority'], fr:'1.8fr 1.3fr 1fr 1.3fr 1fr',
+        rows:[
+          [cell('Annual checkup'), muted('Dr. Patel'), muted('Jun 26'), muted('Office'), badge('Routine','green')],
+          [cell('Lab follow-up'), muted('Dr. Okafor'), muted('May 30'), muted('Telehealth'), badge('Routine','green')],
+          [cell('Chest pain eval'), muted('Dr. Patel'), muted('Feb 12'), muted('Urgent care'), badge('Urgent','red')],
+        ] },
+      equipment: { title:'Medical Equipment', subtitle:'Devices & equipment', add:'＋ Add equipment',
+        cols:['Equipment','Type','Serial','Next service','Status'], fr:'1.6fr 1.2fr 1.2fr 1.2fr 1fr',
+        rows:[
+          [cell('ResMed AirSense'), muted('CPAP'), muted('RS-48201'), muted('Sep 2026'), badge('Active','green')],
+          [cell('Omron monitor'), muted('BP monitor'), muted('OM-1192'), muted('—'), badge('Active','green')],
+          [cell('Dexcom G7'), muted('CGM'), muted('DX-7740'), muted('Jul 2026'), badge('Active','green')],
+        ] },
+      insurance: { title:'Insurance', subtitle:'Policies & coverage', add:'＋ Add policy',
+        cols:['Company','Type','Member ID','Effective','Status'], fr:'1.6fr 1fr 1.3fr 1fr 1fr',
+        rows:[
+          [cell('Blue Shield','PPO 2000'), badge('Medical','blue'), muted('BSC-449201'), muted('Jan 2026'), badge('Active','green')],
+          [cell('Delta Dental'), badge('Dental','purple'), muted('DD-77310'), muted('Jan 2026'), badge('Active','green')],
+          [cell('VSP'), badge('Vision','amber'), muted('VSP-21084'), muted('Jan 2026'), badge('Active','green')],
+        ] },
+      contacts: { title:'Emergency Contacts', subtitle:'Who to reach in an emergency', add:'＋ Add contact',
+        cols:['Name','Relationship','Phone','Email','Primary'], fr:'1.4fr 1.1fr 1.2fr 1.6fr 0.8fr',
+        rows:[
+          [cell('Daniel Lin'), muted('Spouse'), muted('(415) 555-0148'), muted('daniel.lin@email.com'), badge('Primary','green')],
+          [cell('Margaret Lin'), muted('Parent'), muted('(415) 555-0192'), muted('m.lin@email.com'), muted('—')],
+          [cell('Dr. Patel'), muted('Physician'), muted('(415) 555-0110'), muted('clinic@cardio.com'), muted('—')],
+        ] },
+    };
+
+    // ---------- nav ----------
+    const navGroups = [
+      ['Overview', [['dashboard','Dashboard','◇'],['patients','Patients','◎']]],
+      ['Health records', [
+        ['medications','Medications','℞'],['conditions','Conditions','♥'],['allergies','Allergies','⚠'],
+        ['vitals','Vitals','◷'],['labs','Lab Results','◧'],['treatments','Treatments','✚'],
+        ['procedures','Procedures','✦'],['immunizations','Immunizations','◉'],['injuries','Injuries','✜'],
+        ['symptoms','Symptoms','◍'],['encounters','Encounters','◳'],['equipment','Equipment','▥'],
+      ]],
+      ['Profile', [['insurance','Insurance','▤'],['contacts','Emergency Contacts','☎'],['documents','Documents','▦']]],
+      ['Tools', [['report','Report Builder','◫'],['sharing','Sharing','⇄'],['notifications','Notifications','⊙'],['settings','Settings','⚙']]],
+    ];
+    const navGroupsR = navGroups.map(([heading, items]) => ({
+      heading,
+      items: items.map(([key,label,icon]) => {
+        const active = screen === key;
+        return { label, icon, onClick: () => this.setState({ screen: key }),
+          weight: active?'600':'500', color: active?'#3f6f63':'#5f6f6a', bg: active?'#eef3f1':'transparent' };
+      }),
+    }));
+
+    const customTitles = { dashboard:'Dashboard', patients:'Patients', documents:'Documents',
+      sharing:'Sharing', report:'Report Builder', notifications:'Notifications', settings:'Settings' };
+    const sec = sections[screen];
+    const pageTitle = sec ? sec.title : (customTitles[screen] || 'MediKeep');
+
+    // ---------- dashboard data ----------
+    const statCards = [
+      { label:'Active medications', value:'5', unit:'', tag:'On track', tagColor:'#3f6f63', tagBg:'#e7f0ec' },
+      { label:'Avg blood pressure', value:'118/76', unit:'mmHg', tag:'Normal', tagColor:'#3f6f63', tagBg:'#e7f0ec' },
+      { label:'Next refill', value:'9', unit:'days', tag:'Lisinopril', tagColor:'#a06a2c', tagBg:'#faf0e2' },
+      { label:'Open alerts', value:'2', unit:'', tag:'2 reminders', tagColor:'#5f6f6a', tagBg:'#eef2f0' },
+    ];
+    const todayMeds = [
+      { dot:'#3f6f63', name:'Lisinopril', detail:'10 mg · with breakfast', time:'8:00 AM', tColor:'#3f6f63', tBg:'#e7f0ec' },
+      { dot:'#3a5a8c', name:'Metformin', detail:'500 mg · with lunch', time:'12:30 PM', tColor:'#3a5a8c', tBg:'#eef3f8' },
+      { dot:'#a06a2c', name:'Vitamin D', detail:'2000 IU · evening', time:'7:00 PM', tColor:'#a06a2c', tBg:'#faf0e2' },
+    ];
+    const bpVals = [120,118,122,116,119,117,118];
+    const days = ['M','T','W','T','F','S','S'];
+    const bpBars = bpVals.map((v,i) => ({ h: ((v-108)/20*100)+'%', day: days[i] }));
+    const activity = [
+      { text:'Lab results uploaded · Lipid panel', when:'Yesterday · 4:12 PM' },
+      { text:'Metformin marked as taken', when:'Yesterday · 12:40 PM' },
+      { text:'Appointment booked with Dr. Patel', when:'Mon · 9:02 AM' },
+      { text:'Blood pressure logged · 118/76', when:'Mon · 8:15 AM' },
+    ];
+
+    // ---------- patients ----------
+    const patients = [
+      { name:'Sarah Lin', relation:'Self', age:'38', initials:'SL', color:'#3f6f63', records:'124', meds:'5', alerts:'2' },
+      { name:'Daniel Lin', relation:'Spouse', age:'41', initials:'DL', color:'#3a5a8c', records:'63', meds:'2', alerts:'0' },
+      { name:'Emma Lin', relation:'Child', age:'9', initials:'EL', color:'#a06a2c', records:'41', meds:'1', alerts:'1' },
+      { name:'Margaret Lin', relation:'Parent', age:'68', initials:'ML', color:'#6b4f8c', records:'88', meds:'7', alerts:'3' },
+    ];
+
+    // ---------- documents ----------
+    const documents = [
+      { name:'Lipid_Panel_Jun2026.pdf', size:'248 KB', type:'Lab report', tags:['Labs','Cardiology'], date:'Jun 18' },
+      { name:'Echo_Report_Feb2026.pdf', size:'1.2 MB', type:'Imaging', tags:['Cardiology'], date:'Feb 12' },
+      { name:'Insurance_Card_BSC.jpg', size:'180 KB', type:'Insurance', tags:['Insurance'], date:'Jan 04' },
+      { name:'Vaccine_Record_2025.pdf', size:'96 KB', type:'Immunization', tags:['Vaccines'], date:'Oct 09' },
+    ];
+
+    // ---------- sharing ----------
+    const shares = [
+      { initials:'DL', name:'Daniel Lin', patient:'Emma Lin', level:'Full', color:'#3f6f63', bg:'#e7f0ec' },
+      { initials:'DP', name:'Dr. Patel', patient:'Sarah Lin', level:'View', color:'#5f6f6a', bg:'#eef2f0' },
+      { initials:'CL', name:'Caregiver Co.', patient:'Margaret Lin', level:'Edit', color:'#3a5a8c', bg:'#eef3f8' },
+    ];
+    const invites = [
+      { initials:'JR', name:'Dr. Reyes', detail:'View · Sarah Lin · sent 2 days ago' },
+      { initials:'AO', name:'Dr. Okafor', detail:'Edit · Margaret Lin · sent 5 days ago' },
+    ];
+    const familyShares = [
+      { member:'Margaret Lin — heart disease history', with:'Dr. Patel' },
+      { member:'Robert Lin — diabetes history', with:'Daniel Lin' },
+    ];
+
+    // ---------- report ----------
+    const r = this.state.report;
+    const rdef = [
+      ['meds','Medications','5 active medications'],['labs','Lab results','6 recent panels'],
+      ['vitals','Vitals','BP, weight, heart rate'],['conditions','Conditions','3 active conditions'],
+      ['allergies','Allergies','4 recorded allergies'],['immunizations','Immunizations','Vaccination history'],
+    ];
+    const reportItems = rdef.map(([key,label,detail]) => {
+      const on = r[key];
+      return { label, detail, onClick: () => this.setState(s => ({ report: { ...s.report, [key]: !s.report[key] } })),
+        bg: on?'#f3f8f6':'#fff', borderColor: on?'#bcd3cb':'#e4e9e7', check: on?'✓':'',
+        checkBg: on?'#3f6f63':'#fff', checkBorder: on?'#3f6f63':'#cdd6d2' };
+    });
+    const selectedCount = Object.values(r).filter(Boolean).length;
+
+    // ---------- notifications ----------
+    const channels = [
+      { icon:'◆', name:'Discord', detail:'webhook · #health-alerts', status:'Connected', color:'#3f6f63', bg:'#e7f0ec' },
+      { icon:'✉', name:'Email (SMTP)', detail:'sarah.lin@email.com', status:'Connected', color:'#3f6f63', bg:'#e7f0ec' },
+      { icon:'▲', name:'Gotify', detail:'priority 8', status:'Connected', color:'#3f6f63', bg:'#e7f0ec' },
+      { icon:'⚡', name:'Webhook', detail:'not configured', status:'Off', color:'#5f6f6a', bg:'#eef2f0' },
+    ];
+    const ev = this.state.events;
+    const edef = [['backup','Backup completed / failed'],['invite','Invitation received / accepted'],['revoke','Share revoked'],['password','Password changed']];
+    const notifEvents = edef.map(([key,label]) => {
+      const on = ev[key];
+      return { label, onClick: () => this.setState(s => ({ events: { ...s.events, [key]: !s.events[key] } })),
+        track: on?'#3f6f63':'#d4ddd9', justify: on?'flex-end':'flex-start' };
+    });
+
+    // ---------- settings ----------
+    const settingsCards = [
+      { title:'Account', subtitle:'Your profile details', rows:[
+        { label:'Display name', value:'Sarah Lin', action:'Edit' },
+        { label:'Email', value:'sarah.lin@email.com', action:'Edit' },
+        { label:'Time zone', value:'America / New_York', action:'Change' } ] },
+      { title:'Security', subtitle:'Login & access', rows:[
+        { label:'Password', value:'Last changed 3 months ago', action:'Update' },
+        { label:'Single sign-on', value:'Google · connected', action:'Manage' },
+        { label:'Active sessions', value:'2 devices', action:'Review' } ] },
+      { title:'Preferences', subtitle:'How MediKeep behaves', rows:[
+        { label:'Date format', value:'MMM D, YYYY', action:'Change' },
+        { label:'Default patient', value:'Sarah Lin (Self)', action:'Change' },
+        { label:'Units', value:'Imperial', action:'Change' } ] },
+      { title:'Data & backup', subtitle:'Export and safety', rows:[
+        { label:'Automatic backup', value:'Daily · last 2:00 AM', action:'Configure' },
+        { label:'Export all data', value:'Download JSON / CSV', action:'Export' },
+        { label:'Paperless integration', value:'Connected', action:'Manage' } ] },
+    ];
+
+    return {
+      navGroups: navGroupsR, pageTitle,
+      isDashboard: screen==='dashboard', isPatients: screen==='patients', isDocuments: screen==='documents',
+      isSharing: screen==='sharing', isReport: screen==='report', isNotifications: screen==='notifications',
+      isSettings: screen==='settings', isGeneric: !!sec,
+      gridCols: sec ? sec.fr : '1fr', secTitle: sec?sec.title:'', secSubtitle: sec?sec.subtitle:'', secAddLabel: sec?sec.add:'',
+      secCols: sec ? sec.cols.map(label=>({label})) : [],
+      secRows: sec ? sec.rows.map(cells=>({cells})) : [],
+      statCards, todayMeds, bpBars, activity, patients, documents,
+      shares, invites, familyShares, reportItems, selectedCount,
+      channels, notifEvents, settingsCards,
+    };
+  }
+}
+</script>
+</body>
+</html>

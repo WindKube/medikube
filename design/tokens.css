@@ -1,0 +1,111 @@
+/* MediGo design tokens — extracted from design/source/MediKeep.dc.html.
+ *
+ * NOT WIRED INTO ANY BUILD. Nothing imports this file yet and nothing should until
+ * phase 001 implements the shell. It exists so the token set is reviewable and
+ * diffable now, ahead of the Tailwind v4 `@theme` block that will consume it.
+ *
+ * Provenance: every value here appears verbatim in the imported design. Where the
+ * design used a value once and inconsistently, the rationalisation is marked
+ * RATIONALISED and explained in specs/DESIGN.md §3. Nothing was invented.
+ */
+
+:root {
+  /* ---- Brand ------------------------------------------------------------ */
+  --mg-brand:            #3f6f63;  /* primary green: buttons, active nav, links, logo */
+  --mg-brand-tint:       #eef3f1;  /* active nav background, icon chips, tag chips */
+  --mg-brand-surface:    #e7f0ec;  /* "green" badge background */
+  --mg-sage:             #9cb8ae;  /* avatars, chart bars, dropzone glyph */
+  --mg-sage-deep:        #bcd3cb;  /* selected-row border */
+  --mg-brand-selected:   #f3f8f6;  /* selected-row background */
+
+  /* ---- Surfaces --------------------------------------------------------- */
+  --mg-canvas:           #f5f7f6;  /* app background, inset controls */
+  --mg-surface:          #ffffff;  /* cards, sidebar, topbar */
+  --mg-surface-sunken:   #fafbfb;  /* table header */
+  --mg-surface-subtle:   #fbfcfc;  /* dropzone, report preview */
+  --mg-surface-stripe:   #f6f8f7;  /* report preview hatch */
+
+  /* ---- Borders and rules ------------------------------------------------ */
+  --mg-border:           #e4e9e7;  /* card, sidebar, topbar, control borders */
+  --mg-rule:             #eef2f0;  /* divider between rows inside a card */
+  --mg-rule-faint:       #f1f4f3;  /* divider between table rows */
+  --mg-border-dashed:    #c8d4ce;  /* upload dropzone */
+  --mg-border-muted:     #d4ddd9;  /* preview outline, toggle track (off), scrollbar */
+  --mg-border-control:   #cdd6d2;  /* unchecked checkbox */
+
+  /* ---- Text ------------------------------------------------------------- */
+  --mg-text:             #1f2a27;  /* primary */
+  --mg-text-secondary:   #5f6f6a;  /* body copy, muted table cells */
+  --mg-text-tertiary:    #8a978f;  /* field labels, sub-detail */
+  --mg-text-quaternary:  #a3aea9;  /* timestamps, chart labels, arrows */
+  --mg-text-sub:         #9aa6a0;  /* second line inside a table cell */
+  --mg-text-eyebrow:     #a9b3ae;  /* uppercase nav group headings */
+  /* RATIONALISED: the design also used #7c8a83 once, for a stat-card unit suffix.
+   * It is within 2% of --mg-text-secondary and is not worth a token. */
+
+  /* ---- Skeleton --------------------------------------------------------- */
+  --mg-skeleton:         #e7ece9;
+  --mg-skeleton-faint:   #eef2f0;
+
+  /* ---- Semantic status palette -----------------------------------------
+   * Six pairs. Every status badge, chip and pill in the product draws from
+   * exactly these — see specs/DESIGN.md §4.2 for what each one means.        */
+  --mg-status-green-fg:  #3f6f63;  --mg-status-green-bg:  #e7f0ec;
+  --mg-status-blue-fg:   #3a5a8c;  --mg-status-blue-bg:   #eef3f8;
+  --mg-status-amber-fg:  #a06a2c;  --mg-status-amber-bg:  #faf0e2;
+  --mg-status-red-fg:    #b85c4a;  --mg-status-red-bg:    #f8e9e6;
+  --mg-status-gray-fg:   #5f6f6a;  --mg-status-gray-bg:   #eef2f0;
+  --mg-status-purple-fg: #6b4f8c;  --mg-status-purple-bg: #f1ecf6;
+
+  --mg-accent-activity:  #e7ad6b;  /* activity-feed bullet, pending-invite avatar */
+
+  /* ---- Type ------------------------------------------------------------- */
+  --mg-font-ui:      'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mg-font-display: 'Newsreader', Georgia, 'Times New Roman', serif;
+
+  /* RATIONALISED: the design used 17 distinct sizes between 10px and 27px, many
+   * separated by half a pixel (12px/12.5px/13px/13.5px). That is drift, not a
+   * scale. Collapsed to nine steps; the mapping is in specs/DESIGN.md §3.2. */
+  --mg-text-2xs:  0.625rem;   /* 10px — uppercase eyebrow */
+  --mg-text-xs:   0.6875rem;  /* 11px — badges, micro-labels */
+  --mg-text-sm:   0.75rem;    /* 12px — sub-detail, timestamps */
+  --mg-text-base: 0.8125rem;  /* 13px — table cells, nav items, secondary copy */
+  --mg-text-md:   0.875rem;   /* 14px — list item titles, lead copy */
+  --mg-text-lg:   0.9375rem;  /* 15px — card titles */
+  --mg-text-xl:   1.0625rem;  /* 17px — topbar title, patient-card figures */
+  --mg-text-2xl:  1.3125rem;  /* 21px — feature-card display */
+  --mg-text-3xl:  1.5rem;     /* 24px — page title (display face) */
+  --mg-text-4xl:  1.625rem;   /* 26px — stat value */
+
+  --mg-weight-normal: 400;
+  --mg-weight-medium: 500;
+  --mg-weight-semi:   600;
+  --mg-weight-bold:   700;
+
+  --mg-tracking-tight: -0.02em;  /* large bold text */
+  --mg-tracking-wide:  0.05em;   /* uppercase eyebrows and table headers */
+
+  /* ---- Radii ------------------------------------------------------------ */
+  --mg-radius-xs:   4px;   /* skeleton bars */
+  --mg-radius-sm:   7px;   /* badges, tags, checkbox */
+  --mg-radius-md:   9px;   /* icon chips, inline buttons */
+  --mg-radius-lg:   10px;  /* nav items, controls, primary buttons */
+  --mg-radius-xl:   12px;  /* toggle track, preview area */
+  --mg-radius-2xl:  15px;  /* cards — the signature radius */
+  --mg-radius-full: 9999px;
+  /* RATIONALISED: 8px, 11px and 13px each appeared once or twice (time pill,
+   * report row, sidebar user card) and fold into the neighbours above. */
+
+  /* ---- Layout ----------------------------------------------------------- */
+  --mg-sidebar-width: 248px;
+  --mg-topbar-height: 66px;
+  --mg-gutter:        15px;  /* the single grid/stack gap, used everywhere */
+  --mg-content-pad-x: 30px;
+  --mg-content-pad-t: 28px;
+  --mg-content-pad-b: 48px;
+  --mg-card-pad:      20px;
+}
+
+/* The design commits to a single light appearance and defines no dark palette.
+ * specs/DESIGN.md §7 records that as an open decision, not an omission to paper
+ * over here — a guessed dark palette for a medical record is worse than none. */
