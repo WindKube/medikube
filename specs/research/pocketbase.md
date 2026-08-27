@@ -1,4 +1,4 @@
-# PocketBase v0.40.1 as an embedded Go framework — MediGo technical dossier
+# PocketBase v0.40.1 as an embedded Go framework — MediKube technical dossier
 
 **Method note.** Everything below was read directly out of the v0.40.1 source in the local
 module cache (`~/go/pkg/mod/github.com/pocketbase/pocketbase@v0.40.1`), not from the website.
@@ -38,7 +38,7 @@ require (
 ```
 
 - **Cobra is `v1.10.2`** (question 2 answered). `pflag v1.0.10` comes with it.
-- **testify is already an (indirect) dependency at v1.8.0.** MediGo will promote it to direct
+- **testify is already an (indirect) dependency at v1.8.0.** MediKube will promote it to direct
   and almost certainly to a newer version — that's a normal MVS upgrade, no conflict.
 - **`go 1.27`.**
 
@@ -65,7 +65,7 @@ including `tools/router/router.go`, `tools/router/event.go` (i.e. `BindBody`), `
 `package encoding/json/v2 is not in std`.
 
 **Recommended resolution:** move the locked toolchain to **Go 1.27.x** and put
-`toolchain go1.27.x` in MediGo's `go.mod`. The alternatives are all worse:
+`toolchain go1.27.x` in MediKube's `go.mod`. The alternatives are all worse:
 
 - pin PocketBase to v0.39.x (loses v0.40's backup improvements, `Record.GetInt64`, the log
   data-size cap, the `filesystem.NewWriter`/`OnNewWriter`/`OnDelete` hooks, and puts you on a
@@ -74,7 +74,7 @@ including `tools/router/router.go`, `tools/router/event.go` (i.e. `BindBody`), `
 - vendor and patch 120 files — absurd.
 
 Also note the second half of that changelog warning: Go 1.27 retrofitted the *v1*
-`encoding/json` onto v2 and it is **not fully backward compatible**. MediGo's own DTO
+`encoding/json` onto v2 and it is **not fully backward compatible**. MediKube's own DTO
 marshalling will be running on the retrofitted v1 package. Budget a day for JSON edge cases
 (nil-vs-empty slices, `json.RawMessage` handling, duplicate keys, case-insensitive field
 matching) across the whole app, not just PocketBase.
@@ -85,10 +85,10 @@ matching) across the whole app, not just PocketBase.
 ### Minor version facts worth knowing
 
 - `-tags no_ui` strips the embedded superuser dashboard from the binary (`ui/embed_no_ui.go`
-  leaves `ui.DistDirFS` nil and `apis.Serve` then skips registering `/_/{path...}`). MediGo
+  leaves `ui.DistDirFS` nil and `apis.Serve` then skips registering `/_/{path...}`). MediKube
   *wants* the admin UI, so don't use it — but it exists if you ever want a headless build.
 - v0.40.0 changed console-command error propagation: `RunE` errors now reach `app.Start()` and
-  the process exits non-zero. Good for MediGo's Taskfile/CI. It's listed upstream as a
+  the process exits non-zero. Good for MediKube's Taskfile/CI. It's listed upstream as a
   possible breaking change for shell chaining.
 
 ---
@@ -117,7 +117,7 @@ type Config struct {
 }
 ```
 
-**For MediGo use `NewWithConfig`.** You want `HideStartBanner: true` (the banner is
+**For MediKube use `NewWithConfig`.** You want `HideStartBanner: true` (the banner is
 `fmt.Print`-ed colour output that will pollute structured logs), an explicit `DefaultDataDir`
 fed from your `caarlos0/env` config, and `DefaultEncryptionEnv` set so app settings
 (SMTP creds, OAuth2 client secrets) are encrypted at rest in `pb_data`.
@@ -128,7 +128,7 @@ cfg := config.Load() // caarlos0/env/v11
 app := pocketbase.NewWithConfig(pocketbase.Config{
 	DefaultDataDir:       cfg.DataDir,
 	DefaultDev:           cfg.Dev,
-	DefaultEncryptionEnv: "MEDIGO_ENCRYPTION_KEY", // name of the env var, not the value
+	DefaultEncryptionEnv: "MEDIKUBE_ENCRYPTION_KEY", // name of the env var, not the value
 	HideStartBanner:      true,
 	DefaultQueryTimeout:  cfg.QueryTimeout,
 })
@@ -167,7 +167,7 @@ most important structural fact in this document. It is what makes the logger wor
 §13 possible, and it's why `pb` itself satisfies `core.App` and can be handed to your service
 constructors.
 
-**MediGo's seam:** define your own narrow interfaces and accept `core.App` only at the
+**MediKube's seam:** define your own narrow interfaces and accept `core.App` only at the
 composition root. Do not let `core.App` leak into service signatures — it's a 200-method god
 interface and mocking it is hopeless.
 
@@ -239,7 +239,7 @@ func (pb *PocketBase) Execute() error {
 `skipBootstrap()` returns true for `-h/--help/-v/--version` and for **unknown commands**. A
 command you registered is a *known* command, so **your custom subcommands get a fully
 bootstrapped app** — DB open, settings loaded, migrations applied. That's what makes
-`medigo seed` trivial (§2).
+`medikube seed` trivial (§2).
 
 ⚠️ **v0.23 CHANGE:** pre-v0.23 code used `app.OnBeforeServe()` and an `*echo.Echo` on the
 event. Both are gone. It's `OnServe()` with `e.Router`.
@@ -335,7 +335,7 @@ Three gotchas:
    block.
 
 `Execute()` (as opposed to `Start()`) exists if you want to register serve/superuser
-yourself or omit them — e.g. a `medigo-worker` binary with no HTTP server.
+yourself or omit them — e.g. a `medikube-worker` binary with no HTTP server.
 
 ---
 
@@ -568,7 +568,7 @@ against. Actual values:
 | `RequireAuth` etc. | `pbRequireAuth`, ... | `0` | no — opt-in |
 | `Gzip` | `pbGzip` | `0` | no — opt-in |
 
-**The number that matters for MediGo: `loadAuthToken` is `-1020`.** Any middleware of yours
+**The number that matters for MediKube: `loadAuthToken` is `-1020`.** Any middleware of yours
 that needs `e.Auth` populated must have `Priority > -1020` (the default `0` is fine).
 
 Public constructors:
@@ -600,14 +600,14 @@ return e.Next()
 `RequireSuperuserAuth()` is `requireAuth(core.CollectionNameSuperusers)` — i.e. it just
 checks the auth record belongs to `_superusers`.
 
-**`apis.RequireAuth("users")` is what MediGo wants everywhere on `/api/v1`** — it pins the
+**`apis.RequireAuth("users")` is what MediKube wants everywhere on `/api/v1`** — it pins the
 token to the `users` collection so a superuser token or some future service-account
 collection can't be silently accepted by user-facing endpoints.
 
 ### Rate limiting
 
 Rate limiting is **settings-driven, not code-driven**, and **`RateLimits.Enabled` defaults to
-`false`** — PocketBase ships it off. Turn it on explicitly in MediGo's bootstrap settings hook;
+`false`** — PocketBase ships it off. Turn it on explicitly in MediKube's bootstrap settings hook;
 a self-hosted medical app exposed to the internet wants it on, especially for the auth routes.
 `app.Settings().RateLimits` holds `Enabled` plus a list of rules with `Label` (route tag, exact path, or prefix), `MaxRequests`,
 `Duration`, `Audience`. Configure it in a bootstrap hook or via the admin UI. The built-in
@@ -619,7 +619,7 @@ Collection-scoped endpoints re-bind their own `collectionPathRateLimit` under th
 
 ```go
 // mw/patient_access.go
-const PatientAccessMiddlewareId = "medigoPatientAccess"
+const PatientAccessMiddlewareId = "medikubePatientAccess"
 
 func RequirePatientAccess(svc service.PatientService) *hook.Handler[*core.RequestEvent] {
 	return &hook.Handler[*core.RequestEvent]{
@@ -640,7 +640,7 @@ func RequirePatientAccess(svc service.PatientService) *hook.Handler[*core.Reques
 				return e.NotFoundError("", nil)
 			}
 
-			e.Set("medigo:patientId", patientID)
+			e.Set("medikube:patientId", patientID)
 			return e.Next()
 		},
 	}
@@ -651,7 +651,7 @@ Two idioms worth adopting:
 
 ```go
 // wrap any std middleware (Sentry, otelhttp, prometheus)
-se.Router.BindFunc(apis.WrapStdMiddleware(otelhttp.NewMiddleware("medigo")))
+se.Router.BindFunc(apis.WrapStdMiddleware(otelhttp.NewMiddleware("medikube")))
 
 // wrap any std handler (promhttp)
 se.Router.GET("/metrics", apis.WrapStdHandler(promhttp.Handler())).
@@ -690,7 +690,7 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
 Migrations are registered by **package `init()`**, so the package must be blank-imported:
 
 ```go
-import _ "medigo/internal/migrations"
+import _ "medikube/internal/migrations"
 ```
 
 ```go
@@ -748,7 +748,7 @@ func init() {
 				MaxSize:   5 << 20,
 				MimeTypes: []string{"image/jpeg", "image/png", "image/webp"},
 				Thumbs:    []string{"64x64", "256x256f"},
-				Protected: true,        // see §9 — ALWAYS true for MediGo
+				Protected: true,        // see §9 — ALWAYS true for MediKube
 			},
 			&core.AutodateField{
 				Name:     "created",
@@ -879,7 +879,7 @@ it enabled.
 - `migrate history-sync` — drop `_migrations` rows for deleted files
 
 App migrations also run automatically at the start of `apis.Serve` via `RunAllMigrations()`,
-so `medigo serve` self-migrates. System migrations run during `Bootstrap()`.
+so `medikube serve` self-migrates. System migrations run during `Bootstrap()`.
 
 ---
 
@@ -980,7 +980,7 @@ app.ExpandRecords(patients, []string{"owner"}, nil)  // batched, N+1-safe
 The third arg is an `ExpandFetchFunc` — pass a custom one to apply access rules during
 expansion (that's what the built-in API does). Passing `nil` **bypasses access checks**, which
 is correct for internal service code and dangerous if you echo the result straight to a
-client. Since MediGo hand-writes every response DTO, `nil` + explicit authz in the service
+client. Since MediKube hand-writes every response DTO, `nil` + explicit authz in the service
 layer is the right call.
 
 ### Transactions
@@ -1031,7 +1031,7 @@ err := app.RunInTransaction(func(txApp core.App) error {
 
 ### Typed models: `core.RecordProxy`
 
-v0.23 added a proxy mechanism that MediGo should use to keep `record.Get("...")` stringly-typed
+v0.23 added a proxy mechanism that MediKube should use to keep `record.Get("...")` stringly-typed
 access out of the service layer:
 
 ```go
@@ -1053,7 +1053,7 @@ err := app.RecordQuery("patients").
 
 `BaseRecordProxy` embeds `*core.Record`, so a proxy is still a `core.Model` and works with
 `app.Save`/`app.Delete`. This is the clean seam between PocketBase's dynamic records and
-MediGo's typed domain — build one proxy per collection, and let the mappers to/from DTOs live
+MediKube's typed domain — build one proxy per collection, and let the mappers to/from DTOs live
 next to them.
 
 ---
@@ -1061,7 +1061,7 @@ next to them.
 ## 7. 🔒 Locking down the auto-generated `/api/collections/*` API
 
 **Short answer: yes, cleanly — but only via API rules, and it has three sharp edges that
-directly hit MediGo's other locked decisions.**
+directly hit MediKube's other locked decisions.**
 
 ### First, know what actually lives under `/api/collections/`
 
@@ -1077,7 +1077,7 @@ rg.Group("/collections").Bind(RequireSuperuserAuth())
 rg.Group("/collections/{collection}/records")
     GET ""  •  GET "/{id}"  •  POST ""  •  PATCH "/{id}"  •  DELETE "/{id}"
 
-// apis/record_auth.go — AUTH, which MediGo explicitly wants (PB native auth)
+// apis/record_auth.go — AUTH, which MediKube explicitly wants (PB native auth)
 rg.Group("/collections/{collection}")
     GET  "/auth-methods"
     POST "/auth-refresh" | "/auth-with-password" | "/auth-with-oauth2"
@@ -1114,11 +1114,11 @@ Properties:
 - ✅ **Public CRUD is dead.** Non-superuser requests get `403 {"status":403,"message":"Only
   superusers can perform this action."}`.
 - ✅ **The admin dashboard keeps working** — it authenticates as a `_superusers` record, and
-  superusers bypass rules entirely. You keep the admin UI, which is a locked MediGo decision.
+  superusers bypass rules entirely. You keep the admin UI, which is a locked MediKube decision.
 - ✅ **Your Go code is completely unaffected.** `app.FindRecordById`, `app.Save`,
   `app.RecordQuery` never consult API rules. Rules are evaluated only in the `apis` HTTP
   layer via `RequestInfo`. Internal use is untouched. This is the key property that makes the
-  whole MediGo design viable.
+  whole MediKube design viable.
 - ✅ Enforced in one place per collection, in a committed migration, reviewable in a diff.
 - ⚠️ 403 confirms the collection exists. If you want opacity, add Mechanism B.
 
@@ -1137,7 +1137,7 @@ app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		} {
 			if rule != nil {
 				return fmt.Errorf(
-					"collection %q has a non-nil %s rule (%q); MediGo requires nil (superuser-only)",
+					"collection %q has a non-nil %s rule (%q); MediKube requires nil (superuser-only)",
 					c.Name, name, *rule)
 			}
 		}
@@ -1155,7 +1155,7 @@ But you can bind a root middleware that runs **after** `loadAuthToken` and 404s 
 CRUD subtree for non-superusers:
 
 ```go
-const BlockAutoAPIMiddlewareId = "medigoBlockAutoAPI"
+const BlockAutoAPIMiddlewareId = "medikubeBlockAutoAPI"
 
 func BlockAutoCollectionAPI() *hook.Handler[*core.RequestEvent] {
 	return &hook.Handler[*core.RequestEvent]{
@@ -1189,7 +1189,7 @@ record CRUD handlers** — `apis/batch.go` literally calls `recordCreate`/`recor
 rules** (the boolean those constructors take is `responseWriteAfterTx`, not a rules bypass).
 So nil rules do cover it. Still **leave it off** (`Settings().Batch.Enabled`, default
 `false`): it's a large, transaction-holding attack surface with a ~128MB default body limit
-and no benefit to MediGo, whose writes all go through hand-written endpoints.
+and no benefit to MediKube, whose writes all go through hand-written endpoints.
 
 ### 🚨 The three collisions this creates
 
@@ -1219,14 +1219,14 @@ for hours.
 
 The locked decisions say "use PocketBase's native realtime where PocketBase natively supports
 it; use Datastar SSE for everything else." Combined with the lockdown, **PocketBase natively
-supports it nowhere for MediGo's users.**
+supports it nowhere for MediKube's users.**
 
 > **Recommended resolution: drop native realtime entirely and use Datastar SSE for 100% of
 > realtime.** This is a simplification, not a loss:
 >
 > - The lockdown and native realtime are fundamentally incompatible — you'd have to re-open
 >   `ListRule`/`ViewRule` to make it work, which defeats the entire API design.
-> - Native realtime speaks raw collection records — exactly the shape MediGo is trying not to
+> - Native realtime speaks raw collection records — exactly the shape MediKube is trying not to
 >   expose. It would leak internal schema to the browser, bypassing your DTOs.
 > - The frontend is Datastar, which consumes SSE natively. Two realtime transports
 >   (PB's `/api/realtime` SSE + Datastar SSE) in one app is pointless complexity.
@@ -1270,7 +1270,7 @@ waiting to happen.
 
 > **Recommended resolution for #2 and #3 together:**
 >
-> 1. **`Protected: true` on every single `FileField` in MediGo. No exceptions.** Make it a
+> 1. **`Protected: true` on every single `FileField` in MediKube. No exceptions.** Make it a
 >    boot-time assertion like the rules check above. This closes #3.
 > 2. **Serve files from your own `/api/v1` route** using the filesystem abstraction directly
 >    (§9), with authorization from your service layer. This routes around #2.
@@ -1322,7 +1322,7 @@ VerificationTemplate, ResetPasswordTemplate, ConfirmEmailChangeTemplate        E
 
 > **`AuthRule` is not one of the five CRUD rules.** Setting `ListRule = nil` etc. for the
 > lockdown does **not** disable login. Keep `AuthRule = types.Pointer("")`, or
-> `types.Pointer("verified = true")` if MediGo requires email verification before use.
+> `types.Pointer("verified = true")` if MediKube requires email verification before use.
 
 ### Tokens
 
@@ -1406,7 +1406,7 @@ but then you skip the auth-origin recording and the `OnRecordAuthRequest` hook, 
 what you need.
 
 ⚠️ **The one thing you cannot cheaply re-implement is MFA/OTP.** Those flows are woven through
-`apis/record_auth_*.go` with their own events. If MediGo wants MFA, proxy to PB's
+`apis/record_auth_*.go` with their own events. If MediKube wants MFA, proxy to PB's
 `/api/collections/users/auth-with-password` rather than hand-rolling.
 
 ### OAuth2 providers configured in Go, not the dashboard
@@ -1453,7 +1453,7 @@ app.OnBootstrap().BindFunc(func(e *core.BootstrapEvent) error {
 	}
 	users.OAuth2.Providers = []core.OAuth2ProviderConfig{{
 		Name:         "oidc",
-		DisplayName:  "MediGo SSO",
+		DisplayName:  "MediKube SSO",
 		ClientId:     cfg.OIDC.ClientID,
 		ClientSecret: cfg.OIDC.ClientSecret,
 		AuthURL:      cfg.OIDC.AuthURL,
@@ -1497,7 +1497,7 @@ app.OnMailerRecordPasswordResetSend("users").BindFunc(func(e *core.MailerRecordE
 	html, err := mail.PasswordResetTempl(e.Record.Email(), e.Meta["token"]).Render(...)  // templ!
 	if err != nil { return err }
 	e.Message.HTML = html
-	e.Message.Subject = "Reset your MediGo password"
+	e.Message.Subject = "Reset your MediKube password"
 	return e.Next()
 })
 ```
@@ -1626,7 +1626,7 @@ filesystem.NewFileFromURL(ctx context.Context, url string) (*File, error)
 
 > ⚠️ **`NewFileFromURL` is a textbook SSRF sink** — it fetches an arbitrary URL server-side.
 > (The monorepo memory notes a prior SSRF fix in `technologia` logo uploads for exactly this
-> pattern.) If MediGo ever ingests a file by URL, validate the resolved IP against
+> pattern.) If MediKube ever ingests a file by URL, validate the resolved IP against
 > private/link-local ranges *after* DNS resolution, and never follow redirects blindly.
 
 ⚠️ **v0.23 CHANGE:** uploading to a multi-file field **replaces** existing files. To append or
@@ -1636,7 +1636,7 @@ by default.
 Deleting a file: `record.Set("file", "")` or remove the filename from the slice, then save.
 PB cleans up the blob after a successful record save.
 
-### Serving files — MediGo's own route
+### Serving files — MediKube's own route
 
 Given collisions #2/#3 in §7, serve everything yourself:
 
@@ -1695,7 +1695,7 @@ extend the write transaction.
 
 `POST /api/files/token` (requires auth) → `{"token": "..."}` from `e.Auth.NewFileToken()`.
 The token is short-lived (`collection.FileToken.Duration`) and passed as `?token=` to the
-built-in protected-file route. **MediGo doesn't need this** if you serve files from your own
+built-in protected-file route. **MediKube doesn't need this** if you serve files from your own
 authenticated routes — your session token is already on the request. Skip the whole mechanism.
 
 ---
@@ -1770,11 +1770,11 @@ actually bootstrapped before you can touch the DB:
 app.OnBootstrap().BindFunc(func(e *core.BootstrapEvent) error {
 	if err := e.Next(); err != nil { return err }   // FIRST
 	// now Settings(), DB(), collections are all available
-	return applyMediGoSettings(e.App)
+	return applyMediKubeSettings(e.App)
 })
 ```
 
-### Which hook for which job (MediGo)
+### Which hook for which job (MediKube)
 
 | Need | Hook |
 |---|---|
@@ -1800,7 +1800,7 @@ They're the same primitive, so composition is free. A custom route can trigger r
 just by calling `app.Save()`. Two things to watch:
 
 1. **Your `/api/v1` writes fire `OnRecord*` hooks but *not* `OnRecord*Request` hooks** —
-   the `*Request` family is bound inside the built-in CRUD handlers. Since MediGo locks those
+   the `*Request` family is bound inside the built-in CRUD handlers. Since MediKube locks those
    down, **never put business logic in a `*Request` hook**; it will simply never run. Use the
    bare (non-`Request`) hooks.
 2. `app.UnsafeWithoutHooks()` returns an app with hooks disabled — for seeding, migrations, or
@@ -1844,9 +1844,9 @@ options are honoured, and the filter is re-evaluated server-side per record.
 
 ```go
 for _, client := range app.SubscriptionsBroker().Clients() {
-	if !client.HasSubscription("medigo:lab-import") { continue }
+	if !client.HasSubscription("medikube:lab-import") { continue }
 	client.Send(subscriptions.Message{
-		Name: "medigo:lab-import",
+		Name: "medikube:lab-import",
 		Data: []byte(`{"progress":42}`),
 	})
 }
@@ -1859,18 +1859,18 @@ happily do that, but you're now maintaining a bespoke protocol on top of PB's.
 
 ### 🚨 Recommendation (repeat of COLLISION #1)
 
-**Don't use PB realtime in MediGo. Use Datastar SSE for everything.**
+**Don't use PB realtime in MediKube. Use Datastar SSE for everything.**
 
 With the nil-rule lockdown, native realtime delivers nothing to regular users (§7,
 COLLISION #1), and the only fix is re-opening the collection API. Meanwhile everything native
-realtime pushes is raw-record-shaped, which is precisely the abstraction MediGo is paying to
+realtime pushes is raw-record-shaped, which is precisely the abstraction MediKube is paying to
 avoid. Running PB realtime *and* Datastar SSE gives two transports, two auth models, and two
 event schemas for no benefit.
 
 A single Datastar SSE endpoint under `/api/v1`, fed from `OnRecordAfterCreateSuccess` /
 `OnRecordAfterUpdateSuccess` hooks through your own broker, gives you DTO-shaped events, your
 own authorization, and one thing to test. Revise the locked decision to "Datastar SSE for all
-realtime" — PocketBase natively supports realtime for MediGo's access model nowhere.
+realtime" — PocketBase natively supports realtime for MediKube's access model nowhere.
 
 ---
 
@@ -1896,7 +1896,7 @@ func (t *TestApp) ResetEventCalls()
 applies pending migrations. `Cleanup()` fires `OnTerminate` and `os.RemoveAll`s the temp dir.
 So every call gives you a genuinely isolated SQLite database seeded from a fixture directory.
 
-Default fixture dir is PocketBase's own `tests/data`. **MediGo should ship its own**: run the
+Default fixture dir is PocketBase's own `tests/data`. **MediKube should ship its own**: run the
 app once, apply migrations, seed reference data (the standardized lab test catalog, tag
 vocabularies), then commit that `pb_data` as `internal/testdata/pb_data`.
 
@@ -1910,7 +1910,7 @@ func NewApp(t *testing.T) *tests.TestApp {
 
 	app, err := tests.NewTestAppWithConfig(core.BaseAppConfig{
 		DataDir:       "../../internal/testdata/pb_data",
-		EncryptionEnv: "medigo_test_env",
+		EncryptionEnv: "medikube_test_env",
 		IsDev:         false,
 	})
 	require.NoError(t, err)
@@ -1927,7 +1927,7 @@ func TestLabService_Create(t *testing.T) {
 	app := testutil.NewApp(t)
 	svc := service.NewLabService(store.New(app), zerolog.Nop())
 
-	owner, err := app.FindAuthRecordByEmail("users", "test@medigo.local")
+	owner, err := app.FindAuthRecordByEmail("users", "test@medikube.local")
 	require.NoError(t, err)
 
 	out, err := svc.Create(t.Context(), authctx.FromRecord(owner), service.CreateLabInput{
@@ -1948,7 +1948,7 @@ func TestLabService_Create(t *testing.T) {
 ```
 
 Because `*tests.TestApp` embeds `*core.BaseApp` it satisfies `core.App` — pass it anywhere a
-`core.App` is expected. And because MediGo's services take narrow interfaces, most unit tests
+`core.App` is expected. And because MediKube's services take narrow interfaces, most unit tests
 won't need a TestApp at all; use testify mocks and reserve TestApp for the store layer and
 handler integration tests.
 
@@ -1979,7 +1979,7 @@ func (s *ApiScenario) Test(t *testing.T)
 func (s *ApiScenario) Benchmark(b *testing.B)
 ```
 
-`BeforeTestFunc` receives the `*core.ServeEvent`, so **this is where you register MediGo's
+`BeforeTestFunc` receives the `*core.ServeEvent`, so **this is where you register MediKube's
 routes** for the test:
 
 ```go
@@ -2254,7 +2254,7 @@ func (r *Registry) LoadFS(fsys fs.FS, globPatterns ...string) *Renderer
 // Renderer.Render(data any) (string, error)
 ```
 
-**MediGo will not use it, and there is zero conflict.** It is an ordinary helper, not a
+**MediKube will not use it, and there is zero conflict.** It is an ordinary helper, not a
 registered view engine — nothing in the router or `ServeEvent` references it, and no hook
 requires it. Ignore the package entirely.
 
@@ -2326,7 +2326,7 @@ Behaviour worth knowing:
 - Directory-traversal is checked eagerly, plus `os.DirFS` refuses `..` anyway.
 - `/x/index.html` → 301 to `/x/`; a directory without a trailing slash → 301 to `/x/`;
   a file path with a trailing slash → 301 to the non-slash form.
-- `indexFallback: true` serves `index.html` for any miss — for SPAs. **MediGo is server-rendered
+- `indexFallback: true` serves `index.html` for any miss — for SPAs. **MediKube is server-rendered
   templ, so use `false`** and let misses 404 properly.
 - `Static` sets `requestEventKeySkipSuccessActivityLog`, so successful asset hits don't flood
   the activity log. Errors are still logged.
@@ -2334,12 +2334,12 @@ Behaviour worth knowing:
   guards with `if !e.Router.HasRoute(http.MethodGet, "/{path...}")` so user routes win. Copy
   that guard if you register a root catch-all.
 
-For MediGo: embed the Tailwind output and the Datastar JS bundle. Prefer a **content-hashed
+For MediKube: embed the Tailwind output and the Datastar JS bundle. Prefer a **content-hashed
 filename** (`app.a1b2c3.css`) generated by the Tailwind step and referenced from a templ
 layout, so `immutable` caching is safe.
 
 ⚠️ The admin dashboard occupies `/_/{path...}` and sets a strict CSP on its own responses.
-Don't mount MediGo assets under `/_/`.
+Don't mount MediKube assets under `/_/`.
 
 ---
 
@@ -2349,25 +2349,25 @@ Consolidated, most severe first.
 
 | # | Collision | Severity | Recommended resolution |
 |---|---|---|---|
-| **0** | **Go 1.26.5 cannot build PB v0.40.1.** `go 1.27` + 120 files importing `encoding/json/v2` unguarded. | 🔴 **Blocker** | Move the locked toolchain to **Go 1.27.x**. Fallback: pin PB to v0.39.x. Also budget time for Go 1.27's not-fully-backward-compatible `encoding/json` retrofit across MediGo's own DTOs. |
+| **0** | **Go 1.26.5 cannot build PB v0.40.1.** `go 1.27` + 120 files importing `encoding/json/v2` unguarded. | 🔴 **Blocker** | Move the locked toolchain to **Go 1.27.x**. Fallback: pin PB to v0.39.x. Also budget time for Go 1.27's not-fully-backward-compatible `encoding/json` retrofit across MediKube's own DTOs. |
 | **1** | **Nil API rules kill native realtime.** `apis/realtime.go` gates broadcasts on `ListRule`/`ViewRule`; `nil` → superuser-only. Silently delivers nothing, no error. | 🔴 High | **Drop native realtime. Use Datastar SSE for 100% of realtime**, fed from `OnRecordAfter*Success` hooks. Revise the locked "use PB native realtime where supported" — with the lockdown, that's nowhere. |
 | **2** | **Non-protected file fields are world-readable.** `apis/file.go` only access-checks when `fileField.Protected` is true. No `else`. Locking down CRUD does not help. | 🔴 High (data breach class) | **`Protected: true` on every `FileField`, asserted at boot.** Serve all files from hand-written `/api/v1` routes via `app.NewFilesystem()`. Optionally 404 `/api/files/` for non-superusers. |
 | **3** | **Nil `ViewRule` breaks protected file downloads** via the built-in `/api/files/` route. | 🟠 Medium | Consequence of the same design; resolved by the same move — serve files yourself. |
 | **4** | **zerolog swap is not natively supported.** No config field, no setter, no hook; `app.logger` is private and assigned once in `initLogger`. | 🟠 Medium | Decorate the embedded `pb.App` interface field with a `Logger()` override (covers the whole request path) **and** set `Logs.MaxDays = 0`. Accept that BaseApp-internal warnings are dropped. Re-verify on every PB upgrade. |
-| **5** | **`OnRecord*Request` hooks never fire** for MediGo, because the built-in CRUD handlers that trigger them are locked down. | 🟠 Medium | Put business logic in the **bare** hooks (`OnRecordCreate`, `OnRecordAfterCreateSuccess`), never the `*Request` variants. Worth a lint rule or a review checklist entry — this will bite someone. |
+| **5** | **`OnRecord*Request` hooks never fire** for MediKube, because the built-in CRUD handlers that trigger them are locked down. | 🟠 Medium | Put business logic in the **bare** hooks (`OnRecordCreate`, `OnRecordAfterCreateSuccess`), never the `*Request` variants. Worth a lint rule or a review checklist entry — this will bite someone. |
 | **6** | **`/api/batch` is a multiplexer over the same CRUD handlers.** It *does* enforce the same API rules (verified), so nil rules cover it — but it's a transaction-holding surface with a ~128MB body limit. | 🟡 Low | Keep `Settings().Batch.Enabled = false` (the default) and assert it at boot alongside the API-rule assertion. Defence in depth, not a hole. |
 | **7** | **No per-field `Unique`.** Uniqueness is a raw `CREATE UNIQUE INDEX` string on the collection. | 🟡 Low | Use `collection.AddIndex(name, true, cols, where)` in migrations. Actually an upgrade — partial and expression indexes come free. |
 | **8** | **`number` fields are float64** (~2^53-1 safe integer range). | 🟡 Low | Never store identifiers or large integers in `number`. Use `text`. `GetInt64` exists but doesn't widen the underlying type. |
 | **9** | **PB's `Config` has no logger/telemetry injection at all** — Sentry, Prometheus and OTel must all attach via `OnServe` middleware. | 🟡 Low | `apis.WrapStdMiddleware(otelhttp.NewMiddleware(...))` in `OnServe`; `apis.WrapStdHandler(promhttp.Handler())` behind `RequireSuperuserAuth`. Well supported, just not declarative. |
 | **10** | **No trailing-slash normalisation** since v0.23. | 🟡 Low | Pick a convention (no trailing slash), enforce it in the OpenAPI generator, and cover it in the Playwright smoke gate. |
 | **11** | **Automigrate writes `.go` files at runtime**, hooked to `OnCollection*Request`. | 🟡 Low | `Automigrate: cfg.Dev` only. Never in a container image. |
-| **12** | **Cobra root sets `FParseErrWhitelist{UnknownFlags: true}`** — typo'd flags are silently ignored. | 🟡 Low | Validate flag values inside `RunE`; set `SilenceUsage: true` on MediGo commands. |
+| **12** | **Cobra root sets `FParseErrWhitelist{UnknownFlags: true}`** — typo'd flags are silently ignored. | 🟡 Low | Validate flag values inside `RunE`; set `SilenceUsage: true` on MediKube commands. |
 | **13** | testify is an indirect dep at v1.8.0. | 🟢 None | Promote to direct at the current version; MVS resolves it. No conflict. |
 
 **Non-collisions, explicitly confirmed:**
 
 - ✅ Cobra is genuinely PB's own dependency (v1.10.2) — `RootCmd` is a real `*cobra.Command`,
-  and `medigo seed` / `medigo openapi` get a fully bootstrapped app for free. No Viper needed;
+  and `medikube seed` / `medikube openapi` get a fully bootstrapped app for free. No Viper needed;
   `caarlos0/env` slots in cleanly at the composition root.
 - ✅ templ has zero conflict with `tools/template`; the latter is an unregistered helper.
 - ✅ Datastar SSE works from a PB route — raw `e.Response`, `Flush()`, and `Unwrap()` for
@@ -2397,14 +2397,14 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 
-	"medigo/internal/api"
-	"medigo/internal/clicmd"
-	"medigo/internal/config"
-	"medigo/internal/logging"
-	"medigo/internal/pblog"
-	"medigo/internal/wire"
+	"medikube/internal/api"
+	"medikube/internal/clicmd"
+	"medikube/internal/config"
+	"medikube/internal/logging"
+	"medikube/internal/pblog"
+	"medikube/internal/wire"
 
-	_ "medigo/internal/migrations" // registers migrations via init()
+	_ "medikube/internal/migrations" // registers migrations via init()
 )
 
 //go:embed all:web/dist
@@ -2422,7 +2422,7 @@ func main() {
 	app := pocketbase.NewWithConfig(pocketbase.Config{
 		DefaultDataDir:       cfg.DataDir,
 		DefaultDev:           cfg.Dev,
-		DefaultEncryptionEnv: "MEDIGO_ENCRYPTION_KEY",
+		DefaultEncryptionEnv: "MEDIKUBE_ENCRYPTION_KEY",
 		HideStartBanner:      true,
 	})
 
@@ -2479,7 +2479,7 @@ func main() {
 	app.RootCmd.AddCommand(clicmd.NewOpenAPI(app))
 
 	if err := app.Start(); err != nil {   // registers serve + superuser, then Execute()
-		zl.Fatal().Err(err).Msg("medigo exited")
+		zl.Fatal().Err(err).Msg("medikube exited")
 	}
 }
 

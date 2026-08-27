@@ -137,7 +137,7 @@ all required in the response), not a JSON blob.
 | `session_timeout_minutes` | int? | `120` | yes | "controls the frontend inactivity timer only. JWT expiry is fixed at server config and does not change with this preference" — a **cosmetic** security control |
 | `language` | string? | `"en"` | yes | no enum |
 | `date_format` | string? | `"mdy"` | yes | no enum; `mdy`/`dmy`/`ymd` implied |
-| `paperless_enabled` | bool? | `false` | yes | out of MediGo scope |
+| `paperless_enabled` | bool? | `false` | yes | out of MediKube scope |
 | `paperless_url` | string? | — | yes | |
 | `paperless_api_token` | string? | — | **no** (write-only via separate path) | returned as raw field *and* as `paperless_has_token` |
 | `paperless_username` | string? | — | yes | |
@@ -153,7 +153,7 @@ all required in the response), not a JSON blob.
 | `paperless_has_credentials` | bool | `false` | response-only | computed |
 | `papra_has_token` | bool | `false` | response-only | computed |
 
-**Real MediGo-relevant preferences: exactly four** — `unit_system`, `session_timeout_minutes`, `language`,
+**Real MediKube-relevant preferences: exactly four** — `unit_system`, `session_timeout_minutes`, `language`,
 `date_format`. The other twelve are Paperless/Papra integration config (dropped) and should not be carried over.
 Note the design smell: secrets are modelled as normal nullable string fields *and* as `*_has_*` booleans, so the
 response schema advertises fields the API may or may not redact.

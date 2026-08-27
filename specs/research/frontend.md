@@ -1,4 +1,4 @@
-# MediGo Frontend Stack Research: templ + Datastar + Tailwind on PocketBase
+# MediKube Frontend Stack Research: templ + Datastar + Tailwind on PocketBase
 
 **Researched 2026-08-26.** Everything below was verified against **actual source**, not blog posts:
 the `datastar-go` module zip from `proxy.golang.org`, the shipped `datastar.js` v1.0.2 bundle from
@@ -42,7 +42,7 @@ API names are probably wrong too.
 ### Trap 2 — npm is a dead end for the JS bundle
 
 `@starfederation/datastar` on npm is **abandoned at `1.0.0-beta.11`, last published 2025-03-30**.
-The real distribution is GitHub tags / jsDelivr `gh/`. Do not `npm i` Datastar. (MediGo has no Node
+The real distribution is GitHub tags / jsDelivr `gh/`. Do not `npm i` Datastar. (MediKube has no Node
 in the runtime anyway — see §8.)
 
 ### Trap 3 — the official templ Datastar doc page is stale
@@ -92,7 +92,7 @@ Other v1.0 semantic changes that will bite:
 - Setting a signal to `null`/`undefined` **deletes** it (this replaces `remove-signals`).
 - `data-bind` on a file input creates one signal shaped `{name, contents, mime}[]`.
 - Fetch requests are **auto-cancelled when the initiating element is removed from the DOM**. If you
-  patch away the button that started a stream, the stream dies. This matters a lot for MediGo:
+  patch away the button that started a stream, the stream dies. This matters a lot for MediKube:
   put long-lived `@get` streams on a container element that never gets patched.
 
 ### Trap 5 — `data-persist` is **Datastar Pro (paid)**, not in the free bundle
@@ -116,10 +116,10 @@ licence:** `data-persist`, `data-query-string`, `data-replace-url`, `data-scroll
 `data-view-transition`, `data-custom-validity`, `data-animate`, `data-match-media`, `data-on-raf`,
 `data-on-resize`, and actions `@clipboard`, `@fit`.
 
-**Recommendation for MediGo:** treat the free bundle as the hard boundary. Every Pro attribute has a
+**Recommendation for MediKube:** treat the free bundle as the hard boundary. Every Pro attribute has a
 trivial free replacement:
 
-| Pro attribute | Free replacement for MediGo |
+| Pro attribute | Free replacement for MediKube |
 |---|---|
 | `data-persist` | server-side: persist in the PB `users` record or a prefs collection, hydrate via `data-signals` on page render. Better anyway — a medical app should not scatter PHI into `localStorage`. |
 | `data-query-string` / `data-replace-url` | `sse.ReplaceURL(u)` from the Go SDK (server-driven, works today) |
@@ -170,7 +170,7 @@ are matched **by `id`** by default. This is the whole "backend-driven" story.
 
 ### The free attribute set, annotated
 
-| Attribute | What it does | MediGo note |
+| Attribute | What it does | MediKube note |
 |---|---|---|
 | `data-signals:foo="1"` / `data-signals="{a:1,b:2}"` | Create/patch signals. Modifiers: `__case`, `__ifmissing` | Hydrate initial page state here, from Go structs via `templ.JSONString` |
 | `data-bind:foo` / `data-bind="foo"` | Two-way bind an input's value to a signal. Modifiers: `__case`, `__prop`, `__event` | The form workhorse. Since v1.0.2 checkbox/radio default to the `input` event |
@@ -307,7 +307,7 @@ if (ct?.includes("application/json")) -> treat whole body as datastar-patch-sign
 if (ct?.includes("text/javascript"))  -> append as a <script> to <head> and run it
 ```
 
-**This matters enormously for MediGo.** The overwhelming majority of interactions — save a record,
+**This matters enormously for MediKube.** The overwhelming majority of interactions — save a record,
 delete a row, filter a list — are *one* patch and *one* response. For those you can skip SSE
 entirely and just write `Content-Type: text/html` + the rendered templ component. That is a plain
 PB handler, no streaming, no write-deadline problem (§5), no gzip question, trivially testable.
@@ -422,7 +422,7 @@ Three things the docs won't tell you:
 
 ### Full round trip: add a medication
 
-The pattern MediGo should standardise on. Note it uses the **`text/html` fast path** for the happy
+The pattern MediKube should standardise on. Note it uses the **`text/html` fast path** for the happy
 path is *not* used here deliberately — this example shows the SSE form because it patches two
 disjoint regions plus signals in one response, which is where SSE genuinely earns its keep.
 
@@ -431,7 +431,7 @@ disjoint regions plus signals in one response, which is where SSE genuinely earn
 ```templ
 package ui
 
-import "medigo/internal/domain"
+import "medikube/internal/domain"
 
 // Stable-ID contract: this component OWNS #med-form and never renders it nested
 // inside another patch target.
@@ -497,8 +497,8 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/starfederation/datastar-go/datastar"
 
-	"medigo/internal/domain"
-	"medigo/internal/ui"
+	"medikube/internal/domain"
+	"medikube/internal/ui"
 )
 
 // createMedicationSignals mirrors the client-side signal shape exactly.
@@ -661,8 +661,8 @@ templ lsp                      # language server (wraps gopls)
 templ version
 ```
 
-**Should `*_templ.go` be committed? Yes, for MediGo.** The upstream project's own guidance is
-"prefer not to, unless consumers need to build without templ installed" — but MediGo's constraints
+**Should `*_templ.go` be committed? Yes, for MediKube.** The upstream project's own guidance is
+"prefer not to, unless consumers need to build without templ installed" — but MediKube's constraints
 push the other way:
 
 - The Docker build must not need the templ binary (keeps the image and CI simple, and matches the
@@ -830,16 +830,16 @@ PB's own realtime handler works around it (`apis/realtime.go:44`), and so must y
 #### (b) Set `X-Accel-Buffering: no`
 
 PB sets it on its realtime stream and links the rationale. Datastar's `NewSSE` does not. Without it,
-an nginx reverse proxy in front of MediGo buffers the whole stream and nothing arrives until close.
+an nginx reverse proxy in front of MediKube buffers the whole stream and nothing arrives until close.
 
 #### (c) Skip the activity logger
 
 PB's global `activityLogger()` middleware logs on response completion. For a 30-minute stream that
 is a useless record written at the end; PB tags its own realtime route with
-`Bind(SkipSuccessActivityLog())`. Do the same. (MediGo disables `_logs` anyway, but the middleware
+`Bind(SkipSuccessActivityLog())`. Do the same. (MediKube disables `_logs` anyway, but the middleware
 still runs and the zerolog bridge will emit the line.)
 
-**The helper every MediGo SSE handler must go through:**
+**The helper every MediKube SSE handler must go through:**
 
 ```go
 package httpapi
@@ -900,7 +900,7 @@ apis/extensions.go:39  se.Router.Group("/_").<...>.Bind(Gzip())
 
 The global default middleware chain (`apis/base.go:30-36`) is:
 `activityLogger, panicRecover, rateLimit, loadAuthToken, superuserIPsWhitelist, securityHeaders,
-BodyLimit` — **no gzip.** So `/api/v1/*` and MediGo's page routes are uncompressed by default and
+BodyLimit` — **no gzip.** So `/api/v1/*` and MediKube's page routes are uncompressed by default and
 SSE streams flush straight through.
 
 Three follow-ups, though, because the trap is real:
@@ -928,7 +928,7 @@ Three follow-ups, though, because the trap is real:
   Exempt the stream routes, or set the limit generously for them.
 - **`securityHeaders()`** sets `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`,
   `Cross-Origin-Opener-Policy: same-origin`, `X-XSS-Protection`. It does **not** set a CSP. PB's
-  `defaultCSP` is applied only to the `/_` admin UI. **MediGo must set its own CSP** — see §9, and
+  `defaultCSP` is applied only to the `/_` admin UI. **MediKube must set its own CSP** — see §9, and
   note the `ExecuteScript` interaction, which is the one genuine footgun.
 - **`BodyLimit(DefaultMaxBodySize)`** applies to the signals JSON body on POST. Datastar sends *all*
   non-`_` signals on every request, so a page with a large hydrated dataset in signals can hit it.
@@ -1000,7 +1000,7 @@ that means, because it is narrower than it sounds:
 - **PocketBase's admin UI** (`/_`) uses PB realtime internally. Untouched, free, works.
 - **Any future non-Datastar client** (a native mobile app, a JS SDK consumer) can use
   `/api/realtime` directly. Keep it enabled.
-- **MediGo's own Datastar UI cannot consume it.** For that, bridge.
+- **MediKube's own Datastar UI cannot consume it.** For that, bridge.
 
 ### The bridge design
 
@@ -1227,11 +1227,11 @@ Put this on an element that is **never itself a patch target**, for the auto-can
 3. Authorise at connect **and** per event.
 4. Use `...AfterXxxSuccess` hooks so you never render uncommitted state.
 5. `return e.Next()` in every hook, or PB's chain halts.
-6. The hub is in-process. **Single-instance only.** MediGo is self-hosted personal medical records,
+6. The hub is in-process. **Single-instance only.** MediKube is self-hosted personal medical records,
    so that is fine — but state it explicitly in the spec, because "add a second replica" silently
    breaks realtime for half the users. If horizontal scale ever arrives, the `Hub` interface is the
    seam to swap for Redis/NATS.
-7. Keep `/api/realtime` enabled for non-Datastar clients; don't try to make MediGo's UI use it.
+7. Keep `/api/realtime` enabled for non-Datastar clients; don't try to make MediKube's UI use it.
 
 ---
 
@@ -1375,14 +1375,14 @@ tasks:
 
   build:
     deps: [templ:generate, css]
-    cmds: ['go build -o bin/medigo ./cmd/medigo']
+    cmds: ['go build -o bin/medikube ./cmd/medikube']
 
   dev:
     deps: [templ:install, tailwind:install]
     cmds:
       - |
         {{.TAILWIND_BIN}} -i {{.CSS_IN}} -o {{.CSS_OUT}} --watch &
-        templ generate -watch -proxy=http://localhost:8090 -cmd="go run ./cmd/medigo serve"
+        templ generate -watch -proxy=http://localhost:8090 -cmd="go run ./cmd/medikube serve"
 ```
 
 ```gitignore
@@ -1429,7 +1429,7 @@ twentieth of a minimal React + ReactDOM bundle. Embedding it costs nothing.
 `data-bind`, everything) and is for building a custom bundle. `datastar-aliased.js` is byte-identical
 except it uses the **`data-star-*`** prefix instead of `data-*` — I diffed them; the only changes are
 the literal `star-` in the prefix builder and a `startsWith("star-")` guard. Use it only if `data-*`
-collides with other tooling. MediGo has no such collision; use the plain bundle.
+collides with other tooling. MediKube has no such collision; use the plain bundle.
 
 It is an **ES module** (it ends in an `export { ... }` block), so it must be loaded with
 `type="module"`.
@@ -1476,7 +1476,7 @@ import (
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 
-	"medigo/internal/ui/assets"
+	"medikube/internal/ui/assets"
 )
 
 func BindAssets(se *core.ServeEvent) error {
@@ -1506,7 +1506,7 @@ templ head(title string) {
 	<head>
 		<meta charset="utf-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1"/>
-		<title>{ title } &middot; MediGo</title>
+		<title>{ title } &middot; MediKube</title>
 		<link rel="stylesheet" href="/assets/app.css?v=1"/>
 		<script type="module" src="/assets/datastar.js?v=1.0.2" defer></script>
 	</head>
@@ -1677,7 +1677,7 @@ For SSE pages, scope network-idle waits to the initial document, or use
 
 ### CSP — the one genuine footgun
 
-MediGo should set a strict CSP (PB only applies its `defaultCSP` to `/_`). But note how the SDK
+MediKube should set a strict CSP (PB only applies its `defaultCSP` to `/_`). But note how the SDK
 implements `ExecuteScript`:
 
 ```go
@@ -1696,12 +1696,12 @@ silently fail and log a CSP violation to the console — which **fails your zero
 `ExecuteScript`, `ConsoleLog`, `ConsoleError`, `Redirect`, `Redirectf`, `DispatchCustomEvent`,
 `ReplaceURL`, `ReplaceURLQuerystring`, `Prefetch`.
 
-**Decision for MediGo: ban that entire family.** They are all avoidable:
+**Decision for MediKube: ban that entire family.** They are all avoidable:
 
 - `Redirect` → return a normal `303` from the handler *before* opening the SSE stream; or patch an
   element and let a link/`data-on:click` navigate. Full page navigations are cheap here.
 - `ConsoleLog`/`ConsoleError` → zerolog on the server, `role="alert"` banner on the client.
-- `ReplaceURL` → server-rendered canonical URLs; MediGo's routes are real pages, not SPA states.
+- `ReplaceURL` → server-rendered canonical URLs; MediKube's routes are real pages, not SPA states.
 - `DispatchCustomEvent` → patch a signal and use `data-on-signal-patch`.
 
 Banning them keeps `'unsafe-inline'` out of `script-src` permanently, which is the single most
@@ -1773,7 +1773,7 @@ cheap to revisit.
 
 ## 10. Progressive enhancement / no-JS: state it plainly
 
-**MediGo's UI will NOT work with JavaScript disabled. Datastar does not degrade.**
+**MediKube's UI will NOT work with JavaScript disabled. Datastar does not degrade.**
 
 No hedging on this. The reasons are structural, not incidental:
 
@@ -1795,12 +1795,12 @@ gap you can close with effort; closing it means writing a second, form-post-base
 
 ### What the spec should say
 
-> **MediGo requires JavaScript.** The UI is server-rendered HTML enhanced by the Datastar runtime
+> **MediKube requires JavaScript.** The UI is server-rendered HTML enhanced by the Datastar runtime
 > (33 KB, embedded and served from the application origin; no CDN, no third-party requests). It
 > targets current evergreen browsers. There is no no-JS fallback and none is planned: the interaction
 > model is server-driven DOM patching, which has no meaningful degraded mode.
 >
-> This is acceptable for MediGo's deployment context: a self-hosted personal medical records
+> This is acceptable for MediKube's deployment context: a self-hosted personal medical records
 > application accessed by authenticated users on their own devices. It is not a public content site;
 > there is no SEO requirement, no crawler requirement, and no anonymous-reader requirement.
 >

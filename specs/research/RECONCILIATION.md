@@ -1,11 +1,11 @@
-# MediGo — Dossier Reconciliation
+# MediKube — Dossier Reconciliation
 
 **Date:** 2026-08-26
 **Inputs:** `domain-clinical.md`, `domain-platform.md`, `pocketbase.md`, `frontend.md`,
 `observability.md`, `conventions.md`, `testing.md`, plus the two index files
 `VERIFIED-SOURCE-FACTS.md` and `HOUSE-PATTERNS.md`.
-**Also read:** `/Users/krzysztof.wiatrzyk/private/monorepo/medigo/.specify/memory/constitution.md`
-(the only file that currently exists under `medigo/` — the directory is otherwise empty).
+**Also read:** `/Users/krzysztof.wiatrzyk/private/monorepo/medikube/.specify/memory/constitution.md`
+(the only file that currently exists under `medikube/` — the directory is otherwise empty).
 
 **Method.** Every load-bearing claim below was re-verified against the actual v0.40.1 source in
 the module cache (`/home/agent/go/pkg/mod/github.com/pocketbase/pocketbase@v0.40.1`), the
@@ -57,25 +57,25 @@ Two locked decisions ("Go 1.26.5" and "PocketBase v0.40.1 embedded") are mutuall
 indeed works) with *building*. It does not build. Two other dossiers independently caught this;
 the index file should be corrected so it stops contradicting them.
 
-**Resolution.** Move MediGo to **Go 1.27.x**. Concretely:
+**Resolution.** Move MediKube to **Go 1.27.x**. Concretely:
 
-- `go.mod`: `module medigo` / `go 1.27` / `toolchain go1.27.x`.
+- `go.mod`: `module medikube` / `go 1.27` / `toolchain go1.27.x`.
 - Dockerfile `ARG GO_VERSION=1.27` (`conventions.md` line 512 currently says 1.26).
 - golangci-lint **v2** at a release that understands Go 1.27 (`arc-ui`'s Taskfile already notes
   "v1 does not understand Go 1.26" — the same reasoning applies one version up).
-- MediGo will be the **only** project in the monorepo not on 1.26.5. That is a deliberate,
+- MediKube will be the **only** project in the monorepo not on 1.26.5. That is a deliberate,
   documented divergence, not drift. Note `medi-keep-go` documented a `GOTOOLCHAIN=local` trap
   (`conventions.md` line 390) — with a `toolchain` directive present, CI must **not** set
   `GOTOOLCHAIN=local` or the build fails with a confusing "built with go1.26 < targeted go1.27".
 - Budget real time for the knock-on: Go 1.27 retrofits v1 `encoding/json` onto v2 and the
-  CHANGELOG explicitly warns it is *not fully backward compatible*. This affects **MediGo's own
+  CHANGELOG explicitly warns it is *not fully backward compatible*. This affects **MediKube's own
   DTO marshalling**, not just PocketBase — nil-vs-empty slices, `json.RawMessage`, duplicate
   keys, case-insensitive field matching. `tests.ApiScenario` normalises bodies through
   `jsontext` before substring matching, so `ExpectedContent` compares against *re-encoded* JSON.
 
 **Fallback if 1.27 is immovable:** pin PocketBase to v0.39.x. This is strictly worse — it
 forfeits v0.40's `filesystem.NewWriter`/`OnNewWriter`/`OnDelete` hooks, `Record.GetInt64`, the
-log data-size cap and the backup improvements, and it puts MediGo on a branch upstream will stop
+log data-size cap and the backup improvements, and it puts MediKube on a branch upstream will stop
 patching. It also **invalidates every file:line citation in `pocketbase.md` and
 `observability.md`**, which would need a full re-verification pass. Escalate before any code is
 written.
@@ -86,7 +86,7 @@ written.
 
 Locked decision: *"use PocketBase's native realtime where PocketBase natively supports it."*
 Under the equally-locked auto-API lockdown, **PocketBase natively supports it nowhere** for
-MediGo's users.
+MediKube's users.
 
 **Evidence.**
 
@@ -119,7 +119,7 @@ So there are *three* independent reasons this locked decision cannot be implemen
 event names, handshake.
 
 **Resolution.** **Strike native realtime from the locked decisions. Datastar SSE is 100% of
-MediGo's realtime.** This is a simplification, not a loss — native realtime broadcasts *raw
+MediKube's realtime.** This is a simplification, not a loss — native realtime broadcasts *raw
 collection records*, which is precisely the abstraction the hand-written-DTO decision is paying
 to avoid; shipping it would leak internal schema to the browser through a second transport with
 a second authorization model.
@@ -135,7 +135,7 @@ realtime layer.
 Amend the constitution: it currently says PocketBase "owns HTTP routing, persistence, auth, file
 storage, **realtime**, and the superuser admin UI". Delete `realtime` from that list.
 
-**Carry-forward constraint:** the hub is in-process, so MediGo is **single-instance only**. See
+**Carry-forward constraint:** the hub is in-process, so MediKube is **single-instance only**. See
 open question Q4.
 
 ---
@@ -194,7 +194,7 @@ Still a 34→5 collapse — the win is real, the number was optimistic.
 
 **Note also** `filesystem.NewFileFromURL` is a textbook SSRF sink (`pocketbase.md` §9). The
 monorepo has already been bitten by exactly this pattern (`fix(technologia): block SSRF in logo
-uploads`). If MediGo ever ingests by URL, validate the resolved IP against private/link-local
+uploads`). If MediKube ever ingests by URL, validate the resolved IP against private/link-local
 ranges *after* DNS resolution and never follow redirects blindly.
 
 ---
@@ -348,7 +348,7 @@ the single most important implementation detail of the lockdown middleware.
 
 **Resolution.**
 
-- Hand-write `/api/v1/auth/login`, `/refresh`, `/logout` with MediGo DTOs, completing the flow
+- Hand-write `/api/v1/auth/login`, `/refresh`, `/logout` with MediKube DTOs, completing the flow
   through `apis.RecordAuthResponse(e, rec, core.RequestInfoContextPasswordAuth, nil)` — exported,
   and the supported way to finish an auth flow from a custom route (it mints the token, fires
   `OnRecordAuthRequest`, and records the auth origin).
@@ -359,7 +359,7 @@ the single most important implementation detail of the lockdown middleware.
   every auth route untouched.
 - `AuthRule` is **not** one of the five CRUD rules. Setting `ListRule = nil` etc. does **not**
   disable login. Keep `AuthRule = types.Pointer("")`, or `types.Pointer("verified = true")` if
-  MediGo requires verification before use.
+  MediKube requires verification before use.
 
 **Answering the brief's question (f) directly: yes, PB native auth survives the multi-patient
 sharing model cleanly.** Authentication and authorization are orthogonal here. PB issues the
@@ -393,7 +393,7 @@ pay the full syntactic cost of monads for none of the benefit. Even the one defe
 (`mo.Option` for PATCH absent-vs-zero) loses to plain `*T`, which is stdlib, marshals correctly,
 and needs no custom `MarshalJSON` to round-trip through the OpenAPI generator.
 
-**Why `ro` fails.** MediGo is: HTTP in → validate → SQLite → SSE push → HTTP out. There is no
+**Why `ro` fails.** MediKube is: HTTP in → validate → SQLite → SSE push → HTTP out. There is no
 stream algebra to express. Channels, `context` and `errgroup` cover every case. PB's own
 `apis/realtime.go` solves the identical problem with a channel per client and a `select` — that
 is the right amount of machinery. Adding Observables is a **second concurrency model** in one
@@ -441,8 +441,8 @@ for most of them.
   `VaccineCategory`, `ExportFormat`, `ExportScope`, `ChannelType`, `EventType`) plus one
   `pattern`. Every clinical enum — allergy/condition severity, all status ladders, medication
   route, insurance type — is a bare `{"type":"string"}` because Pydantic validators never
-  reached the schema. Since MediGo has **no wire-compat obligation**, this is a licence: §30 of
-  that dossier proposes the canonical set. The spec must say plainly that MediGo is *choosing*
+  reached the schema. Since MediKube has **no wire-compat obligation**, this is a licence: §30 of
+  that dossier proposes the canonical set. The spec must say plainly that MediKube is *choosing*
   these values, not *inheriting* them. Encode them as PB `SelectField.Values`.
 - **Collapsing 11 of 17 link tables into PB multi-relation fields is technically sound** — I
   verified PB supports back-relation traversal (`core/record_field_resolver_runner.go:496`,
@@ -545,7 +545,7 @@ injected `<script>` tags still don't run), plus `connect-src`/`form-action 'self
    to the full list.
 
 Note PB's `securityHeaders()` middleware does **not** set a CSP — PB's `defaultCSP` applies only
-to the `/_` admin UI. MediGo must set its own.
+to the `/_` admin UI. MediKube must set its own.
 
 **If `'unsafe-eval'` is unacceptable to a stakeholder, the honest answer is that Datastar is the
 wrong choice, not that it can be configured around.** See open question Q2.
@@ -589,7 +589,7 @@ version numbers. Do not "align" them; a `datastar.js v1.2.2` does not exist.
 they are silent failures rather than errors.
 
 **Also worth acting on:** Datastar honours a plain `text/html` response as an element patch, so
-**most MediGo interactions need no SSE at all**. Use the non-SSE fast path by default and reserve
+**most MediKube interactions need no SSE at all**. Use the non-SSE fast path by default and reserve
 streams for genuinely live views. This materially reduces the surface exposed to C9.
 
 ---
@@ -627,7 +627,7 @@ Always `defer app.Cleanup()` immediately after the `require.NoError`, or a panic
 Go types" cannot mean "walk the router after the fact".
 
 **Resolution.** An `httproute.Registry` where **describing and registering a route are the same
-call**, with `Bind()` separated so `medigo routes --list` needs no DB, no port and no
+call**, with `Bind()` separated so `medikube routes --list` needs no DB, no port and no
 migrations. Three `go test` gates in CI, modelled on `medikeep-mcp`'s `task api:coverage`:
 registry↔OpenAPI agreement in **both** directions; committed `api/openapi.json` is not stale;
 every page route is smokeable. A page registered without a landmark element panics at
@@ -655,7 +655,7 @@ always-green gate is worse than no gate. Make that the Phase 1 exit criterion.
 | Library | Verdict | Reason |
 |---|---|---|
 | `github.com/samber/mo` | **DROP** | Severs `errors.Is`/`As`/`%w`, which `router.ToApiError`, Sentry and zerolog all depend on. Makes ignored errors lint-invisible. No `?` operator ⇒ strictly more code than `if err != nil`. Drives `.MustGet()` panics. Directly contradicts the mandated KISS + Go-best-practices principles. (`observability.md` §7.4) |
-| `github.com/samber/ro` | **DROP** | It is RxGo, not read-only helpers. **v0.4.1, pre-1.0, documented breaking changes**, in the path of the realtime layer of a medical app. A second concurrency model for a problem MediGo does not have — realtime is already solved by channels + Datastar SSE. (`observability.md` §7.5) |
+| `github.com/samber/ro` | **DROP** | It is RxGo, not read-only helpers. **v0.4.1, pre-1.0, documented breaking changes**, in the path of the realtime layer of a medical app. A second concurrency model for a problem MediKube does not have — realtime is already solved by channels + Datastar SSE. (`observability.md` §7.5) |
 | `github.com/samber/slog-zerolog` | **DO NOT ADD** | Not in the locked list, but the obvious thing someone will reach for. Unnecessary: **zerolog v1.35.1 ships `zerolog.NewSlogHandler` natively** (`rs/zerolog/slog.go`), with correct level mapping, `LogValuer` resolution, typed-field dispatch without hot-path reflection, and `event.Ctx(ctx)` propagation that the Sentry hook depends on. |
 | PB `plugins/jsvm` | **DO NOT REGISTER** | Ships a full JS runtime (goja) into a Go-only medical binary. Already in the constitution's forbidden list; keep it there and in `depguard`. |
 | `datastar.WithCompression` | **DO NOT USE** | Redundant under PB (which does not gzip your routes) and risks double `Content-Encoding` ⇒ an unreadable stream. |
@@ -675,7 +675,7 @@ Versions are pinned to the monorepo house set where they overlap (verified by re
 
 | Module | Version | Role |
 |---|---|---|
-| *(toolchain)* | **go 1.27.x** | **Changed from the locked 1.26.5 — see C1.** `module medigo`, bare name, `toolchain go1.27.x`, `tool ( github.com/a-h/templ/cmd/templ )` |
+| *(toolchain)* | **go 1.27.x** | **Changed from the locked 1.26.5 — see C1.** `module medikube`, bare name, `toolchain go1.27.x`, `tool ( github.com/a-h/templ/cmd/templ )` |
 | `github.com/pocketbase/pocketbase` | v0.40.1 | Persistence, HTTP router, auth, files, migrations, admin UI, cron, mailer |
 | `github.com/a-h/templ` | v0.3.1020 | Server-rendered typed components (matches arc-ui) |
 | `github.com/starfederation/datastar-go` | v1.2.2 | SSE + hypermedia Go SDK. **Browser runtime is v1.0.2, vendored+embedded** |
@@ -698,21 +698,21 @@ Versions are pinned to the monorepo house set where they overlap (verified by re
 **Docker / monorepo integration** (verified against the live files):
 
 - `/.dockerignore` is a **deny-everything-then-readmit allowlist** (`*` on line 12). Add
-  `!medigo/` to the allowlist block after `!arc-ui/`, then mirror arc-ui's build-output
-  exclusions **plus** `medigo/pb_data/` — that directory holds the live database and uploaded
+  `!medikube/` to the allowlist block after `!arc-ui/`, then mirror arc-ui's build-output
+  exclusions **plus** `medikube/pb_data/` — that directory holds the live database and uploaded
   medical records and must never enter a build context. **Miss the allowlist entry and the build
   context is empty**, failing with a misleading "file not found".
-- `/.github/workflows/build-image.yaml` — add `medigo` to
+- `/.github/workflows/build-image.yaml` — add `medikube` to
   `workflow_dispatch.inputs.project-name.options` (currently technologia, appbase, gmod,
   arc-ui). Verified: the matrix is **arch-only**, the workflow is `workflow_dispatch`-only, and
   it is fully generic on `inputs.project-name`. **No matrix entry, no path filter.**
-- **The hard constraint:** CI passes `context: .` (repo root) unconditionally, so MediGo's
-  Dockerfile **must** use project-prefixed COPY (`COPY medigo/go.mod medigo/go.sum ./`). A bare
+- **The hard constraint:** CI passes `context: .` (repo root) unconditionally, so MediKube's
+  Dockerfile **must** use project-prefixed COPY (`COPY medikube/go.mod medikube/go.sum ./`). A bare
   `COPY go.mod ./` works locally and breaks in CI — the likeliest single miss.
 - Copy **arc-ui's** layout, Taskfile and 4-stage Dockerfile, not appbase's. Do **not** copy
-  arc-ui's HTTP layer (it is Gin; PocketBase owns MediGo's router). MediGo needs no
+  arc-ui's HTTP layer (it is Gin; PocketBase owns MediKube's router). MediKube needs no
   `replace ../go-modules`.
-- Ship a `medigo healthcheck` Cobra subcommand — distroless has no curl/wget for `HEALTHCHECK`.
+- Ship a `medikube healthcheck` Cobra subcommand — distroless has no curl/wget for `HEALTHCHECK`.
 - Commit `internal/web/static/.gitkeep` or `go:embed` fails on the empty directory.
 - Land the deletion of the already-staged `medi-keep-go/` in the same commit.
 
@@ -724,7 +724,7 @@ Research settled the facts; these five are genuine decisions that materially cha
 architecture and cannot be made from the dossiers.
 
 1. **Go 1.27.x, or drop PocketBase to v0.39.x?** (C1) Everything is downstream of this. 1.27 is
-   strongly recommended, but it makes MediGo the only project in the monorepo off the 1.26.5
+   strongly recommended, but it makes MediKube the only project in the monorepo off the 1.26.5
    house standard, and the fallback invalidates every file:line citation in two dossiers.
 2. **Is `script-src 'unsafe-eval'` acceptable for an app holding diagnoses and lab results?**
    (C10) It is mandatory and permanent for Datastar. If a stakeholder says no, the honest
@@ -735,7 +735,7 @@ architecture and cannot be made from the dossiers.
    read every patient's complete chart through `/_`. That is a large PHI surface reachable with
    one credential. `-tags no_ui` strips it entirely (`ui/embed_no_ui.go`). If it ships, the
    answer must also cover superuser IP allowlisting and MFA.
-4. **Is MediGo ever horizontally scaled?** The Datastar SSE hub is **in-process** (C2), so the
+4. **Is MediKube ever horizontally scaled?** The Datastar SSE hub is **in-process** (C2), so the
    design is single-instance by construction. If multi-instance is ever required, the hub needs
    an external broker and that is an architectural change, not a config flag. Decide now.
 5. **Record-level soft delete, or file-trash only?** The locked scope lists "soft-delete trash",
@@ -755,7 +755,7 @@ Seven phases. Each is independently shippable and independently verifiable.
 **Goal.** One clinical record type works end to end on embedded PocketBase, with every
 cross-cutting decision proven and gated, so later phases only add domain.
 
-**Deliverables.** Go 1.27 module (`module medigo`, `tool` directive for templ) and the
+**Deliverables.** Go 1.27 module (`module medikube`, `tool` directive for templ) and the
 `.dockerignore` + `build-image.yaml` entries landed in the same commit; arc-ui-shaped layout,
 Taskfile and 4-stage distroless Dockerfile with the Tailwind `x64`-not-`amd64` and glibc traps
 handled; `pocketbase.NewWithConfig` with `HideStartBanner` and `DefaultEncryptionEnv`;
@@ -767,7 +767,7 @@ enumerated PB-path exceptions (C6); **the lockdown**: nil rules in migrations, t
 that refuses to start on any non-nil rule, `Batch.Enabled = false`, and the `-1019` prefix
 middleware; **Allergy** end to end (migration, typed record proxy, repository interface, service,
 DTOs, `/api/v1` CRUD) plus a templ page with Datastar and one SSE stream through the mandatory
-`newStream` helper (C9); the `httproute.Registry` with all three OpenAPI gates (C15); `medigo
+`newStream` helper (C9); the `httproute.Registry` with all three OpenAPI gates (C15); `medikube
 seed` / `routes` / `openapi` / `healthcheck` Cobra subcommands; `.golangci.yml` v2 with
 `depguard` + `forbidigo`; Playwright smoke gate **proven red on a deliberately broken page**
 (C16), desktop + mobile.
@@ -775,7 +775,7 @@ seed` / `routes` / `openapi` / `healthcheck` Cobra subcommands; `.golangci.yml` 
 
 ### 2 — `reference-and-catalogs`
 
-**Goal.** Every lookup entity the clinical records depend on exists, with MediGo's canonical
+**Goal.** Every lookup entity the clinical records depend on exists, with MediKube's canonical
 enums defined rather than inherited.
 
 **Deliverables.** Practitioner, Practice, Pharmacy, Medical Specialty, Injury Type; the two
@@ -834,7 +834,7 @@ as performing **no authorization at all**, is not reproduced.
 
 **Deliverables.** Custom reports + async export in the documented portable format the
 constitution requires ("no user is ever trapped"); the bespoke domain activity log (PB's `_logs`
-is a *request* log and is disabled, so the audit trail is MediGo's); thin wrappers over PB's
+is a *request* log and is disabled, so the audit trail is MediKube's); thin wrappers over PB's
 native backup/restore + cron retention (~20 ops → ~4), keeping only safety-backup-before-restore
 and restore preview; the trash/soft-delete decision from Q5 implemented whichever way it lands;
 the superuser admin UI decision from Q3 implemented; `frontend-logs/*` deliberately **not** built
@@ -864,7 +864,7 @@ re-verification checklist covering the three unexported-internals workarounds (l
   source-verified superuser-only mode (`apis/record_crud.go` + `core.CanAccessRecord`).
   **Internal Go access is completely unaffected** — rules are evaluated only in the `apis` HTTP
   layer, never by `app.FindRecordById` / `app.Save` / `app.RecordQuery`. This is the single
-  property that makes the whole MediGo design viable. **The admin UI survives** because
+  property that makes the whole MediKube design viable. **The admin UI survives** because
   superusers bypass rules. The caveats are C2/C3/C6, not the mechanism itself.
 - **gzip does not break SSE, because PB never gzips your routes.** Verified: `apis.Gzip()` is
   bound at exactly two sites (`apis/serve.go:99`, `apis/extensions.go:39`), **both scoped to the
@@ -912,7 +912,7 @@ re-verification checklist covering the three unexported-internals workarounds (l
   use `text`. `GetInt64` exists but does not widen the underlying type.
 - **No trailing-slash normalisation** since v0.23 — `/api/v1/patients/` ≠ `/api/v1/patients`.
   Pick "no trailing slash", enforce it in the OpenAPI generator, cover it in the smoke gate.
-- **MediGo's UI will not work with JavaScript disabled, and that is fine — but state it
+- **MediKube's UI will not work with JavaScript disabled, and that is fine — but state it
   plainly.** Datastar does not degrade: with JS off nothing is bound, `data-bind` populates no
   signals, so a form submit sends nothing at all. This is structural, not incidental. Do not let
   it be discovered as a bug in Phase 7.

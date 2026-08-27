@@ -27,7 +27,7 @@ document**. What follows separates three confidence tiers, and the tier is state
 | **DOCUMENTED** | Values written out in a field `description` or a query-param `description`. Exact as written; completeness is upstream's claim, not verified. |
 | **DERIVED** | Reconstructed from `default` values, the existence of filter endpoints (`/active`, `/critical`, `/scheduled`, `/ongoing`, `/abnormal`, `/needing-service`), and cross-entity consistency. **Treat as a strong starting proposal, not as upstream truth.** |
 
-MediGo has **no wire-compat obligation**, so the DERIVED sets are a licence rather than a problem:
+MediKube has **no wire-compat obligation**, so the DERIVED sets are a licence rather than a problem:
 we get to define the canonical enums ourselves. Section 30 does exactly that. But the spec must be
 explicit that we are *choosing* these values, not *inheriting* them.
 
@@ -54,7 +54,7 @@ path uses `/lab-results/`. Three spellings of one entity.
 
 Facts that hold across nearly every clinical entity, so they are not repeated in each table:
 
-1. **`id`**: `integer`, required in every `*Response`. Postgres bigserial. MediGo replaces this with
+1. **`id`**: `integer`, required in every `*Response`. Postgres bigserial. MediKube replaces this with
    PocketBase's 15-char text id.
 2. **`patient_id`**: `integer`, **required** on create, `exclusiveMinimum: 0`. Every clinical record
    hangs directly off a patient — there is no encounter-centric or episode-centric grouping.
@@ -1415,16 +1415,16 @@ client cannot show *why* a row matched):
 
 ---
 
-## 30. Canonical enum set for MediGo
+## 30. Canonical enum set for MediKube
 
-Consolidating §0–§27. `*` marks a value MediGo introduces or renames; everything unmarked is
+Consolidating §0–§27. `*` marks a value MediKube introduces or renames; everything unmarked is
 DECLARED or DOCUMENTED upstream. Every one of these becomes a PocketBase `select` field
 (single-select unless noted) **and** a Go string-typed constant set with a `Valid()` method.
 
 ### Severity — ONE ladder, used everywhere
 
 `mild` · `moderate` · `severe` · `life_threatening`
-(upstream spells it `life-threatening`; MediGo standardises on snake_case for all enum values.)
+(upstream spells it `life-threatening`; MediKube standardises on snake_case for all enum values.)
 Used by: allergies, conditions, injuries, symptom occurrences. Symptom occurrences upstream only
 used 3 values; the 4th is simply never selected there. **One enum, four entities.**
 
@@ -1432,15 +1432,15 @@ used 3 values; the 4th is simply never selected there. **One enum, four entities
 
 - **Ongoing-condition shape** (conditions, allergies, symptoms, injuries):
   `active` · `inactive` · `resolved` · `chronic`*
-  (injuries additionally use `healing` — DOCUMENTED — which MediGo keeps as a 5th value on this set.)
+  (injuries additionally use `healing` — DOCUMENTED — which MediKube keeps as a 5th value on this set.)
 - **Order/event shape** (procedures, lab results):
   `ordered`*/`scheduled` · `in_progress` · `completed` · `cancelled`
-  (procedures use `scheduled`, labs use `ordered`, for the same state. MediGo: keep both names on
+  (procedures use `scheduled`, labs use `ordered`, for the same state. MediKube: keep both names on
   one enum rather than two enums — `scheduled` for procedures, `ordered` for labs, both meaning
   "not yet done".)
 - **Course-of-therapy shape** (medications, treatments, medical equipment):
   `active` · `on_hold` · `completed` · `stopped` · `cancelled`
-  (equipment reads `stopped` as "retired"; MediGo adds `retired`* for equipment only.)
+  (equipment reads `stopped` as "retired"; MediKube adds `retired`* for equipment only.)
 
 ### Per-entity enums
 
@@ -1510,7 +1510,7 @@ second route, no second DTO, which also kills the bidirectional duplication in �
 **What about `relevance_note`?** It is `string | null`, unconstrained, on 16 of 17 tables, and there
 is no evidence in the spec that it is ever populated per-pair meaningfully rather than as a shared
 blanket note (the `*BulkCreate` schemas take **one** `relevance_note` for the whole batch — proof
-that upstream itself treats it as per-operation, not per-pair). MediGo drops it. If a user needs to
+that upstream itself treats it as per-operation, not per-pair). MediKube drops it. If a user needs to
 say why two records relate, the owning record's `notes` field is where that belongs.
 
 ## R2 — Keep exactly five real join collections, because they carry real clinical data
@@ -1537,7 +1537,7 @@ whole model, and it is the most clinically valuable field in any link table: it 
 "ibuprofen treats my headache" from "lisinopril causes my cough". Upstream has it on exactly one of
 seventeen tables.
 
-MediGo: **one** `symptom_links` collection —
+MediKube: **one** `symptom_links` collection —
 `symptom` (rel), `target_collection` (enum: `conditions`|`medications`|`treatments`),
 `target_id` (text), `relation` (enum: `treats`|`caused_by`|`worsens`|`monitors`|`related_to`).
 
@@ -1609,7 +1609,7 @@ row for id+colour, so `rename`/`replace`/`delete` are string rewrites across ele
 tag vocabulary that is spelled three different ways (§26). It also means the tag filter has two
 encodings (`tag_match_all` boolean vs `match_mode: any|all`).
 
-MediGo: one `tags` collection (`name` unique per owner, `color`), and a multi-relation `tags` field
+MediKube: one `tags` collection (`name` unique per owner, `color`), and a multi-relation `tags` field
 on every taggable collection. Rename becomes a one-row update. Tag search becomes one PocketBase
 filter expression. One `match` param (`any`|`all`), one vocabulary.
 
@@ -1620,7 +1620,7 @@ Upstream has four reference tables with four different lifecycle rules:
 no update, with an `is_system` flag), `standardized_tests` (read-only, admin-synced),
 `standardized_vaccines` (read-only, admin-synced).
 
-MediGo: **two** shapes.
+MediKube: **two** shapes.
 
 - **Catalogs** (read-only, seeded/synced): `standardized_tests`, `standardized_vaccines`. Keep both;
   they are genuinely valuable (the vaccine one powers `diseases_index`, the test one powers unit and
@@ -1649,7 +1649,7 @@ collection is small, and it is only ever read from the symptom side.
 Upstream lets the **client** state which permission the server should enforce
 (`?required_permission=view`, default `view`, on **41** operations). Even if the server also checks the
 share record, this is an authorization parameter under caller control and it is duplicated forty
-times. MediGo: permission is derived from `(auth token, patient id)` inside a single middleware, the
+times. MediKube: permission is derived from `(auth token, patient id)` inside a single middleware, the
 patient is resolved from the route or the active-patient claim, and the parameter does not exist.
 
 Similarly, retire the dual patient-scoping mechanism (§1.3): one canonical form,
