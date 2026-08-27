@@ -336,8 +336,8 @@ Reading the diagram for the two destructive paths:
   account pointing at it and `audit_events.patient` on every historical entry; the photo and its
   thumbnails are removed with the record by PocketBase's file-field cleanup. One transaction.
 
-Both behaviours are PocketBase's (`core/record_model.go:1587-1626`), not MediGo's, and both are
-asserted by integration tests because MediGo depends on them (research D-06).
+Both behaviours are PocketBase's (`core/record_model.go:1587-1626`), not MediKube's, and both are
+asserted by integration tests because MediKube depends on them (research D-06).
 
 ---
 
@@ -380,7 +380,7 @@ function, not in a README.
 
 ## 9. Fixture and seed data
 
-`internal/testdata/pb_data` (cloned by every `tests.NewTestApp`) and `medigo seed` produce the same
+`internal/testdata/pb_data` (cloned by every `tests.NewTestApp`) and `medikube seed` produce the same
 deterministic set. Ids are exported from `internal/testsupport/fixtures.go` so no test contains a
 literal.
 

@@ -4,7 +4,7 @@ Five operations. Requirements covered: FR-034 … FR-040.
 
 **One directory for practices, pharmacies, hospitals, laboratories, imaging centres and anything
 else**, distinguished by `kind` (FR-034, research D-24). Upstream modelled practices and pharmacies
-as two entities with two different treatments of the same six address concepts; MediGo has one
+as two entities with two different treatments of the same six address concepts; MediKube has one
 shape, one CRUD, one page, one search.
 
 ## DTOs

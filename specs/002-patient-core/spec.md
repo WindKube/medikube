@@ -287,7 +287,7 @@ an unmapped one that carries no marker is a gap.
 - **Ownership of a person cannot be transferred to another account in this phase.** No requirement in this or any planned phase asks for it; sharing (phase 005) covers the case where somebody else needs access.
 - **Measurements are recorded in one canonical unit system and converted for display.** Upstream stored imperial and converted for export, which makes the recorded value depend on the recorder's preference.
 - **There is no limit on how many people one account may own**, beyond what the success criteria require to remain usable.
-- **Deleting a person is permanent.** Only deleted files are recoverable in MediGo, for a documented window, and files arrive in phase 004. Records are destroyed on confirmation and the destruction is recorded.
+- **Deleting a person is permanent.** Only deleted files are recoverable in MediKube, for a documented window, and files arrive in phase 004. Records are destroyed on confirmation and the destruction is recorded.
 - **A person's age, and any measurement shown in a converted unit, are computed when displayed** and never stored, so no chart can show a value that has quietly gone stale.
 - **The application requires a modern browser with scripting enabled.** This is structural to how the interface is built and is stated so it is not discovered later.
 

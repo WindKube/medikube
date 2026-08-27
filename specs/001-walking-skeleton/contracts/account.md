@@ -109,7 +109,7 @@ role is still `user`; signing in on a second session sees the new theme.
 
 | Case | Status | Body |
 |---|---|---|
-| success | `204` + `Set-Cookie: medigo_session` (a fresh token) | — |
+| success | `204` + `Set-Cookie: medikube_session` (a fresh token) | — |
 | `current_password` absent or wrong | `422` | `validation_failed`, field `current_password`, code `incorrect` |
 | new password violates a published rule | `422` | `validation_failed`, field `new_password` |
 | anonymous | `401` | `unauthenticated` |
@@ -150,9 +150,9 @@ many medications will be destroyed — read from `Me.Counts` (FR-028's confirmat
 applied to the account).
 
 **FR-014 and SC-012**: the account and **every** medication recorded under it are permanently
-removed. This is PocketBase's behaviour, not MediGo's: `medications.owner` is
+removed. This is PocketBase's behaviour, not MediKube's: `medications.owner` is
 `CascadeDelete: true`, so `deleteRefRecords` destroys them in the same transaction. Because it is
-behaviour MediGo *depends on* rather than behaviour MediGo *wrote*, it is asserted directly:
+behaviour MediKube *depends on* rather than behaviour MediKube *wrote*, it is asserted directly:
 
 ```sql
 SELECT COUNT(*) FROM medications WHERE owner = '<deleted id>';   -- must be 0

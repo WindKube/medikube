@@ -40,12 +40,12 @@ one patient sees their own self-record, which FR-005 guarantees exists for every
 
 | # | Route | Auth | Landmark inside `main` | Title | FR |
 |---|---|---|---|---|---|
-| P1 | `/patients` | session | `region[name="Patients"]` | People — MediGo | FR-001, FR-010 |
-| P2 | `/patients/{id}` | session | `region[name="Patient chart"]` | {name} — MediGo | FR-027 … FR-030 |
-| P3 | `/practitioners` | session | `region[name="Practitioners"]` | Practitioners — MediGo | FR-032, FR-036 |
-| P4 | `/practitioners/{id}` | session | `article[name="Practitioner"]` | {name} — MediGo | FR-032, FR-040 |
-| P5 | `/facilities` | session | `region[name="Facilities"]` | Places of care — MediGo | FR-034, FR-036 |
-| P6 | `/facilities/{id}` | session | `article[name="Facility"]` | {name} — MediGo | FR-034, FR-040 |
+| P1 | `/patients` | session | `region[name="Patients"]` | People — MediKube | FR-001, FR-010 |
+| P2 | `/patients/{id}` | session | `region[name="Patient chart"]` | {name} — MediKube | FR-027 … FR-030 |
+| P3 | `/practitioners` | session | `region[name="Practitioners"]` | Practitioners — MediKube | FR-032, FR-036 |
+| P4 | `/practitioners/{id}` | session | `article[name="Practitioner"]` | {name} — MediKube | FR-032, FR-040 |
+| P5 | `/facilities` | session | `region[name="Facilities"]` | Places of care — MediKube | FR-034, FR-036 |
+| P6 | `/facilities/{id}` | session | `article[name="Facility"]` | {name} — MediKube | FR-034, FR-040 |
 
 `region[name="X"]` is a `<section aria-label="X">` and `article[name="X"]` is an
 `<article aria-label="X">` — ARIA role selectors, assertable with Playwright's `getByRole` without
@@ -56,7 +56,7 @@ test-only attributes in production markup. This is phase 001's rule, unchanged.
 spec missing either, so a page added without gate coverage is a boot failure rather than a quiet
 gap (T041, T157).
 
-**The detail routes' smoke URLs substitute deterministic ids** from `medigo seed` — never a literal
+**The detail routes' smoke URLs substitute deterministic ids** from `medikube seed` — never a literal
 id typed into a spec file, which is what `internal/testsupport/fixtures.go` exists to prevent.
 
 **No page in this phase is public.** All six require a session; an anonymous request lands on the

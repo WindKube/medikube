@@ -150,7 +150,7 @@ return app.SaveNoValidate(refRecord)
 Three behaviours fall out of it, and all three are load-bearing here:
 
 1. **Non-cascade, non-required → the id is unset and the referencing record is re-saved.** FR-040
-   ("every one of those records survives with the reference cleared") needs *no MediGo code*.
+   ("every one of those records survives with the reference cleared") needs *no MediKube code*.
 2. **Non-cascade, required, no other ids → the delete FAILS with an error.** This is a trap: if
    `medications.patient` had `CascadeDelete: false`, deleting a patient with medications would
    return a 500 instead of cascading. The matrix above is therefore not decorative; the test that
@@ -163,14 +163,14 @@ Three behaviours fall out of it, and all three are load-bearing here:
    caller's transaction.
 
 **Alternatives considered.** Implementing the unset ourselves in the service layer, for
-explicitness — rejected under Principle V ("MediGo MUST NOT rebuild what PocketBase provides") and
+explicitness — rejected under Principle V ("MediKube MUST NOT rebuild what PocketBase provides") and
 because a hand-rolled sweep would be a second, slower, less correct copy of a function that already
 batches.
 
 ### D-07 — Deleting a patient clears every account's "person in view" for free
 
 **Decision.** `users.active_patient` is `MaxSelect: 1, Required: false, CascadeDelete: false`. No
-MediGo code clears it on patient deletion.
+MediKube code clears it on patient deletion.
 
 **Rationale.** By D-06 case 1, deleting a patient unsets the id on every `users` row pointing at
 it. FR-052 ("resolve the person in view to nobody when the person in view is the one deleted") and
@@ -331,7 +331,7 @@ Step 5 must follow step 3: `Required: true` on a column with empty values fails 
 - *Per-record `Save`.* Rejected on audit-noise and cost.
 - *A global "hooks off" toggle for the duration.* Rejected — a hidden mode is precisely what
   Principle I forbids, and it would be reachable at runtime.
-- *A separate `medigo migrate-medications` subcommand run by the operator.* Rejected: FR-022 says
+- *A separate `medikube migrate-medications` subcommand run by the operator.* Rejected: FR-022 says
   the attribution happens "when the change is applied", and an operator-run step is an operator
   who forgets.
 
@@ -378,7 +378,7 @@ half-migrating — loud, which is what we want.
 
 ## D. The photograph
 
-### D-16 — `Protected: true`, MediGo-owned route, eager thumbnails, no file token
+### D-16 — `Protected: true`, MediKube-owned route, eager thumbnails, no file token
 
 **Decision.**
 
@@ -400,10 +400,10 @@ never used.
 handler runs its authorization check **only inside `if fileField.Protected`** with no else branch,
 so an unprotected field is served to any anonymous caller who knows the URL. Under the Principle V
 lockdown the opposite is also true — a protected field 404s for everyone because `ViewRule` is
-`nil` — so MediGo must own the route in either case. FR-044 forbids "any link that carries its own
+`nil` — so MediKube must own the route in either case. FR-044 forbids "any link that carries its own
 credential", which is precisely what a file token is.
 
-**Eager thumbnails, and the exact key layout.** Because MediGo bypasses PB's file route, PB's
+**Eager thumbnails, and the exact key layout.** Because MediKube bypasses PB's file route, PB's
 *lazy* thumbnailer (`apis/file.go:179-181`, which creates the thumb on first request) never runs.
 Thumbnails are therefore generated on upload, in a `TxInfo().OnComplete` callback so they happen
 after the record commit but inside the request, using PB's own naming so that PB's cleanup still
@@ -424,15 +424,15 @@ thumbs anywhere else would orphan them on replace. `fsys.CreateThumb` is
 
 - *Serve through PB's route with a file token.* Rejected by constitution VII: a credential in a URL
   lands in logs, proxies and referrer headers.
-- *Generate thumbs lazily in MediGo's own route.* Rejected: it makes the first list render slow and
+- *Generate thumbs lazily in MediKube's own route.* Rejected: it makes the first list render slow and
   unpredictable, and SHARED-DESIGN §1.2 already mandates eager.
-- *Store thumbs under a MediGo-specific prefix.* Rejected: PB's replace/delete cleanup would not
+- *Store thumbs under a MediKube-specific prefix.* Rejected: PB's replace/delete cleanup would not
   find them and every replaced photo would leak its old thumbnails onto disk forever.
 
 ### D-17 — The MIME type is sniffed by PocketBase; PocketBase's rejection message is not shown to the user
 
 **Decision.** Rely on `MimeTypes` on the field for detection. **Map the resulting PocketBase
-validation error into MediGo's own envelope** with code `unsupported_media_type` and a fixed,
+validation error into MediKube's own envelope** with code `unsupported_media_type` and a fixed,
 PHI-free message; never propagate PB's message.
 
 **Rationale.** Detection is genuinely content-based: `core/field_file.go:298-303` calls
@@ -450,7 +450,7 @@ captured log stream contain no part of the uploaded filename.
 
 ### D-18 — The photo size limit is explicit, and configurable
 
-**Decision.** `MEDIGO_FILES_PHOTO_MAX_BYTES`, default 15 MiB, applied to the field's `MaxSize` at
+**Decision.** `MEDIKUBE_FILES_PHOTO_MAX_BYTES`, default 15 MiB, applied to the field's `MaxSize` at
 migration time and re-asserted at boot.
 
 **Rationale.** `core/field_file.go:28` sets `DefaultFileFieldMaxSize = 5 << 20` — 5 MiB — which
@@ -661,7 +661,7 @@ answered `409 conflict` rather than 403 because it is an invariant, not a permis
 
 **Audit amplification, acknowledged.** Auditing refusals means an attacker enumerating ids writes
 one small row per attempt. Mitigations already in place: PocketBase's rate-limit middleware is
-bound by default on MediGo's routes (it is only unbound on the record-CRUD subtree —
+bound by default on MediKube's routes (it is only unbound on the record-CRUD subtree —
 VERIFIED-SOURCE-FACTS FACT 2), audit retention is a configured purge, and the row carries no
 content. Accepted; recorded so it is not rediscovered as a surprise.
 
@@ -759,7 +759,7 @@ photo thumbnail) inside `#main` on `/patients/{id}`, `/medications` and `/medica
 Playwright smoke assertion for those routes includes the seeded patient's name being visible.
 
 **Rationale.** FR-019 and SC-003 ("100% of screens showing person-specific information name that
-person on screen") is a claim, and Principle IX says a claim MediGo makes about itself is
+person on screen") is a claim, and Principle IX says a claim MediKube makes about itself is
 machine-checked or it is not made.
 
 ### D-35 — Empty states are components inside the landmark, not instead of it
@@ -801,7 +801,7 @@ handler chain until the stack overflows. This is a documented trap, not a style 
 
 `tests.ApiScenario.ExpectedEvents` is used deliberately in two places this phase: to assert that a
 `/api/v1/patients` write fires the audit hooks it should, and to assert that it fires **zero**
-`OnRecordsListRequest` events — i.e. that MediGo's route did not accidentally go through
+`OnRecordsListRequest` events — i.e. that MediKube's route did not accidentally go through
 PocketBase's CRUD API.
 
 ---

@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "Phase 001 of MediGo. One clinical record type works end to end — from stored data through to a rendered page and a passing browser check in continuous integration — establishing every architectural seam the later phases copy. In scope: account sign-up, sign-in, sign-out, password change, self-service password recovery by email, email confirmation, session handling and account deletion; a signed-in person's own profile and preferences; medications with list, view, create, edit and delete; the application shell (navigation, layout, error pages, empty states, light and dark); configuration from the environment; operational logging, measurements, tracing and error reporting; liveness and readiness signals; the operator command surface; the published description of the public interface and the address-inventory gate; the automated browser check; continuous integration wired end to end; and the repository-level registration that lets the deployable image build."
+**Input**: User description: "Phase 001 of MediKube. One clinical record type works end to end — from stored data through to a rendered page and a passing browser check in continuous integration — establishing every architectural seam the later phases copy. In scope: account sign-up, sign-in, sign-out, password change, self-service password recovery by email, email confirmation, session handling and account deletion; a signed-in person's own profile and preferences; medications with list, view, create, edit and delete; the application shell (navigation, layout, error pages, empty states, light and dark); configuration from the environment; operational logging, measurements, tracing and error reporting; liveness and readiness signals; the operator command surface; the published description of the public interface and the address-inventory gate; the automated browser check; continuous integration wired end to end; and the repository-level registration that lets the deployable image build."
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -14,7 +14,7 @@
 
 A person who takes medication needs one trustworthy place to write down what they take, how much, how often, why, since when, and whether they are still taking it — so that they can answer a doctor, a pharmacist or an emergency responder without relying on memory or a shoebox of packaging. They sign in, see everything they take, add a new medication in under a minute, correct a dose that changed, mark one as stopped, and remove one recorded by mistake.
 
-**Why this priority**: This is the reason the product exists, reduced to its smallest honest form. It is the only story in this phase that delivers standalone value to a person, and it is the slice that exercises every layer of the system at once — stored data, business rules, the programmatic interface, the rendered page and the automated checks. If only this story ships, MediGo is already a useful personal medication list.
+**Why this priority**: This is the reason the product exists, reduced to its smallest honest form. It is the only story in this phase that delivers standalone value to a person, and it is the slice that exercises every layer of the system at once — stored data, business rules, the programmatic interface, the rendered page and the automated checks. If only this story ships, MediKube is already a useful personal medication list.
 
 **Independent Test**: Sign in as the seeded demo account, open the medications page, add a medication with name, dose, frequency and start date, confirm it appears in the list, open its detail view, change its dose, mark it stopped, then delete it and confirm it is gone from the list. Fully testable with no other story implemented beyond the ability to sign in.
 
@@ -80,7 +80,7 @@ A person putting their medication history into a self-hosted application needs t
 
 ### User Story 4 - Find my way around without getting lost (Priority: P4)
 
-A person using MediGo on a laptop at home and on a phone in a waiting room needs the same application in both places: consistent navigation, readable in a dark room, honest about failures, and never a blank white page with a technical message on it.
+A person using MediKube on a laptop at home and on a phone in a waiting room needs the same application in both places: consistent navigation, readable in a dark room, honest about failures, and never a blank white page with a technical message on it.
 
 **Why this priority**: The shell is what makes Stories 1 and 2 feel like an application rather than a form. It is fourth because those stories can be demonstrated with a minimal frame, and because every later phase inherits this shell unchanged — getting it right once is worth more than getting it early.
 
@@ -94,14 +94,14 @@ A person using MediGo on a laptop at home and on a phone in a waiting room needs
 4. **Given** a person requests an address that does not exist, **When** the page is shown, **Then** it explains in plain language that the page was not found, sits inside the normal application frame, and reveals neither the requested address nor any internal detail.
 5. **Given** an unexpected failure while handling a request, **When** the person is shown a page, **Then** it says that something went wrong and offers a way onward, gives no technical detail, and includes a short reference the person can quote to an operator.
 6. **Given** a person navigating only by keyboard, **When** they move through any page, **Then** every interactive element can be reached and operated, and the focused element is always visibly indicated.
-7. **Given** a browser with scripting disabled, **When** a person opens the application, **Then** they are told plainly that MediGo needs a current browser with scripting enabled, rather than being shown a page that silently does nothing.
+7. **Given** a browser with scripting disabled, **When** a person opens the application, **Then** they are told plainly that MediKube needs a current browser with scripting enabled, rather than being shown a page that silently does nothing.
 8. **Given** any action that changes data, **When** it succeeds or fails, **Then** the person is told which, in a way that is also announced to assistive technology, and never left unsure whether their change was saved.
 
 ---
 
 ### User Story 5 - Run the instance and know it is healthy (Priority: P5)
 
-An operator self-hosting MediGo for their household needs to start it with settings supplied by the environment, be told immediately and clearly when a setting is missing, watch one log stream rather than four, know from an automated check whether the instance is alive and whether it is ready to serve, load a known demo data set, and see exactly what the application serves.
+An operator self-hosting MediKube for their household needs to start it with settings supplied by the environment, be told immediately and clearly when a setting is missing, watch one log stream rather than four, know from an automated check whether the instance is alive and whether it is ready to serve, load a known demo data set, and see exactly what the application serves.
 
 **Why this priority**: Nothing here is visible to a person using the application, but every later phase depends on it and it cannot be retrofitted cheaply. It is fifth because Stories 1–4 can be demonstrated by a developer running the application by hand.
 
@@ -123,7 +123,7 @@ An operator self-hosting MediGo for their household needs to start it with setti
 
 ### User Story 6 - Every change proves itself before it ships (Priority: P6)
 
-A maintainer of MediGo needs the build to fail when somebody adds a page without a check for it, changes the public interface without meaning to, breaks a page so that the browser complains, or removes an authorization test. The gates established here are copied by every later phase, so they must be real gates and not decorative ones.
+A maintainer of MediKube needs the build to fail when somebody adds a page without a check for it, changes the public interface without meaning to, breaks a page so that the browser complains, or removes an authorization test. The gates established here are copied by every later phase, so they must be real gates and not decorative ones.
 
 **Why this priority**: This story protects all the others in perpetuity, but it can only be built once there are pages, operations and tests to gate. It is last in priority and first in permanence.
 
@@ -325,14 +325,14 @@ no task by design, and it says so here rather than being left silently unmapped.
 criterion below maps either to a task in `tasks.md` or to a phase-exit criterion in `plan.md`, so
 an unmapped one that carries no marker is a gap.
 
-- **SC-001** *[outcome metric]*: A person who has never used MediGo can create an account, sign in and record their first medication in under 3 minutes without reading any documentation.
+- **SC-001** *[outcome metric]*: A person who has never used MediKube can create an account, sign in and record their first medication in under 3 minutes without reading any documentation.
 - **SC-002**: A person with 1,000 recorded medications can locate any one of them within 10 seconds using only the list's own ordering and narrowing, and every page of that list is displayed within 2 seconds of being requested.
 - **SC-003**: 100% of user-facing pages pass the automated browser check at both a desktop and a phone viewport, with zero browser errors, zero uncaught page failures and zero failed resource requests on every one of them.
 - **SC-004**: 100% of the acceptance scenarios in this specification exist as automated tests and pass. This phase is not complete while any one of them is missing or failing.
 - **SC-005**: Zero occurrences of personal or clinical content are found in the instance's logs, measurements, traces and error reports after an automated exercise of every operation this phase defines.
 - **SC-006**: 100% of attempts by one person to read, change or delete another person's medication are refused, and every refusal is indistinguishable from a request for something that does not exist — verified by automated tests across every way a medication can be addressed.
 - **SC-007**: A change made to a medication in one open view appears in another open view of the same list within 5 seconds without any manual refresh, and a view left open for 60 continuous minutes is still receiving updates.
-- **SC-008**: An operator who has never run MediGo can go from a clean machine to a reachable, ready instance in under 10 minutes using only the documented settings and one command.
+- **SC-008**: An operator who has never run MediKube can go from a clean machine to a reachable, ready instance in under 10 minutes using only the documented settings and one command.
 - **SC-009**: Adding a user-facing page without adding it to the automated browser check fails the build 100% of the time — demonstrated by attempting it before this phase is accepted.
 - **SC-010**: Deliberately breaking a page so that the browser reports an error causes the automated browser check to fail — demonstrated at least once before this phase is accepted.
 - **SC-011**: The published description of the public interface matches the operations the application actually serves at all times; any mismatch fails the build 100% of the time.
@@ -346,7 +346,7 @@ an unmapped one that carries no marker is a gap.
 
 **Position in the sequence**
 
-- This is the first phase of MediGo. It assumes no earlier phase and inherits no existing code, data or interface. Nothing here is a migration of an existing system: MediGo is greenfield and does not import data from its predecessor.
+- This is the first phase of MediKube. It assumes no earlier phase and inherits no existing code, data or interface. Nothing here is a migration of an existing system: MediKube is greenfield and does not import data from its predecessor.
 - Everything this phase establishes — how records are stored, how permission is decided, how an operation is shaped, how a page is built, how it is tested and gated — is the template that phases 002 through 006 copy. That is why the phase specifies a single clinical record type in full depth rather than several in outline.
 - Medications are chosen as that first record type because the shared design contract already uses medications as its worked example of a complete vertical slice. Where that contract's phase table allocates medications to a later phase, this phase's charter governs, and the later phase adds the remaining clinical record types.
 
@@ -372,7 +372,7 @@ an unmapped one that carries no marker is a gap.
 
 **Environment and audience**
 
-- People using MediGo have a current browser with scripting enabled. MediGo does not function without it and says so.
-- People self-host MediGo for themselves and their household, on a machine they control, and are willing to supply settings through the environment their instance runs in.
+- People using MediKube have a current browser with scripting enabled. MediKube does not function without it and says so.
+- People self-host MediKube for themselves and their household, on a machine they control, and are willing to supply settings through the environment their instance runs in.
 - The administrative surface is the operator's tool for inspecting stored data, taking a backup and, as a last resort, resetting a password for somebody whose address can no longer receive mail — it is not the ordinary recovery path, which this phase gives the person themselves. It ships with the product rather than being rebuilt, and it is treated as a break-glass credential because whoever holds it can read every record on the instance.
 - Times are recorded in a single universal time reference and presented in the viewer's local terms; values that are calendar dates carry no time at all and never shift with a time zone.

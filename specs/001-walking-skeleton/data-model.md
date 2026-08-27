@@ -35,14 +35,14 @@ PocketBase's initial system migration creates `users` as a `core.CollectionTypeA
 and owns `id`, `email`, `emailVisibility`, `verified`, `password`, `tokenKey`, `created` and
 `updated`. **`verified` is PocketBase's, and this phase uses it**: it is set by
 `confirmEmailVerification` (FR-075), never by a request DTO, and read back as
-`Me.EmailConfirmed`. This phase adds MediGo's fields and, critically, **replaces PocketBase's default API
+`Me.EmailConfirmed`. This phase adds MediKube's fields and, critically, **replaces PocketBase's default API
 rules with `nil`** — the stock collection ships with rules like `id = @request.auth.id`, which
 would leave `GET /api/collections/users/records` open to every authenticated caller.
 
 | Field | PB type | Req | Constraints | Notes |
 |---|---|---|---|---|
 | `name` | text | **yes** | 1..120 | display name. **PHI-adjacent** — redacted in log marshalling. FR-001, FR-011 |
-| `role` | select | **yes** | `user` \| `admin`, default `user` | **Absent from every request DTO.** A MediGo application tier, *not* a PocketBase superuser. FR-012 |
+| `role` | select | **yes** | `user` \| `admin`, default `user` | **Absent from every request DTO.** A MediKube application tier, *not* a PocketBase superuser. FR-012 |
 | `unit_system` | select | **yes** | `metric` \| `imperial`, default `metric` | FR-011. Load-bearing from phase 002, where it drives the display block |
 | `locale` | text | **yes** | ≤10, default `en` | FR-011. English is the only shipped text in this phase; the value governs date and number presentation only |
 | `date_format` | select | **yes** | `iso` \| `dmy` \| `mdy`, default `iso` | FR-011 |
@@ -65,12 +65,12 @@ it.
 | `ManageRule` | `nil` | Nobody manages another account's auth record through the API. |
 | `PasswordAuth.Enabled` | `true`; `IdentityFields` = `["email"]` | FR-005 |
 | `PasswordAuth.MinPasswordLength` | `8` | FR-004's published floor, enforced at the storage layer as well as in the domain |
-| `AuthToken.Duration` | `MEDIGO_AUTH_SESSION_TTL`, default **7 days** | FR-008, and the specification's Assumptions |
+| `AuthToken.Duration` | `MEDIKUBE_AUTH_SESSION_TTL`, default **7 days** | FR-008, and the specification's Assumptions |
 | `OAuth2.Enabled` | `false` | **Phase 006 owns external sign-in** (contract operation 4). Nothing in this phase turns it on. |
 | `PasswordResetToken.Duration` | PocketBase's default, **1800 s (30 min)** | FR-074's "expires after a documented period". Left at the default deliberately: short enough to limit a leaked link, long enough for somebody reading mail on another device. |
 | `VerificationToken.Duration` | PocketBase's default, **86400 s (24 h)** | FR-075. Same reasoning, longer window — confirming an address is not a credential reset. |
 | `MFA.Enabled` | `false` on `users` | Ordinary accounts do not use MFA in this phase. **Superusers do**, and the boot warning checks the `_superusers` collection, not this one (research D-32) |
-| `VerificationTemplate`, `ResetPasswordTemplate` | **left as PocketBase's defaults**, with `Meta.SenderName` / `Meta.SenderAddress` supplied by the operator through the settings store | FR-074, FR-075. MediGo renders no email template of its own: a second template system for two messages is exactly what Principle V forbids. |
+| `VerificationTemplate`, `ResetPasswordTemplate` | **left as PocketBase's defaults**, with `Meta.SenderName` / `Meta.SenderAddress` supplied by the operator through the settings store | FR-074, FR-075. MediKube renders no email template of its own: a second template system for two messages is exactly what Principle V forbids. |
 
 ### Indexes
 
@@ -264,7 +264,7 @@ what makes FR-036's content rule structural rather than procedural.
 | `actor_kind` | select | **yes** | `ActorKind` | carries what kind of actor it was even after `actor` is unset |
 | `action` | select | **yes** | `Action` | |
 | `target_kind` | select | **yes** | `TargetKind` | |
-| `target_id` | text | no | ≤64 | an opaque id — **never a name, never a path, never a filename** — with one bounded exception: when `target_kind` is `system`, `backup` or `export`, there is no record to point at and this carries the **job name or archive name** instead (`medigo_purge_artifacts`, `medigo_20260827120000.zip`). **64 is sized, not guessed**: the longest name the suite composes is phase 006's restore safety copy, `medigo_safety_<YYYYMMDDHHMMSS>_<name>` over a manual archive `medigo_<YYYYMMDDHHMMSS>.zip` — 14 + 14 + 1 + 25 = 54. Timestamps are compact throughout for exactly this reason; spelled as RFC3339 the same name is 66 and would not fit. Phase 006 bounds uploaded archive keys to 64 on the same grounds (ANALYSIS N2). Those are operator-facing identifiers the operator already chose, not personal data, and the backup name is the same string its route is addressed by. Sized 64 because a PocketBase record id is 15 and an archive name is ~40 (ANALYSIS: 006 writes 18–29-character job names into a 15-character column). |
+| `target_id` | text | no | ≤64 | an opaque id — **never a name, never a path, never a filename** — with one bounded exception: when `target_kind` is `system`, `backup` or `export`, there is no record to point at and this carries the **job name or archive name** instead (`medikube_purge_artifacts`, `medikube_20260827120000.zip`). **64 is sized, not guessed**: the longest name the suite composes is phase 006's restore safety copy, `medikube_safety_<YYYYMMDDHHMMSS>_<name>` over a manual archive `medikube_<YYYYMMDDHHMMSS>.zip` — 16 + 14 + 1 + 27 = 58. Timestamps are compact throughout for exactly this reason; spelled as RFC3339 the same name is 70 and would not fit. Phase 006 bounds uploaded archive keys to 64 on the same grounds (ANALYSIS N2). Those are operator-facing identifiers the operator already chose, not personal data, and the backup name is the same string its route is addressed by. Sized 64 because a PocketBase record id is 15 and an archive name is ~40 (ANALYSIS: 006 writes 20–31-character job names into a 15-character column). |
 | `request_id` | text | **yes** | ≤64 | correlates to the zerolog stream (FR-054). **A background run has no HTTP request and still fills this**: the cron, job, migration and backfill contexts mint a *run id* from the same helper that mints request ids, and the run's zerolog lines carry the same value — so the retention purge's own row correlates to the log of the purge that wrote it. The column is required precisely so a row that correlates to nothing cannot be written; without the run id the nightly purge would fail `Required` validation on its first tick in production (ANALYSIS). |
 
 **No `ip` column** (research D-19). **No content column of any kind**, ever.
@@ -385,11 +385,11 @@ is empty and `request_id` carries the correlation an operator needs (research D-
 
 ### Immutability and retention
 
-- All five API rules `nil`, and MediGo exposes no write path.
+- All five API rules `nil`, and MediKube exposes no write path.
 - `OnRecordUpdate("audit_events")` rejects **unconditionally**.
 - `OnRecordDelete("audit_events")` rejects unless the context carries the retention job's marker,
   which is set by the cron and nowhere else.
-- A PocketBase cron runs daily, deleting rows older than `MEDIGO_RETENTION_AUDIT_DAYS`
+- A PocketBase cron runs daily, deleting rows older than `MEDIKUBE_RETENTION_AUDIT_DAYS`
   (**default 730**, per the specification's Assumptions), and writes one `delete`/`system` row
   recording that it ran — never one per deleted row.
 
@@ -412,7 +412,7 @@ this phase has:
 - **Delete an account** → PocketBase's `deleteRefRecords` (`core/record_model.go:1587-1626`)
   deletes every medication whose `owner` points at it, because that relation is `CascadeDelete:
   true`; and **unsets** `audit_events.actor` on every historical entry, because that one is not.
-  One transaction. FR-014 and SC-012 are satisfied by PocketBase's behaviour rather than by MediGo
+  One transaction. FR-014 and SC-012 are satisfied by PocketBase's behaviour rather than by MediKube
   code — which is exactly why they are asserted by an integration test rather than assumed:
   `SELECT COUNT(*) FROM medications WHERE owner = '<deleted id>'` must be `0`, and the
   `account_delete` audit row must still exist with a null actor and `actor_kind = user`.
@@ -478,7 +478,7 @@ rather than a process that will not boot.
 
 ## 6. Fixture and seed data
 
-`internal/testdata/pb_data` — the directory every `tests.NewTestApp` clones — and `medigo seed`
+`internal/testdata/pb_data` — the directory every `tests.NewTestApp` clones — and `medikube seed`
 produce **the same deterministic set**. Ids are exported as constants from
 `internal/testsupport/fixtures.go`, so no test anywhere contains a literal id. FR-060 requires
 determinism and at least two accounts holding medications; SC-003 requires the smoke gate to pass
@@ -491,7 +491,7 @@ on a legitimately empty page.
 | **Account C** — `chidi@example.test` | **No medications at all.** This is what the empty-state smoke case navigates to, so the `@EmptyState` path inside the `region[name="Medications"]` landmark is exercised on every run rather than asserted (research D-39). |
 | Superuser | `admin@example.test`, so the admin-UI smoke and the `admin_session` audit test have a credential |
 
-The seed sets `MEDIGO_AUTH_REGISTRATION_OPEN=true` in the documented smoke environment, because
+The seed sets `MEDIKUBE_AUTH_REGISTRATION_OPEN=true` in the documented smoke environment, because
 `/register` must be reachable for its smoke case and because the sign-up path is one of the six
 user stories (FR-002, and the specification's Assumptions).
 
@@ -529,6 +529,6 @@ decision, not an oversight:
   and would be a second place for the two to disagree.
 - **No settings collection.** Configuration comes from the environment, validated at boot, with no
   configuration files and no second mechanism (FR-051). Where PocketBase persists settings of its
-  own — rate limits, token durations, log retention — MediGo **writes them at boot from its own
+  own — rate limits, token durations, log retention — MediKube **writes them at boot from its own
   validated config** and nobody edits them in the admin UI, which is what keeps the environment
   the single source (research D-18).

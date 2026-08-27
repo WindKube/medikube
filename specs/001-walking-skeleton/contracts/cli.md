@@ -10,18 +10,18 @@ PocketBase's `RootCmd` is a **real `*cobra.Command`** (`pocketbase.go:29`,
 program. Two traps, both real:
 
 1. **`pocketbase.NewWithConfig` with `DefaultDataDir` unset produces `pb_data` next to the
-   binary** — in a distroless image that is a read-only layer. `MEDIGO_DATA_DIR` is required and
+   binary** — in a distroless image that is a read-only layer. `MEDIKUBE_DATA_DIR` is required and
    validated at boot.
 2. **PocketBase parses `--dir`, `--encryptionEnv` and `--dev` from `os.Args` in `NewWithConfig`,
-   before Cobra runs.** An unrecognised MediGo flag placed before the subcommand is consumed by
-   that pre-parse and vanishes. Every MediGo flag is defined on its own subcommand, never
+   before Cobra runs.** An unrecognised MediKube flag placed before the subcommand is consumed by
+   that pre-parse and vanishes. Every MediKube flag is defined on its own subcommand, never
    globally.
 
 ---
 
-## `medigo serve`
+## `medikube serve`
 
-PocketBase's own, unchanged, plus MediGo's `OnServe` bindings. `--http` and `--https` behave as
+PocketBase's own, unchanged, plus MediKube's `OnServe` bindings. `--http` and `--https` behave as
 documented upstream.
 
 **At boot, in order**, and the process **exits non-zero** rather than serving if any step fails:
@@ -33,7 +33,7 @@ documented upstream.
    the reason this is an assertion rather than a hope);
 4. **the protected-files assertion** — every `FileField` in every collection has
    `Protected: true`. Refuses to start otherwise;
-5. PocketBase settings written from MediGo's validated config: rate limits, token TTLs,
+5. PocketBase settings written from MediKube's validated config: rate limits, token TTLs,
    `Logs.MaxDays = 1`;
 6. the admin-UI hardening warning, if applicable (below).
 
@@ -53,31 +53,31 @@ nothing.
 
 ---
 
-## `medigo migrate [up|down|history-sync|collections]`
+## `medikube migrate [up|down|history-sync|collections]`
 
-PocketBase's migrate command with MediGo's migrations registered. Every migration in this phase is
+PocketBase's migrate command with MediKube's migrations registered. Every migration in this phase is
 **reversible by construction** — `migrations.Register(up, down, filename)` takes both halves and
 the collection-snapshot form generates the down automatically (FACT 8).
 
-`migrate down` is refused when `MEDIGO_ENV=production` unless `--force` is passed, because the
+`migrate down` is refused when `MEDIKUBE_ENV=production` unless `--force` is passed, because the
 down of migration 3 drops `audit_events` (FR-059).
 
 ---
 
-## `medigo seed`
+## `medikube seed`
 
 Creates the demo accounts and their medications described in
 [data-model.md](../data-model.md) §6. **Idempotent** — running it twice produces the same state
 and does not duplicate rows.
 
-**Refuses to run when `MEDIGO_ENV=production`**, no `--force` escape (FR-060). Seed data in a
+**Refuses to run when `MEDIKUBE_ENV=production`**, no `--force` escape (FR-060). Seed data in a
 medical production database is indistinguishable from real data once it is in there.
 
 Prints one line per account created or skipped. Exits non-zero if the database is not migrated.
 
 ---
 
-## `medigo routes [--json]`
+## `medikube routes [--json]`
 
 Prints the route inventory from the one declarative registry. **This is the only place the route
 table exists** — PocketBase's router is a private field with no introspection API, so the OpenAPI
@@ -93,7 +93,7 @@ on either asymmetry.
 
 ---
 
-## `medigo openapi [--out FILE]`
+## `medikube openapi [--out FILE]`
 
 Writes the OpenAPI 3.1 document generated from the registry to stdout or `--out`.
 
@@ -108,7 +108,7 @@ structures that do not round-trip (FACT 9, kin-openapi v0.144.0).
 
 ---
 
-## `medigo healthcheck [--addr]`
+## `medikube healthcheck [--addr]`
 
 Dials `http://127.0.0.1:{port}/api/v1/readyz`, exits `0` on `200`, non-zero otherwise, prints
 nothing on success. This exists because **the distroless runtime image has no shell, no `curl` and

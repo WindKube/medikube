@@ -153,8 +153,8 @@ them and so nobody discovers them by accident:
 |---|---|
 | `/_/` and its assets | The PocketBase superuser admin UI. It **ships in production**, hardened: mandatory superuser MFA, mandatory IP allowlist, every session audited, and a loud boot warning until both are configured (constitution VII, research D-32). |
 | `/api/collections/_superusers/*` | The admin UI's own authentication. |
-| `/api/collections/users/auth-with-password`, `/auth-refresh`, `/auth-methods` | PocketBase-native authentication. The lockdown is scoped to `/records` precisely so these survive (FACT 2). MediGo's `/api/v1/auth/login` is the **supported** path, but both are audited, because the audit row is written from `OnRecordAuthRequest("users")` rather than from MediGo's handler (research D-14). |
-| `/api/collections/users/request-password-reset`, `/confirm-password-reset`, `/request-verification`, `/confirm-verification` | The same PocketBase-native family, reachable for the same reason. MediGo's `/api/v1/auth/password-reset*` and `/api/v1/auth/verify-email*` are the **supported** paths and the only ones the pages use; the native ones are recorded as externals so the Principle IX gate does not flag them and so nobody believes they were closed. They enforce the same token rules, because they are the same code MediGo's handlers call. |
+| `/api/collections/users/auth-with-password`, `/auth-refresh`, `/auth-methods` | PocketBase-native authentication. The lockdown is scoped to `/records` precisely so these survive (FACT 2). MediKube's `/api/v1/auth/login` is the **supported** path, but both are audited, because the audit row is written from `OnRecordAuthRequest("users")` rather than from MediKube's handler (research D-14). |
+| `/api/collections/users/request-password-reset`, `/confirm-password-reset`, `/request-verification`, `/confirm-verification` | The same PocketBase-native family, reachable for the same reason. MediKube's `/api/v1/auth/password-reset*` and `/api/v1/auth/verify-email*` are the **supported** paths and the only ones the pages use; the native ones are recorded as externals so the Principle IX gate does not flag them and so nobody believes they were closed. They enforce the same token rules, because they are the same code MediKube's handlers call. |
 
 Everything under `/api/collections/{collection}/records` and `/api/batch` returns **404** to
 non-superusers, via a middleware bound at priority `-1019` — after `loadAuthToken` at `-1020`, so
@@ -172,5 +172,5 @@ For each operation, at minimum:
 3. `404` for a second account, **byte-identical apart from `request_id`** to a genuine
    not-found, with an `access_denied` audit row written;
 4. every documented error case, by its `code` rather than by its message;
-5. `ExpectedEvents` proving the MediGo route fired the audit hooks and **zero** record-CRUD
+5. `ExpectedEvents` proving the MediKube route fired the audit hooks and **zero** record-CRUD
    request events — i.e. that it did not go through PocketBase's auto-API.

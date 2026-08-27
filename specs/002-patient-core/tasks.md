@@ -1,6 +1,6 @@
 ---
 
-description: "Task list for MediGo phase 002 — Patient Core"
+description: "Task list for MediKube phase 002 — Patient Core"
 ---
 
 # Tasks: Patient Core
@@ -26,7 +26,7 @@ independently implementable, testable and demonstrable.
 
 ## Path Conventions
 
-Single Go module rooted at `medigo/`. All paths below are relative to that directory and match the
+Single Go module rooted at `medikube/`. All paths below are relative to that directory and match the
 Project Structure section of [plan.md](./plan.md).
 
 ---
@@ -87,7 +87,7 @@ every user story below depends on.
 - [ ] T027 Implement migration `internal/store/migrations/1756200400_users_active_patient.go` adding `active_patient` with `CascadeDelete: false` (depends on T026)
 - [ ] T028 Implement migration `internal/store/migrations/1756200500_audit_events_patient.go` adding `patient`, extending the `action` vocabulary with `switch_patient` and `target_kind` with `practitioner`/`facility` (`patient` already exists — phase 001 declares the contract's complete vocabulary), and adding the `(patient, occurred_at DESC)` index (depends on T026; **turns T023a green**)
 - [ ] T029 Extend `internal/store/migrations/assertions.go` with the nil-rule check over the three new collections, the `Protected: true` check over `patients.photo`, and the new `Required`/`CascadeDelete` matrix assertion
-- [ ] T030 Register the five migrations and the extended assertions in `internal/platform/pb/boot.go` and `cmd/medigo/main.go`
+- [ ] T030 Register the five migrations and the extended assertions in `internal/platform/pb/boot.go` and `cmd/medikube/main.go`
 
 ### Shared ports, authorization and test scaffolding
 
@@ -100,7 +100,7 @@ every user story below depends on.
 - [ ] T037 Extend `internal/cli/seed.go` to produce the deterministic set of data-model.md §9, leaving Account B's directories **empty** so the smoke gate exercises the empty states (depends on T036)
 - [ ] T038 [P] Extend the ETag/If-Match helper in `internal/web/etag.go` to cover patients, practitioners and facilities, with a test asserting a missing `If-Match` is `422` with field `If-Match` and a mismatch is `412` carrying the current representation so the account holder is told what happened and shown the current values (FR-011), in `internal/web/etag_test.go`
 - [ ] T039 [P] Register the three new cursor sort-key sets of research D-29 in `internal/web/cursor.go`, with a test asserting the id tiebreaker is always present, in `internal/web/cursor_test.go`
-- [ ] T040 [P] Map PocketBase file-validation errors into MediGo's PHI-free envelope in `internal/web/errors.go`, with a test asserting the uploaded filename never appears in the response or the log stream (research D-17), in `internal/web/errors_test.go`
+- [ ] T040 [P] Map PocketBase file-validation errors into MediKube's PHI-free envelope in `internal/web/errors.go`, with a test asserting the uploaded filename never appears in the response or the log stream (research D-17), in `internal/web/errors_test.go`
 - [ ] T041 [P] Extend the route registry test in `internal/httproute/registry_test.go` to assert that every registered `page` route carries a landmark and a `smokeUrl`, that no registered path ends in `/`, and that every operation has a unique `operationId`
 
 **Checkpoint**: the schema exists, the domain types validate, ownership is decidable, and the test
@@ -133,7 +133,7 @@ confirm from a second account that none of the three is visible or discoverable.
 - [ ] T051 [P] [US1] `tests.ApiScenario` suite for `putPatientPhoto`, `getPatientPhoto`, `deletePatientPhoto`: the type is decided from the content, not the name or the stated type (FR-008) — a PDF renamed `photo.jpg` is `415` and nothing lands on disk; a `.png` renamed `.jpg` is accepted; the `415` body and the captured log stream contain no substring of the uploaded filename; the download carries `Cache-Control: private, no-store` and a generic `Content-Disposition` filename — in `internal/web/api/patient_photo_test.go`
 - [ ] T052 [P] [US1] Authorization test using `testsupport.RunOwnershipMatrix` over all eight patient and photo operations, asserting the anonymous caller is refused with nothing about the person in the refusal (FR-043), that the photograph is reachable only through an authorized request (FR-044), that the stranger response is byte-identical to a genuine not-found apart from `request_id` (FR-042, US1-8, SC-005) and that each refusal writes an audit row — in `internal/web/api/patients_authz_test.go`
 - [ ] T053 [P] [US1] `tests.ApiScenario` asserting registration creates exactly one `is_self_record` patient for the new account, marked as theirs, with `relationship_to_owner = self` (FR-005, US1-1) — in `internal/web/api/register_selfrecord_test.go`
-- [ ] T054 [P] [US1] `tests.ApiScenario` with `ExpectedEvents` asserting a patient write fires the audit hooks and fires **zero** record-CRUD request events, proving MediGo's route did not go through PocketBase's auto-API — in `internal/web/api/patients_test.go`
+- [ ] T054 [P] [US1] `tests.ApiScenario` with `ExpectedEvents` asserting a patient write fires the audit hooks and fires **zero** record-CRUD request events, proving MediKube's route did not go through PocketBase's auto-API — in `internal/web/api/patients_test.go`
 - [ ] T055 [P] [US1] templ render tests for `PatientList`, `PatientRow`, `PatientDetail`, `PatientForm` and `PatientPhoto`, asserting the `region[name="Patients"]` landmark is present in both the populated and the empty case, that the list marks which person is the account holder and states how many there are (FR-010), that absent details render as absent rather than as `0`/blank (US1-6), and that name and date of birth appear together wherever people are listed (Edge case: two people with the same name) — in `internal/web/views/patients/list_test.go` and `internal/web/views/patients/detail_test.go`
 - [ ] T056 [P] [US1] JSON round-trip tests for `PatientSummary`, `Patient`, `PatientCreate`, `PatientPatch` under Go 1.27 `encoding/json/v2`: slices marshal as `[]` not `null`, unknown fields are rejected, duplicate keys are rejected, dates are `YYYY-MM-DD` — in `internal/web/api/dto_patient_test.go`
 
@@ -370,11 +370,11 @@ trail.
 
 - [ ] T155 Regenerate and commit `api/openapi.json` via `task openapi`, and review the diff operation by operation (Principle IX)
 - [ ] T156 Implement the registry↔OpenAPI gate test asserting every registered `operationId` appears in the committed document and vice versa, failing the build on any mismatch, in `internal/openapi/gate_test.go`
-- [ ] T157 Implement the route-inventory gate test asserting every `page` route has a landmark and a resolvable `smokeUrl` and that the Playwright target list derived from `medigo routes` covers all six new pages **and asserts `combobox[name="Active patient"]` on every authenticated page the inventory knows about, with no phase ceiling** — the assertion is written against the inventory, not against a hard-coded phase list, so every page a later phase registers inherits it the day it is registered (ANALYSIS, SHARED-DESIGN §3.0), in `internal/httproute/registry_test.go` (`contracts/pages.md` §4)
+- [ ] T157 Implement the route-inventory gate test asserting every `page` route has a landmark and a resolvable `smokeUrl` and that the Playwright target list derived from `medikube routes` covers all six new pages **and asserts `combobox[name="Active patient"]` on every authenticated page the inventory knows about, with no phase ceiling** — the assertion is written against the inventory, not against a hard-coded phase list, so every page a later phase registers inherits it the day it is registered (ANALYSIS, SHARED-DESIGN §3.0), in `internal/httproute/registry_test.go` (`contracts/pages.md` §4)
 - [ ] T158 [P] Demonstrate the smoke gate goes **red**: temporarily break one new page (remove its landmark, then separately throw in a script) and record both failures, then revert — closing open risk R11 for this phase's pages, documented in `e2e/README.md`
 - [ ] T159 [P] Extend phase 001's PHI-leak harness — `internal/testsupport/phileak/exercise.go` **[EDIT]**, run by `task test:phileak` — with this phase's sentinels (name, date of birth, address, file name), exercise **every endpoint this phase adds** against the seeded fixture, and assert zero occurrences in the zerolog stream, the Prometheus registry, the OTel span recorder and the Sentry transport (FR-046, SC-008). There is one harness in the suite and phase 001 owns it (cross-artifact finding M6)
 - [ ] T159a [P] Create `internal/testsupport/netgate/{netgate.go,dial_test.go}` (`//go:build netgate`) and the `task test:netgate` wrapper in `Taskfile.yaml` — a `net.Dialer` control hook that fails the test on **any** outbound connection — and run this phase's whole endpoint exercise under it on an instance with no destination configured, proving nothing about a person leaves the installation unless the operator asked for it (FR-047). **This phase owns the harness**; phases 003, 005 and 006 extend it rather than declaring a second one (cross-artifact finding M6's rule, applied to egress)
-- [ ] T160 [P] Add the phase's metrics (`medigo_records_total{kind}`, `medigo_files_photo_bytes`, `medigo_files_thumb_duration_seconds{size}`, `medigo_patients_switch_total{outcome}`) and the `service.patient.*` / `store.patients.*` spans with allowlisted attributes only, in `internal/obs/metrics.go` and the three service packages
+- [ ] T160 [P] Add the phase's metrics (`medikube_records_total{kind}`, `medikube_files_photo_bytes`, `medikube_files_thumb_duration_seconds{size}`, `medikube_patients_switch_total{outcome}`) and the `service.patient.*` / `store.patients.*` spans with allowlisted attributes only, in `internal/obs/metrics.go` and the three service packages
 - [ ] T161 [P] Re-run the >5-minute SSE liveness helper against the now patient-scoped record stream, proving the `WriteTimeout` override still holds (open risk R7), in `internal/web/stream/timeout_test.go`
 - [ ] T162 [P] Pagination stability test: insert and delete rows while paging each of the three new lists and assert no entry is repeated or skipped (FR-053, Edge case "Paging while data changes"), in `internal/web/api/pagination_test.go`
 - [ ] T163 [P] Keyboard and viewport check: the switcher, the create drawers and the delete confirmation are fully operable by keyboard with a visible focus indicator at 1440×900 and 390×844, in `e2e/a11y.spec.ts`
@@ -484,7 +484,7 @@ Both converge on Phase 9.
   not carry `[P]`.
 - Verify each test is **red** before writing the code that makes it green. A test that passes the
   moment it is written is testing nothing.
-- Commit after each task or logical group, Conventional Commits, scope `medigo`.
+- Commit after each task or logical group, Conventional Commits, scope `medikube`.
 - Two rules from the constitution that this phase will tempt you to break, in order of how much it
   will cost:
   1. **Never authorize from `users.active_patient`.** If a handler reads it, the handler is wrong.

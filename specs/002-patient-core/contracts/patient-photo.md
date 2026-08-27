@@ -37,7 +37,7 @@ thumbnails; **the previous photograph is not retrievable afterwards** (FR-008, U
 |---|---|---|
 | 200 | stored, both thumbnails generated | FR-008, FR-009 |
 | 415 `unsupported_media_type` | the **sniffed** content type is not `image/jpeg`, `image/png` or `image/webp` | FR-008, Edge case |
-| 413 `payload_too_large` | over `MEDIGO_FILES_PHOTO_MAX_BYTES` (default 15 MiB) | FR-008 |
+| 413 `payload_too_large` | over `MEDIKUBE_FILES_PHOTO_MAX_BYTES` (default 15 MiB) | FR-008 |
 | 422 `validation_failed` | no `photo` part, or more than one | |
 | 404 | not owned / does not exist. **Nothing is stored.** | FR-042 |
 | 401 | no session | FR-043 |
@@ -49,7 +49,7 @@ file claims to be is never trusted over what it is".
 
 **PocketBase's rejection message must not be propagated.** `core/validators/file.go:63` formats it
 as `Failed to upload %q due to unsupported file type.` with the **original filename** interpolated.
-A filename is PHI (constitution VII). The handler maps the PB validation error into MediGo's
+A filename is PHI (constitution VII). The handler maps the PB validation error into MediKube's
 envelope with a fixed, PHI-free message.
 
 **Mandatory tests**
@@ -98,7 +98,7 @@ phase 005's [`contracts/widened-authorization.md`](../../005-sharing-and-collabo
 
 - Anonymous `GET` → 401, and the body contains no patient information (FR-043).
 - Account B → 404, identical body to a nonexistent id (SC-005).
-- No route anywhere in `medigo routes` serves patient files without going through the authorizer —
+- No route anywhere in `medikube routes` serves patient files without going through the authorizer —
   asserted by a test that walks the route inventory looking for anything under `/api/files`.
 
 ---

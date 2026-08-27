@@ -1,6 +1,6 @@
 # Quickstart: running and verifying the Walking Skeleton by hand
 
-How a developer brings the very first MediGo instance up from an empty directory and convinces
+How a developer brings the very first MediKube instance up from an empty directory and convinces
 themselves it actually works — including the claims that are easy to state and hard to believe:
 that the auto-generated CRUD API really is gone, that a refusal really is byte-identical to a
 not-found, that the live stream really survives past five minutes, and that the render gate really
@@ -8,7 +8,7 @@ goes red when the UI breaks.
 
 There is no previous phase. Everything here starts from a checkout.
 
-Everything below runs from `medigo/` unless stated. Every routine action is a Task, per the
+Everything below runs from `medikube/` unless stated. Every routine action is a Task, per the
 monorepo convention: you run tasks, not remembered command lines.
 
 ---
@@ -37,7 +37,7 @@ npx playwright install --with-deps chromium
 ```bash
 task gen        # templ generate + tailwind; vet/lint/test/build all depend on this
 task build
-task migrate    # three migrations: users_medigo_fields, medications, audit_events
+task migrate    # three migrations: users_medikube_fields, medications, audit_events
 task seed       # deterministic demo data — same accounts, same ids, every time
 task run
 ```
@@ -45,18 +45,18 @@ task run
 `task run` needs the environment. The minimum for a local instance:
 
 ```bash
-export MEDIGO_ENV=dev
-export MEDIGO_DEV=true
-export MEDIGO_DATA_DIR=./pb_data
-export MEDIGO_HTTP_ADDR=127.0.0.1:8090
-export MEDIGO_PUBLIC_URL=http://127.0.0.1:8090
-export MEDIGO_LOG_LEVEL=debug
-export MEDIGO_LOG_PRETTY=true
-export MEDIGO_AUTH_REGISTRATION_OPEN=true      # closed by default; open it to exercise sign-up
-export MEDIGO_SESSION_TTL=168h                 # 7 days
+export MEDIKUBE_ENV=dev
+export MEDIKUBE_DEV=true
+export MEDIKUBE_DATA_DIR=./pb_data
+export MEDIKUBE_HTTP_ADDR=127.0.0.1:8090
+export MEDIKUBE_PUBLIC_URL=http://127.0.0.1:8090
+export MEDIKUBE_LOG_LEVEL=debug
+export MEDIKUBE_LOG_PRETTY=true
+export MEDIKUBE_AUTH_REGISTRATION_OPEN=true    # closed by default; open it to exercise sign-up
+export MEDIKUBE_SESSION_TTL=168h               # 7 days
 ```
 
-`MEDIGO_DATA_DIR` is **required**. Leaving it unset makes PocketBase put `pb_data` next to the
+`MEDIKUBE_DATA_DIR` is **required**. Leaving it unset makes PocketBase put `pb_data` next to the
 binary, which in the distroless image is a read-only layer; the config validator refuses to start
 rather than let you discover that in production.
 
@@ -83,7 +83,7 @@ rather than let you discover that in production.
 Sign in as the seeded account:
 
 ```
-amara@example.test / medigo-dev-password
+amara@example.test / medikube-dev-password
 ```
 
 Account B is `bo@example.test` (one medication), account C is `chen@example.test` (none — the
@@ -141,7 +141,7 @@ mail must not tell somebody a message is on its way. The boot output has been wa
 same condition since start-up.
 
 Then point it at a sink — `MailHog`, `mailpit`, anything that speaks SMTP — by filling in SMTP in
-the admin UI at `/_/` (it is PocketBase settings state, not a `MEDIGO_` variable; that carve-out is
+the admin UI at `/_/` (it is PocketBase settings state, not a `MEDIKUBE_` variable; that carve-out is
 in the constitution's Technology Constraints), and repeat:
 
 ```bash
@@ -204,7 +204,7 @@ not-found is not a denial.
    still all there.
 4. Toggle dark mode in `/settings`, reload: **no flash of the wrong theme**, because the class is
    server-rendered on `<html>`.
-5. Disable JavaScript and reload: you get a plain statement that MediGo requires it, inside
+5. Disable JavaScript and reload: you get a plain statement that MediKube requires it, inside
    `main` — not a blank page.
 
 ### US5 — Operations (P5)
@@ -224,7 +224,7 @@ path, no DSN, no driver message. Those went to the log stream with the request i
 
 Now `Ctrl-C` while holding a request open. `readyz` flips to `draining` first, in-flight work
 finishes, then the process exits. It does **not** get cut off after one second, which is what
-would happen without MediGo's `-10000` terminate handler running ahead of PocketBase's hardcoded
+would happen without MediKube's `-10000` terminate handler running ahead of PocketBase's hardcoded
 one-second window.
 
 ### US6 — The gates (P6)
@@ -306,7 +306,7 @@ curl -s -o /dev/null -w '%{http_code}\n' \
   localhost:8090/api/files/medications/<id>/<filename>           # 404
 ```
 
-Every file field is `Protected: true` and files are served only from MediGo's own `/api/v1`
+Every file field is `Protected: true` and files are served only from MediKube's own `/api/v1`
 routes, with authorization applied. PocketBase's file-token mechanism is not used and is not
 allowed to be — a file token is a bearer credential for patient data with no authorization
 checkpoint behind it. (No file fields ship in this phase; the assertion and the route ban do,
@@ -319,23 +319,23 @@ because phase 002 adds one.)
 ```bash
 task docker:build
 docker run --rm -p 8090:8090 \
-  -e MEDIGO_DATA_DIR=/data -e MEDIGO_ENV=dev -v medigo-data:/data medigo:dev
+  -e MEDIKUBE_DATA_DIR=/data -e MEDIKUBE_ENV=dev -v medikube-data:/data medikube:dev
 ```
 
 Checks worth doing once:
 
 ```bash
-docker run --rm --entrypoint /medigo medigo:dev healthcheck ; echo $?   # non-zero, nothing running
-docker inspect medigo:dev | jq '.[0].Config.User'                       # "65532:65532"
-docker run --rm --entrypoint sh medigo:dev -c ls                        # fails: no shell
+docker run --rm --entrypoint /medikube medikube:dev healthcheck ; echo $? # non-zero, nothing running
+docker inspect medikube:dev | jq '.[0].Config.User'                       # "65532:65532"
+docker run --rm --entrypoint sh medikube:dev -c ls                        # fails: no shell
 ```
 
 The image is distroless, non-root by numeric uid, `CGO_ENABLED=0`, and declares **no**
-`HEALTHCHECK` — that is the house pattern, and `medigo healthcheck` exists precisely because there
+`HEALTHCHECK` — that is the house pattern, and `medikube healthcheck` exists precisely because there
 is no `curl` or `wget` inside to write one with.
 
 If the build fails with a "file not found" that makes no sense, the cause is almost certainly
-`/.dockerignore`: it is a deny-everything allowlist and `!medigo/` must be readmitted. That change
+`/.dockerignore`: it is a deny-everything allowlist and `!medikube/` must be readmitted. That change
 and the `build-image.yaml` matrix entry are part of this phase.
 
 ---
