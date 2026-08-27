@@ -1,3 +1,3 @@
-# medkube
+# MediKube
 
 Medical Personal Journal

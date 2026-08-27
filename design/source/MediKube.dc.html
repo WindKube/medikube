@@ -26,7 +26,7 @@
     <div style="display:flex; align-items:center; gap:11px; padding:22px 22px 16px;">
       <div style="width:34px; height:34px; border-radius:10px; background:#3f6f63; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:17px;">M</div>
       <div>
-        <div style="font-weight:700; font-size:16px; letter-spacing:-0.2px;">MediKeep</div>
+        <div style="font-weight:700; font-size:16px; letter-spacing:-0.2px;">MediKube</div>
         <div style="font-size:11px; color:#8a978f; margin-top:1px;">Personal health record</div>
       </div>
     </div>
@@ -548,7 +548,7 @@ class Component extends DCLogic {
     const customTitles = { dashboard:'Dashboard', patients:'Patients', documents:'Documents',
       sharing:'Sharing', report:'Report Builder', notifications:'Notifications', settings:'Settings' };
     const sec = sections[screen];
-    const pageTitle = sec ? sec.title : (customTitles[screen] || 'MediKeep');
+    const pageTitle = sec ? sec.title : (customTitles[screen] || 'MediKube');
 
     // ---------- dashboard data ----------
     const statCards = [
@@ -643,7 +643,7 @@ class Component extends DCLogic {
         { label:'Password', value:'Last changed 3 months ago', action:'Update' },
         { label:'Single sign-on', value:'Google · connected', action:'Manage' },
         { label:'Active sessions', value:'2 devices', action:'Review' } ] },
-      { title:'Preferences', subtitle:'How MediKeep behaves', rows:[
+      { title:'Preferences', subtitle:'How MediKube behaves', rows:[
         { label:'Date format', value:'MMM D, YYYY', action:'Change' },
         { label:'Default patient', value:'Sarah Lin (Self)', action:'Change' },
         { label:'Units', value:'Imperial', action:'Change' } ] },
