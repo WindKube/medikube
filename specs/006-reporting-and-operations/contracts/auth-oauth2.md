@@ -16,23 +16,23 @@ It lands here because providers are operator
 configuration and this phase owns the operator surface. Password recovery and email confirmation,
 which are day-one flows, went the other way and landed in phase 001.
 
-## What PocketBase already does, and what MediGo adds
+## What PocketBase already does, and what MediKube adds
 
-| PocketBase v0.40.1 | MediGo |
+| PocketBase v0.40.1 | MediKube |
 |---|---|
 | Provider registry and credentials in `Settings().OAuth2.Providers`, edited in the admin UI | Reads whether any provider is enabled — nothing more |
 | The whole authorize/callback exchange: `POST /api/collections/users/auth-with-oauth2`, `GET\|POST /api/oauth2-redirect` | Recorded as documented externals (§2.4), unchanged |
-| Linking a provider identity to an existing auth record through `_externalAuths` | Nothing. FR-137 is satisfied by that mechanism, not by a MediGo one |
+| Linking a provider identity to an existing auth record through `_externalAuths` | Nothing. FR-137 is satisfied by that mechanism, not by a MediKube one |
 | Token issue, through `apis.RecordAuthResponse` | Nothing |
 
-MediGo adds **one DTO wrapper**, so that a provider sign-in produces the same `Session` shape,
+MediKube adds **one DTO wrapper**, so that a provider sign-in produces the same `Session` shape,
 the same `HttpOnly` cookie and the same audit row as `POST /api/v1/auth/login` — and so that
 `role` and `disabled_at` are unreachable from the request by construction, exactly as they are on
 registration.
 
 **No new configuration mechanism.** `Settings().OAuth2` is PocketBase's settings store, which the
 constitution's Technology Constraints carve out of the `caarlos0/env`-only rule for precisely this
-reason. MediGo neither mirrors providers into `MEDIGO_*` nor builds a screen to edit them.
+reason. MediKube neither mirrors providers into `MEDIKUBE_*` nor builds a screen to edit them.
 
 ---
 
@@ -49,7 +49,7 @@ type OAuth2SignIn struct {                 // no `role`, no `disabled_at`, no `v
 
 | Case | Status | Body |
 |---|---|---|
-| success | `200` + `Set-Cookie: medigo_session` | `Session` (phase 001, `contracts/auth.md`) |
+| success | `200` + `Set-Cookie: medikube_session` | `Session` (phase 001, `contracts/auth.md`) |
 | no provider is configured on this instance | `404` | `not_found` — the route answers as though it does not exist, because on such an instance it effectively does not |
 | the named provider is not one of the configured ones | `404` | `not_found` — **byte-identical to the line above** |
 | the exchange is refused by the provider, or the code is stale | `401` | `unauthenticated` |
@@ -76,7 +76,7 @@ type AuthConfig struct {
 
 **FR-135 in full.** A provider sign-in reaches PocketBase's own `authWithOAuth2`, which either
 matches an existing `_externalAuths` link, or links by verified email, or creates a record —
-according to the operator's own provider settings. MediGo asserts the invariants on the way out:
+according to the operator's own provider settings. MediKube asserts the invariants on the way out:
 the resulting record's `role` is whatever it already was (`user` for a newly created one), its
 `disabled_at` is untouched, and a disabled account is refused with the same body as a wrong
 password. The sign-in audit row is written by `OnRecordAuthRequest("users")`, the hook phase 001
@@ -84,7 +84,7 @@ binds — so a provider sign-in is audited by the same code path as a password s
 can be forgotten independently (phase 001 research D-14).
 
 **FR-137.** One provider identity links to exactly one account, which is `_externalAuths`'
-uniqueness rather than a MediGo rule; the mandatory test proves an attempt to attach a linked
+uniqueness rather than a MediKube rule; the mandatory test proves an attempt to attach a linked
 provider identity to a second account is refused and audited, and that a second account is never
 silently created for an address that already has one.
 

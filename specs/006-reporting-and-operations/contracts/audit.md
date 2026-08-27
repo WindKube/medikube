@@ -120,7 +120,7 @@ The **same** operation, the same narrowing semantics, a different representation
 own narrowing parameters and they would drift.
 
 **Response** `200`, `Content-Type: text/csv; charset=utf-8`,
-`Content-Disposition: attachment; filename="medigo-activity-<YYYYMMDDHHMMSS>.csv"`.
+`Content-Disposition: attachment; filename="medikube-activity-<YYYYMMDDHHMMSS>.csv"`.
 
 Columns, in this fixed documented order, one row per entry, header row first:
 

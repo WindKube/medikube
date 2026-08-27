@@ -104,7 +104,7 @@ tests/app.go:500   t.OnMailerSend().Bind(... e.Mailer = t.TestMailer ...)   // P
 Read together: any message sent through `NewMailClient()` passes through `OnMailerSend`, and the
 test harness binds a handler that swaps the mailer — so `core/base.go:713` routes the message to
 `TestApp.TestMailer` instead of a real server. Every invitation email is therefore **captured and
-assertable in tests with no MediGo-owned seam at all**: `app.TestMailer.Messages()` gives the
+assertable in tests with no MediKube-owned seam at all**: `app.TestMailer.Messages()` gives the
 `*mailer.Message` (`tools/mailer/mailer.go:12` — `From, To, Subject, HTML, Text, Headers`).
 
 `internal/platform/mail.Mailer` implements the consumer-declared `share.Mailer` port, renders the
@@ -117,7 +117,7 @@ CI to assert FR-023's "the email names nobody".
 
 **Alternatives considered**:
 
-- *`net/smtp` directly with config from `MEDIGO_SMTP_*`.* Rejected: a second configuration
+- *`net/smtp` directly with config from `MEDIKUBE_SMTP_*`.* Rejected: a second configuration
   mechanism for a subsystem PocketBase already configures, encrypted at rest, editable in the admin
   UI that ships in production.
 - *Reuse `OnMailerRecord*Send` templates.* Rejected: those are bound to auth flows on an auth
@@ -156,12 +156,12 @@ tools/mailer/sendmail.go:60   cmdPath, err := findSendmailPath()
 tools/mailer/sendmail.go:85   sendmail := exec.Command(cmdPath, "-i", "-t")
 ```
 
-With SMTP disabled, PocketBase falls back to exec'ing a local `sendmail` binary. MediGo's runtime
+With SMTP disabled, PocketBase falls back to exec'ing a local `sendmail` binary. MediKube's runtime
 image is `gcr.io/distroless/static-debian12:nonroot` — no shell, no `sendmail`, so the call fails at
 `exec`. Worse, on a developer's machine it might *succeed* and silently drop mail into a local
 queue.
 
-MediGo therefore exposes `share.Mailer.Configured(ctx) bool` returning `Settings().SMTP.Enabled`,
+MediKube therefore exposes `share.Mailer.Configured(ctx) bool` returning `Settings().SMTP.Enabled`,
 and:
 
 1. warns loudly at boot when it is false — **this warning already exists**: phase 001 emits it for
@@ -183,7 +183,7 @@ read before the user presses the button, not an error discovered after.
 
 - *Send and report the failure.* Rejected: FR-022 requires refusing *up front*, and a `Sendmail`
   that succeeds into a black hole is worse than an error.
-- *A `MEDIGO_MAIL_ENABLED` config flag.* Rejected: a second source of truth that can disagree with
+- *A `MEDIKUBE_MAIL_ENABLED` config flag.* Rejected: a second source of truth that can disagree with
   the setting that actually decides, editable in a second place.
 
 ---
@@ -332,7 +332,7 @@ grants access to somebody else's chart.
 **Decision — the double-accept race is closed by SQLite's single-writer transaction plus a
 compare-and-set on `status`, not by an advisory lock.**
 
-MediGo is single-instance by construction (constitution Technology Constraints) and PocketBase's
+MediKube is single-instance by construction (constitution Technology Constraints) and PocketBase's
 data store is one SQLite database with one writer. `app.RunInTransaction` holds the write lock, so
 a re-read of `invitations.status` inside the transaction followed by a write is a genuine
 compare-and-set: the losing transaction re-reads `accepted` and returns
@@ -416,7 +416,7 @@ every entry a 15-character PocketBase id, all of one kind, all owned by the send
 (FR-016, re-checked at accept per [D-10](#d-10)).
 
 **Rationale**: shared design §1.2 specifies `resource_ids (json — a validated []string)`. Validated
-Go structs in a `json` field are the established MediGo pattern for value lists that are only ever
+Go structs in a `json` field are the established MediKube pattern for value lists that are only ever
 read with their parent (shared design §1.5).
 
 **Alternatives considered**:
@@ -434,7 +434,7 @@ link, stored only as its SHA-256 hex digest under a unique index, and never logg
 
 `token = base64url(crypto/rand 32 bytes)` (43 characters, no padding);
 `token_hash = hex(sha256(token))`; lookup is by `token_hash`. The link is
-`{MEDIGO_PUBLIC_URL}/invite/{token}`.
+`{MEDIKUBE_PUBLIC_URL}/invite/{token}`.
 
 FR-024 is then satisfied in all four of its parts: unguessable (256 bits); not readable back out of
 the instance (only the digest is stored, including in the superuser admin UI); dead the moment the
@@ -512,7 +512,7 @@ three things, none of them load-bearing.**
    yet been tidied, then stamps `revoked_at = expires_at, revoked_by = ''` so it is written once;
 2. moves `pending` invitations whose `expires_at` has passed to `expired` (they are **already**
    refused by the read path — this only tidies the list);
-3. deletes invitations in a terminal state older than `MEDIGO_SHARING_INVITATION_RETENTION_DAYS`
+3. deletes invitations in a terminal state older than `MEDIKUBE_SHARING_INVITATION_RETENTION_DAYS`
    (default 90), leaving their audit events behind (FR-033).
 
 Both audit-writing steps run with **no HTTP request**, and `audit_events.request_id` is `Required`,
@@ -695,11 +695,11 @@ defaults, none required:
 
 | Env | Default | Bounds | Why |
 |---|---|---|---|
-| `MEDIGO_SHARING_INVITATION_TTL` | `168h` | 1h..8760h | FR-017's default 7 days, settable 1 hour to 1 year |
-| `MEDIGO_SHARING_INVITATION_TTL_MIN` | `1h` | — | FR-017's floor, validated at boot |
-| `MEDIGO_SHARING_INVITATION_TTL_MAX` | `8760h` | — | FR-017's ceiling (1 year) |
-| `MEDIGO_SHARING_MAX_RESOURCES_PER_INVITATION` | `50` | 1..200 | [D-14](#d-14) |
-| `MEDIGO_SHARING_INVITATION_RETENTION_DAYS` | `90` | 1..3650 | FR-033's documented retention |
+| `MEDIKUBE_SHARING_INVITATION_TTL` | `168h` | 1h..8760h | FR-017's default 7 days, settable 1 hour to 1 year |
+| `MEDIKUBE_SHARING_INVITATION_TTL_MIN` | `1h` | — | FR-017's floor, validated at boot |
+| `MEDIKUBE_SHARING_INVITATION_TTL_MAX` | `8760h` | — | FR-017's ceiling (1 year) |
+| `MEDIKUBE_SHARING_MAX_RESOURCES_PER_INVITATION` | `50` | 1..200 | [D-14](#d-14) |
+| `MEDIKUBE_SHARING_INVITATION_RETENTION_DAYS` | `90` | 1..3650 | FR-033's documented retention |
 
 No secret is added. Nothing here changes an authorization decision, so nothing here can widen
 access by misconfiguration.

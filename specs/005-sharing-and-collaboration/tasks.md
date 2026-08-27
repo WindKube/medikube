@@ -24,7 +24,7 @@ implementable, testable and demonstrable once the Foundational phase is complete
 
 ## Path conventions
 
-All paths are relative to `/Users/krzysztof.wiatrzyk/private/monorepo/medigo`.
+All paths are relative to `/Users/krzysztof.wiatrzyk/private/monorepo/medikube`.
 
 ## Read before writing a single query
 
@@ -44,9 +44,9 @@ decision in the application. No domain logic here.
 - [ ] T002 [P] Add `internal/platform/mail` to the `depguard` `[PB]` allowlist in `.golangci.yml` (it legitimately imports both PocketBase and templ) and confirm the existing `**/internal/service/**` and `**/internal/domain/**` deny globs already cover `internal/service/share` and `internal/domain/share` with no new rule
 - [ ] T003 [P] Add a `forbid-is-null` step to `Taskfile.yaml` (`task lint:isnull`) that greps `internal/store/share/`, `internal/store/invitation/`, `internal/store/access/` and `internal/store/migrations/` for the literal `IS NULL` and fails, with the message pointing at research D-01
 - [ ] T004 [P] Add `SharingConfig` to `internal/config/config.go` with `envPrefix:"SHARING_"` — `InvitationTTL` (default `168h`), `InvitationTTLMin` (`1h`), `InvitationTTLMax` (`8760h`), `MaxResourcesPerInvitation` (`50`), `InvitationRetentionDays` (`90`) — plus boot validation that min ≤ default ≤ max
-- [ ] T005 [P] Write failing tests in `internal/config/config_test.go` for the five `MEDIGO_SHARING_*` variables: defaults, bounds, and a boot failure when min > max
+- [ ] T005 [P] Write failing tests in `internal/config/config_test.go` for the five `MEDIKUBE_SHARING_*` variables: defaults, bounds, and a boot failure when min > max
 - [ ] T006 [P] Add `task test:slowsse` and extend `task test:scale` and `task test:phileak` wrappers in `Taskfile.yaml` for this phase's build-tagged suites
-- [ ] T007 Extend `internal/cli/seed.go` with the nine accounts and six invitation states from `data-model.md` §7, including the unregistered `newcomer@medigo.local` address and the printed plaintext token, then run `task fixture:regen` to rewrite `internal/testdata/pb_data`
+- [ ] T007 Extend `internal/cli/seed.go` with the nine accounts and six invitation states from `data-model.md` §7, including the unregistered `newcomer@medikube.local` address and the printed plaintext token, then run `task fixture:regen` to rewrite `internal/testdata/pb_data`
 
 **Checkpoint**: linters, configuration and fixtures in place. No production behaviour has changed.
 
@@ -85,7 +85,7 @@ suites. **No user story may start until this phase is complete** — every story
 - [ ] T024 [P] Implement in-memory fakes for all nine share ports plus `ShareReader` in `internal/service/share/sharetest/fake.go`, with an injectable clock so lapse is tested by moving time, never by sleeping
 - [ ] T025 [P] Implement `internal/service/share/sharetest/contract.go` — `RepositoryContract` and `InvitationRepositoryContract` as `testify/suite`s, parameterised by a factory so both run against the real repository and the fake: not-found; the active predicate excludes revoked and lapsed rows; the unique-active constraint; cursor stability under a concurrent insert and a concurrent revoke; cascade removal; case-insensitive `recipient_email` lookup; `GetByTokenHash` misses on a non-pending invitation
 - [ ] T026 [P] Implement `internal/service/access/accesstest/contract.go` — the `ShareReader` contract suite, run against the real reader and the fake, covering: owner-only patient, active grant, revoked grant, lapsed grant, disabled grantee — refused for as long as the account is disabled, with the grant row still present afterwards (FR-048) — and a grantee of a **different** patient of the same owner
-- [ ] T027 [P] Implement `internal/service/share/sharetest/fixtures.go` — builders for a share in each of its four observable states and an invitation in each of its six statuses, used by the suites, the HTTP tests and `medigo seed`
+- [ ] T027 [P] Implement `internal/service/share/sharetest/fixtures.go` — builders for a share in each of its four observable states and an invitation in each of its six statuses, used by the suites, the HTTP tests and `medikube seed`
 
 ### The one authorization checkpoint — the change the whole phase turns on
 
@@ -155,7 +155,7 @@ reachable, and that a third account can reach none of it.
 - [ ] T063 [US1] Implement `internal/web/page/invitations.go` and `internal/web/views/invitations/{received.templ,sent.templ,respond.templ}` (depends on T055)
 - [ ] T064 [P] [US1] Implement `internal/web/views/sharing/sharedrawer.templ` and wire it into `internal/web/views/patients/detail.templ` as a **Datastar signal, not a route**
 - [ ] T065 [P] [US1] Update `internal/web/views/patients/list.templ` — owned and shared groups, counts, and a "shared by X (view)" badge on each shared row (depends on T060)
-- [ ] T066 [P] [US1] Add `e2e/specs/sharing.spec.ts` and `e2e/specs/invitations.spec.ts` — both pages at 1440×900 and 390×844, populated **and** as `empty@medigo.local`, asserting the landmarks, `body[data-signals]`, and zero console/page/network errors
+- [ ] T066 [P] [US1] Add `e2e/specs/sharing.spec.ts` and `e2e/specs/invitations.spec.ts` — both pages at 1440×900 and 390×844, populated **and** as `empty@medikube.local`, asserting the landmarks, `body[data-signals]`, and zero console/page/network errors
 
 **Checkpoint**: an owner can share a chart, a recipient can accept it and read everything, and
 nothing else of the owner's is reachable. This is the MVP and it is demonstrable on its own.
@@ -287,7 +287,7 @@ the lapsed one cannot be answered, and all four show the right state on both sid
 - [ ] T113 [US5] Implement `Preview`, `Cancel` and `Withdraw` in `internal/service/share/invitations.go`, and the lapse guard ahead of `Transition` (depends on T104, T106, T107)
 - [ ] T114 [US5] Implement ops 64 and 66 in `internal/web/api/invitations.go`, with rate limiting on the public preview (depends on T104, T106, T113)
 - [ ] T115 [US5] Implement the all-or-nothing accept failure path returning `410 resources_unavailable` in `internal/service/share/invitations.go` and `internal/web/api/invitations.go` — an invitation is answered as a whole or not at all (FR-015) (depends on T108)
-- [ ] T116 [US5] Implement `internal/service/share/tidy.go` and expose it as `medigo purge --sharing` in `internal/cli/purge.go`, documenting in the file that **phase 006 owns its schedule**; `Tidy` derives one `run_id` per run onto its context so its `system` audit rows fill the `Required` `request_id` and correlate to the run's log lines, by both entry points (depends on T111)
+- [ ] T116 [US5] Implement `internal/service/share/tidy.go` and expose it as `medikube purge --sharing` in `internal/cli/purge.go`, documenting in the file that **phase 006 owns its schedule**; `Tidy` derives one `run_id` per run onto its context so its `system` audit rows fill the `Required` `request_id` and correlate to the run's log lines, by both entry points (depends on T111)
 - [ ] T117 [US5] Implement `internal/web/page/invite.go` (public) and `internal/web/views/invitations/{landing.templ,preview.templ}`, redirecting with a `303` issued before any stream is opened (depends on T112)
 - [ ] T118 [P] [US5] Add `e2e/specs/invite-landing.spec.ts` — the seeded token at both viewports, a lapsed token rendering the shared 404 view, and a sentinel assertion that the seeded patient's name appears nowhere on the page
 - [ ] T119 [P] [US5] Add the cancel, withdraw and decline-with-note controls to `internal/web/views/invitations/{sent.templ,respond.templ}` — the sent list and the received list each showing every invitation's state and offering only the actions that caller's role in it allows (FR-041)
@@ -332,14 +332,14 @@ arrive. Confirm no notice contains a person's name or any clinical detail.
 - [ ] T130 [P] Extend `internal/testsupport/phileak/exercise.go` with four new sentinel classes — email address, note, display name, invitation token — and drive **every operation this phase defines**, asserting zero occurrences in the zerolog stream, the Prometheus registry, the OTel span recorder and the Sentry transport (FR-080, SC-016)
 - [ ] T130a [P] Extend phase 002's egress harness — `internal/testsupport/netgate/` **[EDIT]** — to run this phase's whole endpoint exercise under the `net.Dialer` control hook: with SMTP unconfigured **zero** outbound connections are made, and with it configured the **only** outbound connection is the invitation message to the invited address (FR-073)
 - [ ] T131 [P] Extend `internal/testsupport/scale/generate.go` with the SC-014 fixture (one owner: 20 patients, 200 active grants across 10 grantees; one grantee: 50 shared patients across 12 grantors, mixed levels and expiries) and add `internal/web/api/scale_test.go` (`//go:build scale`) asserting both sharing panels, both invitation lists and `/patients` render inside 2 s, and that a paging walk with concurrent grant and revoke repeats and skips **0** rows (FR-074, FR-075)
-- [ ] T132 [P] Add the `medigo_shares_*`, `medigo_invitations_*` and `medigo_access_denied_total` collectors in `internal/obs/metrics.go` with a test asserting every label value comes from a **bounded** set and that no address, user id, patient id or note can become one
+- [ ] T132 [P] Add the `medikube_shares_*`, `medikube_invitations_*` and `medikube_access_denied_total` collectors in `internal/obs/metrics.go` with a test asserting every label value comes from a **bounded** set and that no address, user id, patient id or note can become one
 - [ ] T133 [P] Add `service.share.*` and `store.shares.*` spans in `internal/service/share` and `internal/store/share` with an allowlisted attribute set, and a test asserting no free-text attribute is emitted
 - [ ] T134 [P] Add the `access_denied` audit row with its `reason` (`no_grant`, `revoked`, `expired`, `view_only`, `not_addressed_to_you`, `disabled`) to `internal/service/access/authorizer.go`, with a test per reason (FR-069) — **SC-015's refusal half**: every refused attempt produces exactly one entry, and none of them carries a name, an address, a note, a label or a clinical value
 - [ ] T135 [P] Add `e2e/specs/sharing-keyboard.spec.ts` — SC-020: send an invitation, answer one, change a level and end access using only the keyboard at both viewports, with a visible focus assertion at every step
 - [ ] T136 Extend `e2e/routes.gate.spec.ts` for the three new page routes with the seeded token substituted into `/invite/{token}`, and re-run the full phases 001–004 smoke suite unchanged to prove this phase added no landmark and no live region, and broke no existing landmark assertion (FR-079, SC-019)
 - [ ] T137 Regenerate and commit `api/openapi.json` via `task openapi`, then confirm `git diff --exit-code api/openapi.json` is clean and `internal/openapi/gate_test.go` passes with all ten new `operationId`s present in both the registry and the document (Principle IX)
 - [ ] T138 [P] Add the PocketBase-upgrade checklist entries to the phase-001 checklist file: re-verify `core/base.go:713` (mailer substitution) and `core/field_date.go:110` (`TEXT DEFAULT '' NOT NULL`) on every PocketBase upgrade — the second silently changes the meaning of every predicate in this phase (research risk R8)
-- [ ] T139 [P] Verify the monorepo integration is still complete: `/Users/krzysztof.wiatrzyk/private/monorepo/.dockerignore` readmits `medigo/` and excludes `medigo/pb_data/`, `medigo/**/*_templ.go` and `medigo/internal/web/static/app.css`; `.github/workflows/build-image.yaml` lists `medigo`
+- [ ] T139 [P] Verify the monorepo integration is still complete: `/Users/krzysztof.wiatrzyk/private/monorepo/.dockerignore` readmits `medikube/` and excludes `medikube/pb_data/`, `medikube/**/*_templ.go` and `medikube/internal/web/static/app.css`; `.github/workflows/build-image.yaml` lists `medikube`
 - [ ] T140 Run `quickstart.md` end to end by hand — all six walkthroughs, including the SMTP-off refusal and the SMTP-on delivery — and correct anything that does not behave as written
 - [ ] T140a Write `specs/005-sharing-and-collaboration/traceability.md` — the mechanical join, generated from `spec.md` and `tasks.md` rather than written by hand: one row per functional requirement (all 80) naming the task ids that satisfy it and the named test that proves it, one row per acceptance scenario naming its test, and one row per success criterion (all 20) naming its task or its exit criterion. **A functional requirement with no task, or a success criterion that is neither mapped nor marked `[outcome metric]` in `spec.md`, fails the phase** (cross-artifact finding M7)
 - [ ] T141 Final gate run: `task check`, `task openapi && git diff --exit-code api/openapi.json`, `task routes`, `task test:e2e`, `task test:phileak`, `go test -tags slowsse ./internal/web/stream/...`, `go test -tags scale ./...`, and the container build
@@ -371,7 +371,7 @@ Phase 1 Setup  ──▶  Phase 2 Foundational  ──┬──▶ Phase 3  US1 
 ### Cross-story caveats (stated rather than pretended away)
 
 - **US2's revocation-immediacy suite (T069)** needs a grant to revoke, so it uses the seeded
-  `viewer@medigo.local` fixture rather than US1's code path. It is independently runnable.
+  `viewer@medikube.local` fixture rather than US1's code path. It is independently runnable.
 - **US3's write matrix (T081–T082)** extends the same registry-derived table US1 creates in T051.
   If US3 is built first, T051's table must be created there instead — the table is the shared
   artefact, not the story.
@@ -432,6 +432,6 @@ its priority.
 
 - `[P]` means different files and no incomplete dependency.
 - Verify each test fails before implementing it. A test that was never red is a defect.
-- Commit after each task or logical group, Conventional Commits scoped `medigo`.
+- Commit after each task or logical group, Conventional Commits scoped `medikube`.
 - Never share a `tests.TestApp` across `ApiScenario` cases — it recurses until the stack overflows.
 - Before writing any query in this phase, re-read [research D-01](./research.md#d-01).

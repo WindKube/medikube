@@ -3,7 +3,7 @@
 How to run this phase and verify it by hand, end to end. Nine walkthroughs, one per user story, then
 the gates in the order CI runs them.
 
-Everything below assumes the repository root `/Users/krzysztof.wiatrzyk/private/monorepo/medigo`.
+Everything below assumes the repository root `/Users/krzysztof.wiatrzyk/private/monorepo/medikube`.
 
 ---
 
@@ -17,7 +17,7 @@ node --version                  # build-time only, for the Playwright gate; neve
 
 Two things that will otherwise bite:
 
-- **`MEDIGO_STATE_DIR` must not be inside `MEDIGO_DATA_DIR`.** The restore journal lives there
+- **`MEDIKUBE_STATE_DIR` must not be inside `MEDIKUBE_DATA_DIR`.** The restore journal lives there
   precisely because a restore replaces `pb_data` wholesale ([research D-23](./research.md#d-23)), and
   the boot validation refuses to start if you nest them.
 - **The PDF spike must have passed.** `task spike:pdf` builds a two-page document with
@@ -41,16 +41,16 @@ task run
 Minimum environment for a hand-run:
 
 ```bash
-export MEDIGO_PUBLIC_URL=http://127.0.0.1:8090
-export MEDIGO_DATA_DIR=./pb_data
-export MEDIGO_STATE_DIR=./medigo_state          # NOT inside pb_data
-export MEDIGO_RETENTION_EXPORT_DAYS=7
-export MEDIGO_BACKUP_WARN_AFTER=168h
-export MEDIGO_LOG_PRETTY=true
+export MEDIKUBE_PUBLIC_URL=http://127.0.0.1:8090
+export MEDIKUBE_DATA_DIR=./pb_data
+export MEDIKUBE_STATE_DIR=./medikube_state      # NOT inside pb_data
+export MEDIKUBE_RETENTION_EXPORT_DAYS=7
+export MEDIKUBE_BACKUP_WARN_AFTER=168h
+export MEDIKUBE_LOG_PRETTY=true
 ```
 
 To watch retention actually happen without waiting a week, run the walkthroughs with
-`MEDIGO_RETENTION_EXPORT_DAYS=1` and use `task purge` to run the sweeps on demand
+`MEDIKUBE_RETENTION_EXPORT_DAYS=1` and use `task purge` to run the sweeps on demand
 (§9 below).
 
 ---
@@ -59,12 +59,12 @@ To watch retention actually happen without waiting a week, run the walkthroughs 
 
 | Account | Password | What it is for |
 |---|---|---|
-| `owner@medigo.local` | `medigo-dev` | The populated account: people, records, documents, 3 saved reports, 5 jobs in 5 states |
-| `empty@medigo.local` | `medigo-dev` | Holds **nothing**. Every empty state, and the second Playwright pass |
-| `admin@medigo.local` | `medigo-dev` | `role = admin`. The operator surface |
-| `admin2@medigo.local` | `medigo-dev` | The second administrator, for the last-administrator refusals |
-| `disabled@medigo.local` | `medigo-dev` | `disabled_at` set |
-| `mustchange@medigo.local` | `medigo-dev` | `must_change_password = true` |
+| `owner@medikube.local` | `medikube-dev` | The populated account: people, records, documents, 3 saved reports, 5 jobs in 5 states |
+| `empty@medikube.local` | `medikube-dev` | Holds **nothing**. Every empty state, and the second Playwright pass |
+| `admin@medikube.local` | `medikube-dev` | `role = admin`. The operator surface |
+| `admin2@medikube.local` | `medikube-dev` | The second administrator, for the last-administrator refusals |
+| `disabled@medikube.local` | `medikube-dev` | `disabled_at` set |
+| `mustchange@medikube.local` | `medikube-dev` | `must_change_password = true` |
 | PocketBase superuser | printed by `task seed` | The **break-glass** credential. Not the administrative tier |
 
 The seeded person `Amina Zayd` carries 12 readings of one lab component in `mmol/L`, 3 of the **same**
@@ -76,7 +76,7 @@ needs. A second person carries a name, a tag and a document description in Arabi
 
 ## 3. Story 1 — walk out with the paper (about 3 minutes)
 
-1. Sign in as `owner@medigo.local`, open **`/reports`**, choose Amina.
+1. Sign in as `owner@medikube.local`, open **`/reports`**, choose Amina.
 2. Confirm the builder shows **every kind with a count**, including kinds at zero, and a total.
 3. Tick four kinds, set the range to the last twelve months, add the `rheumatology` tag. Watch the
    resolved count change as you go — it should settle in well under a second.
@@ -106,12 +106,12 @@ needs. A second person carries a name, a tag and a document description in Arabi
 
 ## 4. Story 2 — take everything with me (about 4 minutes)
 
-1. As `owner@medigo.local`, open **`/exports`**, request everything with documents included.
+1. As `owner@medikube.local`, open **`/exports`**, request everything with documents included.
 2. Confirm the acknowledgement is immediate, the progress moves, and the finished size is reported.
 3. **Stop the application**, unzip the archive somewhere else, and read it:
 
    ```bash
-   unzip -l medigo-export-*.zip | head -30
+   unzip -l medikube-export-*.zip | head -30
    jq '.format_version, .produced_at, .kinds, .documents_included' manifest.json
    ```
 
@@ -120,7 +120,7 @@ needs. A second person carries a name, a tag and a document description in Arabi
 4. Prove nothing secret is in it:
 
    ```bash
-   grep -rl 'tokenKey\|MEDIGO_\|BEGIN PRIVATE KEY' . || echo "clean"
+   grep -rl 'tokenKey\|MEDIKUBE_\|BEGIN PRIVATE KEY' . || echo "clean"
    ```
 
 5. Restart, request a second export while the first is running, and confirm it is accepted and shows
@@ -160,7 +160,7 @@ needs. A second person carries a name, a tag and a document description in Arabi
 
 ## 7. Stories 5, 6 and 8 — the operator surface (3 minutes)
 
-Sign in as `admin@medigo.local`.
+Sign in as `admin@medikube.local`.
 
 1. **`/admin`** — every figure has a definition and a computed-at. With MFA and the IP allowlist
    unconfigured, an unmistakable warning names exactly which is missing. The same warning is in the
@@ -169,7 +169,7 @@ Sign in as `admin@medigo.local`.
    moved**. That is the live-versus-refreshed split working.
 3. Confirm the retention section lists each window with its value, what it applies to, and **when its
    job last ran and last succeeded**.
-4. **`/admin/users`** — disable `owner@medigo.local` while it is signed in elsewhere. Its very next
+4. **`/admin/users`** — disable `owner@medikube.local` while it is signed in elsewhere. Its very next
    request fails, well inside five seconds. Sign in as it with the **wrong** password and then the
    **right** one, and confirm the two answers differ exactly as
    [D-49](./research.md#d-49) specifies and in no other way.
@@ -178,14 +178,14 @@ Sign in as `admin@medigo.local`.
 6. **`/admin/audit`** — narrow by person, by actor, by action and by date, singly and combined. Page
    through. Confirm no entry shows a name, a value or a file name. Export the narrowing as CSV and
    confirm **exactly one** `audit_export` row appears — and that reading the trail added none.
-7. Sign in as `owner@medigo.local` and request `/admin` directly. You get the 404 view, and the
+7. Sign in as `owner@medikube.local` and request `/admin` directly. You get the 404 view, and the
    attempt is in the trail.
 
 ---
 
 ## 8. Story 7 — the restore, at eleven at night (5 minutes, and worth doing properly)
 
-1. As `admin@medigo.local`, take an archive with the note `before the test`.
+1. As `admin@medikube.local`, take an archive with the note `before the test`.
 2. Add a record afterwards, so there is something to lose.
 3. Open the **restore preview**. It must state when the archive was taken, its size, its note, the
    version that produced it, what exists now, and — in words — that everything recorded since will be
@@ -202,7 +202,7 @@ Sign in as `admin@medigo.local`.
      in the phase ([D-23](./research.md#d-23)).
    - your Sentry DSN and every other `,unset` secret survived the restart
      ([D-24](./research.md#d-24)). Check `/admin` rather than guessing.
-8. Upload an archive with no `medigo.json`. The preview says "version unknown" and the restore is
+8. Upload an archive with no `medikube.json`. The preview says "version unknown" and the restore is
    refused unless you pass `accept_unknown_version`.
 
 ---
@@ -210,7 +210,7 @@ Sign in as `admin@medigo.local`.
 ## 9. Story 8 — retention, without waiting a week
 
 ```bash
-MEDIGO_RETENTION_EXPORT_DAYS=1 task run &
+MEDIKUBE_RETENTION_EXPORT_DAYS=1 task run &
 # produce a report and an export, then move the clock or wait, then:
 task purge                                  # runs every sweep once, synchronously
 ```

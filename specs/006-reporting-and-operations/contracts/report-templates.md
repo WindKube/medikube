@@ -113,7 +113,7 @@ byte-identical to a person who does not exist (FR-001), and the attempt is recor
 | `404 not_found` | `patient` unreachable or absent | FR-001 |
 | `409 duplicate_name` | a saved report of that name exists for this account, ignoring capitalisation; **nothing is overwritten**, and the message names the conflict | FR-030, US3 AS-8 |
 | `422 validation_failed` | any rule of data-model §1.2–§1.5 | FR-002 |
-| `422 too_many_charts` | more charts than `MEDIGO_REPORT_MAX_CHARTS`; the message states the limit | FR-023, US4 AS-9 |
+| `422 too_many_charts` | more charts than `MEDIKUBE_REPORT_MAX_CHARTS`; the message states the limit | FR-023, US4 AS-9 |
 | `422 unknown_unit` | a chart unit that was never recorded for that series | FR-018 |
 | `422 not_enough_readings` | a chart range resolving to fewer than the published minimum; the message states how many it has and how many it needs | FR-019, US4 AS-5 |
 | `422 unknown_tag` | a tag id outside the patient owner's set | phase 005 D-22 |

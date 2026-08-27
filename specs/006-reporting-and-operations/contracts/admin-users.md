@@ -76,7 +76,7 @@ administrator changes what an account *may do*, never what it *is*.
 | `must_change_password: true` | the flag plus `RefreshTokenKey()`; at the next sign-in the account can reach the password change **and nothing else** — every other `/api/v1` route is `403 password_change_required` and every page redirects to the forced-change form. Setting a new password clears the flag in the same transaction | FR-093, [D-20](../research.md#d-20) |
 
 **Three refusals, enforced in `internal/domain/adminuser` as pure functions** so they hold no matter
-which caller reaches them — a handler, `medigo seed`, a future CLI subcommand or a test fixture:
+which caller reaches them — a handler, `medikube seed`, a future CLI subcommand or a test fixture:
 
 | Code | When | Requirement |
 |---|---|---|

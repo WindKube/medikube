@@ -188,7 +188,7 @@ streams cut, exactly as for op 61.
 ## Retention (FR-033)
 
 Answered, cancelled, withdrawn and lapsed invitations are excluded from the "still to act on" views
-immediately, retained for `MEDIGO_SHARING_INVITATION_RETENTION_DAYS` (default 90) for
+immediately, retained for `MEDIKUBE_SHARING_INVITATION_RETENTION_DAYS` (default 90) for
 accountability, and then **deleted** by the tidy pass — their audit events outlive them
 ([D-19](../research.md#d-19)). A share whose `invitation` relation is emptied by that deletion keeps
 its own `note` (copied at accept time) and its `from_invitation: true` provenance flag.

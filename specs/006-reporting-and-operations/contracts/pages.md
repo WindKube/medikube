@@ -7,7 +7,7 @@ The shared design contract originally allocated **eight** pages to this phase. `
 **removed**: phase 004 already recovers a deleted document as a filter on the document library, and
 the specification forbids a second surface ([D-14](../research.md#d-14),
 [D-15](../research.md#d-15)). The contract itself has been amended — SHARED-DESIGN §3.1 no longer
-lists `/trash` and records the removal — so the page inventory, the `medigo routes` output and the
+lists `/trash` and records the removal — so the page inventory, the `medikube routes` output and the
 Playwright route list remain one list. The contract's total moves 57 → **56**, which is recorded in
 [plan.md's Deviations](../plan.md#deviations-from-the-shared-design-contract).
 
@@ -83,7 +83,7 @@ on an instance holding nothing — the most common way a smoke gate goes falsely
 
 ## 3. Page-action routes
 
-Neither navigable pages nor part of the public API. Each appears in `medigo routes` with
+Neither navigable pages nor part of the public API. Each appears in `medikube routes` with
 `Kind: page_action`, is **deliberately excluded** from `api/openapi.json`, has no ARIA landmark, and
 **declares the Playwright spec that exercises it**. `e2e/routes.gate.spec.ts` fails the build if that
 spec does not exist or does not reference the route. This follows phase 004's precedent exactly.
@@ -111,12 +111,12 @@ This phase owns the gate for **every user-facing page delivered by phases 001–
 
 | Spec | What it does |
 |---|---|
-| `e2e/specs/full-sweep.spec.ts` | Every route emitted by `medigo routes` with `Page: true`, at both viewports, as the seeded populated account: `200`, the four shell landmarks, the route's declared landmark, `body[data-signals]`, zero console/page/network errors |
-| `e2e/specs/empty-account.spec.ts` | The same sweep as `empty@medigo.local`, which holds **nothing** — so every page that can be empty proves its explanation renders **inside** its own landmark and the gate stays green on a legitimately empty instance (FR-125, US9 AS-2) |
+| `e2e/specs/full-sweep.spec.ts` | Every route emitted by `medikube routes` with `Page: true`, at both viewports, as the seeded populated account: `200`, the four shell landmarks, the route's declared landmark, `body[data-signals]`, zero console/page/network errors |
+| `e2e/specs/empty-account.spec.ts` | The same sweep as `empty@medikube.local`, which holds **nothing** — so every page that can be empty proves its explanation renders **inside** its own landmark and the gate stays green on a legitimately empty instance (FR-125, US9 AS-2) |
 | `e2e/specs/operator-denied.spec.ts` | The four operator pages as a non-administrator: the shared 404 view, and an `access_denied` row per attempt (FR-076, SC-010) |
 | `e2e/routes.gate.spec.ts` | The inventory gate: every `Page: true` route has a smoke case; every `page_action` route names an existing spec that references it. **A page added without coverage fails the build** (US9 AS-4) |
 | `e2e/specs/gate-negative.spec.ts` | Two deliberate negatives, run in CI as *expected failures*: a page instrumented to throw a console error must turn the gate **red** and the failure must **name the page** (US9 AS-3); and a route added to the inventory with no spec must fail `routes.gate` |
 
-The route list under test is derived from the application itself — `medigo routes` — and never
+The route list under test is derived from the application itself — `medikube routes` — and never
 maintained by hand (Principle VIII). The seeded instance deliberately holds an account with nothing so
 the `@EmptyState` path is what the landmark assertion exercises.

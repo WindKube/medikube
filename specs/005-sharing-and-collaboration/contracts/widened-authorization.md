@@ -49,7 +49,7 @@ on the grantee's next action" true without an invalidation protocol.
 
 ## Where `read_sensitive` is written
 
-**This is MediGo's only statement of the rule**, and it governs every phase: opening an individual
+**This is MediKube's only statement of the rule**, and it governs every phase: opening an individual
 record (001, 003, 004), retrieving a document's content or preview (004), and fetching a patient's
 photograph (002). Those phases reference it rather than restating it.
 

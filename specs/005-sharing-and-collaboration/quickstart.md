@@ -1,7 +1,7 @@
 # Quickstart: Sharing and Collaboration (phase 005)
 
 How to run this phase's work locally and verify it by hand, end to end. Every command is run from
-`/Users/krzysztof.wiatrzyk/private/monorepo/medigo` unless stated.
+`/Users/krzysztof.wiatrzyk/private/monorepo/medikube` unless stated.
 
 ---
 
@@ -15,14 +15,14 @@ task --list
 ```
 
 PocketBase v0.40.1 requires Go 1.27: its `go.mod` declares it and 67 non-test files import
-`encoding/json/v2` (VERIFIED-SOURCE-FACTS FACT 0). MediGo is deliberately the only project in this
+`encoding/json/v2` (VERIFIED-SOURCE-FACTS FACT 0). MediKube is deliberately the only project in this
 monorepo off the 1.26.5 house standard.
 
 **If you changed a migration or a seed fixture, regenerate the test fixture first**, or every
 integration test silently runs against the previous schema:
 
 ```bash
-task fixture:regen          # migrations + `medigo seed` -> internal/testdata/pb_data
+task fixture:regen          # migrations + `medikube seed` -> internal/testdata/pb_data
 ```
 
 ---
@@ -32,10 +32,10 @@ task fixture:regen          # migrations + `medigo seed` -> internal/testdata/pb
 ```bash
 task gen                    # templ generate + tailwind
 task build
-export MEDIGO_PUBLIC_URL="http://127.0.0.1:8090"
-export MEDIGO_LOG_PRETTY=true
-./medigo seed --reset       # deterministic accounts, patients, grants and invitations
-./medigo serve --http=127.0.0.1:8090
+export MEDIKUBE_PUBLIC_URL="http://127.0.0.1:8090"
+export MEDIKUBE_LOG_PRETTY=true
+./medikube seed --reset     # deterministic accounts, patients, grants and invitations
+./medikube serve --http=127.0.0.1:8090
 ```
 
 The boot log should contain **exactly one** warning about outbound email, and after this phase it
@@ -60,30 +60,30 @@ a throwaway instance; the server never prints it, never logs it and stores only 
 
 ## 2. The seeded cast
 
-| Account (password `medigo-dev-password`) | Holds |
+| Account (password `medikube-dev-password`) | Holds |
 |---|---|
-| `owner@medigo.local` | 2 patients, one with 3 relatives, records of every kind, 1 attachment |
-| `viewer@medigo.local` | an accepted **view** grant on patient A |
-| `editor@medigo.local` | an accepted **edit** grant on patient A |
-| `cousin@medigo.local` | an accepted view grant on **one relative** of patient A |
-| `stranger@medigo.local` | nothing |
-| `empty@medigo.local` | nothing shared in either direction — the empty-state account |
-| `left@medigo.local` | a grant they revoked themselves |
-| `lapsed@medigo.local` | a grant whose end date has passed |
-| `disabled@medigo.local` | an active grant, account disabled |
-| `newcomer@medigo.local` | **deliberately not registered** — the invite-a-stranger path |
+| `owner@medikube.local` | 2 patients, one with 3 relatives, records of every kind, 1 attachment |
+| `viewer@medikube.local` | an accepted **view** grant on patient A |
+| `editor@medikube.local` | an accepted **edit** grant on patient A |
+| `cousin@medikube.local` | an accepted view grant on **one relative** of patient A |
+| `stranger@medikube.local` | nothing |
+| `empty@medikube.local` | nothing shared in either direction — the empty-state account |
+| `left@medikube.local` | a grant they revoked themselves |
+| `lapsed@medikube.local` | a grant whose end date has passed |
+| `disabled@medikube.local` | an active grant, account disabled |
+| `newcomer@medikube.local` | **deliberately not registered** — the invite-a-stranger path |
 
 ---
 
 ## 3. Walk story 1 by hand — share a chart (about 3 minutes)
 
-1. Sign in as `owner@medigo.local`. Open `/patients`, open patient A, press **Share**.
+1. Sign in as `owner@medikube.local`. Open `/patients`, open patient A, press **Share**.
    The drawer opens **without a navigation** — it is a Datastar signal, not a route.
 2. Enter `kwame@example.org`, choose **Viewing**, write a note, leave the lapse date at its default.
    Submit. You should see "invitation sent", and — because that address has no account and SMTP is
    off — a `422` explaining outbound email is not configured. **This is correct**
    ([D-06](./research.md#d-06)). Configure SMTP (step 1) and try again, or use
-   `viewer2@medigo.local`, which does have an account.
+   `viewer2@medikube.local`, which does have an account.
 3. Open `/invitations` → **Sent**. The invitation is `pending`, `resource_count: 1`, with your note.
 4. Copy the invitation link from the mail catcher (or the seed output). Open it in a **private
    window**: `/invite/{token}` shows who invited you, that it is a person's chart, one item, at
@@ -108,7 +108,7 @@ sharing it onward, or seeing the sharing screen for somebody else's grant.
 ## 4. Walk story 2 — take it away, and prove it is gone (2 minutes)
 
 1. As the recipient, leave the shared patient's record list **open**.
-2. As `owner@medigo.local`, open `/sharing` → **Granted**, find the row, press **End access**.
+2. As `owner@medikube.local`, open `/sharing` → **Granted**, find the row, press **End access**.
 3. Watch the recipient's open window: within 5 seconds the list is replaced by a plain panel saying
    access has ended, with a link back to `/patients`. **It must not silently freeze and must not
    keep showing content** (FR-045, US2 scenario 2).
@@ -121,21 +121,21 @@ sharing it onward, or seeing the sharing screen for somebody else's grant.
 7. Confirm the owner cannot re-grant by pressing anything: sharing again takes a fresh invitation
    the other person must accept (US2 scenario 8).
 
-Repeat with `lapsed@medigo.local` to see the same thing happen with no revoke at all — the end date
+Repeat with `lapsed@medikube.local` to see the same thing happen with no revoke at all — the end date
 is evaluated on every request, never by a sweeper (FR-043, [D-02](./research.md#d-02)).
 
 ---
 
 ## 5. Walk story 4 — the pedigree, and only the pedigree (1 minute)
 
-Sign in as `cousin@medigo.local`. You can read exactly one relative — name, relationship, years,
+Sign in as `cousin@medikube.local`. You can read exactly one relative — name, relationship, years,
 whether they have died, and every condition with its code, age at diagnosis, severity, status and
 notes — plus the sender's display name and note.
 
 Now try to escape, and fail every time (FR-078, SC-008):
 
 ```bash
-# with the cousin's session cookie in $C, and the seeded ids from `medigo seed --print-ids`
+# with the cousin's session cookie in $C, and the seeded ids from `medikube seed --print-ids`
 curl -s -o /dev/null -w '%{http_code}\n' -b "$C" localhost:8090/api/v1/patients/$PATIENT_A       # 404
 curl -s -o /dev/null -w '%{http_code}\n' -b "$C" localhost:8090/api/v1/records/medications?patient=$PATIENT_A  # 404
 curl -s -o /dev/null -w '%{http_code}\n' -b "$C" localhost:8090/api/v1/records/family-history/$OTHER_RELATIVE   # 404

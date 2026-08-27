@@ -5,7 +5,7 @@ Every operation here requires `role = admin`; anything else is `404` **and a rec
 (FR-114 of US7: "the answer is indistinguishable from the capability not existing and the attempt is
 recorded").
 
-**MediGo adds no second backup mechanism** (FR-112, Principle V). Every operation below is a thin
+**MediKube adds no second backup mechanism** (FR-112, Principle V). Every operation below is a thin
 wrapper over PocketBase v0.40.1 ([D-21](../research.md#d-21)). What this phase adds is exactly five
 things PocketBase does not do: the **preview**, the mandatory **safety copy**, the **confirmation**,
 the **authorization**, and the **visibility of failures**.
@@ -20,7 +20,7 @@ type Archive struct {
     Origin     string  `json:"origin"`             // "manual" | "scheduled" | "uploaded" | "safety"
     TakenBy    *string `json:"taken_by"`           // opaque user id; null for scheduled
     Note       string  `json:"note,omitempty"`
-    AppVersion *string `json:"app_version"`        // from medigo.json inside the archive; null if absent
+    AppVersion *string `json:"app_version"`        // from medikube.json inside the archive; null if absent
     Compatible *bool   `json:"compatible"`         // null when app_version is null (D-25)
 }
 
@@ -41,8 +41,8 @@ type InstanceScale struct {
 }
 ```
 
-`Origin`, `TakenBy` and `Note` are MediGo's own metadata, held in a sidecar `medigo-backups.json`
-under `MEDIGO_STATE_DIR` and joined to the filesystem listing by name; an archive present in the
+`Origin`, `TakenBy` and `Note` are MediKube's own metadata, held in a sidecar `medikube-backups.json`
+under `MEDIKUBE_STATE_DIR` and joined to the filesystem listing by name; an archive present in the
 filesystem with no sidecar entry lists with `origin: "uploaded"` and no note, rather than being
 hidden.
 
@@ -71,7 +71,7 @@ be taken**, who took it and its note (FR-099).
 
 **Request**: `{ "note": "before the upgrade" }` — optional, ≤ 500.
 
-**Effect**: `app.CreateBackup(ctx, name)` with `name = medigo_<YYYYMMDDHHMMSS>.zip` — compact, **not** RFC3339: the name reaches `audit_events.target_id` (`Max 64`) through the safety-copy composition below, and it must also be legal as a filename and as an S3 key, which a colon is not (ANALYSIS N2), plus a sidecar entry
+**Effect**: `app.CreateBackup(ctx, name)` with `name = medikube_<YYYYMMDDHHMMSS>.zip` — compact, **not** RFC3339: the name reaches `audit_events.target_id` (`Max 64`) through the safety-copy composition below, and it must also be legal as a filename and as an S3 key, which a colon is not (ANALYSIS N2), plus a sidecar entry
 recording `origin: "manual"`, the actor and the note.
 
 **Response** `201` + `Location: /api/v1/admin/backups/{name}`, body `Archive`.
@@ -85,8 +85,8 @@ bounded exception to "never a name", sized for by 001's `≤64` column, and the 
 archive's own routes are addressed by (001 [data-model](../../001-walking-skeleton/data-model.md) §3).
 
 **Scheduled archives** are PocketBase's own: `Settings().Backups.Cron` and
-`Backups.CronMaxKeep = MEDIGO_BACKUP_KEEP`, written at boot from configuration, with the max-keep
-pruning already implemented upstream (FR-101). MediGo binds `OnBackupCreate` so a scheduled archive
+`Backups.CronMaxKeep = MEDIKUBE_BACKUP_KEEP`, written at boot from configuration, with the max-keep
+pruning already implemented upstream (FR-101). MediKube binds `OnBackupCreate` so a scheduled archive
 writes `backup_create` on success and `job_failed` on error — which is what puts a failed scheduled
 backup on the operator overview and in the trail instead of letting it pass silently (US7 AS-3).
 
@@ -99,7 +99,7 @@ backup on the operator overview and in the trail instead of letting it pass sile
 **Request**: `multipart/form-data` with `file` (the archive) and an optional `note`.
 
 **Validation, before it is stored**: it opens as a zip; it contains `data.db`; it is within
-`MEDIGO_EXPORT_MAX_BYTES`; and **the storage key is normalised and bounded to 64 characters** —
+`MEDIKUBE_EXPORT_MAX_BYTES`; and **the storage key is normalised and bounded to 64 characters** —
 the uploader's filename is not trusted, and `audit_events.target_id` is `Max 64` (ANALYSIS N2).
 Then `fsys.UploadMultipart(fh, key)`.
 
@@ -121,7 +121,7 @@ no `data.db`; `409 archive_operation_in_progress`.
 **Response** `200` — `RestorePreview`, stating (FR-103, US7 AS-5):
 
 - when the archive was taken, its size and its note;
-- **which version of the application produced it** — read from `medigo.json` inside the archive
+- **which version of the application produced it** — read from `medikube.json` inside the archive
   ([D-25](../research.md#d-25), [D-26](../research.md#d-26)): locally with `zip.OpenReader` straight
   off `pb_data/backups/<name>`, or, when PocketBase's S3 backup storage is configured, by streaming
   into a scratch file under `.pb_temp_to_delete` first, because `archive/zip` needs an `io.ReaderAt`;
@@ -137,8 +137,8 @@ no `data.db`; `409 archive_operation_in_progress`.
 | Archive | Result |
 |---|---|
 | `schema_version` ≤ the binary's highest known migration | `compatible: true` — PocketBase runs app migrations up on the next bootstrap |
-| `schema_version` > the binary's highest | `compatible: false`, blocker `archive_version_unsupported` — MediGo cannot migrate down into a binary that does not know the schema |
-| no `medigo.json` (a bare-PocketBase or pre-006 archive) | `app_version: null`, `compatible: null`, blocker `version_unknown` — the restore is **refused** unless the body carries `"accept_unknown_version": true`, which is recorded |
+| `schema_version` > the binary's highest | `compatible: false`, blocker `archive_version_unsupported` — MediKube cannot migrate down into a binary that does not know the schema |
+| no `medikube.json` (a bare-PocketBase or pre-006 archive) | `app_version: null`, `compatible: null`, blocker `version_unknown` — the restore is **refused** unless the body carries `"accept_unknown_version": true`, which is recorded |
 
 **Errors**: `404 not_found` for an unknown name; `422 archive_unreadable` when it does not open —
 with a reason that **names no storage location** (FR-107, FR-118).
@@ -185,7 +185,7 @@ instance offers**, recorded as such (FR-109, SC-018). `target_kind: backup`, the
 **Request**
 
 ```json
-{ "confirm_phrase": "restore medigo_2026-08-26T02-00-00Z.zip",
+{ "confirm_phrase": "restore medikube_2026-08-26T02-00-00Z.zip",
   "password": "…",
   "accept_unknown_version": false }
 ```
@@ -202,10 +202,10 @@ instance offers**, recorded as such (FR-109, SC-018). `target_kind: backup`, the
 4. Validate the archive: it exists, it opens, it contains `data.db`, its version is compatible.
    Anything else → `422`, **before anything on the instance is touched**, with a reason naming no
    storage location (FR-107, US7 AS-9).
-5. **Take the safety copy** — `app.CreateBackup(ctx, "medigo_safety_<YYYYMMDDHHMMSS>_<name>")`, synchronously,
+5. **Take the safety copy** — `app.CreateBackup(ctx, "medikube_safety_<YYYYMMDDHHMMSS>_<name>")`, synchronously,
    and wait for it. **If it fails, the restore does not proceed** and the response says so
    (`safety_backup_failed`). This is not skippable for a recent archive (FR-105, US7 AS-7, SC-017).
-6. Write the **restore journal** to `MEDIGO_STATE_DIR` ([D-23](../research.md#d-23)) and re-apply the
+6. Write the **restore journal** to `MEDIKUBE_STATE_DIR` ([D-23](../research.md#d-23)) and re-apply the
    environment snapshot ([D-24](../research.md#d-24)).
 7. Respond **`202 Accepted`** with the safety copy's reference and the expected downtime — the
    administrator is told the instance will be briefly unavailable (FR-106).
