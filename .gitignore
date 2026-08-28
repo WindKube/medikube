@@ -34,3 +34,27 @@ go.work.sum
 # Tooling caches. go-task keeps its checksum state here; the linters and
 # pre-commit environments are managed by mise and pre-commit themselves.
 .task/
+
+# The built binary. Anchored with a leading slash: a bare `medikube` line is a
+# path component match at any depth, and it would silently untrack cmd/medikube/.
+/medikube
+
+# Tool binaries `task install:*` downloads or builds — the Tailwind standalone
+# and the golangci-lint that had to be compiled by this module's own toolchain.
+.bin/
+
+# Build products of `task gen`. Both spellings of the Tailwind bundle are here:
+# tasks.md T005 names assets/app.css and the generator writes it to the embedded
+# directory instead.
+*_templ.go
+assets/app.css
+internal/web/static/app.css
+
+# The instance's data. The medical records live here; it is the one directory in
+# a checkout that must never reach a remote.
+pb_data/
+*.db*
+
+# Playwright's install and its run output.
+e2e/node_modules
+e2e/test-results

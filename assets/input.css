@@ -1,0 +1,12 @@
+/* Tailwind v4 entrypoint. `task gen:css` compiles this to
+   internal/web/static/app.css, which is embedded and gitignored.
+
+   @source points at the .templ SOURCES, never the generated *_templ.go. Tailwind
+   scans for class names as text; the generated Go files contain the same strings,
+   but pointing the glob at them means the stylesheet depends on `templ generate`
+   having already run. Worse, a glob that matches nothing produces an EMPTY
+   stylesheet and exits 0 — no error, no warning, just an unstyled application
+   (house-pattern trap, specs/research/frontend.md). */
+@import "tailwindcss";
+
+@source "../internal/web/**/*.templ";

@@ -2,23 +2,173 @@ version: "3"
 
 # Every task below runs the same command the corresponding CI job runs, so
 # `task ci` is a faithful dry run of the pipeline rather than an approximation
-# of it. There is no compiler in this repository: "lint" is the four linters,
-# "build" is link integrity, and "test" is the structural assertions over the
-# spec corpus.
+# of it. Two tiers sit side by side: the Go module, and the specification corpus
+# it is written against — the docs gates predate the compiler and still gate.
+
+vars:
+  BIN: medikube
+  GO_BUILD_FLAGS: -trimpath
+  # A dirty or tagless tree is honestly labelled `dev` rather than pretending to
+  # be a release.
+  VERSION:
+    sh: git describe --tags --always --dirty 2>/dev/null || echo dev
+  TAILWIND_VERSION: v4.3.3
+  # 2.12.2 and earlier are built with go1.26 and refuse this module outright
+  # ("the Go language version used to build golangci-lint is lower than the
+  # targeted Go version"), and their vendored staticcheck panics building IR for
+  # 1.27 source. This is the first release that lints Go 1.27.
+  GOLANGCI_VERSION: 2.13.2
+
+env:
+  # go.mod's `toolchain go1.27.0` line is the single place the version is
+  # written, and `auto` is what lets it apply. PocketBase v0.40.1 imports
+  # encoding/json/v2, so a shell or a runner exporting GOTOOLCHAIN=local builds
+  # with whatever go is on PATH — 1.26 in this house — and reports it as a
+  # complaint about go.mod rather than about the override that caused it.
+  GOTOOLCHAIN: auto
 
 tasks:
   default:
     cmds:
       - task: ci
 
+  # --- toolchain -----------------------------------------------------------
+
+  install:tailwind:
+    desc: Fetch the pinned Tailwind standalone binary into .bin/
+    status:
+      - test -x .bin/tailwindcss
+    cmds:
+      - mkdir -p .bin
+      # The x86_64 release asset is named x64, not amd64, and macOS is macos,
+      # not darwin. An unmapped `uname` 404s and the failure reads like a
+      # network blip rather than a naming mistake.
+      - |
+        set -eu
+        case "$(uname -s)" in
+          Linux) os=linux ;;
+          Darwin) os=macos ;;
+          *) echo "no Tailwind standalone build for $(uname -s)" >&2; exit 1 ;;
+        esac
+        case "$(uname -m)" in
+          x86_64 | amd64) arch=x64 ;;
+          aarch64 | arm64) arch=arm64 ;;
+          *) echo "no Tailwind standalone build for $(uname -m)" >&2; exit 1 ;;
+        esac
+        curl -sSfL -o .bin/tailwindcss \
+          "https://github.com/tailwindlabs/tailwindcss/releases/download/{{.TAILWIND_VERSION}}/tailwindcss-$os-$arch"
+        chmod +x .bin/tailwindcss
+
+  install:golangci-lint:
+    desc: Build the pinned golangci-lint with this module's own toolchain
+    # Not `command -v golangci-lint`: a golangci-lint built by an older Go
+    # refuses a newer module, so the check has to be the version and not merely
+    # the presence, and the binary has to be built here rather than downloaded.
+    status:
+      - .bin/golangci-lint --version | grep -q "version {{.GOLANGCI_VERSION}} "
+    cmds:
+      - >-
+        GOBIN="$PWD/.bin" go install
+        github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v{{.GOLANGCI_VERSION}}
+
+  # --- generate ------------------------------------------------------------
+
+  gen:
+    desc: Generate the templ components and the Tailwind bundle
+    # Sequential rather than a parallel `deps:` pair: input.css's @source globs
+    # cover the generated *_templ.go as well as the .templ sources, so Tailwind
+    # must not race the generator.
+    cmds:
+      - task: gen:templ
+      - task: gen:css
+
+  gen:templ:
+    desc: templ sources to *_templ.go
+    cmds:
+      # `go tool templ`, never an installed binary: go.mod's tool directive pins
+      # the generator to the same version as the runtime library it emits calls
+      # into, so the two cannot drift.
+      - go tool templ generate
+
+  gen:css:
+    desc: Tailwind entrypoint to the embedded stylesheet
+    deps: [install:tailwind]
+    cmds:
+      - .bin/tailwindcss -i assets/input.css -o internal/web/static/app.css --minify
+
+  # --- Go ------------------------------------------------------------------
+
+  vet:
+    desc: go vet
+    deps: [gen]
+    cmds:
+      - go vet ./...
+
+  build:
+    desc: Build the binary
+    deps: [gen]
+    cmds:
+      - >-
+        go build {{.GO_BUILD_FLAGS}}
+        -ldflags="-s -w -X main.version={{.VERSION}}"
+        -o {{.BIN}} ./cmd/{{.BIN}}
+
+  run:
+    desc: Build and serve
+    deps: [build]
+    cmds:
+      - ./{{.BIN}} serve {{.CLI_ARGS}}
+
+  migrate:
+    desc: "Apply the migrations — `task migrate -- down` for the other direction"
+    deps: [build]
+    cmds:
+      - ./{{.BIN}} migrate {{.CLI_ARGS}}
+
+  seed:
+    desc: Create the demo accounts and their records; refuses to run in production
+    deps: [build]
+    cmds:
+      - ./{{.BIN}} seed {{.CLI_ARGS}}
+
+  routes:
+    desc: "Print the route inventory — `task routes -- --json` for the machine form"
+    deps: [build]
+    cmds:
+      - ./{{.BIN}} routes {{.CLI_ARGS}}
+
+  openapi:
+    desc: Regenerate the committed OpenAPI document from the route registry
+    deps: [build]
+    cmds:
+      - ./{{.BIN}} openapi --out api/openapi.json
+
+  docker:build:
+    desc: Build the container image
+    # The context is the repository root because this repository *is* the
+    # project: it was extracted out of the monorepo, where the shared
+    # build-image.yaml passed the monorepo root and every COPY was prefixed with
+    # `medikube/`. Those prefixes do not resolve here.
+    cmds:
+      - docker build -f Dockerfile --build-arg VERSION={{.VERSION}} -t {{.BIN}}:local .
+
+  # --- lint ----------------------------------------------------------------
+
   lint:
     desc: Every linter, in CI's order
     cmds:
+      - task: lint:go
       - task: lint:md
       - task: lint:yaml
       - task: lint:actions
       - task: lint:shell
       - task: lint:links
+
+  lint:go:
+    desc: golangci-lint over the module
+    deps: [gen, install:golangci-lint]
+    cmds:
+      - .bin/golangci-lint run ./...
 
   lint:md:
     desc: markdownlint-cli2 over the prose
@@ -53,11 +203,49 @@ tasks:
       # green build depend on other people's uptime and rate limits.
       - lychee --config lychee.toml --no-progress --offline .
 
+  # --- test ----------------------------------------------------------------
+
   test:
     desc: The test tier
     cmds:
+      - task: test:go
       - task: test:specs
       - task: test:naming
+
+  test:go:
+    desc: The Go suites, race detector on
+    deps: [gen]
+    # -count=1 defeats the test cache: these assert against a real embedded
+    # database and a cached PASS from a previous schema is not evidence.
+    cmds:
+      - >-
+        go test -race -shuffle=on -count=1
+        -coverprofile=coverage.out -covermode=atomic ./...
+
+  test:phileak:
+    desc: The PHI-leak suite — every sink, against a sentinel-seeded instance
+    # Build-tagged and therefore invisible to `task test`: it boots an instance
+    # and drives every endpoint, which is minutes rather than seconds. Phases
+    # 002-006 extend the exercise, never the assertion, and run it through here.
+    deps: [gen]
+    cmds:
+      - go test -tags=phileak -count=1 ./internal/testsupport/phileak/...
+
+  test:e2e:
+    desc: The whole Playwright suite, both viewports
+    deps: [build]
+    dir: e2e
+    cmds:
+      - npm ci
+      - npx playwright test
+
+  smoke:
+    desc: The smoke and console-error gate alone
+    deps: [build]
+    dir: e2e
+    cmds:
+      - npm ci
+      - npx playwright test smoke.spec.ts
 
   test:specs:
     desc: Structural assertions over specs/

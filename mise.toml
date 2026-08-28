@@ -1,10 +1,13 @@
 # The dev toolchain. `mise install` gets you everything the Taskfile and the
 # pre-commit hooks expect on PATH.
-#
-# No Go, and no version of it: this repository is specifications and design.
-# `go build` would have nothing to compile, so the three tiers are linting,
-# link integrity, and the structural assertions in scripts/.
 [tools]
+# 1.27, not the 1.26.5 the rest of the house is on: PocketBase v0.40.1 imports
+# encoding/json/v2 and does not compile on anything older. The authoritative
+# copy of this number is go.mod's `toolchain` line — this one only saves the
+# shim a toolchain download. golangci-lint is deliberately absent: it has to be
+# built by this toolchain, which `task install:golangci-lint` does.
+go = "1.27.0"
+
 task = "3.53.1"
 pre-commit = "4.6.2"
 

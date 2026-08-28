@@ -1,0 +1,28 @@
+# Everything by default; the build needs a short, explicit list and nothing else.
+*
+
+!go.mod
+!go.sum
+!cmd/
+!internal/
+!assets/
+
+# Generated in the image's own generate stage. A host-built copy in the context
+# would be copied over the source tree and shadow what that stage produces.
+internal/web/**/*_templ.go
+internal/web/static/app.css
+
+# PocketBase's data directory holds the live database and every uploaded file. It
+# must never enter a build context.
+**/pb_data/
+**/*.db
+**/*.db-wal
+**/*.db-shm
+
+# The specification corpus is the input to the code, not to the image.
+specs/
+.specify/
+docs/
+e2e/node_modules/
+e2e/test-results/
+.bin/
