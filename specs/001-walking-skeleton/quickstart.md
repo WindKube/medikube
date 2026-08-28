@@ -127,8 +127,9 @@ Sign in as the seeded account:
 amara@example.test / medikube-dev-password
 ```
 
-Account B is `bo@example.test` (one medication), account C is `chen@example.test` (none — the
-empty state).
+Account B is `boris@example.test` (three medications — the isolation counterparty every
+stranger-refused check below is run as), and account C is `chidi@example.test` (none: the empty
+state, and the one account seeded unverified so the "not confirmed" settings state is real).
 
 ---
 
@@ -148,7 +149,7 @@ The whole point of the phase: one record kind proving every layer.
 5. Delete it, via the **rendered** confirmation (`region[name="Confirm delete"]`) — not a browser
    dialog. It is **hard deleted**: no `deleted_at`, no tombstone, no way to get it back. Confirm
    with `sqlite3 pb_data/data.db 'select count(*) from medications where id = "..."'`.
-6. Sign in as `chen@example.test`: `region[name="Medications"]` is present and contains the empty
+6. Sign in as `chidi@example.test`: `region[name="Medications"]` is present and contains the empty
    state — the region is there, not replaced.
 
 ### US2 — Accounts (P2)
@@ -211,11 +212,11 @@ saying the link is no longer usable, at `200`, not an error view: that page *is*
 This is the story the whole architecture exists for, so verify it directly.
 
 ```bash
-# as bo, request one of amara's medications and something that never existed
+# as boris, request one of amara's medications and something that never existed
 curl -s -o /tmp/a.json -w '%{http_code} %{time_total}\n' \
-  -b bo.cookies http://127.0.0.1:8090/api/v1/records/medications/<amara-med-id>
+  -b boris.cookies http://127.0.0.1:8090/api/v1/records/medications/<amara-med-id>
 curl -s -o /tmp/b.json -w '%{http_code} %{time_total}\n' \
-  -b bo.cookies http://127.0.0.1:8090/api/v1/records/medications/zzzzzzzzzzzzzzz
+  -b boris.cookies http://127.0.0.1:8090/api/v1/records/medications/zzzzzzzzzzzzzzz
 
 diff /tmp/a.json /tmp/b.json && echo "IDENTICAL"
 ```
@@ -336,7 +337,7 @@ test shorter than that.** CI runs a job longer than five minutes for this reason
 
 ### One subscriber never sees another's records
 
-Two terminals, two accounts, both streaming. Create a medication as amara. Bo's stream must
+Two terminals, two accounts, both streaming. Create a medication as amara. Boris's stream must
 receive **zero** frames. This is the test that catches an authorization check hoisted out of the
 per-event loop.
 

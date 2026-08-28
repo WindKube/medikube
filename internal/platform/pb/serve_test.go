@@ -3,6 +3,7 @@ package pb_test
 import (
 	"errors"
 	"net/http"
+	"sort"
 	"testing"
 	"time"
 
@@ -11,9 +12,11 @@ import (
 	"github.com/pocketbase/pocketbase/tests"
 	"github.com/pocketbase/pocketbase/tools/hook"
 	"github.com/pocketbase/pocketbase/tools/router"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"medikube/internal/obs"
 	"medikube/internal/platform/pb"
 )
 
@@ -132,40 +135,86 @@ func TestServeOverridesPocketBasesFiveMinuteWriteTimeout(t *testing.T) {
 	})
 }
 
+// T066. The chain MediKube serves, written out end to end.
+//
+// It is written out rather than probed because the lockdown short-circuits: the
+// chain is not a list of things that all run, it is a list of things that run
+// *before* the 404, and everything after it is skipped on a locked route. Every
+// neighbour is therefore load-bearing —
+//
+//   - the request logger first, ahead of everything PocketBase binds, so a
+//     request the rate limiter refuses is still correlated (research D-29);
+//   - loadAuthToken before the lockdown, or e.Auth is nil and the superuser
+//     carve-out cannot exist;
+//   - securityHeaders before the lockdown, or a locked 404 arrives without the
+//     four headers a genuine 404 carries and one of them answers the question
+//     the 404 exists to refuse (commit c51a563);
+//   - rateLimit and bodyLimit after it, which is what makes them unreachable on
+//     a locked route.
+//
+// The priorities are literals rather than PocketBase's constants. LockdownPriority
+// is derived — DefaultSecurityHeadersMiddlewarePriority + 1 — so an upgrade that
+// renumbered securityHeaders would carry the lockdown along with it, and an
+// expectation written in the same constants would follow both and assert nothing.
+var medikubeMiddlewareOrder = []boundMiddleware{
+	{id: obs.RequestLoggerID, priority: -1050},
+	{id: "pbPanicRecover", priority: -1030},
+	{id: "pbLoadAuthToken", priority: -1020},
+	{id: "pbSuperuserIPsWhitelist", priority: -1015},
+	{id: "pbSecurityHeaders", priority: -1010},
+	{id: pb.LockdownMiddlewareID, priority: -1009},
+	{id: "pbRateLimit", priority: -1000},
+	{id: "pbBodyLimit", priority: -990},
+}
+
+type boundMiddleware struct {
+	id       string
+	priority int
+}
+
 func TestServeEstablishesTheMiddlewareOrder(t *testing.T) {
 	t.Parallel()
 
 	app := serveApp(t)
 
-	probe := &hook.Handler[*core.RequestEvent]{
-		Id:       "medikubeProbe",
-		Priority: apis.DefaultActivityLoggerMiddlewarePriority - 10,
-		Func:     func(e *core.RequestEvent) error { return e.Next() },
-	}
-
-	pb.BindServe(app, pb.ServeOptions{Middlewares: []*hook.Handler[*core.RequestEvent]{probe}})
+	// MediKube's own request logger, not a stand-in: its priority is part of
+	// the order under test, and a probe placed by this test would be asserting
+	// a number this test chose.
+	pb.BindServe(app, pb.ServeOptions{
+		Middlewares: []*hook.Handler[*core.RequestEvent]{obs.RequestLogger(zerolog.Nop())},
+	})
 
 	se, err := triggerServe(t, app, pocketBaseServer())
 	require.NoError(t, err)
 
-	t.Run("the lockdown is bound", func(t *testing.T) {
-		lockdown := findMiddleware(se.Router.Middlewares, pb.LockdownMiddlewareID)
-		require.NotNil(t, lockdown)
-		assert.Equal(t, pb.LockdownPriority, lockdown.Priority)
+	t.Run("the chain is exactly as designed, in execution order", func(t *testing.T) {
+		// Sorted stably by priority, which is what the router does per route
+		// (tools/hook/hook.go:98-100) when it builds the chain out of
+		// Router.Middlewares — that slice is in bind order, not run order.
+		bound := make([]boundMiddleware, 0, len(se.Router.Middlewares))
+		for _, middleware := range se.Router.Middlewares {
+			bound = append(bound, boundMiddleware{id: middleware.Id, priority: middleware.Priority})
+		}
+
+		sort.SliceStable(bound, func(i, j int) bool { return bound[i].priority < bound[j].priority })
+
+		assert.Equal(t, medikubeMiddlewareOrder, bound)
 	})
 
 	t.Run("PocketBase's activity logger is gone", func(t *testing.T) {
 		// It records the full request URI, and a query string is where a search
 		// for a medication name ends up (FR-038). MediKube's own request logger
-		// records the path only.
+		// records the path only, and takes the slot it vacated.
 		assert.Nil(t, findMiddleware(se.Router.Middlewares, apis.DefaultActivityLoggerMiddlewareId),
 			"the activity logger writes the query string into a second log store")
 	})
 
-	t.Run("MediKube's own middlewares are bound ahead of it", func(t *testing.T) {
-		bound := findMiddleware(se.Router.Middlewares, probe.Id)
-		require.NotNil(t, bound)
-		assert.Less(t, bound.Priority, apis.DefaultActivityLoggerMiddlewarePriority,
+	t.Run("the request logger takes the slot ahead of everything PocketBase binds", func(t *testing.T) {
+		logger := findMiddleware(se.Router.Middlewares, obs.RequestLoggerID)
+		require.NotNil(t, logger)
+
+		assert.Equal(t, apis.DefaultActivityLoggerMiddlewarePriority-10, logger.Priority)
+		assert.Less(t, logger.Priority, apis.DefaultRateLimitMiddlewarePriority,
 			"a request refused by the rate limiter must still be correlated")
 	})
 

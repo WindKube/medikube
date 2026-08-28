@@ -60,15 +60,42 @@ func TestSettingsAfterBootMatchTheMediKubeConfiguration(t *testing.T) {
 		// self-hosted medical instance reachable from the internet wants
 		// (FR-006, research D-18).
 		assert.True(t, settings.RateLimits.Enabled)
-		assert.Equal(t, pb.RateLimitRules(), settings.RateLimits.Rules)
 
-		labels := make([]string, 0, len(settings.RateLimits.Rules))
-		for _, rule := range settings.RateLimits.Rules {
-			labels = append(labels, rule.Label)
-		}
-
-		assert.Contains(t, labels, "POST /api/v1/auth/login")
-		assert.Contains(t, labels, "POST /api/v1/auth/register")
+		// Written out rather than compared against pb.RateLimitRules(), which
+		// would be the implementation asserted against itself: every rule would
+		// still match after somebody halved a window or dropped the floor.
+		// These four numbers are a security posture (FR-006, research D-18) and
+		// changing one has to look like changing a test.
+		//
+		// The last rule's empty audience is load-bearing and easy to lose: the
+		// floor applies to signed-in callers too, and "@guest" here would leave
+		// every authenticated request unlimited.
+		assert.Equal(t, []core.RateLimitRule{
+			{
+				Label:       "POST /api/v1/auth/login",
+				Audience:    core.RateLimitRuleAudienceGuest,
+				Duration:    60,
+				MaxRequests: 10,
+			},
+			{
+				Label:       "POST /api/v1/auth/register",
+				Audience:    core.RateLimitRuleAudienceGuest,
+				Duration:    3600,
+				MaxRequests: 5,
+			},
+			{
+				Label:       "POST /api/v1/auth/password-reset",
+				Audience:    core.RateLimitRuleAudienceGuest,
+				Duration:    3600,
+				MaxRequests: 5,
+			},
+			{
+				Label:       "/api/",
+				Audience:    core.RateLimitRuleAudienceAll,
+				Duration:    10,
+				MaxRequests: 300,
+			},
+		}, settings.RateLimits.Rules)
 	})
 
 	t.Run("the session lifetime is the configured one", func(t *testing.T) {

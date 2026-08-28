@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"sort"
 	"strings"
 	"sync"
@@ -12,6 +15,8 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -115,23 +120,42 @@ func (c *Capture) Tracer(name string) trace.Tracer { return c.provider.Tracer(na
 // to observe an event without a DSN and a network.
 func (c *Capture) SentryTransport() *SentryTransport { return c.sentry }
 
-// WatchMetrics registers the Prometheus exposition text.
+// WatchMetrics registers the application's Prometheus registry.
 //
-// It takes a rendering function rather than a prometheus.Gatherer because
-// github.com/prometheus/client_golang cannot currently be imported: go.mod pins
-// it as an indirect requirement but go.sum carries no entry for its own
-// dependencies — client_model, common, procfs and beorn7/perks — so a build
-// that imports it fails with "missing go.sum entry". Resolving that is a go.mod
-// change and therefore a deliberate act, not a side effect of writing this
-// file.
+// It takes the gatherer rather than a string because a hand-written string is a
+// sink nobody wired: the fixture would be asserting over text the fixture
+// composed, and the middleware that took a medication name for a dimension
+// would never be in it.
 //
-// Scanning the exposition text rather than the *dto.MetricFamily structures is
-// not a workaround, though: metric names and label values are the two places a
-// person's data reaches a metrics endpoint, and the exposition format is
-// exactly those two things rendered. It is also what a scrape actually
-// receives, which is what the requirement is about.
-func (c *Capture) WatchMetrics(render func() (string, error)) {
-	c.watch(SinkMetrics, render)
+// What is scanned is the exposition text the gatherer produces, rendered
+// through promhttp exactly as a scrape would receive it. That is deliberate
+// rather than convenient: metric names, label values and HELP strings are the
+// three places a person's data reaches a metrics endpoint, and the exposition
+// format is those three things rendered. Reading the *dto.MetricFamily
+// structures instead would mean deciding which of their fields to walk, and the
+// field somebody forgot is the one a scrape would still publish.
+func (c *Capture) WatchMetrics(gatherer prometheus.Gatherer) {
+	c.watch(SinkMetrics, func() (string, error) { return renderMetrics(gatherer) })
+}
+
+// renderMetrics is one scrape, run in memory. An error is returned rather than
+// swallowed so that Sinks turns a gatherer that could not be read into a
+// finding rather than into a stream with nothing in it.
+func renderMetrics(gatherer prometheus.Gatherer) (string, error) {
+	if gatherer == nil {
+		return "", errors.New("the gatherer is nil, so nothing was scraped")
+	}
+
+	recorder := httptest.NewRecorder()
+	handler := promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{ErrorHandling: promhttp.HTTPErrorOnError})
+
+	handler.ServeHTTP(recorder, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/metrics", nil))
+
+	if recorder.Code != http.StatusOK {
+		return "", fmt.Errorf("scraping the gatherer answered %d: %s", recorder.Code, recorder.Body.String())
+	}
+
+	return recorder.Body.String(), nil
 }
 
 // Watch registers any further sink a later phase adds. The name appears in the

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
@@ -53,11 +54,18 @@ func TestEverySinkCatchesASentinel(t *testing.T) {
 		{
 			sink: SinkMetrics,
 			leak: func(t *testing.T, capture *Capture) {
-				// A label value, which is where a metrics endpoint leaks: a
-				// middleware that took a path segment for a dimension.
-				capture.WatchMetrics(func() (string, error) {
-					return fmt.Sprintf("medikube_records_total{name=%q} 1\n", sentinel), nil
-				})
+				// A label value on a real registry, which is where a metrics
+				// endpoint leaks: a middleware that took a path segment for a
+				// dimension.
+				registry := prometheus.NewRegistry()
+				records := prometheus.NewCounterVec(
+					prometheus.CounterOpts{Name: "medikube_records_total", Help: "records written"},
+					[]string{"name"},
+				)
+				registry.MustRegister(records)
+				records.WithLabelValues(sentinel).Inc()
+
+				capture.WatchMetrics(registry)
 			},
 		},
 	}
@@ -145,12 +153,19 @@ func TestAnEmptySentinelListIsRefused(t *testing.T) {
 func TestASinkThatCannotBeReadIsAFindingRatherThanAnEmptyStream(t *testing.T) {
 	t.Parallel()
 
-	capture := New(t)
-	capture.WatchMetrics(func() (string, error) {
-		return "", assert.AnError
+	// A registry that fails to gather, not a stub renderer: a collector that
+	// reports an error is the way a real metrics endpoint goes dark, and it
+	// produces an empty scrape body if nothing looks at the status.
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(brokenCollector{
+		desc: prometheus.NewDesc("medikube_broken", "a collector that cannot collect", nil, nil),
 	})
 
+	capture := New(t)
+	capture.WatchMetrics(registry)
+
 	var metrics Sink
+
 	for _, sink := range capture.Sinks() {
 		if sink.Name == SinkMetrics {
 			metrics = sink
@@ -158,7 +173,86 @@ func TestASinkThatCannotBeReadIsAFindingRatherThanAnEmptyStream(t *testing.T) {
 	}
 
 	assert.Contains(t, metrics.Text, "could not be read",
-		"a renderer that failed must not read as a stream with nothing in it")
+		"a gatherer that failed must not read as a stream with nothing in it")
+}
+
+// The metrics sink is the one that reaches into somebody else's library, so the
+// three fields a scrape publishes are each proved to be scanned. A leak through
+// any of them is the same disclosure, and the exposition text is the only place
+// they appear together.
+func TestTheMetricsSinkScansNamesLabelsAndHelp(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		field    string
+		sentinel string
+		register func(registry *prometheus.Registry, sentinel string)
+	}{
+		{
+			field: "the metric name",
+			// A name is restricted to [a-zA-Z0-9_:], so the sentinel takes the
+			// shape a name-derived leak would actually take.
+			sentinel: "amoxicillin_9f2c",
+			register: func(registry *prometheus.Registry, sentinel string) {
+				registry.MustRegister(prometheus.NewCounter(
+					prometheus.CounterOpts{Name: "medikube_" + sentinel + "_doses_total", Help: "doses"},
+				))
+			},
+		},
+		{
+			field:    "a label value",
+			sentinel: sentinel,
+			register: func(registry *prometheus.Registry, sentinel string) {
+				doses := prometheus.NewCounterVec(
+					prometheus.CounterOpts{Name: "medikube_doses_total", Help: "doses"},
+					[]string{"medication"},
+				)
+				registry.MustRegister(doses)
+				doses.WithLabelValues(sentinel).Inc()
+			},
+		},
+		{
+			field:    "the HELP text",
+			sentinel: sentinel,
+			register: func(registry *prometheus.Registry, sentinel string) {
+				registry.MustRegister(prometheus.NewGauge(
+					prometheus.GaugeOpts{Name: "medikube_doses", Help: "doses of " + sentinel},
+				))
+			},
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.field, func(t *testing.T) {
+			t.Parallel()
+
+			registry := prometheus.NewRegistry()
+			testCase.register(registry, testCase.sentinel)
+
+			capture := New(t)
+			capture.WatchMetrics(registry)
+
+			failures := recordFailures(func(report Reporter) {
+				capture.AssertNoSentinels(report, testCase.sentinel)
+			})
+
+			require.Len(t, failures, 1)
+			assert.Contains(t, failures[0], SinkMetrics)
+			assert.Contains(t, failures[0], testCase.sentinel)
+		})
+	}
+}
+
+// brokenCollector is a collector whose Collect reports an error, which is what
+// makes Gather fail.
+type brokenCollector struct {
+	desc *prometheus.Desc
+}
+
+func (c brokenCollector) Describe(ch chan<- *prometheus.Desc) { ch <- c.desc }
+
+func (c brokenCollector) Collect(ch chan<- prometheus.Metric) {
+	ch <- prometheus.NewInvalidMetric(c.desc, assert.AnError)
 }
 
 func TestTheCaptureHoldsExactlyTheFourSinks(t *testing.T) {
@@ -177,7 +271,7 @@ func complete(t *testing.T) *Capture {
 	t.Helper()
 
 	capture := New(t)
-	capture.WatchMetrics(func() (string, error) { return "", nil })
+	capture.WatchMetrics(prometheus.NewRegistry())
 
 	return capture
 }

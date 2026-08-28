@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -590,6 +591,9 @@ var filterDSLExempt = map[string]string{
 
 // PocketBase's own entry points into its filter DSL. A call to one of these is
 // a filter string by definition, wherever the string itself was written.
+//
+// The literal detector below cannot see a filter that was assembled rather than
+// written, so this list is the whole backstop for one.
 var filterDSLCalls = map[string]string{
 	"FindRecordsByFilter":     "takes a filter DSL string and substitutes its {:params} into the text before parsing (tools/search/filter.go:56-80)",
 	"FindFirstRecordByFilter": "the same, for one record",
@@ -597,6 +601,18 @@ var filterDSLCalls = map[string]string{
 	"FilterData":              "the DSL parser itself",
 	"ParseSortFromString":     "the sort half of the same DSL",
 	"NewRecordFieldResolver":  "resolves DSL identifiers against a collection, which only a DSL string needs",
+	"CanAccessRecord":         "runs the rule it is handed through the DSL — search.FilterData(*accessRule).BuildExpr(resolver) at core/record_query.go:620-621 — so an access rule assembled at the call site is a filter (research D-26)",
+	"ParseAndExec":            "search.Provider's one-shot: it reads the raw `filter=` URL query parameter straight into the DSL (tools/search/provider.go:224-226)",
+}
+
+// Names PocketBase's search provider shares with the standard library. Banned
+// on the same terms as the list above, but not when the receiver is a
+// standard-library package this file imports: `Parse` is search.Provider's
+// front door onto the raw `filter=` query parameter and it is also url.Parse
+// and time.Parse, and a gate that flagged those would be turned off within a
+// week.
+var filterDSLAmbiguousCalls = map[string]string{
+	"Parse": "search.Provider.Parse reads the raw `filter=` URL query parameter into the DSL (tools/search/provider.go:224-226) — request input straight into a query language",
 }
 
 var (
@@ -638,9 +654,7 @@ func TestNoFilterDSLStringAppearsOutsideThisPackage(t *testing.T) {
 	)
 
 	walkGoFiles(t, root, func(rel string) {
-		// This package is where the DSL lives. internal/store/migrations is
-		// under it and legitimately restores PocketBase's own stock API rules.
-		if strings.HasPrefix(rel, "internal/store/") {
+		if filterDSLWalkSkips(rel) {
 			return
 		}
 
@@ -650,42 +664,124 @@ func TestNoFilterDSLStringAppearsOutsideThisPackage(t *testing.T) {
 
 		scanned++
 
-		file, err := parser.ParseFile(fileSet, filepath.Join(root, rel), nil, parser.SkipObjectResolution)
-		require.NoErrorf(t, err, "parsing %s", rel)
-
-		ast.Inspect(file, func(node ast.Node) bool {
-			switch typed := node.(type) {
-			case *ast.SelectorExpr:
-				if reason, banned := filterDSLCalls[typed.Sel.Name]; banned {
-					offences = append(offences, fileSet.Position(typed.Pos()).String()+
-						": names "+typed.Sel.Name+", which "+reason+
-						" — build a store.Query instead (research D-26, plan.md internal/store)")
-				}
-			case *ast.BasicLit:
-				if typed.Kind != token.STRING {
-					return true
-				}
-
-				value, unquoteErr := strconv.Unquote(typed.Value)
-				if unquoteErr != nil {
-					return true
-				}
-
-				if reason := looksLikeFilterDSL(value); reason != "" {
-					offences = append(offences, fileSet.Position(typed.Pos()).String()+
-						": the literal is a PocketBase filter expression ("+reason+
-						") — build a store.Query instead, or add the file to filterDSLExempt with a reason")
-				}
-			}
-
-			return true
-		})
+		offences = append(offences, filterDSLOffences(t, fileSet, filepath.Join(root, rel))...)
 	})
 
 	require.Greater(t, scanned, 20, "the walk found almost nothing; it is not looking where it thinks it is")
 
 	sort.Strings(offences)
 	assert.Empty(t, offences)
+}
+
+// The package that writes the DSL, and the one tree under it that legitimately
+// restores PocketBase's own stock API rules.
+const (
+	filterDSLPackage    = "internal/store"
+	filterDSLMigrations = "internal/store/migrations"
+)
+
+// filterDSLWalkSkips is the exemption, and it is a package and a tree rather
+// than a prefix. `internal/store/` as a prefix also exempted
+// internal/store/medication, internal/store/identity and internal/store/audit —
+// the three repository packages phases 002-006 fill, doc.go only today — which
+// is precisely the population this gate exists to police. The comment justified
+// migrations and the code exempted four packages more.
+func filterDSLWalkSkips(rel string) bool {
+	dir := path.Dir(rel)
+
+	return dir == filterDSLPackage ||
+		dir == filterDSLMigrations ||
+		strings.HasPrefix(dir, filterDSLMigrations+"/")
+}
+
+// filterDSLOffences is one file's findings, factored out of the walk so the
+// detector can be run over a source that does not exist in the repository —
+// which is the only way to prove a repository package that has not been written
+// yet would be caught.
+func filterDSLOffences(t *testing.T, fileSet *token.FileSet, absolute string) []string {
+	t.Helper()
+
+	file, err := parser.ParseFile(fileSet, absolute, nil, parser.SkipObjectResolution)
+	require.NoErrorf(t, err, "parsing %s", absolute)
+
+	stdlib := standardLibraryImports(file)
+
+	var offences []string
+
+	ast.Inspect(file, func(node ast.Node) bool {
+		switch typed := node.(type) {
+		case *ast.SelectorExpr:
+			reason, banned := filterDSLCalls[typed.Sel.Name]
+			if !banned {
+				if ambiguous, shared := filterDSLAmbiguousCalls[typed.Sel.Name]; shared && !stdlibReceiver(typed.X, stdlib) {
+					reason, banned = ambiguous, true
+				}
+			}
+
+			if banned {
+				offences = append(offences, fileSet.Position(typed.Pos()).String()+
+					": names "+typed.Sel.Name+", which "+reason+
+					" — build a store.Query instead (research D-26, plan.md internal/store)")
+			}
+		case *ast.BasicLit:
+			if typed.Kind != token.STRING {
+				return true
+			}
+
+			value, unquoteErr := strconv.Unquote(typed.Value)
+			if unquoteErr != nil {
+				return true
+			}
+
+			if reason := looksLikeFilterDSL(value); reason != "" {
+				offences = append(offences, fileSet.Position(typed.Pos()).String()+
+					": the literal is a PocketBase filter expression ("+reason+
+					") — build a store.Query instead, or add the file to filterDSLExempt with a reason")
+			}
+		}
+
+		return true
+	})
+
+	return offences
+}
+
+// standardLibraryImports is the local names this file binds to standard-library
+// packages. A module path always carries a dot in its first element and a
+// standard-library path never does, which is the same test the architecture
+// suite uses and costs no dependency.
+func standardLibraryImports(file *ast.File) map[string]bool {
+	names := map[string]bool{}
+
+	for _, spec := range file.Imports {
+		importPath, err := strconv.Unquote(spec.Path.Value)
+		if err != nil {
+			continue
+		}
+
+		first, rest, _ := strings.Cut(importPath, "/")
+		if strings.Contains(first, ".") {
+			continue
+		}
+
+		local := path.Base(first + "/" + rest)
+		if spec.Name != nil {
+			local = spec.Name.Name
+		}
+
+		names[local] = true
+	}
+
+	return names
+}
+
+// stdlibReceiver is true for `url.Parse` and false for `provider.Parse`. A
+// local variable shadowing an imported package name would read as the package;
+// that is a narrower hole than banning the name outright would open.
+func stdlibReceiver(receiver ast.Expr, stdlib map[string]bool) bool {
+	ident, isIdent := receiver.(*ast.Ident)
+
+	return isIdent && stdlib[ident.Name]
 }
 
 func looksLikeFilterDSL(value string) string {
@@ -710,6 +806,108 @@ func looksLikeFilterDSL(value string) string {
 
 	return ""
 }
+
+// The exemption is the other half of the gate, and it is the half that fails
+// silently: a file the walk never opens is a file with no findings.
+func TestTheSourceWalkExemptsThisPackageAndMigrationsAndNothingElse(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		rel     string
+		skipped bool
+		why     string
+	}{
+		{rel: "internal/store/filter.go", skipped: true, why: "this package is where the DSL is written"},
+		{rel: "internal/store/cursor.go", skipped: true, why: "the same package"},
+		{rel: "internal/store/filter_test.go", skipped: true, why: "this file names every banned call by hand"},
+		{rel: "internal/store/migrations/1756100200_" + kind.Medication.Collection() + ".go", skipped: true, why: "migrations restore PocketBase's own stock API rules"},
+		{rel: "internal/store/medication/repo.go", skipped: false, why: "a repository package: exactly where an assembled filter would be written"},
+		{rel: "internal/store/identity/repo.go", skipped: false, why: "the same"},
+		{rel: "internal/store/audit/repo.go", skipped: false, why: "the same"},
+		{rel: "internal/web/api/" + kind.Medication.Collection() + ".go", skipped: false, why: "a handler, which is where request input meets a query"},
+		{rel: "internal/storefront/query.go", skipped: false, why: "a prefix match on internal/store would take this too"},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.rel, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equalf(t, testCase.skipped, filterDSLWalkSkips(testCase.rel), "%s — %s", testCase.rel, testCase.why)
+		})
+	}
+}
+
+// And the file the exemption above no longer covers has to actually produce a
+// finding, which nothing proves while internal/store/medication holds a doc.go
+// and nothing else. So the detector is run over a repository package written
+// for the purpose.
+func TestARepositoryPackageThatReachesForTheDSLIsAFinding(t *testing.T) {
+	t.Parallel()
+
+	// The collection is spelled by the kind table and not by hand, which is the
+	// rule internal/architecture's kind-literal walk enforces on every file.
+	repo := `package medication
+
+import (
+	"net/url"
+
+	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/search"
+)
+
+func List(app core.App, owner string, provider *search.Provider, raw string) error {
+	if _, err := url.Parse(raw); err != nil {
+		return err
+	}
+
+	if err := provider.Parse(raw); err != nil {
+		return err
+	}
+
+	if _, err := provider.ParseAndExec(raw, nil); err != nil {
+		return err
+	}
+
+	if ok, err := app.CanAccessRecord(nil, nil, nil); err != nil || !ok {
+		return err
+	}
+
+	_, err := app.FindRecordsByFilter("` + kind.Medication.Collection() + `", "owner = {:owner}", "-created", 25, 0)
+
+	return err
+}
+`
+
+	absolute := filepath.Join(t.TempDir(), "repo.go")
+	require.NoError(t, os.WriteFile(absolute, []byte(repo), 0o600))
+
+	require.False(t, filterDSLWalkSkips("internal/store/medication/repo.go"),
+		"the walk has to open the file before the detector can say anything about it")
+
+	offences := filterDSLOffences(t, token.NewFileSet(), absolute)
+
+	var reported []string
+
+	for _, offence := range offences {
+		if named := filterDSLReportedCall.FindStringSubmatch(offence); named != nil {
+			reported = append(reported, named[1])
+		}
+	}
+
+	// Exactly these, and `Parse` exactly once: url.Parse is in the same file,
+	// and a gate that flagged it would be paid for in exemptions until somebody
+	// deleted it.
+	assert.ElementsMatch(t,
+		[]string{"FindRecordsByFilter", "CanAccessRecord", "ParseAndExec", "Parse"},
+		reported)
+
+	assert.Contains(t, strings.Join(offences, "\n"), "{:param} placeholder",
+		"the written-out filter in the same file is still a finding of its own")
+}
+
+// The call named by an offence, so a test can assert the exact set rather than
+// that each name appears somewhere in a megabyte of message.
+var filterDSLReportedCall = regexp.MustCompile(`: names (\w+), which `)
 
 // The gate has to be able to fail, so this is the same detector run against
 // strings that are filters. If a change to looksLikeFilterDSL stops it seeing
