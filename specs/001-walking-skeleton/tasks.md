@@ -24,7 +24,7 @@ independently testable.
   merge**. Used where the honest measurement is a trend a human reads, not a threshold — see T202a
   and Constitution VIII's ban on flaky gate assertions (ANALYSIS N13).
 - Every task names the **exact** file path
-- Paths are relative to `medigo/` unless they start with `/`, which means the repository root
+- Paths are relative to `medikube/` unless they start with `/`, which means the repository root
 
 ---
 
@@ -33,7 +33,7 @@ independently testable.
 **Purpose**: the module, the toolchain, the lint gates and the monorepo wiring. Nothing here
 imports anything; this is the ground the rest stands on.
 
-- [ ] T001 Create `go.mod` — `module medigo`, `go 1.27`, `toolchain go1.27.x`, and the
+- [ ] T001 Create `go.mod` — `module medikube`, `go 1.27`, `toolchain go1.27.x`, and the
   `tool ( github.com/a-h/templ/cmd/templ )` directive. **Not 1.26.5**: PocketBase v0.40.1 imports
   `encoding/json/v2` in 67 non-test files and will not build (research D-02, VERIFIED FACT 0).
 - [ ] T002 Add every pinned dependency at the exact version in `plan.md`'s Technical Context and
@@ -47,7 +47,7 @@ imports anything; this is the ground the rest stands on.
   (Principle II) and `forbidigo` banning `app.Logger()`, `slog.`, `log.Print` and the
   `OnRecord(Create|Update|Delete|View|List)Request` family outside `internal/platform/pb/hooks.go`
   (Principles VI, and research D-14 for the auth-family carve-out).
-- [ ] T005 [P] Create `.gitignore` — `medigo`, `.bin/`, `*_templ.go`, `assets/app.css`, `pb_data/`,
+- [ ] T005 [P] Create `.gitignore` — `medikube`, `.bin/`, `*_templ.go`, `assets/app.css`, `pb_data/`,
   `*.db*`, `e2e/node_modules`, `e2e/test-results`.
 - [ ] T006 [P] Create `Taskfile.yaml` with arc-ui's task names (`gen`, `vet`, `lint`, `test`,
   `build`, `run`, `docker:build`) plus `migrate`, `seed`, `routes`, `openapi`, `smoke`,
@@ -60,16 +60,16 @@ imports anything; this is the ground the rest stands on.
 - [ ] T008 [P] Vendor Datastar browser runtime **v1.0.2** to
   `internal/web/static/datastar.js` and embed it via `internal/web/static/embed.go`. The Go SDK is
   v1.2.2 — **different version lines, both correct** (research D-33).
-- [ ] T009 [P] Create `cmd/medigo/version.go` with the `version` var populated by
+- [ ] T009 [P] Create `cmd/medikube/version.go` with the `version` var populated by
   `-ldflags -X main.version`, and wire the flag into `Taskfile.yaml` and the `Dockerfile`.
 - [ ] T010 [P] Create the 4-stage `Dockerfile` — templ+tailwind, Go build with `CGO_ENABLED=0`,
   distroless runtime, `USER 65532:65532`. **Every `COPY` is project-prefixed**
-  (`COPY medigo/go.mod ./`) because the shared workflow passes the repository root as the build
+  (`COPY medikube/go.mod ./`) because the shared workflow passes the repository root as the build
   context. Pin `TAILWIND_VERSION`, use the `x64` asset name (**not** `amd64`), and create every
   directory in an earlier stage — distroless has no shell and no `mkdir`. No `HEALTHCHECK`.
   The image is the single self-contained artefact, with no companion service (FR-061).
-- [ ] T011 [P] Add `!medigo/` to the allowlist block of `/.dockerignore`, mirroring arc-ui's
-  build-output exclusions plus `medigo/pb_data/`. **Omitting this fails the image build with a
+- [ ] T011 [P] Add `!medikube/` to the allowlist block of `/.dockerignore`, mirroring arc-ui's
+  build-output exclusions plus `medikube/pb_data/`. **Omitting this fails the image build with a
   misleading "file not found"** (constitution Development Workflow; recorded in the user's memory).
 - [ ] T012 TEST `internal/platform/pb/build_smoke_test.go` — a test that merely imports
   `github.com/pocketbase/pocketbase` and constructs an app, run **first**, to prove the toolchain
@@ -79,10 +79,10 @@ imports anything; this is the ground the rest stands on.
   the forbidden dependencies is in `go.mod` or imported anywhere: Gin, Huma, Viper, samber/mo,
   samber/ro, samber/slog-zerolog, any React or HTMX asset, jsvm, or any cgo-requiring package
   (constitution Forbidden).
-- [ ] T014 [P] Add `medigo` to `workflow_dispatch.inputs.project-name.options` in
+- [ ] T014 [P] Add `medikube` to `workflow_dispatch.inputs.project-name.options` in
   `/.github/workflows/build-image.yaml`.
-- [ ] T015 [P] Create `.github/workflows/medigo-ci.yml` and copy it to
-  `/.github/workflows/medigo-ci.yml` (house convention: the canonical file lives with the
+- [ ] T015 [P] Create `.github/workflows/medikube-ci.yml` and copy it to
+  `/.github/workflows/medikube-ci.yml` (house convention: the canonical file lives with the
   project, the root copy executes). Jobs: `gen` → `vet` → `lint` → `test` → `openapi-diff` →
   `e2e` → `stream-liveness`. **Do not set `GOTOOLCHAIN=local`.**
 - [ ] T016 [P] Create `README.md` and `CLAUDE.md` (day-to-day guidance consistent with the
@@ -105,14 +105,14 @@ exists.
 
 ### Configuration and the log stream
 
-- [ ] T018 [P] TEST `internal/config/config_test.go` — every `MEDIGO_` variable parses, defaults
-  apply, an absent `MEDIGO_DATA_DIR` fails, `MEDIGO_DRAIN_MAX <= MEDIGO_DRAIN_DELAY` fails, and
-  **every** validation problem is reported in one error rather than the first (FR-051). `MEDIGO_DATA_DIR`
+- [ ] T018 [P] TEST `internal/config/config_test.go` — every `MEDIKUBE_` variable parses, defaults
+  apply, an absent `MEDIKUBE_DATA_DIR` fails, `MEDIKUBE_DRAIN_MAX <= MEDIKUBE_DRAIN_DELAY` fails, and
+  **every** validation problem is reported in one error rather than the first (FR-051). `MEDIKUBE_DATA_DIR`
   is the one location everything the instance holds lives under (FR-061).
 - [ ] T019 [P] TEST `internal/config/redact_test.go` — marshalling the config to zerolog emits no
   secret value for any secret-bearing field, asserted field by field via reflection so a newly
   added secret fails the test by default (FR-041).
-- [ ] T020 Implement `internal/config/config.go` — the ONE `caarlos0/env` struct, `MEDIGO_` prefix,
+- [ ] T020 Implement `internal/config/config.go` — the ONE `caarlos0/env` struct, `MEDIKUBE_` prefix,
   per the observability dossier's field list. **No Viper.**
 - [ ] T021 Implement `internal/config/validate.go` using `errors.Join`.
 - [ ] T022 Implement `internal/config/redact.go` — `MarshalZerologObject` redacting every secret.
@@ -193,7 +193,7 @@ exists.
   `HideStartBanner`, an explicit `DefaultDataDir` and the `DBConnect` hook.
 - [ ] T052 Implement `internal/platform/pb/app.go`.
 - [ ] T053 [P] TEST `internal/platform/pb/settings_test.go` — after boot: `Batch.Enabled == false`,
-  `Logs.MaxDays == 1`, rate limits and token TTLs match the MediGo config. Settings are written
+  `Logs.MaxDays == 1`, rate limits and token TTLs match the MediKube config. Settings are written
   from validated env at boot and never hand-edited in the admin UI (ANALYSIS M4).
 - [ ] T054 Implement `internal/platform/pb/settings.go`.
 - [ ] T055 [P] TEST `internal/platform/pb/lockdown_test.go` — **the most important test in the
@@ -225,8 +225,8 @@ exists.
   this phase; the assertion does, because phase 002 adds one and a file served to a stranger is
   exactly the failure Principle VII exists to prevent.
 - [ ] T063 [P] TEST `internal/platform/pb/no_file_routes_test.go` — `GET /api/files/...` is
-  unreachable for every collection and no MediGo route issues a PocketBase file token. Files are
-  served only from MediGo's own `/api/v1` routes, with authorization applied.
+  unreachable for every collection and no MediKube route issues a PocketBase file token. Files are
+  served only from MediKube's own `/api/v1` routes, with authorization applied.
 - [ ] T064 [P] TEST `internal/platform/pb/adminwarn_test.go` — the warning fires on each of the four
   conditions independently: empty `Settings().SuperuserIPs`, superusers-collection `MFA.Enabled`
   false, a **non-empty `MFA.Rule`** (a partial rollout that reads as "on"), and fewer than two
@@ -244,7 +244,7 @@ exists.
   migration, up → down → up leaves an identical schema. Reversibility is by construction
   (`Register(up, down, filename)`) but only a test proves it (VERIFIED FACT 8, FR-059).
 - [ ] T069 Implement `internal/store/migrations/1756100100_users_profile.go` — amend `users` with
-  the seven MediGo fields, set all five API rules to nil, leave `AuthRule` as
+  the seven MediKube fields, set all five API rules to nil, leave `AuthRule` as
   `types.Pointer("")`, add `idx_users_email_lower`, set token config (data-model §1).
 - [ ] T070 Implement `internal/store/migrations/1756100200_medications.go` — create `medications`
   with thirteen fields, three enums, `owner → users` **`Required: true, CascadeDelete: true`**,
@@ -256,7 +256,7 @@ exists.
   migration extends and re-asserts; a value a phase writes but no migration declared is a red test
   here rather than a failed `SelectField` validation in production (ANALYSIS C1). **Also asserts
   the two field sizes the later phases depend on**: `target_id` is `Max 64` (phase 006 writes
-  18–29-character job names and ~40-character archive names into it) and `request_id` is `Max 64`
+  20–31-character job names and ~40-character archive names into it) and `request_id` is `Max 64`
   **and `Required`** — a row that correlates to nothing must not be writable (ANALYSIS).
 - [ ] T071 Implement `internal/store/migrations/1756100300_audit_events.go` — create `audit_events`
   with seven fields, **no `ip` column, no `reason` column, no `affected` column, no content
@@ -283,7 +283,7 @@ exists.
   rejected rather than trusted; the encoding is keyset, never an offset; and a cursor issued
   before a restart still validates afterwards (research D-25, CT-3).
 - [ ] T078 Implement `internal/store/cursor.go` — opaque HMAC-signed keyset cursors, key derived by
-  HKDF from PocketBase's persisted auth-token secret with `MEDIGO_CURSOR_KEY` as an override
+  HKDF from PocketBase's persisted auth-token secret with `MEDIKUBE_CURSOR_KEY` as an override
   (**CT-3** — confirm the exact secret field name against v0.40.1 at implementation time).
 - [ ] T079 [P] TEST `internal/store/mapping_test.go` — `*core.Record` ↔ domain in both directions,
   including the calendar-date handling and `encoding/json/v2`'s stricter semantics (research D-28).
@@ -319,7 +319,7 @@ exists.
   fake handler makes `RunOwnershipMatrix` **fail**. A matrix that cannot fail proves nothing, and
   five later phases depend on this one helper.
 - [ ] T092 [P] TEST `internal/testsupport/fixtures_test.go` — the exported fixture constants match
-  what `medigo seed` actually writes, so a drifting seed breaks the harness loudly.
+  what `medikube seed` actually writes, so a drifting seed breaks the harness loudly.
 
 ### The route registry, OpenAPI and the record family
 
@@ -419,15 +419,16 @@ exists.
   builds with no cycle, so a wiring mistake fails a test rather than the first request.
 - [ ] T131 Implement `internal/di/container.go` and `providers.go` — samber/do v2, wired **only** in
   the composition root.
-- [ ] T132 Implement `cmd/medigo/main.go` — the composition root and the **only** place in the
+- [ ] T132 Implement `cmd/medikube/main.go` — the composition root and the **only** place in the
   program permitted to panic.
-- [ ] T133 TEST `cmd/medigo/main_test.go` — the composition root builds end to end against a test
+- [ ] T133 TEST `cmd/medikube/main_test.go` — the composition root builds end to end against a test
   app and reaches a serving state against an empty data directory (FR-063).
 
 **Checkpoint**: `task test` passes, the instance boots against an empty data directory, the
 lockdown holds, and the log stream is pure zerolog. User stories can now start in parallel.
 
 ---
+
 ## Phase 3: User Story 1 — Keep an accurate medication list (Priority: P1) 🎯 MVP
 
 **Goal**: one clinical record kind proving every layer — domain, store, service, the generic
@@ -477,7 +478,7 @@ confirm the row is gone from stored data. All nine of US1's acceptance scenarios
   path and machine code (FR-027).
 - [ ] T145 [P] [US1] TEST `internal/web/api/records_delete_test.go` — a delete removes the row
   from stored data outright: no `deleted_at`, no tombstone, no filtered-out survivor. Soft delete
-  in MediGo is **files only**, and a record collection carrying a deletion column would be a
+  in MediKube is **files only**, and a record collection carrying a deletion column would be a
   schema-level contradiction of that (data-model §2).
 - [ ] T146 [P] [US1] TEST `internal/web/api/records_etag_test.go` — PATCH and DELETE without
   `If-Match` are refused; with a stale one the response is **412 carrying the current
@@ -596,7 +597,7 @@ confirm the row is gone from stored data. All nine of US1's acceptance scenarios
 ## Phase 4: User Story 2 — Own and control my account (Priority: P2)
 
 **Goal**: registration, sign-in, sessions, profile, password change and account deletion, built on
-PocketBase's native auth but exposed only through MediGo's own DTOs.
+PocketBase's native auth but exposed only through MediKube's own DTOs.
 
 **Independent Test**: register, sign in, change the display name and theme, change the password
 and watch every other session stop working, then delete the account and confirm every medication
@@ -672,7 +673,7 @@ under it is gone from stored data.
 - [ ] T204 [P] [US2] TEST `internal/web/views/settings/*_test.go` — profile, password and the danger
   zone, each rendering inside `region[name="Settings"]`.
 - [ ] T205 [P] [US2] TEST `internal/platform/pb/hooks_auth_test.go` — `OnRecordAuthRequest` writes
-  the `login` audit row for **both** MediGo's own login route and PocketBase's native one. This
+  the `login` audit row for **both** MediKube's own login route and PocketBase's native one. This
   is the one `OnRecord*Request` binding the phase permits and the reason for the forbidigo
   carve-out (research D-14).
 - [ ] T206 [P] [US2] TEST `internal/web/api/register_closed_test.go` — with registration closed,
@@ -799,7 +800,7 @@ ends every prior session through the same mechanism T200 already asserts.
   which answer `200` with the expired-link state (contracts/pages.md).
 - [ ] T223o [US2] Implement the mail-unconfigured refusal and the third boot warning in
   `internal/platform/pb/adminwarn.go` and the auth handlers, and confirm the two token durations
-  MediGo inherits are the documented ones — reset **30 minutes**, confirmation **24 hours** —
+  MediKube inherits are the documented ones — reset **30 minutes**, confirmation **24 hours** —
   writing them into `contracts/auth.md` if PocketBase's defaults differ from what is documented
   there.
 - [ ] T223p [P] [US2] `e2e/smoke.spec.ts` cases for `/forgot-password`, `/reset-password/{token}`
@@ -877,7 +878,7 @@ row; grep the whole captured log stream and find no medication name.
   **127.0.0.1 only** and is unreachable from the application's own port (FR-055).
 - [ ] T238 [P] [US3] TEST `internal/web/api/bulk_absence_test.go` — no general-purpose browsing or
   bulk-extraction facility is reachable by an ordinary account: the collections subtree is 404,
-  `/api/batch` is 404, and no MediGo route accepts an arbitrary filter expression (FR-035).
+  `/api/batch` is 404, and no MediKube route accepts an arbitrary filter expression (FR-035).
 
 ### Implementation for User Story 3
 
@@ -908,6 +909,7 @@ row; grep the whole captured log stream and find no medication name.
 eight of US3's acceptance scenarios pass.
 
 ---
+
 ## Phase 6: User Story 4 — Find my way around without getting lost (Priority: P4)
 
 **Goal**: one shell, four landmarks, on every page, at both viewports, proven by a render gate
@@ -929,7 +931,7 @@ the console open; every page has the shell, nothing overflows, and the console i
   and relies on the Tailwind `dark` variant responding to `prefers-color-scheme`. No inline script:
   the CSP bans it and `data-persist` is Datastar Pro (FR-045, research D-36).
 - [ ] T252 [P] [US4] TEST `internal/web/views/shell/noscript_test.go` — every page carries a
-  `<noscript>` block **inside `main`** stating plainly that MediGo requires scripting (FR-049).
+  `<noscript>` block **inside `main`** stating plainly that MediKube requires scripting (FR-049).
 - [ ] T253 [P] [US4] TEST `internal/web/page/nav_test.go` — the current location is marked
   `aria-current`, and every page offers a route back to the medication list (FR-050).
 - [ ] T254 [P] [US4] TEST `internal/web/render_test.go` — after a full-region patch, focus is moved
@@ -968,7 +970,7 @@ the console open; every page has the shell, nothing overflows, and the console i
 - [ ] T267 [US4] Configure `e2e/playwright.config.ts` with the two projects — desktop 1440×900 and
   mobile 390×844 — and the two flakiness mitigations from reconciliation C16.
 - [ ] T268 [US4] Implement `e2e/routes.ts` — the smoke list produced by shelling out to
-  `medigo routes --json` at collection time, so the gate's page list **is** the application's own
+  `medikube routes --json` at collection time, so the gate's page list **is** the application's own
   inventory (FR-067).
 - [ ] T269 [P] [US4] Implement `e2e/package.json` and pin the Playwright version.
 
@@ -1007,21 +1009,21 @@ it complete.
   successfully.
 - [ ] T275 [P] [US5] TEST `internal/cli/seed_test.go` — the seed is deterministic (same ids twice),
   **idempotent** (running it twice changes nothing), and **refuses to run** when
-  `MEDIGO_ENV=production` with no override (FR-060).
-- [ ] T276 [P] [US5] TEST `internal/cli/routes_test.go` — `medigo routes --json` lists exactly the
+  `MEDIKUBE_ENV=production` with no override (FR-060).
+- [ ] T276 [P] [US5] TEST `internal/cli/routes_test.go` — `medikube routes --json` lists exactly the
   registry's routes, needs no database and binds no port.
 - [ ] T277 [P] [US5] TEST `internal/web/api/health_exclusions_test.go` — probe traffic appears in
   neither the activity log, nor the metrics, nor the traces.
 - [ ] T278 [P] [US5] TEST `internal/cli/migrate_test.go` — `migrate down` is refused when
-  `MEDIGO_ENV=production` without `--force`, because the down of migration 3 drops `audit_events`.
+  `MEDIKUBE_ENV=production` without `--force`, because the down of migration 3 drops `audit_events`.
 - [ ] T279 [P] [US5] TEST `internal/cli/openapi_cmd_test.go` — the command writes a document
   byte-identical to the committed `api/openapi.json`.
 - [ ] T280 [P] [US5] TEST `internal/config/failure_output_test.go` — a configuration failure names
   the offending variable and **never** its value (FR-041).
 - [ ] T281 [P] [US5] TEST `internal/cli/healthcheck_test.go` — exits 0 against a ready instance and
   non-zero otherwise, printing nothing on success.
-- [ ] T282 [P] [US5] TEST `internal/cli/root_test.go` — MediGo's subcommands are registered on
-  PocketBase's `RootCmd`, and **every MediGo flag is defined on its own subcommand**: PocketBase
+- [ ] T282 [P] [US5] TEST `internal/cli/root_test.go` — MediKube's subcommands are registered on
+  PocketBase's `RootCmd`, and **every MediKube flag is defined on its own subcommand**: PocketBase
   pre-parses `--dir`, `--encryptionEnv` and `--dev` from `os.Args` inside `NewWithConfig`, before
   Cobra runs, and swallows an unrecognised global flag silently.
 - [ ] T283 [P] [US5] TEST `internal/logging/correlation_test.go` — one request produces log lines
@@ -1034,7 +1036,7 @@ it complete.
 - [ ] T285 [US5] Implement `internal/web/api/health.go` — `healthz` and `readyz`, excluded from the
   activity logger, the metrics middleware and the tracing middleware.
 - [ ] T286 [US5] Implement the drain handler in `internal/platform/pb/serve.go` at priority -10000,
-  with `MEDIGO_DRAIN_DELAY` and `MEDIGO_DRAIN_MAX`, and handle `TerminateEvent.IsRestart`.
+  with `MEDIKUBE_DRAIN_DELAY` and `MEDIKUBE_DRAIN_MAX`, and handle `TerminateEvent.IsRestart`.
 - [ ] T287 [P] [US5] Implement `internal/cli/root.go` — subcommand registration and the removal of
   the PocketBase commands that would bypass the lockdown. T287–T291 and `serve` are together the six
   operator commands of FR-058.
@@ -1042,7 +1044,7 @@ it complete.
 - [ ] T289 [P] [US5] Implement `internal/cli/routes.go` (FR-058).
 - [ ] T290 [P] [US5] Implement `internal/cli/openapi.go` (FR-058, FR-064).
 - [ ] T291 [P] [US5] Implement `internal/cli/healthcheck.go` (FR-058).
-- [ ] T292 [US5] Implement the boot sequence in `cmd/medigo/main.go` — config, migrations, the two
+- [ ] T292 [US5] Implement the boot sequence in `cmd/medikube/main.go` — config, migrations, the two
   boot assertions, settings, the admin warning, and **one** startup line at info (FR-053).
 
 **Checkpoint**: the instance is operable and observable. All nine of US5's acceptance scenarios
@@ -1097,7 +1099,7 @@ each break the build for the right reason.
 
 ### Implementation for User Story 6
 
-- [ ] T304 [US6] Complete `.github/workflows/medigo-ci.yml` — `gen`, `vet`, `lint`, `test`,
+- [ ] T304 [US6] Complete `.github/workflows/medikube-ci.yml` — `gen`, `vet`, `lint`, `test`,
   `openapi-diff`, `e2e` and the separate **`stream-liveness`** job that runs longer than five
   minutes. Every failure blocks the merge (FR-070).
 - [ ] T305 [US6] Verify the image builds through the shared pipeline from a clean checkout on the
@@ -1142,7 +1144,7 @@ scenarios pass.
   cite the contract's amended figures rather than a re-derived one.
 - [ ] T317 [P] Confirm the exact PocketBase v0.40.1 field name backing the cursor HMAC key
   derivation and update `internal/store/cursor.go` and research D-25 if it differs (**CT-3**).
-- [ ] T318 [P] Publish the complete documented environment in `README.md` — every `MEDIGO_`
+- [ ] T318 [P] Publish the complete documented environment in `README.md` — every `MEDIKUBE_`
   variable, its default and whether it is required — and check `quickstart.md`'s minimum set
   matches it exactly (FR-051, SC-008).
 - [ ] T319 [P] Run `task lint` with `--max-issues-per-linter=0 --max-same-issues=0` and clear
@@ -1167,6 +1169,7 @@ scenarios pass.
   the phase complete.
 
 ---
+
 ## Dependencies & Execution Order
 
 ### Phase dependencies

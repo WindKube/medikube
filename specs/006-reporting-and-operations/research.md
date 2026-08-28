@@ -29,11 +29,11 @@ trust this document.
 | [D-01](#d-01) | PDF engine: `go-pdf/fpdf`, pinned, behind a `report.Renderer` port |
 | [D-02](#d-02) | Charts are drawn as PDF vector primitives. No chart library. |
 | [D-03](#d-03) | Series reduction: deterministic every-k-th decimation, stated on the page |
-| [D-04](#d-04) | Font coverage, bidi, and the limitation MediGo states rather than hides |
+| [D-04](#d-04) | Font coverage, bidi, and the limitation MediKube states rather than hides |
 | [D-05](#d-05) | One worker, one queue, position from the row order |
 | [D-06](#d-06) | Startup reconciliation kills the "running forever" job (closes R9) |
 | [D-07](#d-07) | Job scratch space is PocketBase's `.pb_temp_to_delete`, and that is not an accident |
-| [D-08](#d-08) | The artifact is a `Protected: true` file field served by MediGo's own route |
+| [D-08](#d-08) | The artifact is a `Protected: true` file field served by MediKube's own route |
 | [D-09](#d-09) | Authorization is re-resolved when production *starts*, not when it is requested |
 | [D-10](#d-10) | Limits and retention windows are configuration with published defaults |
 | [D-11](#d-11) | The audit reader never joins to content — the DTO has nowhere to put it |
@@ -50,7 +50,7 @@ trust this document.
 | [D-22](#d-22) | The safety backup is a precondition of the restore, not a courtesy |
 | [D-23](#d-23) | The restore journal, because a restore destroys the audit rows that describe it |
 | [D-24](#d-24) | `,unset` × `execve`: the environment must be re-applied before `RestoreBackup` |
-| [D-25](#d-25) | `medigo.json` in `pb_data` is the archive's version marker |
+| [D-25](#d-25) | `medikube.json` in `pb_data` is the archive's version marker |
 | [D-26](#d-26) | Reading an archive for preview: local file directly, S3 via the temp dir |
 | [D-27](#d-27) | Archive download is a `POST` with password re-entry |
 | [D-28](#d-28) | A restore is refused while a job is running |
@@ -142,11 +142,11 @@ point markers, using `Line`, `Rect`, `SetDashPattern`, `SetLineWidth` and `Text`
 library is added.** Nothing is rasterised, so a chart is crisp at any print resolution and adds no
 image bytes to the document.
 
-**Rationale.** The chart MediGo needs is fully described by FR-020 and FR-021: one time series, a
+**Rationale.** The chart MediKube needs is fully described by FR-020 and FR-021: one time series, a
 labelled x-axis of dates, a labelled y-axis carrying the unit, an optional reference band, and a
 table of the same points beside it. That is roughly 250 lines of straight-line drawing code, all of
 it testable by asserting on the emitted PDF content stream. A chart library would bring a font
-stack, a colour theme, a layout engine and an opinion about legends, and MediGo would then have to
+stack, a colour theme, a layout engine and an opinion about legends, and MediKube would then have to
 fight all four to satisfy FR-021's "no meaning by colour alone" (which is expressed here by giving
 each series a distinct marker shape and each reference boundary a distinct dash pattern, in addition
 to any colour).
@@ -158,13 +158,13 @@ to any colour).
   something the target format already draws natively.
 - **`gonum.org/v1/plot`.** Larger, brings `vg` and its own font assets, same rasterisation problem.
 - **SVG into the PDF.** `fpdf` cannot place SVG. Would require an SVG-to-PDF converter — a third
-  dependency for a picture MediGo can just draw.
+  dependency for a picture MediKube can just draw.
 
 ---
 
 ## D-03
 
-**Decision.** When a chart's selected range resolves to more than `MEDIGO_REPORT_MAX_CHART_POINTS`
+**Decision.** When a chart's selected range resolves to more than `MEDIKUBE_REPORT_MAX_CHART_POINTS`
 readings (default **200**), the series is reduced by **deterministic every-k-th decimation** with
 `k = ceil(n / max)`, always keeping the **first and last** readings, and the document prints, in
 words, directly beneath the chart: *"Showing 200 of 517 readings (every 3rd reading). The
@@ -201,12 +201,12 @@ runes, and draws each run with that face. Runs whose base direction is right-to-
 from logical to visual order with **`golang.org/x/text/unicode/bidi`** (already in the module graph,
 pure Go) before drawing.
 
-**MediGo states the limitation instead of hiding it.** Arabic and Hebrew are reordered but **not
+**MediKube states the limitation instead of hiding it.** Arabic and Hebrew are reordered but **not
 contextually shaped** — Arabic letters are drawn in isolated forms. Scripts with no embedded face
 (CJK, Devanagari, Thai, and every other) are drawn as U+FFFD, and the report's first page carries a
 counted, plain-language note: *"N characters could not be rendered with the fonts available to this
 instance and appear as ▯. The exported data file contains the exact text."* The operator may extend
-coverage by pointing `MEDIGO_REPORT_EXTRA_FONT_DIR` at a directory of additional TrueType files,
+coverage by pointing `MEDIKUBE_REPORT_EXTRA_FONT_DIR` at a directory of additional TrueType files,
 which are added to the coverage chain at boot and listed on `/admin`.
 
 **Rationale.** The specification's edge case requires that non-Latin, right-to-left and
@@ -250,7 +250,7 @@ no in-memory queue to lose.
 FR-045 is therefore satisfied by construction: at most one job runs on an instance because there is
 exactly one worker, and the order is the row order.
 
-**Rationale.** MediGo is single-instance by construction (constitution, Technology Constraints), so a
+**Rationale.** MediKube is single-instance by construction (constitution, Technology Constraints), so a
 broker, a work-stealing pool and a distributed lock are all forbidden speculative machinery. A
 database-backed queue with one consumer is the whole of what FR-045 asks for, survives a restart
 (D-06), and makes "your position is 3" a `COUNT`, not a bookkeeping structure that can drift from
@@ -285,7 +285,7 @@ the fix is deterministic too.
 **Alternatives considered.**
 
 - **A heartbeat column and a staleness threshold.** Necessary only if more than one process could be
-  running the job. MediGo forbids that (Technology Constraints). Rejected as machinery for a
+  running the job. MediKube forbids that (Technology Constraints). Rejected as machinery for a
   topology that cannot exist.
 - **Leaving them and letting the retention purge collect them.** They would report themselves as
   running for up to a week, which is precisely what FR-049 forbids.
@@ -307,7 +307,7 @@ and only moved into the `export_jobs.artifact` file field on success.
   taken while an export is running: both complete, and the archive either contains the finished
   artifact or does not, never a half-written one."*
 - `core/base.go:449` does `os.RemoveAll(filepath.Join(app.DataDir(), LocalTempDirName))` on every
-  `Bootstrap()`, so a restart mid-export erases the scratch file with no code of MediGo's own, which
+  `Bootstrap()`, so a restart mid-export erases the scratch file with no code of MediKube's own, which
   is the other half of D-06.
 - `core/backup_restore.go:63` excludes the same directory from the restore, so a restore cannot be
   confused by it either.
@@ -320,7 +320,7 @@ instead of the volume.
 
 - **`os.TempDir()` / `t.TempDir()`-style scratch.** Wrong filesystem, wrong lifetime, and it is
   outside the volume.
-- **A MediGo-owned `pb_data/medigo_tmp`.** Would be **included** in backups, failing the edge case
+- **A MediKube-owned `pb_data/medikube_tmp`.** Would be **included** in backups, failing the edge case
   above, and would survive restarts, failing D-06.
 - **Streaming straight into the file field.** PocketBase's file field takes a
   `*filesystem.File`, which wants a complete file or a byte slice
@@ -350,7 +350,7 @@ is served to any anonymous caller who knows the URL (constitution VII, VERIFIED-
 **Alternatives considered.**
 
 - **PocketBase's `?token=` file token.** Forbidden by the constitution for the reason above.
-- **A signed expiring URL of MediGo's own.** Same defect with extra code: possession of the address
+- **A signed expiring URL of MediKube's own.** Same defect with extra code: possession of the address
   becomes the credential, which FR-013 forbids in those words.
 - **Storing artifacts outside PocketBase, on the raw filesystem.** Loses cascade deletion with the
   owning row, which is what makes FR-051 ("deleting an account destroys its archives") free.
@@ -387,23 +387,23 @@ carry stale access across a revocation, which is the exact failure phase 005 exi
 
 ## D-10
 
-**Decision.** New configuration, all under the existing `MEDIGO_` prefix, all with published
+**Decision.** New configuration, all under the existing `MEDIKUBE_` prefix, all with published
 defaults, all validated at boot, and all shown on `/admin` so an operator never has to read the
 source to learn a window:
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `MEDIGO_REPORT_MAX_RECORDS` | `5000` | FR-010's documented maximum for one document |
-| `MEDIGO_REPORT_MAX_CHARTS` | `12` | FR-023's documented maximum |
-| `MEDIGO_REPORT_MIN_CHART_POINTS` | `3` | FR-017's published minimum to be chartable |
-| `MEDIGO_REPORT_MAX_CHART_POINTS` | `200` | D-03's decimation threshold |
-| `MEDIGO_REPORT_EXTRA_FONT_DIR` | *(empty)* | D-04's escape hatch |
-| `MEDIGO_EXPORT_MAX_BYTES` | `10 GiB` | refuse rather than fill the disk |
-| `MEDIGO_RETENTION_EXPORT_DAYS` | `7` *(already exists)* | FR-012 **and** FR-047 |
-| `MEDIGO_RETENTION_TRASH_DAYS` | `30` *(already exists)* | FR-057 |
-| `MEDIGO_RETENTION_AUDIT_DAYS` | `730` *(already exists)* | FR-074 |
-| `MEDIGO_BACKUP_WARN_AFTER` | `168h` | US5 AS-4's documented staleness threshold |
-| `MEDIGO_STATE_DIR` | `/data/medigo_state` | D-23's restore journal |
+| `MEDIKUBE_REPORT_MAX_RECORDS` | `5000` | FR-010's documented maximum for one document |
+| `MEDIKUBE_REPORT_MAX_CHARTS` | `12` | FR-023's documented maximum |
+| `MEDIKUBE_REPORT_MIN_CHART_POINTS` | `3` | FR-017's published minimum to be chartable |
+| `MEDIKUBE_REPORT_MAX_CHART_POINTS` | `200` | D-03's decimation threshold |
+| `MEDIKUBE_REPORT_EXTRA_FONT_DIR` | *(empty)* | D-04's escape hatch |
+| `MEDIKUBE_EXPORT_MAX_BYTES` | `10 GiB` | refuse rather than fill the disk |
+| `MEDIKUBE_RETENTION_EXPORT_DAYS` | `7` *(already exists)* | FR-012 **and** FR-047 |
+| `MEDIKUBE_RETENTION_TRASH_DAYS` | `30` *(already exists)* | FR-057 |
+| `MEDIKUBE_RETENTION_AUDIT_DAYS` | `730` *(already exists)* | FR-074 |
+| `MEDIKUBE_BACKUP_WARN_AFTER` | `168h` | US5 AS-4's documented staleness threshold |
+| `MEDIKUBE_STATE_DIR` | `/data/medikube_state` | D-23's restore journal |
 
 Reports and exports share one retention window deliberately: FR-012 and FR-047 both say "a
 documented window" and neither asks for two numbers. One knob, one sentence in the handbook.
@@ -513,7 +513,7 @@ each carrying the window that applies, and **neither carrying a file name, a des
 person any of them concerns** (FR-056). The overview links to `/documents?deleted=true`, which is a
 pointer, not a second surface (FR-057).
 
-An earlier revision of this decision added a `deleted_by` relation, a `medigo_purge_trash` cron and a
+An earlier revision of this decision added a `deleted_by` relation, a `medikube_purge_trash` cron and a
 restore-versus-purge conditional write to this phase. All three were written against the earlier
 draft of the specification, which restated phase 004's trash. **They are withdrawn.** Phase 004 owns
 the purge and its race; `deleted_by` is not required by any requirement in the current specification
@@ -591,12 +591,12 @@ figure in both carries its own `computed_at`:
 - **Live per request** (indexed `COUNT`s, milliseconds): accounts, patients, records per kind,
   attachments, active shares, pending invitations, queued/running/failed jobs, trash rows and trash
   bytes.
-- **From a cron-refreshed gauge** (`medigo_storage_refresh`, every 15 minutes, plus once at boot):
+- **From a cron-refreshed gauge** (`medikube_storage_refresh`, every 15 minutes, plus once at boot):
   database bytes (`data.db` + `-wal` + `auxiliary.db`) and document bytes (a walk of
   `<DataDir>/storage`). These are stored in memory with their computation time and served from there.
 
 `/admin/system` additionally reports: readiness (the same check `/readyz` performs), process uptime,
-build version, last-successful-backup name/time/size and its age against `MEDIGO_BACKUP_WARN_AFTER`,
+build version, last-successful-backup name/time/size and its age against `MEDIKUBE_BACKUP_WARN_AFTER`,
 superuser MFA posture, superuser IP-allowlist posture, SMTP posture, the migration state, and the
 list of failed or abandoned work (D-18's query).
 
@@ -701,7 +701,7 @@ stays valid until it expires unless the signing key rotates.
 - **A session table to revoke against.** PocketBase's tokens are stateless by design; adding a
   session table means re-implementing authentication, which Principle V forbids.
 - **Waiting for token expiry.** "Immediately" is in the requirement.
-- **Enforcing the last-admin rule only in the handler.** Then `medigo seed`, a future CLI subcommand
+- **Enforcing the last-admin rule only in the handler.** Then `medikube seed`, a future CLI subcommand
   and a test fixture can each lock the instance out. It belongs in the domain.
 
 ---
@@ -732,7 +732,7 @@ cannot proceed without doing so". That is a persisted state, not an email.
 
 ## D-21
 
-**Decision.** All seven backup operations are thin wrappers over PocketBase, and MediGo adds no
+**Decision.** All seven backup operations are thin wrappers over PocketBase, and MediKube adds no
 second mechanism:
 
 | Op | PocketBase call |
@@ -740,25 +740,25 @@ second mechanism:
 | list | `app.NewBackupsFilesystem()` → `fsys.List("")` → `blob.ListObject{Key, Size, ModTime}` |
 | create | `app.CreateBackup(ctx, name)` |
 | upload | `fsys.UploadMultipart(fh, key)` after validation |
-| preview | filesystem attributes + `medigo.json` from inside the archive (D-25, D-26) |
+| preview | filesystem attributes + `medikube.json` from inside the archive (D-25, D-26) |
 | download | `fsys.Serve(...)` after re-authentication (D-27) |
 | restore | `app.RestoreBackup(ctx, name)` (D-22, D-23, D-24) |
 | delete | `fsys.Delete(key)` |
 
 Concurrency is **PocketBase's own guard**: both `CreateBackup` (`core/backup_create.go:68`) and
 `RestoreBackup` (`core/backup_restore.go:52`) refuse when `app.Store().Has(core.StoreKeyActiveBackup)`
-(`core/backup.go:14`). MediGo reads the same key to answer "a restore is already in progress" with a
+(`core/backup.go:14`). MediKube reads the same key to answer "a restore is already in progress" with a
 `409 conflict` **before** doing any work, and maps PocketBase's own error to the same code if it
 loses the race (US7 AS-10).
 
 The restore handler mirrors `apis/backup.go`'s shape, which exists because `RestoreBackup` ends in
-`app.Restart()` → `execve` (`core/base.go:805-830`) and no response can be written after that: MediGo
+`app.Restart()` → `execve` (`core/base.go:805-830`) and no response can be written after that: MediKube
 responds **`202 Accepted`** with the safety-backup reference and the expected downtime, then performs
 the restore in an owned goroutine after a short delay.
 
 Scheduled backups are PocketBase's: `Settings().Backups.Cron` and `Backups.CronMaxKeep`
 (`core/settings_model.go:476-490`), registered by `registerAutobackupHooks` (`core/backup.go:33-105`)
-with the max-keep pruning already implemented. MediGo sets both from configuration at boot and
+with the max-keep pruning already implemented. MediKube sets both from configuration at boot and
 **surfaces failures**, which PocketBase logs but does not report: an `OnBackupCreate` hook records
 `backup_create` on success and `job_failed` on error, which is what puts a failed scheduled backup on
 `/admin` and in the trail (US7 AS-3).
@@ -769,12 +769,12 @@ when it fails, and that is the gap this phase fills.
 
 **Alternatives considered.**
 
-- **A MediGo backup format.** Would have to reimplement the concurrent-safe zip of an open SQLite
+- **A MediKube backup format.** Would have to reimplement the concurrent-safe zip of an open SQLite
   database that `core/backup_create.go` already implements with `VACUUM INTO` and an exclusion set.
 - **Exposing PocketBase's `/api/backups` directly.** Its download route "relies on superuser file
   token" (`apis/backup.go:22`) — a credential in a URL, forbidden by constitution VII — and it is
-  superuser-only, so a MediGo `admin` could not use it.
-- **A cron of MediGo's own.** Duplicates `registerAutobackupHooks` including its `maxKeep` pruning.
+  superuser-only, so a MediKube `admin` could not use it.
+- **A cron of MediKube's own.** Duplicates `registerAutobackupHooks` including its `maxKeep` pruning.
 
 ---
 
@@ -788,8 +788,8 @@ failure without touching anything:
 2. refuse with `409` if `app.Store().Has(core.StoreKeyActiveBackup)`;
 3. refuse with `409` if any `export_jobs` row is `queued` or `running` (D-28);
 4. read and validate the archive: it exists, it opens as a zip, it contains `data.db`, and its
-   `medigo.json` is version-compatible (D-25);
-5. **take the safety backup** with `app.CreateBackup(ctx, "medigo_safety_<YYYYMMDDHHMMSS>_<name>")` and wait
+   `medikube.json` is version-compatible (D-25);
+5. **take the safety backup** with `app.CreateBackup(ctx, "medikube_safety_<YYYYMMDDHHMMSS>_<name>")` and wait
    for it. **If it fails, the restore does not proceed** and the response says so;
 6. write the restore journal (D-23) and re-apply the environment snapshot (D-24);
 7. respond `202` with the safety-backup name;
@@ -812,7 +812,7 @@ what PocketBase already ships.
 
 ## D-23
 
-**Decision.** MediGo writes a **restore journal** to `MEDIGO_STATE_DIR` (default `/data/medigo_state`,
+**Decision.** MediKube writes a **restore journal** to `MEDIKUBE_STATE_DIR` (default `/data/medikube_state`,
 i.e. on the volume but **outside** `pb_data`) immediately before calling `RestoreBackup`:
 
 ```json
@@ -820,7 +820,7 @@ i.e. on the volume but **outside** `pb_data`) immediately before calling `Restor
   "safety_backup": "...", "actor": "<opaque user id>", "request_id": "..." }
 ```
 
-On the next `OnBootstrap` after `e.Next()`, if the journal exists MediGo writes the corresponding
+On the next `OnBootstrap` after `e.Next()`, if the journal exists MediKube writes the corresponding
 `backup_create` (safety copy) and `backup_restore` audit entries into the **restored** database,
 then deletes the journal. If the journal exists but the database is unchanged (the restore failed
 before completing), the boot path writes a `job_failed` entry instead, so the trail records what
@@ -852,8 +852,8 @@ records what happened."*
 
 - **Writing the audit rows before the restore.** They are erased by the restore. This is the
   seductive wrong answer.
-- **Writing them into `pb_data/backups/.medigo_restore_journal.json`.** Survives, but that directory
-  is the backups filesystem: the file would appear in `fsys.List("")` and MediGo would have to filter
+- **Writing them into `pb_data/backups/.medikube_restore_journal.json`.** Survives, but that directory
+  is the backups filesystem: the file would appear in `fsys.List("")` and MediKube would have to filter
   its own dotfile out of the operator's archive list forever.
 - **Re-deriving the restore from the archive's own contents at boot.** An archive does not record
   that it was restored.
@@ -862,7 +862,7 @@ records what happened."*
 
 ## D-24
 
-**Decision.** `cmd/medigo/main.go` captures `os.Environ()` into a package-level snapshot **as its
+**Decision.** `cmd/medikube/main.go` captures `os.Environ()` into a package-level snapshot **as its
 first statement, before `config.Load()` runs**. Immediately before calling `app.RestoreBackup`, the
 admin service re-applies that snapshot with `os.Setenv` for every variable currently absent.
 
@@ -875,7 +875,7 @@ admin service re-applies that snapshot with `os.Setenv` for every variable curre
 
 So by the time a restore restarts the process, every secret-bearing variable has been deleted from
 the environment the new process image will inherit. The instance comes back with no Sentry DSN, no
-OTLP headers and, depending on which variables carry `,unset`, possibly no `MEDIGO_PUBLIC_URL` — and
+OTLP headers and, depending on which variables carry `,unset`, possibly no `MEDIKUBE_PUBLIC_URL` — and
 it comes back *after a disaster recovery*, which is the worst possible moment to discover it. This
 was found by reading `Restart` rather than by testing, because a test shorter than an actual restore
 never exercises it.
@@ -896,14 +896,14 @@ re-apply restores every variable the process started with.
 
 ## D-25
 
-**Decision.** At every boot, MediGo writes `<DataDir>/medigo.json`:
+**Decision.** At every boot, MediKube writes `<DataDir>/medikube.json`:
 
 ```json
-{ "app": "medigo", "app_version": "v1.4.2",
+{ "app": "medikube", "app_version": "v1.4.2",
   "schema_version": "1756900300_export_jobs", "written_at": "..." }
 ```
 
-`schema_version` is the id of the highest applied MediGo migration. Because `CreateBackup` zips the
+`schema_version` is the id of the highest applied MediKube migration. Because `CreateBackup` zips the
 whole of `pb_data` minus five known directories (`core/backup_create.go:83-89`), this file rides
 inside every archive.
 
@@ -911,16 +911,16 @@ inside every archive.
 
 - archive `schema_version` **≤** running binary's highest known migration id → **allowed**
   (PocketBase runs app migrations up on the next bootstrap);
-- archive `schema_version` **>** the binary's highest → **refused**, because MediGo cannot migrate
+- archive `schema_version` **>** the binary's highest → **refused**, because MediKube cannot migrate
   down into a binary that does not know the schema;
-- archive with **no** `medigo.json` (an archive taken by a bare PocketBase, or by a pre-006 MediGo) →
+- archive with **no** `medikube.json` (an archive taken by a bare PocketBase, or by a pre-006 MediKube) →
   the preview says "version unknown" and the restore is **refused** unless the operator passes
   `"accept_unknown_version": true` in the body, which is recorded in the trail.
 
 **Rationale.** The specification's edge case: *"An archive uploaded from a different version of the
 application: the preview states the version it was taken with, and a restore from an incompatible
 version is refused with an explanation rather than attempted."* PocketBase's archive carries no
-application version of its own, so MediGo has to put one there.
+application version of its own, so MediKube has to put one there.
 
 **Alternatives considered.**
 
@@ -938,9 +938,9 @@ application version of its own, so MediGo has to put one there.
 
 ## D-26
 
-**Decision.** The preview reads `medigo.json` out of the archive as follows:
+**Decision.** The preview reads `medikube.json` out of the archive as follows:
 
-- when `app.Settings().Backups.S3.Enabled == false` (the default, and MediGo's shipped configuration):
+- when `app.Settings().Backups.S3.Enabled == false` (the default, and MediKube's shipped configuration):
   open `filepath.Join(app.DataDir(), core.LocalBackupsDirName, name)` directly with
   `zip.OpenReader`, read the one entry, close;
 - when S3 backup storage **is** configured: stream `fsys.GetReader(key)` into a scratch file under
@@ -950,7 +950,7 @@ application version of its own, so MediGo has to put one there.
 `*blob.Reader` is a sequential stream. The local branch avoids copying a several-gigabyte archive to
 answer a two-line question (the specification's large-data edge case names multi-gigabyte archives
 explicitly). The S3 branch is fifteen lines and exists so the feature does not simply break for an
-operator who configured S3 backups in PocketBase's settings, which MediGo does not control.
+operator who configured S3 backups in PocketBase's settings, which MediKube does not control.
 
 **Alternatives considered.**
 
@@ -1081,7 +1081,7 @@ a secret or an operator setting cannot enter an archive, because there is nowher
 from. Two tests keep it that way:
 
 1. a **scanning test** that produces an export over the seeded fixture and asserts the archive bytes
-   contain none of: the seeded passwords, any `tokenKey`, any `MEDIGO_`-prefixed string, the SMTP
+   contain none of: the seeded passwords, any `tokenKey`, any `MEDIKUBE_`-prefixed string, the SMTP
    password, the Sentry DSN, or any patient id belonging to an account the exporter cannot reach;
 2. a **reflection test** over every DTO reachable from the exporter asserting no field name matches
    `(?i)(password|secret|token|key|dsn)`.
@@ -1225,10 +1225,10 @@ nothing useful and a grep for `ZZPATIENTNAMEZZ` cannot false-negative.
 
 **Decision.** A build-tagged `netgate` test replaces `http.DefaultTransport.DialContext` and
 `net.Dialer` use in the process with a dialer that records every address and **fails the test on any
-non-loopback dial**, then boots MediGo with Sentry, OTLP and SMTP all unconfigured and exercises
+non-loopback dial**, then boots MediKube with Sentry, OTLP and SMTP all unconfigured and exercises
 every route in the registry plus every cron job.
 
-**Rationale.** US9 AS-8 and constitution VII: *"MediGo makes no outbound network request that the
+**Rationale.** US9 AS-8 and constitution VII: *"MediKube makes no outbound network request that the
 operator has not explicitly configured."* An assertion at the socket layer is the only one that
 cannot be fooled by a library that dials on its own.
 
@@ -1332,7 +1332,7 @@ picker:
   span. **A canonical name recorded in more than one unit appears once per unit**, and the response
   marks the name as `multi_unit: true`.
 
-Every entry carries `chartable` (count ≥ `MEDIGO_REPORT_MIN_CHART_POINTS`) and, when false,
+Every entry carries `chartable` (count ≥ `MEDIKUBE_REPORT_MIN_CHART_POINTS`) and, when false,
 `readings` and `readings_needed`, so a value with one reading is **shown as not yet chartable**
 rather than hidden (FR-017). Choosing a chart requires a unit whenever the name is `multi_unit`, and
 readings in any other unit are excluded from that chart and the exclusion is stated in the document.
@@ -1374,7 +1374,7 @@ landmark assertion holds on a freshly seeded instance. The landmarks are SHARED-
 | `/admin/backups` | `region[name="Backups"]` | "An archive is a complete copy of this instance…" |
 
 The Playwright gate runs each of the seven, at both viewports, **twice**: once against the populated
-seeded account and once against `empty@medigo.local`, which holds nothing (FR-125). `/admin`,
+seeded account and once against `empty@medikube.local`, which holds nothing (FR-125). `/admin`,
 `/admin/audit`, `/admin/users` and `/admin/backups` are additionally run as a non-administrator,
 asserting the shared 404 view and an audit row (FR-076, SC-010).
 
@@ -1440,7 +1440,7 @@ one precedent the application already has for "an act on a resource that is not 
 
 **Decision.** `expired` is a **state the purge writes**, not a computed predicate:
 
-- `medigo_purge_artifacts` runs daily. For every `export_jobs` row with `status = "succeeded"` and
+- `medikube_purge_artifacts` runs daily. For every `export_jobs` row with `status = "succeeded"` and
   `expires_at < now`, it clears `artifact` (which deletes the blob with it), zeroes `bytes`, and sets
   `status = "expired"`. It writes one `job_succeeded` entry carrying the count (D-43).
 - The download route refuses an `expired` job with `410 gone`, code `artifact_expired`, and a plain
@@ -1485,7 +1485,7 @@ func Run(app core.App, name string, fn func(ctx context.Context) (affected int, 
 It writes **exactly one** audit entry per run: `job_succeeded` on success (with `affected` as a
 count) or `job_failed` on error (with a bounded `error_code`), both with `actor_kind = "system"`,
 `target_kind = "system"` and `target_id = name` — a **bounded job name**, never a record id and never
-content. `target_id` is `text ≤64`, which is why the four names of 18–29 characters fit: 001's
+content. `target_id` is `text ≤64`, which is why the four names of 20–31 characters fit: 001's
 `audit_events` sizes the column for exactly this bounded exception (001
 [data-model](../001-walking-skeleton/data-model.md) §3).
 
@@ -1588,7 +1588,7 @@ report over this person" without parsing JSON, which the deletion-confirmation d
 - **Keeping the patient in `criteria` JSON.** Then FR-032's "the person can no longer be reached" is
   a JSON lookup with no referential integrity, and a deleted person leaves a dangling id that reads
   identically to a withdrawn share.
-- **Uniqueness enforced only in the service.** `medigo seed`, a future CLI subcommand and a test
+- **Uniqueness enforced only in the service.** `medikube seed`, a future CLI subcommand and a test
   fixture would each be able to create a duplicate. Uniqueness that is not an index is a convention.
 
 ---
@@ -1600,18 +1600,18 @@ variable and the bound it violated, when any of the following does not hold (FR-
 
 | Setting | Rule |
 |---|---|
-| `MEDIGO_RETENTION_EXPORT_DAYS` | `1 ≤ n ≤ 3650` |
-| `MEDIGO_RETENTION_AUDIT_DAYS` | `1 ≤ n ≤ 3650` |
-| `MEDIGO_RETENTION_TRASH_DAYS` | `1 ≤ n ≤ 3650` |
-| `MEDIGO_REPORT_MAX_RECORDS` | `1 ≤ n ≤ 100000` |
-| `MEDIGO_REPORT_MAX_CHARTS` | `1 ≤ n ≤ 50` |
-| `MEDIGO_REPORT_MIN_CHART_POINTS` | `2 ≤ n ≤ 100` |
-| `MEDIGO_REPORT_MAX_CHART_POINTS` | `MIN_CHART_POINTS ≤ n ≤ 5000` |
-| `MEDIGO_EXPORT_MAX_BYTES` | `1 MiB ≤ n ≤ 1 TiB` |
-| `MEDIGO_BACKUP_WARN_AFTER` | `1h ≤ d ≤ 8760h` |
-| `MEDIGO_BACKUP_KEEP` | `1 ≤ n ≤ 365` |
-| `MEDIGO_REPORT_EXTRA_FONT_DIR` | empty, or a readable directory |
-| `MEDIGO_STATE_DIR` | writable, and **not** inside `DataDir` (D-23) |
+| `MEDIKUBE_RETENTION_EXPORT_DAYS` | `1 ≤ n ≤ 3650` |
+| `MEDIKUBE_RETENTION_AUDIT_DAYS` | `1 ≤ n ≤ 3650` |
+| `MEDIKUBE_RETENTION_TRASH_DAYS` | `1 ≤ n ≤ 3650` |
+| `MEDIKUBE_REPORT_MAX_RECORDS` | `1 ≤ n ≤ 100000` |
+| `MEDIKUBE_REPORT_MAX_CHARTS` | `1 ≤ n ≤ 50` |
+| `MEDIKUBE_REPORT_MIN_CHART_POINTS` | `2 ≤ n ≤ 100` |
+| `MEDIKUBE_REPORT_MAX_CHART_POINTS` | `MIN_CHART_POINTS ≤ n ≤ 5000` |
+| `MEDIKUBE_EXPORT_MAX_BYTES` | `1 MiB ≤ n ≤ 1 TiB` |
+| `MEDIKUBE_BACKUP_WARN_AFTER` | `1h ≤ d ≤ 8760h` |
+| `MEDIKUBE_BACKUP_KEEP` | `1 ≤ n ≤ 365` |
+| `MEDIKUBE_REPORT_EXTRA_FONT_DIR` | empty, or a readable directory |
+| `MEDIKUBE_STATE_DIR` | writable, and **not** inside `DataDir` (D-23) |
 
 The message is one line per violation, all of them reported at once, and it names the variable, the
 value and the bound — never a path outside what the operator typed.
@@ -1856,7 +1856,7 @@ is zero: it is a query parameter.
 | **R8** PocketBase upgrade fragility | **Extended, not closed.** This phase adds four more upgrade-sensitive touch points — `core.StoreKeyActiveBackup`, the `Restart`/`execve` environment behaviour (D-24), the backup exclusion set (D-07), and the empties-rather-than-deletes behaviour of a non-cascading relation (D-45). All four go on the upgrade checklist phase 001 created. |
 | **R3** FTS5 availability | Untouched. Phase 004 owns it; nothing in this phase depends on relevance ranking. |
 
-**Left open, deliberately, and stated so nobody discovers it later:** MediGo cannot render every
+**Left open, deliberately, and stated so nobody discovers it later:** MediKube cannot render every
 script in a produced document (D-04), and Arabic is not contextually shaped. The export always carries
 the exact text, the limitation is counted on the document's first page, and the operator handbook
 says so.

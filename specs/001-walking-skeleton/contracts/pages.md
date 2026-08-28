@@ -50,15 +50,15 @@ what is conditional on a session, not the landmark around it (ANALYSIS).
 
 | # | Path | Auth | Landmark inside `main` | Title | FR |
 |---|---|---|---|---|---|
-| P1 | `/login` | public | `form[name="Sign in"]` | Sign in — MediGo | FR-034 |
-| P2 | `/register` | public | `form[name="Create account"]` | Create account — MediGo | FR-002 |
-| P3 | `/` | session | `region[name="Overview"]` | Overview — MediGo | FR-050 |
-| P4 | `/medications` | session | `region[name="Medications"]` | Medications — MediGo | FR-021 |
-| P5 | `/medications/{id}` | session | `article[name="Medication"]` | {name} — MediGo | FR-024 |
-| P6 | `/settings` | session | `region[name="Settings"]` | Settings — MediGo | FR-011 |
-| P7 | `/forgot-password` | public | `form[name="Reset password"]` | Reset password — MediGo | FR-073 |
-| P8 | `/reset-password/{token}` | public | `form[name="Choose a new password"]` | Choose a new password — MediGo | FR-074 |
-| P9 | `/verify-email/{token}` | public | `region[name="Email confirmation"]` | Confirm your address — MediGo | FR-075 |
+| P1 | `/login` | public | `form[name="Sign in"]` | Sign in — MediKube | FR-034 |
+| P2 | `/register` | public | `form[name="Create account"]` | Create account — MediKube | FR-002 |
+| P3 | `/` | session | `region[name="Overview"]` | Overview — MediKube | FR-050 |
+| P4 | `/medications` | session | `region[name="Medications"]` | Medications — MediKube | FR-021 |
+| P5 | `/medications/{id}` | session | `article[name="Medication"]` | {name} — MediKube | FR-024 |
+| P6 | `/settings` | session | `region[name="Settings"]` | Settings — MediKube | FR-011 |
+| P7 | `/forgot-password` | public | `form[name="Reset password"]` | Reset password — MediKube | FR-073 |
+| P8 | `/reset-password/{token}` | public | `form[name="Choose a new password"]` | Choose a new password — MediKube | FR-074 |
+| P9 | `/verify-email/{token}` | public | `region[name="Email confirmation"]` | Confirm your address — MediKube | FR-075 |
 
 `region[name="X"]` is a `<section aria-label="X">`; `article[name="X"]` is an
 `<article aria-label="X">`; `form[name="X"]` is a `<form aria-label="X">`. These are ARIA role
@@ -170,7 +170,7 @@ the first time anyone learns the gate works, which is too late.
 - **The delete confirmation is a rendered element with its own landmark**
   (`region[name="Confirm delete"]`), not a `window.confirm`. A browser dialog is invisible to the
   render gate and untestable in the smoke run (FR-028).
-- **A `<noscript>` block on every page** states plainly that MediGo requires JavaScript, inside
+- **A `<noscript>` block on every page** states plainly that MediKube requires JavaScript, inside
   `main`, so the page is not a blank rectangle (FR-049).
 - **Theme is a server-rendered class on `<html>`** read from the account's stored preference, plus
   a Tailwind `dark` variant configured to respond to **both** the class and

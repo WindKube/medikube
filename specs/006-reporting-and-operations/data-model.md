@@ -94,8 +94,8 @@ type ChartSelection struct {
 | `Source == vitals` → `Metric` is one of the `vitals` numeric columns and `CanonicalName` is empty | `422 validation_failed` | FR-016 |
 | `Source == lab` → `CanonicalName` non-empty and `Metric` empty | `422 validation_failed` | FR-016 |
 | `Unit` non-empty, and matches a unit actually recorded for that series | `422 unknown_unit` | FR-018 |
-| `len(charts) <= MEDIGO_REPORT_MAX_CHARTS` | `422 too_many_charts`, message states the limit | FR-023 |
-| the series resolves to `>= MEDIGO_REPORT_MIN_CHART_POINTS` readings in `[From, To]` | `422 not_enough_readings`, message states how many it has and how many it needs | FR-019 |
+| `len(charts) <= MEDIKUBE_REPORT_MAX_CHARTS` | `422 too_many_charts`, message states the limit | FR-023 |
+| the series resolves to `>= MEDIKUBE_REPORT_MIN_CHART_POINTS` readings in `[From, To]` | `422 not_enough_readings`, message states how many it has and how many it needs | FR-019 |
 | **no conversion is performed under any circumstance** | — | FR-018; a `Convert` function does not exist, asserted by a grep test |
 
 ### 1.4 `settings` — the validated struct
@@ -143,10 +143,10 @@ collection, one queue, one worker ([D-05](./research.md#d-05), [D-53](./research
 | `progress` | number | **yes** | 0..100, default 0 |
 | `record_count` | number | no | what the job actually produced (FR-003's figure, after the fact) |
 | `error_code` | text | no | a **bounded token**, never a message: `interrupted`, `owner_unavailable`, `storage_full`, `too_many_records`, `nothing_matched`, `patient_unreachable`, `render_failed`, `archive_too_large` (FR-050, FR-118) |
-| `artifact` | file | no | MaxSelect 1, **`Protected: true`** (constitution VII, no exception), MaxSize `MEDIGO_EXPORT_MAX_BYTES` |
+| `artifact` | file | no | MaxSelect 1, **`Protected: true`** (constitution VII, no exception), MaxSize `MEDIKUBE_EXPORT_MAX_BYTES` |
 | `bytes` | number | no | the finished size (FR-044) |
 | `cancel_requested` | bool | **yes** | default false — the cooperative-cancel flag ([D-41](./research.md#d-41)) |
-| `expires_at` | date | no | set on success = `retention.DueAt(finished_at, MEDIGO_RETENTION_EXPORT_DAYS)` |
+| `expires_at` | date | no | set on success = `retention.DueAt(finished_at, MEDIKUBE_RETENTION_EXPORT_DAYS)` |
 | `started_at` | date | no | RFC3339 UTC |
 | `finished_at` | date | no | RFC3339 UTC |
 
@@ -201,8 +201,8 @@ every other pair returns `*exportjob.TransitionError` carrying the state the row
 |---|---|---|
 | `kind = report` → `patient` set and reachable **by the owner at request time and again at dequeue** | `404 not_found` | FR-001, FR-011, [D-09](./research.md#d-09) |
 | `kind = report` → resolved record count `>= 1` | `422 nothing_matched`, selection left intact | FR-004 |
-| `kind = report` → resolved record count `<= MEDIGO_REPORT_MAX_RECORDS` | `422 too_many_records`, message states the limit | FR-010 |
-| `kind = report` → `len(charts) <= MEDIGO_REPORT_MAX_CHARTS` | `422 too_many_charts` | FR-023 |
+| `kind = report` → resolved record count `<= MEDIKUBE_REPORT_MAX_RECORDS` | `422 too_many_records`, message states the limit | FR-010 |
+| `kind = report` → `len(charts) <= MEDIKUBE_REPORT_MAX_CHARTS` | `422 too_many_charts` | FR-023 |
 | `format` matches `kind` | `422 validation_failed` | §2 |
 | `progress ∈ [0,100]` | `422` | FR-005 |
 | `error_code` ∈ the bounded set | — | FR-050, FR-118 |
@@ -294,11 +294,11 @@ the contract's vocabulary — and cover a produced document, an export request a
 **`target_id` and the three kinds that carry a name.** 001's rule is that `target_id` is an opaque
 id and never a name, with one bounded exception it states in full: when `target_kind` is `system`,
 `backup` or `export` there is no record to point at, so the column carries the **job name or archive
-name** instead. This phase is where all three land — `medigo_purge_artifacts` and its siblings (18–29
-characters), and `medigo_safety_<YYYYMMDDHHMMSS>_<name>` on `backup_create`, `backup_upload`,
-`backup_download`, `backup_delete` and `backup_restore` — **54 at its longest**, composed over a
-manual archive `medigo_<YYYYMMDDHHMMSS>.zip`. Timestamps are compact, not RFC3339, precisely so
-this fits: spelled RFC3339 the same name is 66 against a `Max 64` column. Op 86 normalises and
+name** instead. This phase is where all three land — `medikube_purge_artifacts` and its siblings (20–31
+characters), and `medikube_safety_<YYYYMMDDHHMMSS>_<name>` on `backup_create`, `backup_upload`,
+`backup_download`, `backup_delete` and `backup_restore` — **58 at its longest**, composed over a
+manual archive `medikube_<YYYYMMDDHHMMSS>.zip`. Timestamps are compact, not RFC3339, precisely so
+this fits: spelled RFC3339 the same name is 70 against a `Max 64` column. Op 86 normalises and
 bounds an uploaded archive's key to 64 on the same grounds (ANALYSIS N2). They are operator-facing identifiers
 the operator already chose — the archive name is the same string its route is addressed by — not
 personal data, and 001 sizes the column at **`≤64`** for exactly this (001
@@ -351,7 +351,7 @@ handler performs no lookup against any other collection ([D-11](./research.md#d-
 | `internal/domain/report` | `Definition`, `Criteria`, `ChartSelection`, `ChartSource`, `Settings`, `SortOrder`, `Grouping`, `Counts`, `Document`, `Section`, `Chart`, `Series` | `Document` is what the renderer draws: already resolved, already authorized, already ordered. It carries no repository and no context |
 | `internal/domain/exportjob` | `Job`, `Status`, `Stage`, `Scope`, `Options`, `ErrorCode`, `*TransitionError` | `Transition(from, event) (Status, error)` is the only state machine |
 | `internal/domain/retention` | `DueAt`, `Expired`, `DaysRemaining` | [D-50](./research.md#d-50); whole days from the recorded moment, clock-jump safe |
-| `internal/domain/adminuser` | `CanChangeRole`, `CanDisable`, `LastEnabledAdminGuard` | [D-19](./research.md#d-19); pure functions, exhaustive table tests, so `medigo seed` and a future CLI cannot lock the instance out |
+| `internal/domain/adminuser` | `CanChangeRole`, `CanDisable`, `LastEnabledAdminGuard` | [D-19](./research.md#d-19); pure functions, exhaustive table tests, so `medikube seed` and a future CLI cannot lock the instance out |
 | `internal/domain/audit` | `Query`, `Action`, `TargetKind`, `ActorKind` | the reader's typed narrowing; no free-text field exists on it |
 
 Every one of these implements `MarshalZerologObject` emitting **only** ids, enum values and counts.
@@ -365,19 +365,23 @@ template name (FR-117).
 Five, each with a real `down` (VERIFIED-SOURCE-FACTS FACT 8 makes both functions structural).
 
 ### `1757xxx100_report_templates.go`
+
 Creates the collection of §1 with all five API rules `nil` and the three indexes of §1.1.
 `down` drops it. **Reversible.**
 
 ### `1757xxx200_export_jobs.go`
+
 Creates the collection of §2 with all five API rules `nil`, the three indexes of §2.1, and
 `artifact` as a `FileField` with `Protected: true`. `down` drops it — **and the migration file
 documents that dropping it destroys any artifact still stored**, which is the reversibility note
 Principle IX requires. **Reversible with a documented data loss.**
 
 ### `1757xxx300_users_must_change_password.go`
+
 Adds the bool with default `false`. `down` removes the field. **Reversible.**
 
 ### `1757xxx400_audit_vocab_ops.go`
+
 Adds the `affected` column of §4.0, extends `audit_events.action` by the ten values of §4.1 and
 `target_kind` by `report_template`. `down` removes all three **and the file documents that rows
 already carrying a removed value would fail validation on their next write** — they are never
@@ -386,6 +390,7 @@ asserts the **complete** vocabulary after this phase, thirty-six actions and twe
 kinds, never a delta. **Reversible with a documented caveat.**
 
 ### ~~`1757xxx500_audit_page_indexes.go`~~ — **not created**
+
 There is no audit-index migration in this phase. §4.3 says why: the four indexes the reader
 needs are created wide enough on purpose by 001 and 002, and re-creating them here would collide
 by name on `idx_audit_target` and fail `CREATE INDEX` at first boot. T034 asserts the four with
@@ -393,7 +398,7 @@ by name on `idx_audit_target` and fail `CREATE INDEX` at first boot. T034 assert
 
 ### Boot assertions extended (`internal/store/migrations/assertions.go`)
 
-1. All five API rules `nil` on `report_templates` and `export_jobs` — MediGo refuses to start
+1. All five API rules `nil` on `report_templates` and `export_jobs` — MediKube refuses to start
    otherwise.
 2. The file-field assertion now names **three** fields — `patients.photo`, `attachments.file`,
    `export_jobs.artifact` — and every one must be `Protected: true`. A fourth file field anywhere on
@@ -406,25 +411,25 @@ by name on `idx_audit_target` and fail `CREATE INDEX` at first boot. T034 assert
 
 ## 7. Configuration (`internal/config`)
 
-Eleven values, all `MEDIGO_`-prefixed, all with published defaults, all validated at boot
+Eleven values, all `MEDIKUBE_`-prefixed, all with published defaults, all validated at boot
 ([D-10](./research.md#d-10)), all **rendered on `/admin`** so an operator never reads source to learn
 one (FR-087), and all bounded so the instance refuses to start on a value it cannot honour
 ([D-46](./research.md#d-46), FR-113).
 
 | Variable | Default | Bound | Governs |
 |---|---|---|---|
-| `MEDIGO_REPORT_MAX_RECORDS` | `5000` | 1..100000 | FR-010 |
-| `MEDIGO_REPORT_MAX_CHARTS` | `12` | 1..50 | FR-023 |
-| `MEDIGO_REPORT_MIN_CHART_POINTS` | `3` | 2..100 | FR-017 |
-| `MEDIGO_REPORT_MAX_CHART_POINTS` | `200` | ≥ MIN..5000 | [D-03](./research.md#d-03) |
-| `MEDIGO_REPORT_EXTRA_FONT_DIR` | *(empty)* | empty or readable dir | [D-04](./research.md#d-04) |
-| `MEDIGO_EXPORT_MAX_BYTES` | `10 GiB` | 1 MiB..1 TiB | FR-050's `archive_too_large` |
-| `MEDIGO_RETENTION_EXPORT_DAYS` | `7` *(exists)* | 1..3650 | FR-012 **and** FR-047 — one window for both |
-| `MEDIGO_RETENTION_AUDIT_DAYS` | `730` *(exists)* | 1..3650 | FR-074 |
-| `MEDIGO_RETENTION_TRASH_DAYS` | `30` *(exists)* | 1..3650 | phase 004's window; **stated** here, not enforced here |
-| `MEDIGO_BACKUP_WARN_AFTER` | `168h` | 1h..8760h | FR-082 |
-| `MEDIGO_BACKUP_KEEP` | `14` | 1..365 | written into `Settings().Backups.CronMaxKeep` (FR-101) |
-| `MEDIGO_STATE_DIR` | `/data/medigo_state` | writable, **outside `DataDir`** | [D-23](./research.md#d-23) |
+| `MEDIKUBE_REPORT_MAX_RECORDS` | `5000` | 1..100000 | FR-010 |
+| `MEDIKUBE_REPORT_MAX_CHARTS` | `12` | 1..50 | FR-023 |
+| `MEDIKUBE_REPORT_MIN_CHART_POINTS` | `3` | 2..100 | FR-017 |
+| `MEDIKUBE_REPORT_MAX_CHART_POINTS` | `200` | ≥ MIN..5000 | [D-03](./research.md#d-03) |
+| `MEDIKUBE_REPORT_EXTRA_FONT_DIR` | *(empty)* | empty or readable dir | [D-04](./research.md#d-04) |
+| `MEDIKUBE_EXPORT_MAX_BYTES` | `10 GiB` | 1 MiB..1 TiB | FR-050's `archive_too_large` |
+| `MEDIKUBE_RETENTION_EXPORT_DAYS` | `7` *(exists)* | 1..3650 | FR-012 **and** FR-047 — one window for both |
+| `MEDIKUBE_RETENTION_AUDIT_DAYS` | `730` *(exists)* | 1..3650 | FR-074 |
+| `MEDIKUBE_RETENTION_TRASH_DAYS` | `30` *(exists)* | 1..3650 | phase 004's window; **stated** here, not enforced here |
+| `MEDIKUBE_BACKUP_WARN_AFTER` | `168h` | 1h..8760h | FR-082 |
+| `MEDIKUBE_BACKUP_KEEP` | `14` | 1..365 | written into `Settings().Backups.CronMaxKeep` (FR-101) |
+| `MEDIKUBE_STATE_DIR` | `/data/medikube_state` | writable, **outside `DataDir`** | [D-23](./research.md#d-23) |
 
 ---
 
@@ -443,32 +448,32 @@ bounded exception.
 
 | Job name (the bounded `target_id`) | Cadence | Does |
 |---|---|---|
-| `medigo_purge_artifacts` | daily 03:10 | `succeeded` rows past `expires_at` → clear `artifact`, zero `bytes`, `status = expired` (FR-012, FR-047) |
-| `medigo_purge_audit` | daily 03:20 | delete `audit_events` older than `MEDIGO_RETENTION_AUDIT_DAYS` whole days (FR-074) |
-| `medigo_storage_refresh` | every 15 min + once at boot | recompute database bytes and document bytes into the in-memory gauge with its `computed_at` ([D-16](./research.md#d-16)) |
+| `medikube_purge_artifacts` | daily 03:10 | `succeeded` rows past `expires_at` → clear `artifact`, zero `bytes`, `status = expired` (FR-012, FR-047) |
+| `medikube_purge_audit` | daily 03:20 | delete `audit_events` older than `MEDIKUBE_RETENTION_AUDIT_DAYS` whole days (FR-074) |
+| `medikube_storage_refresh` | every 15 min + once at boot | recompute database bytes and document bytes into the in-memory gauge with its `computed_at` ([D-16](./research.md#d-16)) |
 
-Wrapped, not rewritten: phase 004's `medigo_attachment_maintenance` (its trash purge and orphan sweep), phase 005's
+Wrapped, not rewritten: phase 004's `medikube_attachment_maintenance` (its trash purge and orphan sweep), phase 005's
 share/invitation tidy, and PocketBase's own auto-backup (via `OnBackupCreate`, which is how a failed
 scheduled backup reaches the overview and the trail — FR-101, US7 AS-3).
 
 ---
 
-## 9. Seed fixtures (`medigo seed`) — deterministic, and shaped by what the tests need
+## 9. Seed fixtures (`medikube seed`) — deterministic, and shaped by what the tests need
 
 | Fixture | Why it exists |
 |---|---|
-| `owner@medigo.local` with 3 saved reports: one over a populated person, one over a person with **no** records, one whose `patient` has been **emptied** | US3 AS-1/AS-3/AS-11, FR-032 |
+| `owner@medikube.local` with 3 saved reports: one over a populated person, one over a person with **no** records, one whose `patient` has been **emptied** | US3 AS-1/AS-3/AS-11, FR-032 |
 | one `succeeded` job with a downloadable artifact, one `expired` job, one `failed` (`interrupted`) job, one `cancelled` job, one `queued` job behind another | US1 AS-11, US2 AS-8/AS-9/AS-10/AS-11, US8 AS-1/AS-2 |
-| `empty@medigo.local` — an account with no people, no records, no saved reports, no jobs | every empty state, and the second Playwright pass (FR-125) |
-| `admin@medigo.local` (`role = admin`) and `admin2@medigo.local` | the last-admin refusals of FR-096, and the "a second administrator changed my tier" edge case |
-| `disabled@medigo.local` (`disabled_at` set) | FR-091, [D-49](./research.md#d-49) |
-| `mustchange@medigo.local` (`must_change_password = true`) | FR-093 |
+| `empty@medikube.local` — an account with no people, no records, no saved reports, no jobs | every empty state, and the second Playwright pass (FR-125) |
+| `admin@medikube.local` (`role = admin`) and `admin2@medikube.local` | the last-admin refusals of FR-096, and the "a second administrator changed my tier" edge case |
+| `disabled@medikube.local` (`disabled_at` set) | FR-091, [D-49](./research.md#d-49) |
+| `mustchange@medikube.local` (`must_change_password = true`) | FR-093 |
 | a person with 12 readings of one lab component in `mmol/L`, 3 of the **same** component in `mg/dL`, and 1 reading of a second component | US4's independent test verbatim — enough, not enough, and two units |
 | a person whose name, a tag and a document description carry Arabic, Hebrew, CJK and `<script>` text | FR-006's unrenderable-character statement, and the "never interpreted as markup" edge case |
-| two archives in `pb_data/backups`, one with `medigo.json` and one without | US7 AS-5/AS-9, [D-25](./research.md#d-25) |
+| two archives in `pb_data/backups`, one with `medikube.json` and one without | US7 AS-5/AS-9, [D-25](./research.md#d-25) |
 | a trail with entries of every action, including `system` and `superuser` actors and one refusal | US6 AS-2/AS-10/AS-11, FR-072 |
 
-`medigo seed --print-ids` prints the ids the quickstart and the Playwright specs substitute.
+`medikube seed --print-ids` prints the ids the quickstart and the Playwright specs substitute.
 
 ## 10. Scale fixture (`internal/testsupport/scale`)
 

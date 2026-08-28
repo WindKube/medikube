@@ -8,7 +8,7 @@
 
 ## Summary
 
-This phase builds MediGo from an empty directory to a deployable container that a person can
+This phase builds MediKube from an empty directory to a deployable container that a person can
 sign in to and keep a medication list in, and it builds it in the exact shape phases 002–006
 have already been planned against. Nothing here is provisional: the repository interface, the
 DTO boundary, the service contract, the authorization checkpoint, the templ + Datastar page
@@ -28,7 +28,7 @@ surface at `/api/v1/me`;
 the six-operation `/api/v1/records/{kind}` family, templ + Datastar pages and a Datastar SSE
 stream, to tests at every layer of the pyramid; the application shell with its landmarks, error
 views, empty states and light/dark; the operator command surface; **one** declarative route
-table that simultaneously registers routes, emits `medigo routes` and drives the generated
+table that simultaneously registers routes, emits `medikube routes` and drives the generated
 `api/openapi.json`; the Playwright smoke gate proven to go red; CI end to end; and the
 repository-level registration in `/.dockerignore` and `/.github/workflows/build-image.yaml`
 without which the container build fails with a misleading "file not found".
@@ -53,9 +53,9 @@ than documentation, and each is the reason a later phase can be short:
    non-system collection, `Batch.Enabled` is `false`, a `-1019` middleware 404s the record CRUD
    subtree for non-superusers, and a boot assertion refuses to start the process if any rule is
    non-nil. It is scoped precisely to `/records` and `/api/batch`, because PocketBase's native
-   auth endpoints share the `/api/collections/` prefix and are MediGo's authentication mechanism
+   auth endpoints share the `/api/collections/` prefix and are MediKube's authentication mechanism
    (VERIFIED-SOURCE-FACTS FACT 2).
-4. **Realtime is 100% MediGo's.** A post-commit record hook publishes `{Kind, RecordID, OwnerID}`
+4. **Realtime is 100% MediKube's.** A post-commit record hook publishes `{Kind, RecordID, OwnerID}`
    — IDs, never bodies — to an in-process hub; a per-subscriber Datastar SSE handler re-fetches,
    **re-authorises for that subscriber**, renders and patches. Fanning out IDs is what makes
    per-subscriber authorization possible at all, and Principle VII requires it. PocketBase's
@@ -68,17 +68,17 @@ than documentation, and each is the reason a later phase can be short:
 
 ## Technical Context
 
-**Language/Version**: Go **1.27**. `go.mod` declares `module medigo`, `go 1.27` and an explicit
+**Language/Version**: Go **1.27**. `go.mod` declares `module medikube`, `go 1.27` and an explicit
 `toolchain go1.27.x`. This is **required, not preferred**: PocketBase v0.40.1's `go.mod` line 3
 declares `go 1.27` and 67 non-test files import the Go 1.27 stdlib package `encoding/json/v2`,
 15 of them under `core/` and `apis/`. `GOTOOLCHAIN=local go build` on 1.26.5 fails outright with
-`go.mod requires go >= 1.27`; go1.27.0 builds it clean (VERIFIED-SOURCE-FACTS FACT 0). MediGo is
+`go.mod requires go >= 1.27`; go1.27.0 builds it clean (VERIFIED-SOURCE-FACTS FACT 0). MediKube is
 therefore the first project in this monorepo off the 1.26.5 house standard that `arc-ui`, `gmod`,
 `appbase` and `medikeep-mcp` share. **CI MUST NOT set `GOTOOLCHAIN=local`**, or the divergence
 surfaces as a misleading toolchain error rather than as the deliberate decision it is.
 
 **Primary Dependencies** — versions pinned to the monorepo house set where they overlap with
-`arc-ui`, which HOUSE-PATTERNS identifies as MediGo's template project, and to the verified
+`arc-ui`, which HOUSE-PATTERNS identifies as MediKube's template project, and to the verified
 module cache otherwise:
 
 | Module | Version | Used in this phase for |
@@ -96,7 +96,7 @@ module cache otherwise:
 | `github.com/samber/do/v2` | v2.1.0 | dependency injection, composition root only |
 | `github.com/samber/lo` | v1.53.0 | generic helpers, stdlib-first rule |
 | `github.com/stretchr/testify` | v1.12.0 | the only assertion library |
-| `github.com/spf13/cobra` | v1.10.2 — **the one place this is pinned in the suite** | **Transitive, via PocketBase's `RootCmd`. Never a direct `require`.** The version is `pocketbase@v0.40.1`'s own `go.mod` requirement, read from the module cache and verified, **not** a MediGo choice: it moves when PocketBase moves. Phases 002–006 cite this row rather than restating a version (cross-artifact finding **M2**). |
+| `github.com/spf13/cobra` | v1.10.2 — **the one place this is pinned in the suite** | **Transitive, via PocketBase's `RootCmd`. Never a direct `require`.** The version is `pocketbase@v0.40.1`'s own `go.mod` requirement, read from the module cache and verified, **not** a MediKube choice: it moves when PocketBase moves. Phases 002–006 cite this row rather than restating a version (cross-artifact finding **M2**). |
 | `modernc.org/sqlite` | v1.57.0 (transitive) | pure-Go SQLite, so `CGO_ENABLED=0` holds |
 | Tailwind CSS standalone | v4.3.3, pinned by `ARG` | build-time only |
 | Playwright CLI | build/CI only | the browser gate. **No Node in the runtime image.** |
@@ -106,10 +106,10 @@ Absent and staying absent: `gin-gonic/gin`, `danielgtaylor/huma`, `spf13/viper`,
 Alpine.
 
 **Storage**: embedded SQLite through PocketBase (`modernc.org/sqlite`, no cgo) under
-`MEDIGO_DATA_DIR` (`/data/pb_data` in the image). Schema is code: three reversible Go migrations
+`MEDIKUBE_DATA_DIR` (`/data/pb_data` in the image). Schema is code: three reversible Go migrations
 registered into `core.AppMigrations`; `migrations.Register(up, down, filename)` **requires** both
 directions, so Principle IX's reversibility rule is enforced by the API itself
-(VERIFIED-SOURCE-FACTS FACT 8). `Automigrate` is enabled only when `MEDIGO_DEV=true`; in
+(VERIFIED-SOURCE-FACTS FACT 8). `Automigrate` is enabled only when `MEDIKUBE_DEV=true`; in
 production it would try to write `.go` files into a directory the distroless image does not have.
 
 **Testing**: `stretchr/testify` — `require` for preconditions, `assert` for independent
@@ -124,18 +124,18 @@ are mandatory and every one of them is created by this phase:
 - **contract** — one shared `suite.Suite` per interface, run against **every** implementation
   including the fake, which is how Principle II's Liskov clause becomes mechanical;
 - **HTTP** — `tests.ApiScenario`, asserting status, DTO shape and authorization boundary, with
-  `ExpectedEvents` used to prove a MediGo route fires the audit hooks and **zero** record-CRUD
+  `ExpectedEvents` used to prove a MediKube route fires the audit hooks and **zero** record-CRUD
   request events;
 - **UI render** — templ components rendered to a buffer and asserted on, including every empty
   state, because an empty page is the most common way a smoke gate goes falsely red.
 
 Plus the Playwright smoke + console-error gate at 1440×900 and 390×844, whose route list is
-derived from `medigo routes` so a page cannot be added without a test.
+derived from `medikube routes` so a page cannot be added without a test.
 
 **Target Platform**: Linux server. One static binary, `CGO_ENABLED=0`, from
 `gcr.io/distroless/static-debian12:nonroot`, `USER 65532:65532`, `VOLUME ["/data"]`, built for
 linux/amd64 and linux/arm64 through the monorepo's shared `build-image.yaml`. Browser target:
-current desktop and mobile browsers **with scripting enabled** — MediGo does not function
+current desktop and mobile browsers **with scripting enabled** — MediKube does not function
 without it and says so (FR-049).
 
 **Project Type**: server-rendered Go web application with an embedded framework (PocketBase),
@@ -143,6 +143,7 @@ hypermedia interactivity (templ + Datastar), and a hand-written JSON API. One mo
 no separate frontend service, no companion process, no CDN fetch at runtime.
 
 **Performance Goals**:
+
 - SC-002: a 1,000-medication list is narrowable to any single entry within 10 s of interaction,
   and **every page of that list renders within 2 s**. Budget: one indexed keyset query on
   `(owner, started_on DESC, id)`, `LIMIT 26`, no `COUNT(*)` unless `?count=true` is passed.
@@ -156,6 +157,7 @@ no separate frontend service, no companion process, no CDN fetch at runtime.
   than the first, which is what a keyset cursor buys and an `OFFSET` would not.
 
 **Constraints**:
+
 - **Single instance by construction.** The realtime hub is in-process and SQLite is single-writer.
   The hub MUST NOT be abstracted behind a broker interface "in case" — Principle I forbids the
   speculative seam and the hub has exactly one consumer.
@@ -168,7 +170,7 @@ no separate frontend service, no companion process, no CDN fetch at runtime.
   exists only for files, which this phase does not have.
 - No PHI in logs, metrics, traces or Sentry. An opaque 15-character id is permitted; a name, an
   email address, a medication name, a dose, a reason or any free text is not.
-- Go 1.27 `encoding/json/v2` retrofit semantics apply to **MediGo's own DTOs**, not just to
+- Go 1.27 `encoding/json/v2` retrofit semantics apply to **MediKube's own DTOs**, not just to
   PocketBase: slices marshal as `[]` and never `null`, unknown fields are rejected, duplicate
   keys are rejected, and `tests.ApiScenario` normalises bodies through `jsontext` before
   substring matching — so `ExpectedContent` compares against *re-encoded* JSON. Every DTO gets a
@@ -224,9 +226,9 @@ specification asks for it:
   `confirm-password-reset`, `request-verification` and `confirm-verification` already exist in
   PocketBase, `mails.SendRecordPasswordReset` and `mails.SendRecordVerification` already build
   and send the messages, and `app.FindAuthRecordByToken(token, core.TokenTypePasswordReset)`
-  already validates the token — so MediGo writes four thin DTO handlers, three pages and their
+  already validates the token — so MediKube writes four thin DTO handlers, three pages and their
   tests, and reimplements nothing. Principle V requires exactly this.
-- **No `medigo purge` subcommand.** FR-037 requires audit entries to be purged *automatically*;
+- **No `medikube purge` subcommand.** FR-037 requires audit entries to be purged *automatically*;
   a PocketBase cron does that. A manual trigger is a knob nobody asked for.
 - **No broker abstraction over the realtime hub**, no caching layer, no counter table, no
   materialised list, no `?fields=`, no idempotency keys, no soft delete, no `/medications/new`
@@ -275,7 +277,7 @@ Simplicity is served by the split, not by the omnibus, and nothing switches on `
   **This is enforced by the `depguard` rule wired into CI from this phase's first commit, and a
   task deliberately adds a forbidden import to prove the rule fires.**
 - Constructors take interfaces and return concrete types. Wiring happens once, in `internal/di`,
-  from `cmd/medigo/main.go`. No package-level globals, no `init()` registration.
+  from `cmd/medikube/main.go`. No package-level globals, no `init()` registration.
 
 ### III. Test-First With testify (NON-NEGOTIABLE) — **PASS**
 
@@ -312,7 +314,7 @@ Simplicity is served by the split, not by the omnibus, and nothing switches on `
   generator.
 - `context.Context` is the first parameter of every function that performs I/O and is honoured —
   the readiness probe, the SSE handler and every repository query respect cancellation.
-- `panic` appears in exactly two places, both programmer-error-at-startup: `cmd/medigo/main.go`
+- `panic` appears in exactly two places, both programmer-error-at-startup: `cmd/medikube/main.go`
   and `httproute.Registry.Handle`, which panics when a page route declares no landmark or no
   `SmokeURL`. **That second panic is load-bearing** — it is why a page cannot escape the browser
   gate. No request handler panics as flow control.
@@ -338,13 +340,13 @@ Simplicity is served by the split, not by the omnibus, and nothing switches on `
   `SetPassword` + `Save`, which rotates `tokenKey` and therefore ends every prior session by the
   same mechanism FR-010 already relies on; `POST /api/v1/auth/verify-email` and
   `/verify-email/confirm` do the same through `mails.SendRecordVerification` and
-  `core.TokenTypeVerification`. MediGo mints no token, writes no email template and stores no
+  `core.TokenTypeVerification`. MediKube mints no token, writes no email template and stores no
   reset state. The defaults it inherits are PocketBase's: a reset token valid **30 minutes**, a
   verification token valid **24 hours** (`core/collection_model_auth_options.go`).
-- **The one thing this depends on is outside MediGo's configuration mechanism, and it fails
+- **The one thing this depends on is outside MediKube's configuration mechanism, and it fails
   loudly rather than quietly.** SMTP lives in PocketBase's `Settings()` store, which the
   constitution's Technology Constraints carve out of the `caarlos0/env` rule precisely because
-  it is platform state, not MediGo configuration. With `SMTP.Enabled` false, `NewMailClient()`
+  it is platform state, not MediKube configuration. With `SMTP.Enabled` false, `NewMailClient()`
   returns `&mailer.Sendmail{}` — a shell-out to a local `sendmail` binary that the distroless
   image does not contain — so an unconfigured instance does not "silently drop" the message, it
   fails the send. FR-076 turns that into specified behaviour: a boot warning while SMTP is
@@ -368,7 +370,7 @@ Simplicity is served by the split, not by the omnibus, and nothing switches on `
   handlers the lockdown disables, so logic placed there is silently dead code. A `forbidigo`
   pattern enforces it. **The auth family is explicitly carved out**: `OnRecordAuthRequest` and
   its siblings live in `bindRecordAuthApi`, which is *not* locked down, and this phase depends on
-  `OnRecordAuthRequest("users")` firing to write the sign-in audit row for both MediGo's own
+  `OnRecordAuthRequest("users")` firing to write the sign-in audit row for both MediKube's own
   login route and PocketBase's native one (research D-14).
 - Cobra subcommands are registered on PocketBase's `RootCmd`, which already is a
   `*cobra.Command`. No second CLI framework. Two traps are handled: the root sets
@@ -439,12 +441,12 @@ asserted.
 | FR-034 an anonymous request reveals nothing | `RequireAuth` returns `401 unauthenticated` with a body that names no resource, before any handler runs. Public routes are an explicit allowlist of five: `/login`, `/register`, `/api/v1/auth/*`, `/api/v1/healthz`, `/api/v1/readyz`. |
 | FR-035 no general-purpose browse or bulk extract | The lockdown. Five nil rules, `Batch.Enabled = false`, the `-1019` 404 middleware, the boot assertion, and a per-collection `ApiScenario` proving the CRUD route 404s. |
 | FR-036/FR-038 the audit trail records that something happened and never what | `audit_events` has **no content column at all** — actor, actor kind, action, target kind, opaque target id, request id, timestamp. There is no field a value could be written into. Rows are produced by post-commit hooks registered by `records.Register`, not by handlers. |
-| FR-037 audit entries are not editable or deletable through the application | All five rules nil, no MediGo write path, plus bare `OnRecordUpdate("audit_events")` rejecting unconditionally and `OnRecordDelete("audit_events")` rejecting unless the retention cron marked the context. |
+| FR-037 audit entries are not editable or deletable through the application | All five rules nil, no MediKube write path, plus bare `OnRecordUpdate("audit_events")` rejecting unconditionally and `OnRecordDelete("audit_events")` rejecting unless the retention cron marked the context. |
 | FR-038 no PHI in the operational record | `clinical.Medication` and `identity.User` implement `MarshalZerologObject` emitting **only** ids. `MarshalJSON` is deliberately *not* implemented on a domain type — a domain type has no wire form. Span attributes and metric labels are allowlists, never denylists. A test exercises every endpoint, captures the log stream and the Prometheus registry, and asserts zero occurrences of any seeded name, email address, medication name, dose or note. |
 | FR-039 no unconfigured outbound connection | Sentry and OTLP are off unless a DSN/endpoint is configured; the Datastar bundle and every asset are embedded, never fetched; there is no update ping and no telemetry default. A test asserts that with an empty configuration the process opens no outbound socket. |
 | FR-040 the break-glass credential | The admin UI ships. The boot check reads the IP allowlist from `Settings().SuperuserIPs` and MFA from the **superusers auth collection's** `MFA.Enabled` — they live in two different places (FACT 10) — and warns loudly and unmistakably on every start until both are configured. It also warns when `MFA.Rule` is non-empty, because a partial rule means some superuser signs in without a second factor, and when the collection has fewer than two auth methods, because PocketBase refuses to enable MFA without them. Every superuser session writes an `admin_session` audit row. |
 | FR-041 secrets | `,file` so a secret arrives from a mounted file rather than the process environment, `,unset` so it is removed from `os.Environ()` after parsing, and a `Config.MarshalZerologObject` that redacts every secret field so the struct cannot be logged by accident. |
-| FR-042 the CSP | `default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'`. PocketBase's `securityHeaders()` sets **no** CSP for application routes — this one is MediGo's, set by MediGo's middleware. |
+| FR-042 the CSP | `default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'`. PocketBase's `securityHeaders()` sets **no** CSP for application routes — this one is MediKube's, set by MediKube's middleware. |
 | Hard delete | No `deleted_at` anywhere. Deleting an account cascades through `medications.owner` in one transaction; the destructive action is confirmed in the interface, names what is being destroyed, and writes an audit row. |
 
 ### VIII. The UI Must Prove It Renders — **PASS**
@@ -459,7 +461,7 @@ asserted.
   usable, request another" state inside its own landmark. That is not a workaround: FR-074
   requires exactly that state, and registering it as the smoke case is what puts the most likely
   real-world path — a link opened too late — under the browser gate.
-- The route list under test is derived from `medigo routes` at Playwright's collection phase, by
+- The route list under test is derived from `medikube routes` at Playwright's collection phase, by
   shelling out to the binary under test. **A page registered without a landmark or a `SmokeURL`
   panics at registration and the process cannot boot**, which is the strongest form of the gate
   Principle VIII asks for.
@@ -485,7 +487,7 @@ asserted.
 
 - **One declarative route table.** `httproute.Registry.Handle(spec, handler)` registers and
   describes in one indivisible call, and `Bind(se)` is the only place a route reaches PocketBase's
-  router. `medigo routes` prints the inventory as JSON **with no database, no port and no
+  router. `medikube routes` prints the inventory as JSON **with no database, no port and no
   migrations** — it is a pure function of the binary. This exists because PocketBase's route
   table is not introspectable: `RouterGroup.children` is unexported and Go 1.27's
   `http.ServeMux` still has no pattern-enumeration API.
@@ -562,31 +564,31 @@ specs/001-walking-skeleton/
 └── tasks.md                      # Phase 2 output (/speckit-tasks)
 ```
 
-### Source Code (repository root: `medigo/`)
+### Source Code (repository root: `medikube/`)
 
 Everything below is **new**; the directory contains only `.specify/` and `specs/` today. Files
 marked `[PB]` are the only packages permitted to import
 `github.com/pocketbase/pocketbase/...`, and that boundary is a `depguard` rule, not a convention.
 
 ```text
-go.mod                                    module medigo, go 1.27, toolchain go1.27.x, tool ( templ )
+go.mod                                    module medikube, go 1.27, toolchain go1.27.x, tool ( templ )
 go.sum
 Taskfile.yaml                             arc-ui's task names + seed/routes/openapi/test:e2e
 Dockerfile                                4 stages, distroless, project-prefixed COPY
 .golangci.yml                             v2 schema; depguard + forbidigo carry Principles II and VI
-.gitignore                                medigo, .bin/, *_templ.go, app.css, pb_data/, *.db*
+.gitignore                                medikube, .bin/, *_templ.go, app.css, pb_data/, *.db*
 CLAUDE.md                                 day-to-day guidance, consistent with the constitution
 README.md
 api/openapi.json                          generated, committed, diffed, gated
 assets/input.css                          Tailwind v4 entrypoint; scans ../internal/web/**/*.templ
 docs/pocketbase-upgrade-checklist.md      the three unexported-internals workarounds (risk R8)
 
-cmd/medigo/
+cmd/medikube/
   main.go                                 composition root; the ONLY place that panics [PB]
   version.go                              -ldflags -X main.version
 
 internal/config/
-  config.go                               the one caarlos0/env struct, MEDIGO_ prefix
+  config.go                               the one caarlos0/env struct, MEDIKUBE_ prefix
   validate.go                             errors.Join — every problem reported at once
   redact.go                               MarshalZerologObject that redacts every secret
   config_test.go
@@ -767,26 +769,26 @@ internal/testdata/pb_data/                the committed fixture every tests.NewT
 
 e2e/
   package.json  playwright.config.ts      desktop 1440x900 + mobile 390x844 projects
-  routes.ts                               shells out to `medigo routes` at collection time
+  routes.ts                               shells out to `medikube routes` at collection time
   auth.setup.ts                           signs in as the seeded account, stores the state
   smoke.spec.ts                           the gate: 200, landmarks, zero console/page/network errors
   routes.gate.spec.ts                     fails if a registered page has no smoke case
   a11y.spec.ts                            keyboard reachability and visible focus
   README.md                               how the red-gate demonstration was performed
 
-.github/workflows/medigo-ci.yml           kept with the project; placed at the repo root to run
+.github/workflows/medikube-ci.yml         kept with the project; placed at the repo root to run
 ```
 
-**Monorepo integration — two files outside `medigo/`, changed in the same commit** (constitution
+**Monorepo integration — two files outside `medikube/`, changed in the same commit** (constitution
 Development Workflow; omitting either fails the container build with a misleading "file not
 found"):
 
 ```text
-/.dockerignore                    + !medigo/ in the allowlist block, and the mirror of
-                                    arc-ui's build-output exclusions plus medigo/pb_data/
+/.dockerignore                     + !medikube/ in the allowlist block, and the mirror of
+                                    arc-ui's build-output exclusions plus medikube/pb_data/
 /.github/workflows/build-image.yaml
-                                  + medigo in workflow_dispatch.inputs.project-name.options
-/.github/workflows/medigo-ci.yml  the copy that actually executes (house convention: the
+                                  + medikube in workflow_dispatch.inputs.project-name.options
+/.github/workflows/medikube-ci.yml the copy that actually executes (house convention: the
                                     canonical file lives with the project)
 ```
 
@@ -797,7 +799,7 @@ package per repository; every PocketBase import confined to the `[PB]`-marked pa
 enforced by `depguard`. The `<pkg>test` convention (`medicationtest`, `identitytest`) for fakes
 and contract suites is established here and copied by every later phase. The build context is the
 **repository root**, because that is what the shared workflow passes unconditionally, so every
-`COPY` in the Dockerfile is project-prefixed (`COPY medigo/go.mod medigo/go.sum ./`) — a bare
+`COPY` in the Dockerfile is project-prefixed (`COPY medikube/go.mod medikube/go.sum ./`) — a bare
 `COPY go.mod ./` works locally and breaks in CI, and is the likeliest single miss in the phase.
 
 ## Deviations from the shared design contract
@@ -820,7 +822,7 @@ only its allocation, plus three corrections it is wrong about.**
 | `access_denied` arrives in phase 003 | It arrives here, with `audit_events` | A trail that encodes refusals two different ways either side of phase 003 cannot be filtered by anyone. One enum value, introduced where the collection is born. Closes cross-artifact finding **M2**. Research D-20. |
 | The record path segment (contract rule 2) is plural, generated from one Go constant — but phase 002's contracts use the singular `/records/medication` | Plural: `/api/v1/records/medications`, from `kind.Kind.Segment()` | The constant is created here, so the spelling is settled here, and it is the spelling phase 003's registry already declares. Phase 002's contracts and quickstart **were** corrected to match on 2026-08-27 and now read `/records/medications` throughout. Closes cross-artifact finding **H1** (analysis run 2026-08-27; it was **H2** in the run before it). Research D-05. |
 | Health and readiness live at `/api/v1/healthz` and `/api/v1/readyz` (contract §2.3), while the observability dossier proposes `/api/v1/health/live` and `/api/v1/health/ready` | `/api/v1/healthz` and `/api/v1/readyz` | The contract is the binding document; the dossier is a reference. Stated so nobody has to diff them. |
-| The `forbidigo` ban is on `OnRecord.*Request` | The ban is on the **CRUD** request family only; the **auth** request family is explicitly permitted | `bindRecordAuthApi` is not disabled by the lockdown, so `OnRecordAuthRequest` *does* fire — and this phase depends on it to audit sign-in for both MediGo's own login route and PocketBase's native one. Banning it would leave the auth trail unwritable. Research D-14. |
+| The `forbidigo` ban is on `OnRecord.*Request` | The ban is on the **CRUD** request family only; the **auth** request family is explicitly permitted | `bindRecordAuthApi` is not disabled by the lockdown, so `OnRecordAuthRequest` *does* fire — and this phase depends on it to audit sign-in for both MediKube's own login route and PocketBase's native one. Banning it would leave the auth trail unwritable. Research D-14. |
 | Risk **R1** (discriminated `oneOf`) is open and assigned to this phase | Recorded as **CLOSED** by VERIFIED-SOURCE-FACTS FACT 9, and turned into a permanent regression gate here | It was built and run: document validates after a marshal→load round trip, and every registered kind appears in the discriminator mapping. The 94-operation budget (SHARED-DESIGN §2.3) and phase 003's three-route shape hold. |
 | Risk **R6** (reading MFA and the IP allowlist at boot) is open | Recorded as **CLOSED** by FACT 10, and implemented here | Both are readable from Go, but from **different** places: `Settings().SuperuserIPs` and the superusers collection's `MFA.Enabled`. A plan that assumed they sat together would have been wrong. |
 | Risk **R3** (FTS5 availability) is open | Recorded as **CLOSED** by FACT 11 | FTS5, `MATCH` and `rank` all work in `modernc.org/sqlite` v1.57.0. Nothing in this phase uses them; phase 004 may stop hedging. |
@@ -830,7 +832,7 @@ of this plan recorded password recovery, email confirmation and external sign-in
 with an operator workaround, and flagged that the shared design contract's operations 4, 7 and 8
 and its three auth pages belonged to nobody across 001–006 (cross-artifact finding H7, research
 D-04). That allocation has been decided for the suite and is applied above: **recovery and
-confirmation land in this phase** — they are PocketBase-native, so under Principle V MediGo wires
+confirmation land in this phase** — they are PocketBase-native, so under Principle V MediKube wires
 them rather than builds them, and a medical-records instance whose forgotten password is
 unrecoverable without superuser intervention is broken on day one — and **external sign-in lands
 in phase 006**, with the operator surface that configures providers. Nothing is left unallocated.
@@ -848,7 +850,7 @@ for a message that was never sent.
 |-----------|------------|-------------------------------------|
 | **CT-1.** The PocketBase log bridge reaches past the framework's public surface twice: it reassigns the exported embedded `pb.App` field to a decorator, and it binds `OnModelCreate("_logs")` and deliberately returns **without** calling `e.Next()` so a write PocketBase intends never happens. Both rest on observed internal behaviour rather than on a documented extension point, and both must be re-verified on every PocketBase upgrade. | Constitution Principle VI requires exactly one log stream, and PocketBase v0.40.1 hardcodes its slog handler in `core.BaseApp.initLogger` — neither `pocketbase.Config` nor `core.BaseAppConfig` exposes a logger or handler field, and `app.logger` is unexported. There is no injection point. Without both mechanisms, PocketBase's backup, mailer, cron and OAuth2 failures either go nowhere at all (`MaxDays = 0`) or land in a second, invisible log store (`MaxDays > 0` with no interception). In a medical-records application, silently discarding the framework's own failure reports is not acceptable. | *One mechanism instead of two* was rejected on evidence: `core/db_tx.go`'s `createTxApp` does `clone := *app` on a `*BaseApp`, so every transaction-scoped log line bypasses the decorator entirely — the two mechanisms cover disjoint sets of lines. *`MaxDays = 0`* was rejected because `BeforeAddFunc` returns `MaxDays > 0`, so the record never enters the batch and mechanism 2 never fires. *Reading `_logs` on a schedule and forwarding it* was rejected as a third log store with a polling delay and a retention window. *Forking PocketBase* was rejected outright. **Mitigations:** the decorator is safe by verification — grepping all non-test v0.40.1 source for `.(*BaseApp)` / `.(*core.BaseApp)` returns zero hits, so nothing downcasts past it; both mechanisms have tests that fail loudly if the behaviour changes; and both, plus the copied `DefaultDBConnect` pragma string, are the three entries in `docs/pocketbase-upgrade-checklist.md` created by this phase (shared-design risk R8). |
 | **CT-2.** `internal/records` is a registry with a dispatch table, introduced with **one** registered kind. Principle I says an abstraction needs at least two real implementations, or a test double, before it is introduced — and on the day this phase ships, medications is the only kind. | The registry is not speculative: it is the phase's *charter*. The specification's Assumptions state that everything this phase establishes "is the template that phases 002 through 006 copy", and phase 003's plan and task list are already written against `records.Register` adding thirteen kinds and **zero** routes. Introducing it in phase 003 instead would mean rewriting phase 001's medication handler, its DTO codec, its templ registration, its audit hooks and its OpenAPI branch — i.e. paying the abstraction cost anyway, later, with a migration. The alternative is not "no abstraction", it is "the same abstraction, retrofitted". | *Defer the registry to phase 003* was rejected on the cost above, and because the shared design contract's entire 94-operation budget (§2.3) depends on the record family existing from the start. *A `switch kind` in the handler* was rejected as the exact violation Principle II's open/closed clause names. **The Principle I clause is satisfied on its own terms, not waived:** the registry ships with **two** implementations of `records.Service` from day one — `medication.Adapter` and `recordstest.FakeKindService`, a second fully registered synthetic kind used only by `internal/records/registry_test.go` and `internal/openapi/gate_test.go`. That second kind is what makes the discriminated-`oneOf` gate meaningful (research D-08) and what proves the registry is genuinely kind-agnostic before phase 003 bets thirteen kinds on it. It is test-only and never registered in a production build, asserted by a test. |
-| **CT-3.** `internal/store/cursor.go` derives its HMAC key by HKDF from PocketBase's persisted `users` collection auth-token secret rather than from a MediGo configuration value, which means a MediGo security property depends on a PocketBase field MediGo does not own. | Cursors must be opaque *and* unforgeable — a client that can mint a cursor can choose the keyset boundary and page through rows it was never offered. The key must also survive a process restart, because SC-007 requires a list left open for sixty minutes to still work. A per-process random key breaks every open page on every deploy; a configured key adds a required secret to `MEDIGO_*` that the operator must generate, cannot rotate safely, and will paste into a shell history. | *A configured `MEDIGO_CURSOR_KEY`* was rejected because SC-008 requires an operator to reach a running instance in under ten minutes with the documented settings, and a mandatory generated secret is the single most common reason that fails. *An unsigned opaque cursor (base64 of the keyset tuple)* was rejected: opacity is not integrity, and the forged-cursor path is exactly a Principle VII problem. *A server-side cursor table* was rejected as state with a lifetime nobody wants to own. **Mitigations:** the derivation is one function with a test asserting a cursor minted before a restart still verifies after one; the key never leaves `internal/store`; a forged or tampered cursor is `400 invalid_cursor` and is audited; and the exact PocketBase field name is confirmed against v0.40.1 in the first setup task, with a documented fallback to a configured key if it is not readable (research D-25). |
+| **CT-3.** `internal/store/cursor.go` derives its HMAC key by HKDF from PocketBase's persisted `users` collection auth-token secret rather than from a MediKube configuration value, which means a MediKube security property depends on a PocketBase field MediKube does not own. | Cursors must be opaque *and* unforgeable — a client that can mint a cursor can choose the keyset boundary and page through rows it was never offered. The key must also survive a process restart, because SC-007 requires a list left open for sixty minutes to still work. A per-process random key breaks every open page on every deploy; a configured key adds a required secret to `MEDIKUBE_*` that the operator must generate, cannot rotate safely, and will paste into a shell history. | *A configured `MEDIKUBE_CURSOR_KEY`* was rejected because SC-008 requires an operator to reach a running instance in under ten minutes with the documented settings, and a mandatory generated secret is the single most common reason that fails. *An unsigned opaque cursor (base64 of the keyset tuple)* was rejected: opacity is not integrity, and the forged-cursor path is exactly a Principle VII problem. *A server-side cursor table* was rejected as state with a lifetime nobody wants to own. **Mitigations:** the derivation is one function with a test asserting a cursor minted before a restart still verifies after one; the key never leaves `internal/store`; a forged or tampered cursor is `400 invalid_cursor` and is audited; and the exact PocketBase field name is confirmed against v0.40.1 in the first setup task, with a documented fallback to a configured key if it is not readable (research D-25). |
 
 ## Phase Exit Criteria
 
@@ -862,7 +864,7 @@ This phase is done when, and only when:
    `[outcome metric]` in `spec.md`, fails the phase (cross-artifact finding M7).
 2. Every one of the 22 operations has an owner-succeeds / stranger-refused pair, and the refusal
    is byte-identical to a genuine not-found apart from `request_id` (FR-069, SC-006).
-3. `medigo routes`, `api/openapi.json` and the Playwright coverage agree in both directions, and
+3. `medikube routes`, `api/openapi.json` and the Playwright coverage agree in both directions, and
    the `api/openapi.json` diff in the phase's pull request is reviewed operation by operation
    (FR-064, FR-065, SC-011).
 4. The Playwright gate passes on all 9 pages and 3 error views at 1440×900 and 390×844 against a

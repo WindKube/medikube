@@ -1,7 +1,7 @@
 # Quickstart: Labs and Attachments (phase 004)
 
 How a developer runs this phase's work locally and verifies it by hand, end to end. Every command
-is run from `/Users/krzysztof.wiatrzyk/private/monorepo/medigo` unless stated otherwise.
+is run from `/Users/krzysztof.wiatrzyk/private/monorepo/medikube` unless stated otherwise.
 
 ---
 
@@ -42,13 +42,13 @@ seed data (research D-11).
 Environment for a local run:
 
 ```bash
-export MEDIGO_PUBLIC_URL=http://127.0.0.1:8090
-export MEDIGO_LOG_LEVEL=debug
-export MEDIGO_LOG_PRETTY=true
-export MEDIGO_FILES_MAX_UPLOAD_BYTES=33554432          # 32 MiB, the default
-export MEDIGO_FILES_ALLOWED_MIME=application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,image/tiff,image/gif,text/plain
-export MEDIGO_RETENTION_TRASH_DAYS=30
-export MEDIGO_LABS_MAX_SERIES_POINTS=500               # new in this phase
+export MEDIKUBE_PUBLIC_URL=http://127.0.0.1:8090
+export MEDIKUBE_LOG_LEVEL=debug
+export MEDIKUBE_LOG_PRETTY=true
+export MEDIKUBE_FILES_MAX_UPLOAD_BYTES=33554432        # 32 MiB, the default
+export MEDIKUBE_FILES_ALLOWED_MIME=application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,image/tiff,image/gif,text/plain
+export MEDIKUBE_RETENTION_TRASH_DAYS=30
+export MEDIKUBE_LABS_MAX_SERIES_POINTS=500             # new in this phase
 ```
 
 > **A note that will otherwise cost somebody an afternoon.** `text/csv` is **not** in the default
@@ -61,7 +61,7 @@ export MEDIGO_LABS_MAX_SERIES_POINTS=500               # new in this phase
 ## 2. Seed a deterministic instance
 
 ```bash
-task seed        # medigo seed
+task seed        # medikube seed
 ```
 
 The seed creates:
@@ -229,7 +229,7 @@ curl -s -o /dev/null -w '%{http_code}\n' \
    curl -s -o /dev/null -w '%{http_code}\n' -X POST \
      -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"name":"x"}' \
      http://127.0.0.1:8090/api/v1/catalog/lab-tests            # 404/405 — the route does not exist
-   ./medigo routes | jq '.[] | select(.path | startswith("/api/v1/catalog")) | .method'
+   ./medikube routes | jq '.[] | select(.path | startswith("/api/v1/catalog")) | .method'
    # must print only "GET"
    ```
 
@@ -260,7 +260,7 @@ task test                 # go test -race -count=1 ./...
 task lint                 # golangci-lint v2, incl. depguard and forbidigo
 task openapi              # regenerate api/openapi.json
 git diff --exit-code api/openapi.json     # MUST be clean — an unintended API change is a diff, not a surprise
-task routes               # medigo routes | jq
+task routes               # medikube routes | jq
 task test:e2e             # Playwright, both viewports
 task test:scale           # build-tagged: 5,000 results, a 100-component panel, 500 readings, 2,000 documents
 task test:phileak         # build-tagged: no clinical or identifying content in logs, metrics, traces or Sentry
@@ -286,7 +286,7 @@ makes every integration test run against the old schema and fail in a way that l
 bug.**
 
 ```bash
-task fixture:regen        # runs migrations against a clean db + medigo seed, rewrites internal/testdata/pb_data
+task fixture:regen        # runs migrations against a clean db + medikube seed, rewrites internal/testdata/pb_data
 git status internal/testdata/pb_data     # commit the result
 ```
 

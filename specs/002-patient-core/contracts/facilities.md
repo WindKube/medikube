@@ -4,7 +4,7 @@ Five operations. Requirements covered: FR-034 … FR-040.
 
 **One directory for practices, pharmacies, hospitals, laboratories, imaging centres and anything
 else**, distinguished by `kind` (FR-034, research D-24). Upstream modelled practices and pharmacies
-as two entities with two different treatments of the same six address concepts; MediGo has one
+as two entities with two different treatments of the same six address concepts; MediKube has one
 shape, one CRUD, one page, one search.
 
 ## DTOs
@@ -108,6 +108,7 @@ References from `practitioners.facility` and `medications.pharmacy` are **unset,
 | 412 / 404 / 401 | as elsewhere | |
 
 **Mandatory tests**
+
 - A facility referenced by a practitioner and by a medication's `pharmacy` is deleted → both
   survive with an empty reference.
 - Account B → 404 for every one of the five operations against Account A's ids (FR-037, SC-014).

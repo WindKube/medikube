@@ -1,0 +1,37 @@
+name: Spec tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# There is no compiler here, so this is what "the build is green" means: the
+# corpus still has the shape every speckit skill and every cross-reference
+# assumes. Nothing in this workflow writes anything.
+permissions:
+  contents: read
+
+concurrency:
+  group: spec-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  structure:
+    name: Spec corpus structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5.1.0
+        with:
+          persist-credentials: false
+
+      # Plain bash, awk and coreutils — no toolchain to install, which is why this
+      # job is fast enough to run on every push.
+      - name: Structural assertions over specs/
+        run: bash scripts/check-spec-structure.sh
+
+      # Separate step so the summary says which of the two failed. The guard needs
+      # the full history only in the sense that it reads the index; the shallow
+      # checkout above is enough because it greps tracked files at this commit.
+      - name: The old project name has not come back
+        run: bash scripts/check-naming.sh

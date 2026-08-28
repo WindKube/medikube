@@ -1,6 +1,6 @@
 # specs/research/
 
-The nine reference dossiers behind the MediGo specification suite. Each was produced by reading
+The nine reference dossiers behind the MediKube specification suite. Each was produced by reading
 real source — downloaded module code, the MediKeep original, the sibling projects in this
 monorepo — rather than documentation, and each records the evidence for decisions the phase plans
 then cite by name.
@@ -28,7 +28,7 @@ When two documents disagree, the higher one wins:
 | File | What it covers |
 |---|---|
 | `RECONCILIATION.md` | Contradictions found **between** the other dossiers, and how each was settled. Read this before trusting any single dossier — several of its C-numbered findings overturn advice given elsewhere in this directory. |
-| `HOUSE-PATTERNS.md` | How this monorepo builds Go services: `arc-ui` as MediGo's template project, the Dockerfile and Taskfile shape, the `.dockerignore` allowlist, `depguard` and `forbidigo` configuration. |
+| `HOUSE-PATTERNS.md` | How this monorepo builds Go services: `arc-ui` as MediKube's template project, the Dockerfile and Taskfile shape, the `.dockerignore` allowlist, `depguard` and `forbidigo` configuration. |
 | `pocketbase.md` | PocketBase v0.40.1 as an embedded framework — hooks, routing, migrations, the file API, the test harness, and which unexported internals the suite depends on. |
 | `frontend.md` | templ, Datastar v1, Tailwind v4, and the CSP consequences of each. |
 | `observability.md` | zerolog, Sentry, Prometheus, OpenTelemetry, and the logger bridge into PocketBase. |

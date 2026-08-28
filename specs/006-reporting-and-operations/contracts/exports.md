@@ -89,8 +89,8 @@ whose manifest **states that documents were excluded** (FR-036, FR-006 of US2, U
 |---|---|---|
 | `404 not_found` | any named person is unreachable, or does not exist | FR-001, FR-011, US1 AS-9 |
 | `422 nothing_matched` | the selection resolves to **zero** records; the message says nothing matched and **the selection is left intact** so it can be widened | FR-004, US1 AS-4 |
-| `422 too_many_records` | more than `MEDIGO_REPORT_MAX_RECORDS`; the message states the limit and asks for a narrower selection, **before anything is produced** | FR-010, US1 AS-14 |
-| `422 too_many_charts` | more charts than `MEDIGO_REPORT_MAX_CHARTS` | FR-023, US4 AS-9 |
+| `422 too_many_records` | more than `MEDIKUBE_REPORT_MAX_RECORDS`; the message states the limit and asks for a narrower selection, **before anything is produced** | FR-010, US1 AS-14 |
+| `422 too_many_charts` | more charts than `MEDIKUBE_REPORT_MAX_CHARTS` | FR-023, US4 AS-9 |
 | `422 not_enough_readings` | a chart range below the published minimum | FR-019 |
 | `409 patient_unreachable` | `template` names a person the account can no longer reach | FR-032, US3 AS-11 |
 | `422 validation_failed` | anything else in data-model §1.2–§1.4 or §2.3 | — |
@@ -150,7 +150,7 @@ progress.
 
 **Response** `200`, streamed from `app.NewFilesystem()` through `fsys.Serve`, with
 `Content-Type: application/pdf` or `application/zip` and
-`Content-Disposition: attachment; filename="medigo-report-<YYYYMMDDHHMMSS>.pdf"` (or `-export-…zip`). The
+`Content-Disposition: attachment; filename="medikube-report-<YYYYMMDDHHMMSS>.pdf"` (or `-export-…zip`). The
 filename carries **no** patient name (FR-117).
 
 **Authorization**, in this order, every time — possession of the address grants nothing (FR-013,

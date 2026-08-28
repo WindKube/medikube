@@ -1,0 +1,87 @@
+version: "3"
+
+# Every task below runs the same command the corresponding CI job runs, so
+# `task ci` is a faithful dry run of the pipeline rather than an approximation
+# of it. There is no compiler in this repository: "lint" is the four linters,
+# "build" is link integrity, and "test" is the structural assertions over the
+# spec corpus.
+
+tasks:
+  default:
+    cmds:
+      - task: ci
+
+  lint:
+    desc: Every linter, in CI's order
+    cmds:
+      - task: lint:md
+      - task: lint:yaml
+      - task: lint:actions
+      - task: lint:shell
+      - task: lint:links
+
+  lint:md:
+    desc: markdownlint-cli2 over the prose
+    cmds:
+      - markdownlint-cli2 "**/*.md"
+
+  lint:yaml:
+    desc: yamllint
+    cmds:
+      - yamllint --strict -c .yamllint.yaml .
+
+  lint:actions:
+    desc: "Workflow syntax (actionlint) and supply chain (zizmor)"
+    cmds:
+      - actionlint .github/workflows/*.yaml
+      # pedantic, not the default regular: regular hides the excessive-permissions
+      # class, which is most of what pinning and least-privilege buy you.
+      - zizmor --no-progress --persona=pedantic .github/workflows/
+
+  lint:shell:
+    desc: shellcheck
+    cmds:
+      # The vendored .specify/ scripts are included: they are committed here and
+      # `specify` runs them, so they are this repository's to keep clean.
+      - shellcheck scripts/*.sh .specify/scripts/bash/*.sh
+
+  lint:links:
+    desc: "Link integrity — the nearest thing a docs repo has to a build"
+    cmds:
+      # --offline is the whole point: the assertion is that every relative link
+      # and image resolves inside the checkout. Reaching the network would make a
+      # green build depend on other people's uptime and rate limits.
+      - lychee --config lychee.toml --no-progress --offline .
+
+  test:
+    desc: The test tier
+    cmds:
+      - task: test:specs
+      - task: test:naming
+
+  test:specs:
+    desc: Structural assertions over specs/
+    cmds:
+      - bash scripts/check-spec-structure.sh
+
+  test:naming:
+    desc: The old project name has not come back
+    cmds:
+      - bash scripts/check-naming.sh
+
+  ci:
+    desc: Everything CI runs
+    cmds:
+      - task: lint
+      - task: test
+
+  hooks:install:
+    desc: Install the pre-commit hook and its environments
+    cmds:
+      - pre-commit install --install-hooks
+
+  hooks:update:
+    desc: Bump the pinned hook revisions, then run them
+    cmds:
+      - pre-commit autoupdate
+      - pre-commit run --all-files

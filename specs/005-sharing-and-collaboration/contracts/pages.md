@@ -6,7 +6,7 @@ the page's own landmark visible;
 `body[data-signals]` present (proving Datastar booted); **zero** console errors; **zero** page
 errors; **zero** failed network requests.
 
-The route list under test is derived from `medigo routes`, so a page added without a smoke case
+The route list under test is derived from `medikube routes`, so a page added without a smoke case
 fails the build (FR-079, SC-019).
 
 ## 1. New pages
@@ -67,7 +67,7 @@ phase-001–004 smoke suite unchanged.
 
 `/sharing` and `/invitations` each render the shared `@EmptyState(title, body, action)` **inside
 their own landmark**, so the landmark assertion holds on a freshly seeded instance with nothing to
-show. The seed provides `empty@medigo.local` — an account with nothing shared in either direction —
+show. The seed provides `empty@medikube.local` — an account with nothing shared in either direction —
 and both pages are smoke-tested **as that account** as well as as the populated one. This is the
 most common way a smoke gate goes falsely red, and it is the reason the fixture exists.
 

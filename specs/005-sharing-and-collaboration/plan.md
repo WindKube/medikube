@@ -48,12 +48,12 @@ documentation:
 4. **Invitation email goes through `app.NewMailClient()`, and only through it.**
    `core/base.go:713` sends via the event's mailer when a hook replaced it, and
    `tests/app.go:500` is exactly such a hook — so every invitation email is captured by
-   `TestApp.TestMailer` with no seam of MediGo's own. A hand-rolled SMTP client would have been
+   `TestApp.TestMailer` with no seam of MediKube's own. A hand-rolled SMTP client would have been
    untestable and would have re-implemented what Principle V forbids re-implementing.
 5. **"Outbound email is not configured" is `Settings().SMTP.Enabled == false`, not a failed send.**
    `core/base.go:637-653` falls back to `&mailer.Sendmail{}`, which `exec`s a `sendmail` binary
    that does not exist in `gcr.io/distroless/static-debian12`. Detecting the misconfiguration by
-   trying to send would mean discovering it after the user pressed the button. MediGo reads the
+   trying to send would mean discovering it after the user pressed the button. MediKube reads the
    flag, warns at boot, and refuses FR-022's case up front.
 6. **Nothing shown before acceptance names anybody.** The invitation preview DTO physically cannot
    carry a patient name: it has no field for one. That is the FR-023/SC-010 control — DTO shape,
@@ -76,15 +76,15 @@ set `GOTOOLCHAIN=local`.
 | `github.com/pocketbase/pocketbase` | v0.40.1 | 2 new collections + 1 amendment as reversible Go migrations; `RunInTransaction` for the all-or-nothing accept; `NewMailClient()` for the invitation email; post-commit `OnRecordAfter*Success` hooks on `shares`/`invitations` for the audit trail; `CascadeDelete` for FR-048/FR-053 |
 | `github.com/a-h/templ` | v0.3.1020 | sharing screen, invitations screen, public invite-landing page, share drawer, notice toast, **and the invitation email body** — one renderer for web and mail |
 | `github.com/starfederation/datastar-go` | v1.2.2 | the share drawer and respond/revoke actions (plain `text/html` patches, no stream), plus `GET /api/v1/streams/notifications` |
-| `github.com/caarlos0/env/v11` | v11.4.1 | `MEDIGO_SHARING_*` (invitation default/min/max lapse, max resources per invitation, answered-invitation retention) |
+| `github.com/caarlos0/env/v11` | v11.4.1 | `MEDIKUBE_SHARING_*` (invitation default/min/max lapse, max resources per invitation, answered-invitation retention) |
 | `github.com/rs/zerolog` | v1.35.1 | the only logger; redacting `MarshalZerologObject` on `Share` and `Invitation` (never the address, the note or the token) |
 | `github.com/getsentry/sentry-go` | v0.48.0 | errors and panics only, scrubbed |
-| `github.com/prometheus/client_golang` | latest pinned | `medigo_shares_*` and `medigo_invitations_*`; labels bounded to `resource_kind`, `level`, `outcome`, `reason` |
+| `github.com/prometheus/client_golang` | latest pinned | `medikube_shares_*` and `medikube_invitations_*`; labels bounded to `resource_kind`, `level`, `outcome`, `reason` |
 | `go.opentelemetry.io/otel` | latest pinned | `service.share.*` and `store.shares.*` spans; no address, note or token as an attribute |
 | `github.com/samber/do` | v2 | container providers for the share service, the mail adapter and the notifier |
 | `github.com/samber/lo` | v1.53.0 | sparingly, per Principle IV |
 | `github.com/stretchr/testify` | v1.12.0 | the only assertion library |
-| `github.com/spf13/cobra` | **transitive — pinned once in [001's plan](../001-walking-skeleton/plan.md#technical-context), never a direct `require`** | via PocketBase's `RootCmd`; `medigo seed` gains sharing fixtures, `medigo purge` gains the share/invitation tidy. The version is whatever `pocketbase@v0.40.1`'s `go.mod` requires and is not restated here (cross-artifact finding M2) |
+| `github.com/spf13/cobra` | **transitive — pinned once in [001's plan](../001-walking-skeleton/plan.md#technical-context), never a direct `require`** | via PocketBase's `RootCmd`; `medikube seed` gains sharing fixtures, `medikube purge` gains the share/invitation tidy. The version is whatever `pocketbase@v0.40.1`'s `go.mod` requires and is not restated here (cross-artifact finding M2) |
 | `modernc.org/sqlite` | v1.57.0 | transitive; pure Go, so `CGO_ENABLED=0` holds |
 
 Stdlib only for the invitation credential: `crypto/rand` + `crypto/sha256` + `encoding/base64`.
@@ -126,7 +126,7 @@ table-driven `t.Run` subtests. Six layers, all mandatory:
 the runtime image. **Note that distroless has no `sendmail`** — see decision [D-05](./research.md#d-05).
 
 **Project Type**: single server-rendered Go web application; a project inside the `windkube`
-monorepo at `/medigo`, image `ghcr.io/windkube/medigo`.
+monorepo at `/medikube`, image `ghcr.io/windkube/medikube`.
 
 **Performance Goals** (the spec's success criteria are the acceptance bar):
 
@@ -271,18 +271,18 @@ Generated `*_templ.go` is committed, marked generated, excluded from lint and co
 Nothing PocketBase provides is rebuilt:
 
 - **Mail**: `app.NewMailClient()`, the `OnMailerSend` hook and `Settings().SMTP` are the mail
-  subsystem. MediGo writes an envelope and a templ body and hands it over.
+  subsystem. MediKube writes an envelope and a templ body and hands it over.
 - **Atomicity**: `app.RunInTransaction` wraps the accept (FR-028) and the withdraw (FR-031). SQLite
   is single-writer, so the compare-and-set on `invitations.status` inside that transaction is what
   makes the double-accept edge case impossible without an advisory lock (research
   [D-11](./research.md#d-11)).
 - **Cascade**: `shares.patient`, `shares.family_member`, `shares.grantor`, `shares.grantee` and
   `invitations.sender` are `CascadeDelete: true`, which is FR-048 and FR-053 implemented by
-  `core/record_model.go` rather than by MediGo. Both are *proved by test*, not assumed.
+  `core/record_model.go` rather than by MediKube. Both are *proved by test*, not assumed.
 - **Hooks**: only post-commit `OnRecordAfterCreateSuccess` / `…UpdateSuccess` / `…DeleteSuccess` on
   `shares` and `invitations`. `OnRecord*Request` is not used and is blocked by `forbidigo`.
 - **Realtime**: PocketBase's is not used, for the three verified reasons in Principle V. The
-  notifications stream is a MediGo Datastar SSE handler fed by the in-process hub, publishing
+  notifications stream is a MediKube Datastar SSE handler fed by the in-process hub, publishing
   **ids and event kinds only** and **re-authorising per subscriber at delivery** — which is exactly
   what FR-066 independently requires.
 - Both new collections keep all five API rules `nil`, asserted at boot and proved per collection by
@@ -300,10 +300,10 @@ display name, invitation token) and driven across **every operation this phase d
 SC-016), asserting zero occurrences in the zerolog stream, the Prometheus registry, the OTel span
 recorder and the Sentry transport.
 
-Metric labels stay bounded: `medigo_shares_granted_total{resource_kind,level}`,
-`medigo_shares_revoked_total{resource_kind,by}`, `medigo_invitations_sent_total{resource_kind}`,
-`medigo_invitations_answered_total{response}`, `medigo_access_denied_total{reason}`,
-`medigo_sse_streams_active{stream}`. No address, no user id, no patient id, no note.
+Metric labels stay bounded: `medikube_shares_granted_total{resource_kind,level}`,
+`medikube_shares_revoked_total{resource_kind,by}`, `medikube_invitations_sent_total{resource_kind}`,
+`medikube_invitations_answered_total{response}`, `medikube_access_denied_total{reason}`,
+`medikube_sse_streams_active{stream}`. No address, no user id, no patient id, no note.
 
 Datastar's `ConsoleLog`/`ConsoleError` remain banned on production paths — the notice toast is a
 `PatchElements` into `#toast`, never a console write, or the Principle VIII gate would fight
@@ -350,7 +350,7 @@ This is the principle the phase exists to serve, and the one it can most easily 
 Three new pages (`/sharing`, `/invitations`, `/invite/{token}`) plus one new shell region, each
 covered at 1440×900 and 390×844 asserting `200`, the four shell landmarks, the page's own landmark,
 `body[data-signals]` present, and zero console errors / page errors / failed requests. The route
-list is derived from `medigo routes`, so a page added without a smoke case fails the build
+list is derived from `medikube routes`, so a page added without a smoke case fails the build
 (FR-079, SC-019). The seeded instance deliberately holds an account with **nothing shared in either
 direction** so that the `@EmptyState` path is what the landmark assertion exercises (FR-040, US1
 scenario 8, SC-019).
@@ -367,7 +367,7 @@ Five gates, all `go test` or CI steps, all failing the build:
 
 1. `internal/openapi/gate_test.go` — the route registry and committed `api/openapi.json` agree on
    every `operationId`; the regenerated document is byte-identical to the committed one.
-2. `e2e/routes.gate.spec.ts` — every route emitted by `medigo routes` with `Page: true` has a smoke
+2. `e2e/routes.gate.spec.ts` — every route emitted by `medikube routes` with `Page: true` has a smoke
    case, now including `/invite/{token}` with a seeded token.
 3. `internal/service/access/coverage_test.go` — **new in this phase**: every registered record kind
    and every patient-scoped route in the registry has an entry in the authorization matrix suite. A
@@ -429,13 +429,13 @@ specs/005-sharing-and-collaboration/
 └── tasks.md             # Phase 2 output (/speckit-tasks)
 ```
 
-### Source Code (repository root `/medigo`)
+### Source Code (repository root `/medikube`)
 
 Only paths this phase **creates** or **touches**. `[NEW]` = created here, `[EDIT]` = modified.
 
 ```text
-medigo/
-├── cmd/medigo/main.go                                   [EDIT] register share service, mail adapter, notifier
+medikube/
+├── cmd/medikube/main.go                                 [EDIT] register share service, mail adapter, notifier
 │
 ├── internal/config/config.go                            [EDIT] SharingConfig (envPrefix "SHARING_")
 │
@@ -578,7 +578,7 @@ planned; pages **+1**.
 This phase is done when, and only when:
 
 1. All 47 acceptance scenarios exist as named automated tests and pass (FR-076, SC-018).
-2. The authorization matrix suite covers **every** patient-scoped route in `medigo routes`, and
+2. The authorization matrix suite covers **every** patient-scoped route in `medikube routes`, and
    `internal/service/access/coverage_test.go` fails the build if one is missing (FR-077).
 3. The family-history isolation suite passes in full (FR-078, SC-008).
 4. The PHI-leak exercise reports zero occurrences of an address, a note, a display name or an

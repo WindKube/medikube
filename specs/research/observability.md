@@ -1,4 +1,4 @@
-# MediGo — Observability & Cross-Cutting Concerns
+# MediKube — Observability & Cross-Cutting Concerns
 
 Research basis: **PocketBase v0.40.1 source read directly** from the module cache
 (`~/go/pkg/mod/github.com/pocketbase/pocketbase@v0.40.1`), plus `pocketbase/dbx@v1.12.0`,
@@ -75,7 +75,7 @@ func NewLogger(cfg LogConfig, release string) zerolog.Logger {
 		Level(level).
 		With().
 		Timestamp().
-		Str("service", "medigo").
+		Str("service", "medikube").
 		Str("release", release).
 		Logger()
 }
@@ -97,7 +97,7 @@ zerolog logs `error` (the message chain) + `caller`; Sentry owns the stack. One 
 no half-working stacks in JSON logs.
 
 If you later decide you want stacks in logs, add a minimal marshaler over your own
-`medigo/internal/apperr` type rather than pulling in `pkg/errors`.
+`medikube/internal/apperr` type rather than pulling in `pkg/errors`.
 
 ### 1.3 Request-scoped logger through PocketBase
 
@@ -125,7 +125,7 @@ const RequestIDHeader = "X-Request-Id"
 // the request context so every downstream layer can reach it without an interface change.
 func RequestLogger(base zerolog.Logger) *hook.Handler[*core.RequestEvent] {
 	return &hook.Handler[*core.RequestEvent]{
-		Id:       "medigoRequestLogger",
+		Id:       "medikubeRequestLogger",
 		Priority: apis.DefaultActivityLoggerMiddlewarePriority - 10, // run before PB's own
 		Func: func(e *core.RequestEvent) error {
 			start := time.Now()
@@ -183,6 +183,7 @@ func (s *recordService) Create(ctx context.Context, in CreateRecordInput) (*Reco
 ```
 
 Two things make this safe:
+
 - `zerolog.Ctx(ctx)` returns a disabled logger, never nil, when nothing is attached
   (`rs/zerolog/ctx.go`) — so tests and background jobs don't panic.
 - Set `zerolog.DefaultContextLogger = &base` at boot so a ctx-less path still logs somewhere
@@ -361,7 +362,7 @@ func BridgePBLogs(app core.App, base zerolog.Logger) {
 	l := base.With().Str("src", "pocketbase").Logger()
 
 	app.OnModelCreate("_logs").Bind(&hook.Handler[*core.ModelEvent]{
-		Id:       "medigoLogBridge",
+		Id:       "medikubeLogBridge",
 		Priority: -99999, // before anything else that might want the record
 		Func: func(e *core.ModelEvent) error {
 			pbLog, ok := e.Model.(*core.Log)
@@ -441,14 +442,14 @@ view the collection is disabled; from PB's point of view the pipe is open.
 app.OnServe().BindFunc(func(e *core.ServeEvent) error {
 	probe := make(chan struct{}, 1)
 	app.OnModelCreate("_logs").Bind(&hook.Handler[*core.ModelEvent]{
-		Id: "medigoLogBridgeProbe",
+		Id: "medikubeLogBridgeProbe",
 		Func: func(me *core.ModelEvent) error { select { case probe <- struct{}{}: default: }; return nil },
 	})
-	app.Logger().Info("medigo log bridge probe")
+	app.Logger().Info("medikube log bridge probe")
 	go func() {
 		select {
 		case <-probe:
-			app.OnModelCreate("_logs").Unbind("medigoLogBridgeProbe")
+			app.OnModelCreate("_logs").Unbind("medikubeLogBridgeProbe")
 		case <-time.After(10 * time.Second):
 			base.Error().Msg("PB->zerolog log bridge is NOT working; PocketBase internal logs are being lost")
 		}
@@ -591,7 +592,7 @@ Note `HTTPBodies: []sentry.BodyType{}` — an **empty non-nil slice**. `resolveD
 only substitutes `allBodyTypes()` when the field is `nil` (data_collection.go:~172). An empty
 slice means "collect nothing". Getting this wrong ships patient JSON to Sentry.
 
-### 3.2 What must NEVER reach Sentry — the MediGo denylist
+### 3.2 What must NEVER reach Sentry — the MediKube denylist
 
 This is a medical records app. Treat the Sentry payload as a hostile egress channel.
 
@@ -715,7 +716,7 @@ func scrubEvent(event *sentry.Event, _ *sentry.EventHint) *sentry.Event {
    `scrubEvent`. This test is a compliance artefact — make it a required gate.
 
 Also worth a `sentry.Init` guard: refuse to boot with `SENTRY_DSN` set and
-`MEDIGO_ENV=production` unless `SENTRY_SCRUB_VERIFIED=true` (a build-time constant set by CI
+`MEDIKUBE_ENV=production` unless `SENTRY_SCRUB_VERIFIED=true` (a build-time constant set by CI
 after the scrubber tests pass). Cheap, and it makes the invariant structural.
 
 ### 3.4 Panic recovery middleware on PB's router
@@ -728,7 +729,7 @@ response:
 ```go
 func SentryRecover() *hook.Handler[*core.RequestEvent] {
 	return &hook.Handler[*core.RequestEvent]{
-		Id:       "medigoSentryRecover",
+		Id:       "medikubeSentryRecover",
 		Priority: apis.DefaultPanicRecoverMiddlewarePriority - 1,
 		Func: func(e *core.RequestEvent) (err error) {
 			hub := sentry.CurrentHub().Clone()
@@ -850,13 +851,13 @@ now contains `linking_integration.go` and an `otlp/` subpackage:
 
 1. **OpenTelemetry is the only thing that creates spans.** `EnableTracing: false` and
    `TracesSampleRate: 0` in `ClientOptions`. Sentry's own `StartTransaction`/`StartSpan` API is
-   never called in MediGo code.
+   never called in MediKube code.
 2. `BeforeSendTransaction` returns `nil` — a hard stop. If a dependency ever starts a Sentry
    transaction behind your back, it dies at the gate. (This is the belt to the braces.)
 3. Add `sentryotel.NewOtelIntegration()` so every Sentry error carries the `trace_id`/`span_id`
    of the OTel span it happened in. Clicking from a Sentry issue to the trace works.
 4. **Where spans go is a config choice, not an architecture choice.** Either
-   `otlptracehttp.New(...)` to your collector (recommended for self-hosted MediGo), *or*
+   `otlptracehttp.New(...)` to your collector (recommended for self-hosted MediKube), *or*
    `sentryotlp.NewTraceExporter(ctx, dsn)` to send them to Sentry, *or* both as two batch
    processors on the same `TracerProvider`. Either way the spans are produced exactly once, by
    OTel.
@@ -928,7 +929,7 @@ func NewMetrics() *Metrics {
 	m := &Metrics{
 		reg: reg,
 		HTTPDuration: f.NewHistogramVec(prometheus.HistogramOpts{
-			Namespace: "medigo", Subsystem: "http", Name: "request_duration_seconds",
+			Namespace: "medikube", Subsystem: "http", Name: "request_duration_seconds",
 			Help:    "HTTP request latency by route pattern.",
 			Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
 			// Native histograms: cheap high-resolution latency without bucket tuning.
@@ -937,15 +938,15 @@ func NewMetrics() *Metrics {
 			NativeHistogramMinResetDuration: time.Hour,
 		}, []string{"route", "method", "status"}),
 		HTTPInFlight: f.NewGauge(prometheus.GaugeOpts{
-			Namespace: "medigo", Subsystem: "http", Name: "requests_in_flight",
+			Namespace: "medikube", Subsystem: "http", Name: "requests_in_flight",
 			Help: "In-flight HTTP requests.",
 		}),
 		RecordsCreated: f.NewCounterVec(prometheus.CounterOpts{
-			Namespace: "medigo", Subsystem: "records", Name: "created_total",
+			Namespace: "medikube", Subsystem: "records", Name: "created_total",
 			Help: "Clinical records created, by type.",
 		}, []string{"record_type"}),
 		AuthFailures: f.NewCounterVec(prometheus.CounterOpts{
-			Namespace: "medigo", Subsystem: "auth", Name: "failures_total",
+			Namespace: "medikube", Subsystem: "auth", Name: "failures_total",
 			Help: "Failed authentication attempts, by reason.",
 		}, []string{"reason"}),
 		// ... rest elided, same shape
@@ -957,6 +958,7 @@ func (m *Metrics) Registry() *prometheus.Registry { return m.reg }
 ```
 
 **Deliberately NOT metrics:**
+
 - Anything labelled by `patient_id`, `user_id`, `record_id`, filename, or tag name. That is
   unbounded and it is also PII in your monitoring system, which is a much worse problem than a
   cardinality bill.
@@ -984,7 +986,7 @@ mux.HandleFunc(pattern, func(resp http.ResponseWriter, req *http.Request) { ... 
 
 Since **Go 1.23**, `ServeMux.ServeHTTP` sets `Request.Pattern` to the matched pattern before
 dispatching (go1.23 release notes: *"For inbound requests, the new `Request.Pattern` field
-contains the `ServeMux` pattern (if any) that matched the request."*). MediGo targets Go 1.26,
+contains the `ServeMux` pattern (if any) that matched the request."*). MediKube targets Go 1.26,
 so this is available unconditionally.
 
 ```go
@@ -1006,7 +1008,7 @@ func routePattern(r *http.Request) string {
 ```
 
 Why this is bounded: the label space is exactly the set of registered routes (~80-120 for
-MediGo + PB's ~40 built-ins), which is a compile-time constant. Path params never appear —
+MediKube + PB's ~40 built-ins), which is a compile-time constant. Path params never appear —
 `{patientId}` stays literal. And unmatched requests can't explode it either, because
 `Router.BuildMux` (tools/router/router.go:65) installs a catch-all:
 
@@ -1049,7 +1051,7 @@ of expensive.
 ```go
 func MetricsMiddleware(m *Metrics, rl *routeLabeller) *hook.Handler[*core.RequestEvent] {
 	return &hook.Handler[*core.RequestEvent]{
-		Id:       "medigoMetrics",
+		Id:       "medikubeMetrics",
 		Priority: apis.DefaultActivityLoggerMiddlewarePriority - 20,
 		Func: func(e *core.RequestEvent) error {
 			route := rl.label(e.Request)
@@ -1131,7 +1133,7 @@ func StartMetricsServer(cfg MetricsConfig, m *Metrics, log zerolog.Logger) (*htt
 - **It survives the app being unhealthy.** If PB's bootstrap fails or the main router is
   wedged, you still want to scrape. A separate `http.Server` with its own mux gives you that.
 - **Binding to localhost is a real control, not a config toggle.** In the container, Prometheus
-  scrapes over the pod network only if you deliberately set `MEDIGO_METRICS_ADDR=0.0.0.0:9090`.
+  scrapes over the pod network only if you deliberately set `MEDIKUBE_METRICS_ADDR=0.0.0.0:9090`.
   Default-deny.
 - **Superuser auth on `/metrics` is the wrong shape.** Prometheus scrape configs with a PB
   superuser token is operationally awful (token rotation, a superuser credential sitting in
@@ -1139,7 +1141,7 @@ func StartMetricsServer(cfg MetricsConfig, m *Metrics, log zerolog.Logger) (*htt
 
 If you are forced onto a single port (some PaaS), the fallback is a PB route with
 `apis.RequireSuperuserAuth()` **plus** a static bearer token from
-`MEDIGO_METRICS_TOKEN` compared with `subtle.ConstantTimeCompare`. Second-best, and say so.
+`MEDIKUBE_METRICS_TOKEN` compared with `subtle.ConstantTimeCompare`. Second-best, and say so.
 
 **Metrics carry no PHI**, so the exposure risk is enumeration of usage patterns, not patient
 data — but a self-hosted medical app's operator will still be asked about it. Localhost default
@@ -1164,7 +1166,7 @@ func InitTracing(ctx context.Context, cfg OTelConfig, release string) (func(cont
 		resource.WithTelemetrySDK(),
 		resource.WithHost(),
 		resource.WithAttributes(
-			semconv.ServiceName("medigo"),
+			semconv.ServiceName("medikube"),
 			semconv.ServiceVersion(release),
 			semconv.DeploymentEnvironmentName(cfg.Environment),
 		),
@@ -1217,11 +1219,11 @@ to provide.
 
 ```go
 func TracingMiddleware(rl *routeLabeller) *hook.Handler[*core.RequestEvent] {
-	tracer := otel.Tracer("medigo/http")
+	tracer := otel.Tracer("medikube/http")
 	prop := otel.GetTextMapPropagator()
 
 	return &hook.Handler[*core.RequestEvent]{
-		Id:       "medigoTracing",
+		Id:       "medikubeTracing",
 		Priority: apis.DefaultActivityLoggerMiddlewarePriority - 30, // outermost of ours
 		Func: func(e *core.RequestEvent) error {
 			route := rl.label(e.Request)
@@ -1253,7 +1255,7 @@ func TracingMiddleware(rl *routeLabeller) *hook.Handler[*core.RequestEvent] {
 			}
 			span.SetAttributes(semconv.HTTPResponseStatusCode(status))
 			if e.Auth != nil {
-				span.SetAttributes(attribute.String("medigo.user_id", e.Auth.Id))
+				span.SetAttributes(attribute.String("medikube.user_id", e.Auth.Id))
 			}
 			if err != nil {
 				span.RecordError(err)
@@ -1270,10 +1272,10 @@ func TracingMiddleware(rl *routeLabeller) *hook.Handler[*core.RequestEvent] {
 Middleware ordering (PB sorts by `Priority` ascending, `hook.Hook.Bind`):
 
 ```
-medigoTracing        (activityLogger - 30)  <- creates the span, must be outermost
-medigoMetrics        (activityLogger - 20)
-medigoRequestLogger  (activityLogger - 10)  <- reads trace_id from ctx
-medigoSentryRecover  (panicRecover - 1)
+medikubeTracing       (activityLogger - 30)  <- creates the span, must be outermost
+medikubeMetrics       (activityLogger - 20)
+medikubeRequestLogger (activityLogger - 10)  <- reads trace_id from ctx
+medikubeSentryRecover (panicRecover - 1)
 pbPanicRecover / pbRateLimit / pbLoadAuthToken / ...
 ```
 
@@ -1413,7 +1415,7 @@ This is where the trace breaks if you're not careful. Three rules:
 `SaveWithContext`, `SaveNoValidateWithContext`, `DeleteWithContext`, `ValidateWithContext`,
 `AuxSaveWithContext`, `RunInTransaction` etc. (core/db.go:178-230). The non-ctx forms call
 `context.Background()` — which **silently detaches the span**. Ban the non-ctx variants in
-MediGo code with a lint rule.
+MediKube code with a lint rule.
 
 **(b) For dbx queries, use `db.WithContext(ctx)`.** `dbx.DB.WithContext` (dbx/db.go:~144)
 clones the DB with the ctx attached, and every subsequent `Query`/`Execute` uses it. In PB terms:
@@ -1461,7 +1463,7 @@ genuinely have no request parent — but expect them in your trace backend. Filt
 
 ### 5.6 OTel metrics vs raw Prometheus — RECOMMENDATION
 
-**Recommendation: Prometheus `client_golang` is the metrics API MediGo code writes against.
+**Recommendation: Prometheus `client_golang` is the metrics API MediKube code writes against.
 OpenTelemetry is for traces. Bridge otelsql's OTel metrics into the Prometheus registry with
 `go.opentelemetry.io/otel/exporters/prometheus`. One `/metrics`, two producers, one scrape.**
 
@@ -1471,7 +1473,7 @@ func InitMetrics(reg *prometheus.Registry) error {
 		otelprom.WithRegisterer(reg),   // <- the SAME registry as promauto
 		otelprom.WithoutScopeInfo(),
 		otelprom.WithoutTargetInfo(),
-		otelprom.WithNamespace("medigo"),
+		otelprom.WithNamespace("medikube"),
 	)
 	if err != nil {
 		return err
@@ -1483,7 +1485,7 @@ func InitMetrics(reg *prometheus.Registry) error {
 ```
 
 Now `otelsql`'s `db.client.*` instruments and any future OTel-instrumented library land on the
-same `/metrics` endpoint as `medigo_http_request_duration_seconds`.
+same `/metrics` endpoint as `medikube_http_request_duration_seconds`.
 
 **Justification — why not go all-in on OTel metrics:**
 
@@ -1492,7 +1494,7 @@ same `/metrics` endpoint as `medigo_http_request_duration_seconds`.
   `Int64Counter` constructed with an `error` return, a `ctx` at every call site, and
   `metric.WithAttributes(attribute.String(...))`. For ~20 hand-written business counters that
   is pure ceremony tax with no payoff.
-- **The scrape target is Prometheus.** MediGo is a self-hosted single-binary app. The realistic
+- **The scrape target is Prometheus.** MediKube is a self-hosted single-binary app. The realistic
   deployment is Docker Compose with a Prometheus sidecar, not an OTel Collector pipeline.
   Optimise for the actual deployment.
 - **`promauto` + a registry is testable.** `prometheus/client_golang/prometheus/testutil`
@@ -1509,7 +1511,7 @@ same `/metrics` endpoint as `medigo_http_request_duration_seconds`.
 conventions, two sets of dashboards. If you take nothing else from this section: one registry,
 one endpoint.
 
-**When you would flip this recommendation:** if MediGo ever ships to an environment where an
+**When you would flip this recommendation:** if MediKube ever ships to an environment where an
 OTel Collector is mandatory and Prometheus scraping is unavailable (e.g. a managed vendor that
 only accepts OTLP), swap the reader for `otlpmetricgrpc` and rewrite the ~20 business counters.
 That is a day of work, and it's the right trade to defer.
@@ -1613,8 +1615,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/samber/do/v2"
 
-	"medigo/internal/domain"
-	"medigo/internal/obs"
+	"medikube/internal/domain"
+	"medikube/internal/obs"
 )
 
 // Compile-time interface satisfaction — one line, catches drift at build time.
@@ -1734,7 +1736,7 @@ Hook `do` into PB's terminate instead:
 
 ```go
 app.OnTerminate().Bind(&hook.Handler[*core.TerminateEvent]{
-	Id:       "medigoContainerShutdown",
+	Id:       "medikubeContainerShutdown",
 	Priority: -100, // after PB's own graceful HTTP shutdown (priority -9999)
 	Func: func(e *core.TerminateEvent) error {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -1782,7 +1784,7 @@ If you assumed `ro` was "read-only helpers" or an iterator package: it is not. I
 
 ### 7.2 `samber/lo` — ADOPT, with a stdlib-first rule
 
-`lo` is genuinely useful and MediGo will use it. But Go 1.26's `slices` and `maps` already cover
+`lo` is genuinely useful and MediKube will use it. But Go 1.26's `slices` and `maps` already cover
 a large slice of what people reach for `lo` for, and a stdlib call is always the better choice
 when it exists.
 
@@ -1796,7 +1798,7 @@ when it exists.
 `lo.Associate`, `lo.FlatMap`, `lo.CountBy`, `lo.Ternary` (sparingly), `lo.ToPtr`/`lo.FromPtr`,
 `lo.Must` (in tests and `init` only).
 
-Real MediGo use: grouping 13 record types for the dashboard, keying the standardized lab test
+Real MediKube use: grouping 13 record types for the dashboard, keying the standardized lab test
 catalog by code, chunking bulk export batches.
 
 **Do NOT use `lo` for** — use stdlib or a plain loop:
@@ -1863,6 +1865,7 @@ classic `*string` vs `sql.NullString` problem. Medical records have real nullabl
 (end_date on a medication, a lab reference range).
 
 **But even there, reject it**, because:
+
 - `*T` already expresses it, is stdlib, and marshals correctly with `encoding/json`.
 - `mo.Option[T]` needs custom `MarshalJSON`/`UnmarshalJSON` handling to round-trip through your
   DTOs and OpenAPI generation, and PocketBase's field types (`types.JSONMap`, `types.DateTime`)
@@ -1871,7 +1874,7 @@ classic `*string` vs `sql.NullString` problem. Medical records have real nullabl
 
 **RULE FOR THE SPEC (encode verbatim):**
 
-> **`samber/mo` MUST NOT be used in MediGo.** Errors are `error`, returned as the last value and
+> **`samber/mo` MUST NOT be used in MediKube.** Errors are `error`, returned as the last value and
 > handled with `if err != nil`, wrapped with `%w`. Optionality is `*T` or a `bool` companion
 > return. `mo` is not in `go.mod`. If a PR adds it, the PR is rejected.
 
@@ -1879,20 +1882,20 @@ If it is already in the locked stack list, the honest recommendation is: **drop 
 stack**. Carrying a dependency you have banned in the rules is worse than not having it — it is
 an invitation.
 
-### 7.5 `samber/ro` — REJECT. It is RxGo, and MediGo is a CRUD app.
+### 7.5 `samber/ro` — REJECT. It is RxGo, and MediKube is a CRUD app.
 
 `ro` is a ReactiveX implementation: `Observable`, `Observer`, `Subject`, `Subscription`,
 `Pipe`, `Merge`, `CombineLatest`, `Retry`, `Catch`. At **v0.4.1**, pre-1.0, published August
 2026, explicitly warning of breaking changes.
 
-**Why it does not belong in MediGo:**
+**Why it does not belong in MediKube:**
 
 1. **The problem it solves does not exist here.** Rx pays off for complex event-stream
    composition — debouncing user input against three merged async sources with backpressure and
-   retry. MediGo is: HTTP request in → validate → SQLite read/write → SSE push → HTTP response
+   retry. MediKube is: HTTP request in → validate → SQLite read/write → SSE push → HTTP response
    out. There is no stream algebra to express.
 2. **Go already has the primitives.** Channels, `context`, `errgroup`, and Go 1.23+ `iter.Seq`
-   cover every case MediGo will hit. Adding an Observable layer on top of channels is a second
+   cover every case MediKube will hit. Adding an Observable layer on top of channels is a second
    concurrency model in one codebase — now every contributor must know both, and the failure
    modes (unsubscribed observables leaking goroutines, hot vs cold semantics, error-channel
    termination) are subtle and unfamiliar to Go developers.
@@ -1909,7 +1912,7 @@ an invitation.
 
 **RULE FOR THE SPEC:**
 
-> **`samber/ro` MUST NOT be used in MediGo.** Realtime is PocketBase's native realtime where PB
+> **`samber/ro` MUST NOT be used in MediKube.** Realtime is PocketBase's native realtime where PB
 > supports it, and Datastar SSE elsewhere, implemented with channels, `context`, and
 > `golang.org/x/sync/errgroup`. Reactive-stream abstractions are out of scope.
 
@@ -1966,7 +1969,8 @@ _ = server.Shutdown(ctx)
 not exposed on `ServeConfig`. Any request still running after 1s has its connection cut
 mid-response.
 
-For MediGo that is a real problem:
+For MediKube that is a real problem:
+
 - attachment uploads/downloads of a scanned lab PDF,
 - `REPORTING/export` generating a multi-patient PDF,
 - `backup/restore` operations,
@@ -1976,14 +1980,14 @@ For MediGo that is a real problem:
 
 1. **Make long operations resumable or asynchronous.** Exports and backups become jobs with a
    status endpoint rather than a long-held HTTP response. This is the right fix and it's a
-   design decision, not a workaround — put it in the spec: *no MediGo endpoint holds a request
+   design decision, not a workaround — put it in the spec: *no MediKube endpoint holds a request
    open for more than a few seconds except SSE.*
 2. **Bind your own pre-drain at a priority lower than -9999** to stop accepting new work and
    give in-flight requests a chance before PB's 1s window opens:
 
 ```go
 app.OnTerminate().Bind(&hook.Handler[*core.TerminateEvent]{
-	Id:       "medigoPreDrain",
+	Id:       "medikubePreDrain",
 	Priority: -10000, // BEFORE pbGracefulShutdown (-9999)
 	Func: func(e *core.TerminateEvent) error {
 		readiness.Store(false)        // /readyz starts failing -> LB stops routing
@@ -2063,6 +2067,7 @@ func (h *HealthHandler) Ready(e *core.RequestEvent) error {
 ```
 
 **Rules:**
+
 - **Liveness must not check dependencies.** A DB blip should not get your container killed and
   restarted into the same blip. Liveness = "the process is not deadlocked".
 - **Readiness must check dependencies and must respect the drain flag.** This is the only
@@ -2072,7 +2077,7 @@ func (h *HealthHandler) Ready(e *core.RequestEvent) error {
 
 ```go
 e.Router.GET("/api/v1/health/live", h.Live).
-	Unbind(apis.DefaultActivityLoggerMiddlewareId, "medigoMetrics", "medigoTracing")
+	Unbind(apis.DefaultActivityLoggerMiddlewareId, "medikubeMetrics", "medikubeTracing")
 ```
 
 `Route.Unbind` (tools/router/route.go:52) removes middleware for a single route.
@@ -2145,13 +2150,13 @@ func main() {
 ```
 
 Note `app.Start()` registers PB's Cobra subcommands and calls `Execute()`. Since
-`pb.RootCmd` **is** a `*cobra.Command`, MediGo's own commands (`medigo migrate`,
-`medigo seed-catalog`) are added with `app.RootCmd.AddCommand(...)` before `Start()` — no second
+`pb.RootCmd` **is** a `*cobra.Command`, MediKube's own commands (`medikube migrate`,
+`medikube seed-catalog`) are added with `app.RootCmd.AddCommand(...)` before `Start()` — no second
 CLI framework, per the locked decision.
 
 **One caveat on the observability init order:** everything above (`InitSentry`, `InitTracing`,
-`StartMetricsServer`) runs for *every* subcommand, including `medigo --help` and
-`medigo superuser create`. Gate them on `os.Args` naming `serve`, or on a `cobra` `PersistentPreRunE`,
+`StartMetricsServer`) runs for *every* subcommand, including `medikube --help` and
+`medikube superuser create`. Gate them on `os.Args` naming `serve`, or on a `cobra` `PersistentPreRunE`,
 so a CLI invocation doesn't open an OTLP connection and a metrics port.
 
 ---
@@ -2184,7 +2189,7 @@ type Config struct {
 	// --- app ---
 	Env       string        `env:"ENV"        envDefault:"production"`
 	Dev       bool          `env:"DEV"        envDefault:"false"`
-	DataDir   string        `env:"DATA_DIR"   envDefault:"/var/lib/medigo/pb_data"`
+	DataDir   string        `env:"DATA_DIR"   envDefault:"/var/lib/medikube/pb_data"`
 	HTTPAddr  string        `env:"HTTP_ADDR"  envDefault:"0.0.0.0:8090"`
 	PublicURL string        `env:"PUBLIC_URL,required,notEmpty"`
 
@@ -2243,7 +2248,7 @@ type FilesConfig struct {
 }
 ```
 
-Env vars land as `MEDIGO_SENTRY_DSN`, `MEDIGO_OTEL_ENDPOINT`, `MEDIGO_LOG_LEVEL`, etc., because
+Env vars land as `MEDIKUBE_SENTRY_DSN`, `MEDIKUBE_OTEL_ENDPOINT`, `MEDIKUBE_LOG_LEVEL`, etc., because
 of the global prefix below.
 
 ### 9.2 Loading and validating
@@ -2254,7 +2259,7 @@ of the global prefix below.
 ```go
 func Load() (Config, error) {
 	cfg, err := env.ParseAsWithOptions[Config](env.Options{
-		Prefix:          "MEDIGO_",
+		Prefix:          "MEDIKUBE_",
 		RequiredIfNoDef: false, // be explicit with `required` instead of blanket-requiring
 	})
 	if err != nil {
@@ -2333,7 +2338,7 @@ Three mechanisms, use all three:
 
 1. **`,file`** — the value of the env var is a *path*; `env` reads the file
    (`env.go:643 getFromFile`). This is how Docker secrets and Kubernetes projected volumes
-   work. `MEDIGO_SENTRY_DSN=/run/secrets/sentry_dsn`.
+   work. `MEDIKUBE_SENTRY_DSN=/run/secrets/sentry_dsn`.
 2. **`,unset`** — after parsing, the variable is removed from the process environment
    (`env.go:575`). A subsequent `os.Environ()` — including anything a subprocess or a crash
    handler dumps — no longer contains it.
@@ -2354,7 +2359,7 @@ func (c Config) MarshalZerologObject(e *zerolog.Event) {
 
 Note that PB has its own secret channel: the `--encryptionEnv` flag names an env var holding a
 32-char key used to encrypt settings at rest. Wire it from
-`MEDIGO_PB_ENCRYPTION_ENV` and keep it out of the `Config` struct — PB reads the env var itself.
+`MEDIKUBE_PB_ENCRYPTION_ENV` and keep it out of the `Config` struct — PB reads the env var itself.
 
 ### 9.4 Testing config
 
@@ -2364,11 +2369,11 @@ need no `t.Setenv` and can run in parallel:
 ```go
 func TestConfigValidate(t *testing.T) {
 	cfg, err := env.ParseAsWithOptions[Config](env.Options{
-		Prefix: "MEDIGO_",
+		Prefix: "MEDIKUBE_",
 		Environment: map[string]string{
-			"MEDIGO_PUBLIC_URL":  "https://medigo.example",
-			"MEDIGO_ENV":         "production",
-			"MEDIGO_LOG_PRETTY":  "true",
+			"MEDIKUBE_PUBLIC_URL": "https://medikube.example",
+			"MEDIKUBE_ENV":        "production",
+			"MEDIKUBE_LOG_PRETTY": "true",
 		},
 	})
 	require.NoError(t, err)
@@ -2408,7 +2413,7 @@ func TestConfigValidate(t *testing.T) {
     the drain flag. Both are excluded from tracing/metrics/activity logging.
 14. Drain readiness before PocketBase's hardcoded 1-second HTTP shutdown window opens. No
     endpoint holds a request open for more than a few seconds except SSE.
-15. Config is `caarlos0/env/v11` with prefix `MEDIGO_`, secrets via `,file,unset`, and an
+15. Config is `caarlos0/env/v11` with prefix `MEDIKUBE_`, secrets via `,file,unset`, and an
     explicit `Validate()` returning `errors.Join` of every problem.
 
 ## 11. Open risks to track

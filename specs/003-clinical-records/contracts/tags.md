@@ -45,7 +45,7 @@ Body: `{ "name": "cardiology", "color": "#aa3311" }`. `owner` is not in the DTO;
 - `201` with `Location`.
 - `409 conflict`, `code: duplicate_name`, when a tag with the same name **ignoring letter case**
   already exists for this account (FR-063, US7-2). Enforced by the unique index on
-  `(owner, LOWER(name))` *and* checked in the service so the error is MediGo's envelope.
+  `(owner, LOWER(name))` *and* checked in the service so the error is MediKube's envelope.
 - `422 validation_failed` for an empty name, a name over 40 characters, or a `color` not matching
   `^#[0-9a-fA-F]{6}$`.
 

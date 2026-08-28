@@ -61,7 +61,7 @@ Replaces nine untyped upstream admin-dashboard routes, three of which were unaut
 - **live per request** — the indexed `COUNT`s above, so a figure an operator just changed moves,
   which is US5's own independent test ("take a backup and confirm the last-backup figure moves");
 - **refreshed** — `database_bytes` (a stat of `data.db`, `-wal` and `auxiliary.db`) and
-  `document_bytes` (a walk of `<DataDir>/storage`), recomputed by the `medigo_storage_refresh` job
+  `document_bytes` (a walk of `<DataDir>/storage`), recomputed by the `medikube_storage_refresh` job
   every 15 minutes and at boot, served from memory with `refreshed: true` and an `age_seconds`. A
   directory walk over a 200 GB document store is never on the request path: an operator dashboard
   must not be the thing that takes the instance down.
@@ -101,19 +101,19 @@ no second recovery surface** (FR-057).
                "smtp": "configured", "oauth2": "unconfigured",
                "warnings": ["superuser_mfa", "superuser_ip_allowlist"] },
   "retention": [ { "key": "export_days", "value": 7, "applies_to": "produced documents and export archives",
-                   "job": "medigo_purge_artifacts",
+                   "job": "medikube_purge_artifacts",
                    "last_run_at": "2026-08-27T03:10:00Z", "last_success_at": "2026-08-27T03:10:00Z" },
                  { "key": "audit_days", "value": 730, "applies_to": "activity entries",
-                   "job": "medigo_purge_audit", "…": "…" },
+                   "job": "medikube_purge_audit", "…": "…" },
                  { "key": "trash_days", "value": 30, "applies_to": "deleted documents",
-                   "job": "medigo_attachment_maintenance", "…": "…" } ],
+                   "job": "medikube_attachment_maintenance", "…": "…" } ],
   "limits": [ { "key": "report_max_records", "value": 5000 },
               { "key": "report_max_charts", "value": 12 },
               { "key": "report_min_chart_points", "value": 3 },
               { "key": "report_max_chart_points", "value": 200 },
               { "key": "export_max_bytes", "value": 10737418240 },
               { "key": "backup_keep", "value": 14 } ],
-  "attention": [ { "what": "job_failed", "job": "medigo_purge_artifacts",
+  "attention": [ { "what": "job_failed", "job": "medikube_purge_artifacts",
                    "at": "2026-08-26T03:10:00Z", "error_code": "storage_full" },
                  { "what": "export_failed", "job_id": "rec…", "at": "…",
                    "error_code": "interrupted" } ] }
@@ -126,7 +126,7 @@ Field by field, against the requirements:
 | `ready` | FR-077 | the same check `/readyz` performs |
 | `uptime_seconds`, `version` | FR-077 | process start time; the ldflags-stamped version |
 | `migrations` | FR-085 | `_migrations` versus the binary's registered list |
-| `backup.state ∈ {ok, stale, never}` | FR-082 | `never` is a **warning**, never a blank or a zero (US5 AS-3); `stale` when `age_seconds > MEDIGO_BACKUP_WARN_AFTER`, stating the age (US5 AS-4) |
+| `backup.state ∈ {ok, stale, never}` | FR-082 | `never` is a **warning**, never a blank or a zero (US5 AS-3); `stale` when `age_seconds > MEDIKUBE_BACKUP_WARN_AFTER`, stating the age (US5 AS-4) |
 | `posture.superuser_mfa ∈ {on, off, partial}` | FR-083 | the superusers collection's `MFA.Enabled`; `partial` when `MFA.Rule` is non-empty, because a partial rollout means some superuser can sign in without a second factor ([D-17](../research.md#d-17)) |
 | `posture.superuser_ip_allowlist ∈ {set, unset}` | FR-083 | `len(Settings().SuperuserIPs) > 0` |
 | `posture.smtp ∈ {configured, unconfigured}` | FR-084 | `Settings().SMTP.Enabled` — phase 001's password recovery and confirmation and phase 005's invitations all refuse rather than pretend without it, and all three warn at boot |

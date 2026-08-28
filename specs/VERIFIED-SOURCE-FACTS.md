@@ -33,6 +33,7 @@ go version go1.27.0 linux/arm64                 # 33MB binary, builds clean
 ```
 
 Evidence:
+
 - `github.com/pocketbase/pocketbase@v0.40.1/go.mod` line 3 declares `go 1.27`.
 - **67 non-test `.go` files** import the Go 1.27 stdlib package
   `encoding/json/v2`; **15 of those are in `core/` and `apis/`**, so it is
@@ -41,19 +42,21 @@ Evidence:
 - No build tags, no fallback path.
 
 ### Consequence
-MediGo MUST be `go 1.27`, not the 1.26.5 house standard that `arc-ui`, `gmod`,
-`appbase` and `medikeep-mcp` share. MediGo is the first project in this monorepo
+
+MediKube MUST be `go 1.27`, not the 1.26.5 house standard that `arc-ui`, `gmod`,
+`appbase` and `medikeep-mcp` share. MediKube is the first project in this monorepo
 off that standard, and that is a deliberate, documented divergence forced by the
 PocketBase decision.
 
 Required changes:
+
 - `go.mod`: `go 1.27` plus a `toolchain go1.27.x` line.
 - Dockerfile: `ARG GO_VERSION=1.27`.
 - CI: do **NOT** set `GOTOOLCHAIN=local`, or the build fails with the
   misleading "built with go1.26 < targeted go1.27".
 - golangci-lint: v2 at a release that understands Go 1.27.
 - Budget real time for Go 1.27's `encoding/json` v2 retrofit semantics in
-  MediGo's OWN DTOs — nil-versus-empty slices, `json.RawMessage` handling, and
+  MediKube's OWN DTOs — nil-versus-empty slices, `json.RawMessage` handling, and
   duplicate-key rejection are not fully backward compatible.
 
 Rejected alternative: pinning PocketBase to v0.39.x to stay on Go 1.26.5. It
@@ -76,6 +79,7 @@ DataMaxIdleConns, AuxMaxOpenConns, AuxMaxIdleConns, IsDev.
 **Neither exposes a Logger or slog.Handler field.**
 
 `core/base.go:1472 initLogger()` hardcodes:
+
 ```go
 handler := logger.NewBatchHandler(logger.BatchOptions{
     Level: getLoggerMinLevel(app),
@@ -85,13 +89,15 @@ handler := logger.NewBatchHandler(logger.BatchOptions{
 })
 app.logger = slog.New(handler)     // core/base.go:1536 — private field
 ```
+
 `app.logger` is unexported and `Logger()` (core/base.go:378) just returns it.
 
 ### Consequences for the locked "zerolog primary, bridged into PB" decision
+
 - Injecting a zerolog-backed slog.Handler into PocketBase is **impossible** in
   v0.40.1 without forking. Decision as literally stated is not achievable.
 - What IS achievable, and what the plan must say instead:
-  1. MediGo's own code uses zerolog exclusively and NEVER calls `app.Logger()`.
+  1. MediKube's own code uses zerolog exclusively and NEVER calls `app.Logger()`.
      This is enforceable by a lint rule / forbidigo entry.
   2. PocketBase's own framework logs are suppressed in production by setting
      `Settings().Logs.MaxDays = 0` — verified: `WriteFunc` returns early when
@@ -110,6 +116,7 @@ An earlier revision of this file concluded the bridge was "unachievable without
 a fork" and that MaxDays=0 was the answer. Both halves were wrong.
 
 **(a) Decorate the exported embedded interface.** `pocketbase.go` declares:
+
 ```go
 type PocketBase struct {
 	core.App              // <- EXPORTED embedded interface field
@@ -117,6 +124,7 @@ type PocketBase struct {
 	RootCmd *cobra.Command
 }
 ```
+
 so `pb.App = &loggedApp{App: pb.App, logger: zerologBackedSlog}` is legal and
 redirects the entire request path — `Start()` passes `pb` itself into the serve
 command, and `apis.NewRouter` does `event.App = app`. Verified SAFE: grepping
@@ -147,6 +155,7 @@ checklist item to re-verify both mechanisms.
 
 `apis.NewRouter` (apis/base.go:19) hardcodes every built-in binding with
 **no opt-out flag**:
+
 ```go
 apiGroup := pbRouter.Group("/api")
 bindSettingsApi(app, apiGroup); bindCollectionApi(app, apiGroup)
@@ -158,6 +167,7 @@ bindHealthApi(app, apiGroup); bindSQLApi(app, apiGroup)
 ```
 
 Record **CRUD** routes (apis/record_crud.go) — the ones to lock down:
+
 ```
 GET    /api/collections/{collection}/records
 GET    /api/collections/{collection}/records/{id}
@@ -168,6 +178,7 @@ DELETE /api/collections/{collection}/records/{id}
 
 Record **AUTH** routes (apis/record_auth.go) — these MUST stay reachable and
 live under the SAME `/api/collections/` prefix:
+
 ```
 GET  /api/collections/{collection}/auth-methods
 POST /api/collections/{collection}/auth-refresh
@@ -187,6 +198,7 @@ GET|POST /api/oauth2-redirect
 
 **A blanket 403/404 on `/api/collections/*` would kill PocketBase native auth,
 which is the locked auth decision.** The lockdown must therefore be either:
+
 - (preferred, idiomatic) set all five API rules (list/view/create/update/delete)
   to `nil` on every collection => superuser-only. Auth routes consult
   `authRule`/`manageRule`, NOT the CRUD rules, so login keeps working and the
@@ -219,10 +231,12 @@ compression is wanted, bind it per-group and exclude SSE routes.
 ## FACT 4 — Datastar v1 API surface (v0.x names are DEAD).
 
 `datastar/consts.go` defines exactly TWO event types:
+
 ```go
 EventTypePatchElements EventType = "datastar-patch-elements"
 EventTypePatchSignals  EventType = "datastar-patch-signals"
 ```
+
 The v0.x names (`datastar-merge-fragments`, `datastar-merge-signals`,
 `datastar-remove-fragments`, `datastar-remove-signals`,
 `datastar-execute-script`) **no longer exist**. Any tutorial using them is
@@ -233,6 +247,7 @@ stale. `ExecuteScript` and `RemoveElement` are now implemented ON TOP of
 `prepend`, `append`, `before`, `after`.
 
 Verified public API:
+
 ```go
 func NewSSE(w http.ResponseWriter, r *http.Request, opts ...SSEOption) *ServerSentEventGenerator
 func ReadSignals(r *http.Request, signals any) error
@@ -270,11 +285,11 @@ the Playwright gate asserts ZERO console errors, the spec must forbid
 ## FACT 5 — Custom realtime publishing is available.
 
 `core/base.go:632` exposes `func (app *BaseApp) SubscriptionsBroker() *subscriptions.Broker`,
-so MediGo can publish custom messages to PB realtime subscribers, not just
+so MediKube can publish custom messages to PB realtime subscribers, not just
 record-change events. However PB's realtime wire format is its own JSON
 envelope on `/api/realtime` — it is **NOT** the `datastar-patch-*` SSE format,
 so a browser cannot point Datastar at PB's realtime stream directly. Any
-"live" UI needs a MediGo-owned SSE endpoint that translates PB record hooks
+"live" UI needs a MediKube-owned SSE endpoint that translates PB record hooks
 into Datastar patch events.
 
 ## FACT 6 — Plugins and Cobra.
@@ -282,8 +297,8 @@ into Datastar patch events.
 `plugins/` contains `migratecmd`, `jsvm`, `ghupdate`.
 `migratecmd.MustRegister(app core.App, rootCmd *cobra.Command, config Config)`
 confirms PocketBase's RootCmd is a real `*cobra.Command`, so registering custom
-Cobra subcommands (`medigo seed`, `medigo routes`, `medigo openapi`) is native
-and needs no extra dependency. **jsvm must be left unregistered** — MediGo is
+Cobra subcommands (`medikube seed`, `medikube routes`, `medikube openapi`) is native
+and needs no extra dependency. **jsvm must be left unregistered** — MediKube is
 Go-only and must not ship a JS runtime.
 
 `apis.WrapStdHandler(h http.Handler)` and
@@ -303,13 +318,14 @@ first-run installer page — relevant for deterministic Playwright fixtures.
 calls `TempDirClone(config.DataDir)` and then `app.Bootstrap()`. So **every
 test app is a filesystem clone of a fixture data dir into a temp dir**. That
 means:
+
 - Tests ARE isolated from each other and from the fixture, so `t.Parallel()` is
   safe.
 - The cost per test app is a directory copy plus a SQLite bootstrap — cheap but
   not free. Unit tests of service logic MUST therefore use fakes, not a test
   app; a test app is for adapter/integration and HTTP tests only. This is what
   Principle III's pyramid encodes.
-- MediGo needs its own committed fixture data dir (migrated schema + seed
+- MediKube needs its own committed fixture data dir (migrated schema + seed
   superuser) for `NewTestApp` to clone.
 
 `tests.ApiScenario` fields (tests/api.go):
@@ -330,7 +346,7 @@ API itself; the only escape is passing a `down` that returns nil, which is what
 the "document the irreversibility in the migration file" clause covers.
 
 `core.AppMigrations` is the user-defined migration list;
-`core.SystemMigrations` is PocketBase's own. MediGo registers into
+`core.SystemMigrations` is PocketBase's own. MediKube registers into
 `AppMigrations` only.
 
 ---
@@ -347,13 +363,14 @@ phase 003 grows from 3 routes to 62. It assigned the proof to phase 001.
 Generator: `github.com/getkin/kin-openapi/openapi3` **v0.144.0**, which is
 pure Go, cgo-free, and adds no HTTP framework — so it does not collide with the
 constitution's ban on a second router or OpenAPI-serving framework. It models
-the OpenAPI 3 object graph directly, which suits MediGo exactly, because
+the OpenAPI 3 object graph directly, which suits MediKube exactly, because
 PocketBase's route table is not introspectable (FACT: `apis.NewRouter` exposes
-no route list) and MediGo must therefore keep a single declarative route
+no route list) and MediKube must therefore keep a single declarative route
 registry anyway. The document is BUILT from that registry rather than reflected
 out of the router.
 
 Verified end to end:
+
 ```
 OpenAPI document VALIDATES after marshal -> load round trip
 document bytes: 1212
@@ -362,6 +379,7 @@ discriminator: kind map[allergies:... emergency-contacts:...]
 ```
 
 What the probe actually did, which is the shape phase 001 should implement:
+
 1. Declared a registry of record kinds, each carrying its own fully typed
    object schema — `allergies` (allergen, severity enum) and
    `emergency-contacts` (full_name, relationship).
@@ -381,6 +399,7 @@ What the probe actually did, which is the shape phase 001 should implement:
    the build.
 
 API notes for whoever writes this, both of which cost a compile error first:
+
 - `Discriminator.Mapping` is `map[string]openapi3.MappingRef`, NOT
   `map[string]string`.
 - `MappingRef` is a struct (an alias of `SchemaRef`), so the value is
@@ -396,14 +415,14 @@ CLOSED with this evidence rather than left open in the risk register.
 
 ## FACT 10 — RISK R6 IS CLOSED, and the two settings live in DIFFERENT places.
 
-The constitution requires MediGo to warn loudly at boot when superuser MFA or
+The constitution requires MediKube to warn loudly at boot when superuser MFA or
 the superuser IP allowlist is unconfigured (Principle VII, following the
 "admin UI ships in production, hardened" decision). SHARED-DESIGN.md R6 left it
 unverified. Both are readable from Go in v0.40.1 — but a plan that assumes they
 sit together will be wrong.
 
 **IP allowlist — on GLOBAL settings.**
-`core/settings_model.go:125` — `SuperuserIPs []string \`json:"superuserIPs"\``.
+`core/settings_model.go:125` — `` SuperuserIPs []string `json:"superuserIPs"` ``.
 Boot check: `len(app.Settings().SuperuserIPs) == 0` -> warn.
 It is validated as `IPOrSubnet`, so CIDR ranges are accepted.
 It is also enforced in two places already seen in this codebase: the router's
@@ -412,6 +431,7 @@ auth on a file request from a non-allowlisted IP.
 
 **MFA — on the SUPERUSERS AUTH COLLECTION, not on settings.**
 `core/collection_model_auth_options.go:348`:
+
 ```go
 type MFAConfig struct {
 	Enabled  bool   `json:"enabled"`
@@ -419,18 +439,20 @@ type MFAConfig struct {
 	Rule     string `json:"rule"`     // optional filter; empty = everyone
 }
 ```
+
 reached via the auth collection's `MFA MFAConfig` field (line 132). Boot check:
 find the superusers collection by `core.CollectionNameSuperusers` and read
 `collection.MFA.Enabled`.
 
 Two consequences worth putting in the plan:
+
 - PocketBase refuses to enable MFA unless the collection has **at least two auth
   methods** enabled (`validation_mfa_not_enough_auths`, line ~201). So "turn on
   superuser MFA" is not a single toggle — the instance must also have a second
-  method configured, and MediGo's boot warning should say so rather than just
+  method configured, and MediKube's boot warning should say so rather than just
   reporting MFA off.
 - `MFAConfig.Rule` being empty means MFA applies to everyone, which is what
-  MediGo wants for superusers. A non-empty rule is a partial rollout and should
+  MediKube wants for superusers. A non-empty rule is a partial rollout and should
   ALSO trigger the warning, since it means some superuser can sign in without
   a second factor.
 
@@ -440,7 +462,7 @@ Two consequences worth putting in the plan:
 
 SHARED-DESIGN.md R3 recorded FTS5 availability in the vendored SQLite as
 "Unconfirmed", and hedged that if it were absent, search would degrade to `LIKE`
-over `search_index` with date ordering and "MediGo must not claim relevance
+over `search_index` with date ordering and "MediKube must not claim relevance
 ranking". That hedge is unnecessary.
 
 Tested against `modernc.org/sqlite v1.57.0` — the exact version PocketBase
@@ -456,7 +478,7 @@ SELECT kind, title, rank FROM search_index
   WHERE search_index MATCH 'antibiotic' ORDER BY rank             -- OK, 2 rows ranked
 ```
 
-**FTS5 works, including `MATCH` and the `rank` column**, so MediGo's unified
+**FTS5 works, including `MATCH` and the `rank` column**, so MediKube's unified
 search CAN legitimately claim relevance ranking and phase 004's spec does not
 need the `LIKE` fallback hedge. FTS3 and FTS4 are not compiled in, which is
 irrelevant — FTS5 supersedes both and is the one to use.
@@ -472,13 +494,13 @@ SELECT count(*) FROM json_each('[1,2,3]')         -> 3
 ```
 
 This matters beyond search: PocketBase's `json` field type and its filter
-resolver rely on these, and MediGo's own report-template storage and any
+resolver rely on these, and MediKube's own report-template storage and any
 multi-relation filtering will too.
 
 Caveat worth carrying into the plan: an FTS5 virtual table is a SEPARATE table
 that must be kept in step with the record collections. PocketBase will not do
 that for you, and its migrations do not model virtual tables — so the
 `search_index` table is created by a raw SQL migration and maintained by
-post-commit record hooks, with a `medigo reindex` subcommand for rebuilds.
+post-commit record hooks, with a `medikube reindex` subcommand for rebuilds.
 Deleting a record MUST delete its index row, or search leaks the titles of
 deleted records, which is a Principle VII problem.

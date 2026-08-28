@@ -1,4 +1,4 @@
-# Monorepo house conventions — what MediGo's spec must match
+# Monorepo house conventions — what MediKube's spec must match
 
 Repo: `/Users/krzysztof.wiatrzyk/private/monorepo`. Evidence gathered from `appbase/`,
 `gmod/`, `arc-ui/`, `technologia/`, `medikeep-mcp/`, `go-modules/`, the root
@@ -9,12 +9,12 @@ Repo: `/Users/krzysztof.wiatrzyk/private/monorepo`. Evidence gathered from `appb
 ## 0. Read this first: the closest sibling is `arc-ui`, not `appbase`
 
 The task brief pointed at `appbase` as "the closest sibling". It is not. **`arc-ui` is
-the closest sibling by a wide margin** and is the layout MediGo should copy.
+the closest sibling by a wide margin** and is the layout MediKube should copy.
 
 `arc-ui/go.mod` (`/Users/krzysztof.wiatrzyk/private/monorepo/arc-ui/go.mod`) already
-carries almost exactly MediGo's locked stack:
+carries almost exactly MediKube's locked stack:
 
-| MediGo locked decision | arc-ui | appbase |
+| MediKube locked decision | arc-ui | appbase |
 | --- | --- | --- |
 | templ v0.3.1020 | ✅ `github.com/a-h/templ v0.3.1020` | ✅ same version |
 | Datastar v1.2.2 | ✅ `github.com/starfederation/datastar-go v1.2.2` | ❌ vendored HTMX 1.9.12 |
@@ -28,7 +28,7 @@ carries almost exactly MediGo's locked stack:
 | Cobra | ✅ `v1.7.0` | ✅ `v1.10.2` |
 | Embedded SQLite, CGO-free | ✅ `modernc.org/sqlite` | ❌ (Baserow API) |
 | Server-rendered + SSE live updates | ✅ `internal/web/stream.go` | ❌ |
-| Gin / Huma | ⚠️ uses gin (MediGo drops it — PocketBase owns the router) | uses gin + huma |
+| Gin / Huma | ⚠️ uses gin (MediKube drops it — PocketBase owns the router) | uses gin + huma |
 | Config file | none — env only | none — env only |
 
 **Copy from arc-ui:** package layout, `internal/web` (templ + Datastar + hashed embedded
@@ -44,7 +44,7 @@ Dockerfile, the go:embed/.gitkeep trap, testify-based tests.
 **Ignore:** `medi-keep-go/` — a prior MediKeep-in-Go attempt, currently staged for
 deletion (`git status` shows 90+ `D medi-keep-go/…` entries). It used Gin + Huma + GORM +
 HTMX (all now dropped) and, critically, **was never registered in `.dockerignore` or
-`build-image.yaml`** — it built with its own directory as context. MediGo must not repeat
+`build-image.yaml`** — it built with its own directory as context. MediKube must not repeat
 that. Its `.golangci.yml`, however, is byte-identical to arc-ui's/appbase's profile, which
 confirms that profile is the house standard.
 
@@ -53,8 +53,8 @@ confirms that profile is the house standard.
 ## 1. Canonical Go project layout
 
 ```
-medigo/
-├── .claude/skills/medigo/SKILL.md   # optional; every catalog project has one
+medikube/
+├── .claude/skills/medikube/SKILL.md # optional; every catalog project has one
 ├── .env.example                     # committed; .env is gitignored
 ├── .gitignore
 ├── .golangci.yml
@@ -66,7 +66,7 @@ medigo/
 ├── go.sum
 ├── assets/input.css                 # Tailwind entrypoint (arc-ui pattern)
 ├── cmd/
-│   └── medigo/
+│   └── medikube/
 │       ├── main.go                  # `var version = "dev"`, cobra root
 │       ├── serve.go                 # one file per subcommand (appbase/technologia style)
 │       ├── healthcheck.go
@@ -86,11 +86,12 @@ medigo/
 
 **`cmd/<binary>/`** — one directory named exactly after the binary, which is named exactly
 after the project directory. Never `cmd/server`, never `cmd/app`.
+
 - `appbase/cmd/appbase/` holds `main.go` + one file per cobra subcommand: `admin.go`,
   `category.go`, `enqueue.go`, `image.go`, `mcp.go`, `records.go`, `worker.go`.
 - `arc-ui/cmd/arc-ui/` keeps everything in `main.go` (it has only `serve`, `version`,
   `healthcheck`).
-- MediGo has many subcommands via PocketBase's `RootCmd` → follow appbase: one file per
+- MediKube has many subcommands via PocketBase's `RootCmd` → follow appbase: one file per
   subcommand.
 - `main.go` always declares `// version is stamped at build time with -ldflags -X main.version=…`
   and `var version = "dev"`.
@@ -98,6 +99,7 @@ after the project directory. Never `cmd/server`, never `cmd/app`.
 **`internal/<name>/`** — flat, single-word, all-lowercase package names. No `internal/pkg/`,
 no `internal/domain/service/impl/`. Deeper nesting appears only where a generator or an API
 version forces it:
+
 - `arc-ui/internal/store/ent/schema/` (ent generator)
 - `arc-ui/internal/arcapi/v1alpha1/` (K8s API versioning)
 - `medikeep-mcp/internal/gen/coverage/` (one sub-concern of the generator)
@@ -113,7 +115,7 @@ alongside `page.go`, `view.go`, `stream.go`, `assets.go`.
 no `/test` or `/testdata`-only directory). `internal/store/store_test.go`,
 `internal/web/web_test.go`, `internal/config/config_test.go`. Density varies:
 `medikeep-mcp` has a `_test.go` for essentially every source file — that is the standard
-MediGo should hold itself to, given the constitution's Principle III.
+MediKube should hold itself to, given the constitution's Principle III.
 
 **testify is the assertion library.** arc-ui and medikeep-mcp both use
 `require` for fatal preconditions and `assert` for the assertions under test:
@@ -126,6 +128,7 @@ import (
 s, err := Open(t.Context(), path, zerolog.Nop())
 require.NoError(t, err, "Open")
 ```
+
 Note `t.Context()` (Go 1.24+), `t.TempDir()`, `zerolog.Nop()` for silent loggers, and
 package-level fixed instants (`var base = time.Date(2026, 3, 4, 12, 0, 0, 0, time.UTC)`)
 so assertions are deterministic.
@@ -141,7 +144,7 @@ so assertions are deterministic.
 | ent client (`internal/store/ent/`) | **Yes** (arc-ui) | Regenerated only on schema change (`task gen:ent`), not on every build. |
 | `medikeep-mcp/internal/tools/zz_generated_tools.go` | **Yes**, and diff-checked | It is an *input to a build gate*: `task api:coverage` reads the **compiled** registry, so the file must exist and compile. `task gen:check` runs `git diff --exit-code` on it. |
 
-**Rule for MediGo:** generated code that is a pure build product is gitignored and
+**Rule for MediKube:** generated code that is a pure build product is gitignored and
 regenerated by `task gen`. Generated code that a compliance gate reads back is committed
 and guarded by a `gen:check` diff task.
 
@@ -151,10 +154,11 @@ and guarded by a `gen:check` diff task.
 //go:embed all:static
 var staticFS embed.FS
 ```
+
 `go:embed` on a directory is a **compile-time error if the directory is empty**. Since
 `app.css` is gitignored, a fresh clone would not build. arc-ui commits
 `internal/web/static/.gitkeep` to prevent that, and uses the `all:` prefix so embed does
-not skip the dot-file. MediGo must commit the same `.gitkeep`.
+not skip the dot-file. MediKube must commit the same `.gitkeep`.
 
 ### Two architectural details worth copying verbatim from arc-ui
 
@@ -165,7 +169,7 @@ not skip the dot-file. MediGo must commit the same `.gitkeep`.
    max-age=31536000, immutable` and the plain path `max-age=300`.
 2. **`WriteTimeout: 0` on the `http.Server`** — any non-zero value is a hard deadline on
    the whole response, which severs an SSE stream mid-page on a timer. Handlers bound
-   their own work through the request context. MediGo uses Datastar SSE → this applies
+   their own work through the request context. MediKube uses Datastar SSE → this applies
    directly. (Note: PocketBase owns the router, so this becomes a `serve` hook / server
    config concern rather than a hand-built `http.Server`.)
 
@@ -174,7 +178,7 @@ not skip the dot-file. MediGo must commit the same `.gitkeep`.
 ## 2. The exact `go.mod` header
 
 ```go
-module medigo
+module medikube
 
 go 1.26.5
 ```
@@ -198,13 +202,13 @@ imported projects use domain-prefixed module paths (`github.com/windkube/github-
 `github.com/mergestat/mergestat`) — those are foreign, not house style.
 
 **Counter-example to avoid:** the deleted `medi-keep-go/` declared `module medikeep` in a
-directory named `medi-keep-go` — a name mismatch. MediGo's directory is `medigo`, so the
-module is `medigo`.
+directory named `medi-keep-go` — a name mismatch. MediKube's directory is `medikube`, so the
+module is `medikube`.
 
 **No `replace` directive.** `replace go-modules => ../go-modules` exists only in the three
 catalog projects (technologia, appbase, gmod) that import the shared toolkit. `go-modules/`
 holds catalog-specific primitives — a GitHub client, Hatchet bootstrap, MCP/agent glue, an
-SVG rasteriser, a NocoDB/Baserow/Teable-oriented `safefetch`. **MediGo imports none of it.**
+SVG rasteriser, a NocoDB/Baserow/Teable-oriented `safefetch`. **MediKube imports none of it.**
 arc-ui and medikeep-mcp have no `replace` either.
 
 **No root `go.work` — ever.** From
@@ -212,12 +216,14 @@ arc-ui and medikeep-mcp have no `replace` either.
 > "No root `go.work`. Go walks up to find `go.work`; a root workspace breaks every unlisted
 > module in this monorepo."
 
-**`tool` directive (arc-ui only, and recommended for MediGo):**
+**`tool` directive (arc-ui only, and recommended for MediKube):**
+
 ```go
 tool (
 	github.com/a-h/templ/cmd/templ
 )
 ```
+
 This pins the templ *generator* to the same version as the templ *runtime library*, so
 `go tool templ generate` can never drift from what the code links against. appbase instead
 does `go install …/templ@v0.3.1020` and has to keep two version strings in sync by hand (in
@@ -273,9 +279,9 @@ formatters:
 It lacks `gosec`, `prealloc` and `contextcheck` (it has no templ and no long-lived
 handlers), which the house profile has.
 
-### Recommendation for MediGo: the union
+### Recommendation for MediKube: the union
 
-MediGo holds medical records — it should be the strictest project in the repo. Take the
+MediKube holds medical records — it should be the strictest project in the repo. Take the
 house 13, add medikeep-mcp's 5 extras and all four of its tightened settings:
 
 ```yaml
@@ -329,10 +335,10 @@ linters:
         - ifElseChain
     misspell:
       ignore-rules:
-        - medigo
-        - Medigo
-        - MEDIGO
-        - MediGo
+        - medikube
+        - Medikube
+        - MEDIKUBE
+        - MediKube
 
   exclusions:
     generated: lax
@@ -376,7 +382,7 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - medigo
+        - medikube
   exclusions:
     generated: lax
 ```
@@ -400,7 +406,7 @@ carry an `install:golangci-lint` task pinning to `github.com/golangci/golangci-l
 (`/Users/krzysztof.wiatrzyk/private/monorepo/Taskfile.yaml`) has no `includes:` and no
 `dir:` fan-out. It holds four repo-wide tasks only: `commit`, `workflow:run`,
 `workflow:list`, `workflow:watch` (all `gh` wrappers). **You `cd` into the project and run
-`task <x>` there.** MediGo does not register itself with the root Taskfile.
+`task <x>` there.** MediKube does not register itself with the root Taskfile.
 
 ### Real task names across siblings
 
@@ -434,14 +440,16 @@ carry an `install:golangci-lint` task pinning to `github.com/golangci/golangci-l
 
 ### Conventions inside the file
 
-- `vars:` — `BIN: medigo` (arc-ui/appbase/gmod/technologia) or `BINARY` + `MAIN`
+- `vars:` — `BIN: medikube` (arc-ui/appbase/gmod/technologia) or `BINARY` + `MAIN`
   (medikeep-mcp). Use `BIN`.
 - `GO_BUILD_FLAGS: "-trimpath"` — every project.
 - Version stamping (arc-ui + medikeep-mcp):
+
   ```yaml
   VERSION:
     sh: git describe --tags --always --dirty 2>/dev/null || echo dev
   ```
+
   with `-ldflags="-s -w -X main.version={{.VERSION}}"`. The comment in arc-ui:
   *"A dirty or tagless tree is honestly labelled `dev` rather than pretending to be a
   release."*
@@ -450,22 +458,24 @@ carry an `install:golangci-lint` task pinning to `github.com/golangci/golangci-l
 - `deps: [gen]` on `vet`, `lint`, `test`, `build` — generated code must exist first.
 - `status:` guards on every `install:*` task so re-running is a no-op.
 - **`docker:build` uses `dir: ..`**, with the comment stating why:
+
   ```yaml
   # The image is built from the repository root, because that is the context CI
-  # passes (`context: .`, `file: medigo/Dockerfile`) and the COPY paths in the
+  # passes (`context: .`, `file: medikube/Dockerfile`) and the COPY paths in the
   # Dockerfile are project-prefixed to match. A bare `docker build .` here fails.
   docker:build:
     desc: Build the Docker image
     dir: ..
     cmds:
-      - docker build -f medigo/Dockerfile --build-arg VERSION={{.VERSION}} -t {{.BIN}}:local .
+      - docker build -f medikube/Dockerfile --build-arg VERSION={{.VERSION}} -t {{.BIN}}:local .
   ```
+
 - Gate tasks are **deliberately not fingerprinted** with `sources:`/`generates:`.
   medikeep-mcp's comment:
   > *"Deliberately not fingerprinted with sources/generates: `gen:check` is a build gate,
   > and a skipped run would turn a stale registry into a passing CI job."*
 
-### The compliance-gate pattern MediGo must adopt
+### The compliance-gate pattern MediKube must adopt
 
 `medikeep-mcp` proves its tool registry covers all 500 upstream operations, mechanically.
 Three files:
@@ -473,27 +483,31 @@ Three files:
 - `medikeep-mcp/cmd/gen-tools/main.go` — `-mode=generate` rewrites the registry;
   `-mode=coverage` runs the set arithmetic and exits non-zero on a gap.
 - `medikeep-mcp/internal/gen/coverage/coverage.go` — pure set arithmetic on strings:
+
   ```
   covered    = BUILT ∩ SPEC
   missing    = SPEC − BUILT − EXCLUDED   → fail
   orphaned   = BUILT − SPEC              → fail
   stale_excl = EXCLUDED − SPEC           → fail
   ```
+
 - `medikeep-mcp/cmd/gen-tools/coverage_test.go` — **the gate that guards the gate**. It
   asserts BUILT was read out of the *compiled* registry and not re-derived from the spec,
   using sort order as the discriminator:
+
   ```go
   if sort.StringsAreSorted(got) {
       t.Fatal("built ids are in operationId order, which is spec order, not registry order")
   }
   ```
+
   With a comment stating the failure mode being prevented: *"Re-deriving it from the spec
   would make `task api:coverage` a tautology: it would report full coverage against a
   registry that had never been generated at all."*
 - `medikeep-mcp/api/exclusions.yaml` — every non-covered operation with a written reason.
   A stale exclusion (one whose operation no longer exists) is itself a failure.
 
-**MediGo's analogue** (constitution Principle IX, *"Compliance Is A Build Gate, Not A README
+**MediKube's analogue** (constitution Principle IX, *"Compliance Is A Build Gate, Not A README
 Paragraph"*): a `task api:coverage` proving every `/api/v1` route in the OpenAPI document
 has a hand-written handler with explicit DTOs, and — the higher-value one — that **no
 PocketBase auto-CRUD `/api/collections/*` record route is publicly reachable**, read out of
@@ -517,23 +531,25 @@ ARG TAILWIND_VERSION=v4.1.14
 - **`ARG GO_VERSION=1.26`** — the *image tag*, not the go.mod patch version. Every sibling
   uses `1.26` even where go.mod says `1.26.5`.
 - **Base: `golang:${GO_VERSION}-bookworm`** (Debian), not Alpine. medikeep-mcp uses
-  `golang:1.26-alpine` but it has no Tailwind. **MediGo must use bookworm** — arc-ui's
+  `golang:1.26-alpine` but it has no Tailwind. **MediKube must use bookworm** — arc-ui's
   comment explains: *"The [Tailwind] binary is a Bun build and is NOT statically linked —
   it needs glibc. … The `-musl` variants exist for Alpine builders only; using one here
   fails at exec time, not at download time."*
-- **Stages.** arc-ui uses four; appbase/gmod use two. MediGo should use arc-ui's four:
-  1. `deps` — `COPY medigo/go.mod medigo/go.sum ./` + `go mod download`, keyed on
+- **Stages.** arc-ui uses four; appbase/gmod use two. MediKube should use arc-ui's four:
+  1. `deps` — `COPY medikube/go.mod medikube/go.sum ./` + `go mod download`, keyed on
      manifests alone so a source edit does not re-download the module graph.
   2. `generate` — `go tool templ generate ./internal/web/...` + the Tailwind standalone.
   3. `build` — the cross-compile, plus staging any directory the runtime cannot create.
   4. `runtime` — distroless.
 - **Cross-compilation, not QEMU.** Every non-final stage is
   `FROM --platform=$BUILDPLATFORM …`, with `ARG TARGETOS` / `ARG TARGETARCH`:
+
   ```dockerfile
   RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
       go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" \
-        -o /out/medigo ./cmd/medigo
+        -o /out/medikube ./cmd/medikube
   ```
+
   arc-ui's reason: *"Emulating an arm64 builder to run templ and Tailwind costs minutes of
   wall clock and OOMs regularly, for zero benefit — both generators only ever emit source."*
   **PocketBase note:** PocketBase v0.40.1 uses `modernc.org/sqlite` (pure Go), so
@@ -552,22 +568,25 @@ ARG TAILWIND_VERSION=v4.1.14
   > runAsNonRoot and image has non-numeric user' on those runtimes."*
 - **Writable data directory on distroless.** There is no shell and no `mkdir`, so it must
   be built in the build stage and copied:
+
   ```dockerfile
   RUN install -d -m 0755 -o 65532 -g 65532 /pb_data
   ...
   COPY --from=build --chown=65532:65532 /pb_data /pb_data
   VOLUME ["/pb_data"]
   ```
-  MediGo needs this for PocketBase's data directory.
+
+  MediKube needs this for PocketBase's data directory.
 - **No `HEALTHCHECK` on distroless** — no curl, no wget, no shell. arc-ui instead ships a
   `arc-ui healthcheck` cobra subcommand that probes `/healthz` and exits non-zero, and
-  compose calls `test: ["CMD", "/usr/local/bin/arc-ui", "healthcheck"]`. **MediGo should
-  add a `medigo healthcheck` subcommand for the same reason.**
+  compose calls `test: ["CMD", "/usr/local/bin/arc-ui", "healthcheck"]`. **MediKube should
+  add a `medikube healthcheck` subcommand for the same reason.**
 - **Exec-form `ENTRYPOINT`/`CMD` only** — no shell to interpret shell form.
 - **`ENV` defaults in the image** so the container is runnable with no env file:
+
   ```dockerfile
-  ENV MEDIGO_HTTP_ADDR=0.0.0.0:8080 \
-      MEDIGO_PB_DATA_DIR=/pb_data
+  ENV MEDIKUBE_HTTP_ADDR=0.0.0.0:8080 \
+      MEDIKUBE_PB_DATA_DIR=/pb_data
   ```
 
 ### Static assets
@@ -578,20 +597,24 @@ ARG TAILWIND_VERSION=v4.1.14
 - **The Tailwind arch trap, twice** (once in the Taskfile, once in the Dockerfile): the
   release asset for x86_64 is named `x64`, **not** `amd64`. An unmapped `uname -m` /
   `$BUILDARCH` 404s and the failure reads like a network blip:
+
   ```sh
   arch="${BUILDARCH}"; case "${arch}" in amd64) arch=x64 ;; arm64) arch=arm64 ;; esac
   ```
+
 - **The Tailwind source-scanning trap** (`arc-ui/assets/input.css`): Tailwind v4
   auto-detects sources by walking the project and **deliberately skips anything
   `.gitignore` excludes**. `*_templ.go` is gitignored, so on a clean tree auto-detection
   finds no class names and silently emits a stylesheet with none of the app's utilities —
   the page renders unstyled and nothing errors. Fix with explicit `@source` directives
   pointing at the `.templ` **sources** and at any `.go` file that builds class names:
+
   ```css
   @import "tailwindcss";
   @source "../internal/web/**/*.templ";
   @source "../internal/web/*.go";
   ```
+
 - **Build context is the repository root.** Non-negotiable — see §6.
 
 ---
@@ -622,7 +645,7 @@ not at this file. Its own header says so:
 !appbase/
 !gmod/
 !arc-ui/
-!medigo/
+!medikube/
 ```
 
 **Change 2 — exclude the bare-named build artifact.** In the "Build outputs" block, after
@@ -635,36 +658,36 @@ appbase/appbase
 gmod/gmod
 arc-ui/arc-ui
 arc-ui/.bin/
-medigo/medigo
-medigo/.bin/
+medikube/medikube
+medikube/.bin/
 ```
 
-**Change 3 — exclude everything MediGo regenerates inside the image, plus its live data.**
+**Change 3 — exclude everything MediKube regenerates inside the image, plus its live data.**
 Append a new block after the existing `arc-ui/**` block, in the same commented style:
 
 ```
-# medigo regenerates all of these inside the image — templ output and the Tailwind
+# medikube regenerates all of these inside the image — templ output and the Tailwind
 # bundle in the generate stage. A host-built copy in the context would be copied
 # over the source tree and shadow what the generate stage produces.
-medigo/**/*_templ.go
-medigo/internal/web/static/app.css
+medikube/**/*_templ.go
+medikube/internal/web/static/app.css
 
 # PocketBase's data directory: the SQLite database, uploaded attachments and
 # issued auth tokens. It holds live medical records and must never be transferred
 # to a build daemon, captured in build cache, or recorded in provenance.
-medigo/pb_data/
-medigo/pb_public/
-medigo/**/*.db
-medigo/**/*.db-wal
-medigo/**/*.db-shm
+medikube/pb_data/
+medikube/pb_public/
+medikube/**/*.db
+medikube/**/*.db-wal
+medikube/**/*.db-shm
 
 # Spec/planning material and Playwright output: none of it is read during a build.
-medigo/.specify/
-medigo/specs/
-medigo/docs/
-medigo/test-results/
-medigo/playwright-report/
-medigo/node_modules/
+medikube/.specify/
+medikube/specs/
+medikube/docs/
+medikube/test-results/
+medikube/playwright-report/
+medikube/node_modules/
 ```
 
 Already covered by existing global patterns — **do not re-add**: `**/.env`, `**/.env.*`,
@@ -673,7 +696,7 @@ Already covered by existing global patterns — **do not re-add**: `**/.env`, `*
 
 > Note the header's warning: exclusions are deliberately specific rather than `**/*.md`,
 > because `prompts/*.md` **is** copied into the runtime image for the catalog projects.
-> MediGo has no `prompts/` directory, so listing its markdown directories individually (as
+> MediKube has no `prompts/` directory, so listing its markdown directories individually (as
 > above) is both safe and consistent with the file's style.
 
 **Why this matters, in the maintainer's own words** (commit `e936a32`):
@@ -705,59 +728,60 @@ on:
           - appbase
           - gmod
           - arc-ui
-          - medigo          # ← the only change
+          - medikube        # ← the only change
 ```
 
 Everything downstream is already parameterised on `inputs.project-name`:
-- sparse-checkout takes `${{ inputs.project-name }}` **and** `go-modules` (MediGo does not
+
+- sparse-checkout takes `${{ inputs.project-name }}` **and** `go-modules` (MediKube does not
   need go-modules, but it comes along harmlessly);
 - the Dockerfile presence check reads `${{ inputs.project-name }}/${{ inputs.dockerfile }}`;
-- the image is `ghcr.io/windkube/medigo`;
+- the image is `ghcr.io/windkube/medikube`;
 - **the build context is `context: .` (the repository root)** with
   `file: ${{ inputs.project-name }}/${{ inputs.dockerfile }}`.
 
-That last point is the hard constraint on MediGo's Dockerfile. The workflow's own comment:
+That last point is the hard constraint on MediKube's Dockerfile. The workflow's own comment:
 
 > *"The repository root, not the project directory: each project's go.mod has a `replace
 > ../go-modules` directive, and Go cannot resolve a path outside the build context. The
 > Dockerfiles COPY with project-prefixed paths to match."*
 
-**MediGo has no `replace` directive, but the workflow passes `context: .` unconditionally
-with no per-project override.** So MediGo's Dockerfile **must** use project-prefixed COPY
+**MediKube has no `replace` directive, but the workflow passes `context: .` unconditionally
+with no per-project override.** So MediKube's Dockerfile **must** use project-prefixed COPY
 paths anyway:
 
 ```dockerfile
-WORKDIR /src/medigo
-COPY medigo/go.mod medigo/go.sum ./
+WORKDIR /src/medikube
+COPY medikube/go.mod medikube/go.sum ./
 RUN go mod download
-COPY medigo/ ./
+COPY medikube/ ./
 ```
 
 A bare `COPY go.mod go.sum ./` (as in `medikeep-mcp/Dockerfile`, which is *not* registered
 in this workflow) would fail in CI. This is the single most likely thing to get wrong.
 
-### 6.3 Files inside `medigo/` that the monorepo expects to find
+### 6.3 Files inside `medikube/` that the monorepo expects to find
 
 | Path | Required? | Content |
 | --- | --- | --- |
-| `medigo/go.mod` | yes | `module medigo` / `go 1.26.5` / `tool (github.com/a-h/templ/cmd/templ)` |
-| `medigo/Taskfile.yaml` | yes | §4; `docker:build` with `dir: ..` |
-| `medigo/.golangci.yml` | yes | §3 |
-| `medigo/Dockerfile` | yes | §5; project-prefixed COPY paths |
-| `medigo/compose.yaml` | yes | `build: {context: .., dockerfile: medigo/Dockerfile}` |
-| `medigo/README.md` | yes | See §6.4 |
-| `medigo/.gitignore` | yes | See below |
-| `medigo/.env.example` | yes | Committed template; every var, commented, with defaults |
-| `medigo/internal/web/static/.gitkeep` | **yes** | Or `go:embed` fails to compile on a fresh clone |
-| `medigo/assets/input.css` | yes | Tailwind entrypoint with explicit `@source` directives |
-| `medigo/.claude/skills/medigo/SKILL.md` | optional | Every catalog project has one; MediGo is an app, not a catalog |
-| `medigo/.mcp.json` | no | Only for projects exposing an MCP server |
+| `medikube/go.mod` | yes | `module medikube` / `go 1.26.5` / `tool (github.com/a-h/templ/cmd/templ)` |
+| `medikube/Taskfile.yaml` | yes | §4; `docker:build` with `dir: ..` |
+| `medikube/.golangci.yml` | yes | §3 |
+| `medikube/Dockerfile` | yes | §5; project-prefixed COPY paths |
+| `medikube/compose.yaml` | yes | `build: {context: .., dockerfile: medikube/Dockerfile}` |
+| `medikube/README.md` | yes | See §6.4 |
+| `medikube/.gitignore` | yes | See below |
+| `medikube/.env.example` | yes | Committed template; every var, commented, with defaults |
+| `medikube/internal/web/static/.gitkeep` | **yes** | Or `go:embed` fails to compile on a fresh clone |
+| `medikube/assets/input.css` | yes | Tailwind entrypoint with explicit `@source` directives |
+| `medikube/.claude/skills/medikube/SKILL.md` | optional | Every catalog project has one; MediKube is an app, not a catalog |
+| `medikube/.mcp.json` | no | Only for projects exposing an MCP server |
 
-`medigo/.gitignore` (modelled on `arc-ui/.gitignore`, whose every entry carries a reason):
+`medikube/.gitignore` (modelled on `arc-ui/.gitignore`, whose every entry carries a reason):
 
 ```gitignore
 # Build artefacts
-/medigo
+/medikube
 /.bin/
 
 # Generated: templ output and the Tailwind bundle. Both are reproduced by
@@ -793,7 +817,7 @@ node_modules/
 .vscode/
 ```
 
-Note: `medigo/.dockerignore` is **optional and inert** for the real builds. arc-ui keeps one
+Note: `medikube/.dockerignore` is **optional and inert** for the real builds. arc-ui keeps one
 anyway, with a header explaining it only applies to a context rooted in that directory and
 is kept in sync so the two cannot disagree. Copying that habit is fine; relying on it is not.
 
@@ -806,6 +830,7 @@ is kept in sync so the two cannot disagree. Copying that habit is fine; relying 
   prose", `## Local development` with the exact task sequence, and `## Docker` explaining
   the repo-root build context.
 - **Config: one flat struct, env only.** `arc-ui/internal/config/config.go`:
+
   ```go
   // Package config loads and validates the process configuration from the
   // environment. Everything is a single flat struct so the full surface is
@@ -818,22 +843,26 @@ is kept in sync so the two cannot disagree. Copying that habit is fine; relying 
   }
   func Load() (Config, []Warning, error)
   ```
+
   Loaded with `env.ParseAs[Config]()`, **validated at boot** (a bad `LOG_FORMAT` refuses to
   start), and returning a separate `[]Warning` for non-fatal problems *"instead of logging
-  directly so the caller controls where they go"*. MediGo's prefix is `MEDIGO_`. Variables
+  directly so the caller controls where they go"*. MediKube's prefix is `MEDIKUBE_`. Variables
   naming **shared infrastructure** rather than this app's own settings go **unprefixed** —
   arc-ui's `KUBE_API_URL`, appbase's `HATCHET_CLIENT_TOKEN` / `AI_GATEWAY_URL` /
   `GITHUB_APP_ID`.
 - **Logging: constructor, not a global.**
+
   ```go
   // Package logging builds the process logger. The logger is passed explicitly
   // to whatever needs it rather than living in a package-level global.
   func New(level, format string) zerolog.Logger
   ```
+
   `console` for humans, JSON on **stderr** otherwise, `zerolog.TimeFieldFormat = time.RFC3339`,
-  and a `.Str("service", "medigo")` field on every line.
+  and a `.Str("service", "medikube")` field on every line.
 - **Interfaces are declared at the consumer**, narrow, with a comment saying why the seam
   exists. `arc-ui/internal/web/stream.go`:
+
   ```go
   // EventSource fetches recent Kubernetes events for one runner pod.
   //
@@ -843,10 +872,11 @@ is kept in sync so the two cannot disagree. Copying that habit is fine; relying 
       Events(ctx context.Context, r fleet.Runner) ([]fleet.Event, error)
   }
   ```
+
 - **Every non-obvious decision carries a comment stating the failure mode it prevents**,
   not what the code does. This is the single most distinctive house habit — it appears in
   the Dockerfiles, the Taskfiles, `.dockerignore`, `.gitignore`, `compose.yaml`, and the
-  Go source. A MediGo spec that omits the reasoning will read as foreign to this repo.
+  Go source. A MediKube spec that omits the reasoning will read as foreign to this repo.
 - **No root `go.work`.**
 - **`docs/superpowers/specs/<YYYY-MM-DD>-<slug>-design.md`** — design docs live either at
   the repo root (`docs/superpowers/specs/2026-08-17-claudy-decomposition-design.md`) for
@@ -854,7 +884,7 @@ is kept in sync so the two cannot disagree. Copying that habit is fine; relying 
   `medikeep-mcp/docs/superpowers/{plans,specs}/…`) for project-local work. Header format:
   `# Title`, `Status: approved, in implementation`, `Date: 2026-08-17`, then
   `## Problem` / `## Goal` / `## Decisions` (a numbered table of Decision + Rationale) /
-  `## Target topology`. MediGo already has `medigo/.specify/` (speckit), which is a
+  `## Target topology`. MediKube already has `medikube/.specify/` (speckit), which is a
   different toolchain — worth noting the divergence explicitly in the spec so nobody
   looks for the design doc in the wrong place.
 
@@ -866,26 +896,26 @@ header states the placement rule:
 
 > *"GitHub only runs workflows found in `.github/workflows` at the **repository** root."*
 
-If MediGo wants CI (it should — the constitution has a build-gate principle), the file goes
-at `/Users/krzysztof.wiatrzyk/private/monorepo/.github/workflows/medigo-ci.yml`, following
+If MediKube wants CI (it should — the constitution has a build-gate principle), the file goes
+at `/Users/krzysztof.wiatrzyk/private/monorepo/.github/workflows/medikube-ci.yml`, following
 `tape-ci.yml`'s shape:
 
 ```yaml
-name: medigo-ci
+name: medikube-ci
 on:
   push:
-    paths: ["medigo/**", ".github/workflows/medigo-ci.yml"]
+    paths: ["medikube/**", ".github/workflows/medikube-ci.yml"]
   pull_request:
-    paths: ["medigo/**", ".github/workflows/medigo-ci.yml"]
+    paths: ["medikube/**", ".github/workflows/medikube-ci.yml"]
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: medigo-ci-${{ github.ref }}
+  group: medikube-ci-${{ github.ref }}
   cancel-in-progress: true
 defaults:
   run:
-    working-directory: medigo
+    working-directory: medikube
 jobs:
   ci:
     runs-on: ubuntu-24.04
@@ -893,37 +923,37 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: medigo/go.mod      # ← never a hardcoded version
+          go-version-file: medikube/go.mod    # ← never a hardcoded version
       - run: go build ./...
       - run: go vet ./...
       - run: go test -race ./internal/...
       - uses: golangci/golangci-lint-action@v8
         with:
-          working-directory: medigo
+          working-directory: medikube
 ```
 
-`go-version-file: medigo/go.mod` is the house pattern — the Go version is never duplicated
+`go-version-file: medikube/go.mod` is the house pattern — the Go version is never duplicated
 into the workflow.
 
 ### 6.6 The complete checklist, condensed
 
 ```
-[ ] medigo/go.mod                             module medigo / go 1.26.5 / tool templ
-[ ] medigo/.gitignore                         §6.3
-[ ] medigo/.golangci.yml                      §3
-[ ] medigo/Taskfile.yaml                      §4, docker:build with dir: ..
-[ ] medigo/Dockerfile                         §5, PROJECT-PREFIXED COPY PATHS
-[ ] medigo/compose.yaml                       context: .. / dockerfile: medigo/Dockerfile
-[ ] medigo/README.md                          §6.4
-[ ] medigo/.env.example                       every MEDIGO_* var, commented
-[ ] medigo/assets/input.css                   @source pointing at .templ sources
-[ ] medigo/internal/web/static/.gitkeep        or go:embed will not compile
-[ ] /.dockerignore                            !medigo/ + artifacts + pb_data + specs   ← FAILS BUILD IF MISSED
-[ ] /.github/workflows/build-image.yaml       one line: - medigo in the options list
-[ ] /.github/workflows/medigo-ci.yml          optional, but must live at the ROOT
+[ ] medikube/go.mod                           module medikube / go 1.26.5 / tool templ
+[ ] medikube/.gitignore                       §6.3
+[ ] medikube/.golangci.yml                    §3
+[ ] medikube/Taskfile.yaml                    §4, docker:build with dir: ..
+[ ] medikube/Dockerfile                       §5, PROJECT-PREFIXED COPY PATHS
+[ ] medikube/compose.yaml                     context: .. / dockerfile: medikube/Dockerfile
+[ ] medikube/README.md                        §6.4
+[ ] medikube/.env.example                     every MEDIKUBE_* var, commented
+[ ] medikube/assets/input.css                 @source pointing at .templ sources
+[ ] medikube/internal/web/static/.gitkeep      or go:embed will not compile
+[ ] /.dockerignore                            !medikube/ + artifacts + pb_data + specs   ← FAILS BUILD IF MISSED
+[ ] /.github/workflows/build-image.yaml       one line: - medikube in the options list
+[ ] /.github/workflows/medikube-ci.yml        optional, but must live at the ROOT
 [ ] NOT a root go.work                        forbidden by design decision 8
 [ ] NOT registered in the root Taskfile       per-project Taskfiles are independent
-[ ] delete medi-keep-go/                      already staged; land it with MediGo
+[ ] delete medi-keep-go/                      already staged; land it with MediKube
 ```
 
 ---
@@ -957,7 +987,7 @@ fix(tape): make RecorderService.Stop idempotent
 ci: register tape-ci workflow at monorepo root (GitHub only runs root .github/workflows)
 ```
 
-**MediGo's scope is `medigo`:** `feat(medigo): …`, `fix(medigo): …`, `docs(medigo): …`.
+**MediKube's scope is `medikube`:** `feat(medikube): …`, `fix(medikube): …`, `docs(medikube): …`.
 
 **Bodies are substantial prose, and they explain WHY.** They are not changelogs. The
 recurring devices:
@@ -974,7 +1004,7 @@ recurring devices:
   it needs rotating regardless of this change."`
 
 Excerpt from `e936a32` (`ci: build catalog images from the repository root`), the commit
-that created the `.dockerignore` MediGo must edit:
+that created the `.dockerignore` MediKube must edit:
 
 > Adds a root .dockerignore, which the root context makes necessary rather than optional.
 > Docker reads .dockerignore from the context root and nowhere else, so moving the context
@@ -991,25 +1021,25 @@ Claude-Session: https://claude.ai/code/session_<id>
 
 ---
 
-## 8. Gaps and judgement calls for the MediGo spec
+## 8. Gaps and judgement calls for the MediKube spec
 
 Things the house style does not settle, where the spec should decide explicitly:
 
-1. **Router.** Every HTTP sibling uses gin (arc-ui, appbase, technologia). MediGo drops it
+1. **Router.** Every HTTP sibling uses gin (arc-ui, appbase, technologia). MediKube drops it
    — PocketBase owns the router. So `internal/api` becomes route *registration* against
    `core.App`'s `OnServe` hook rather than a `*gin.Engine` + `*http.Server` it owns. The
    `WriteTimeout: 0` SSE constraint (§1) still applies and must be reached through
    PocketBase's server configuration.
 2. **`internal/web` vs `internal/web/views`.** arc-ui is flat, appbase nests. Recommend
-   arc-ui's flat layout, but MediGo has ~13 record types + labs + sharing + ops — that is a
+   arc-ui's flat layout, but MediKube has ~13 record types + labs + sharing + ops — that is a
    lot of templ files for one package. A `internal/web/views/` split is the defensible
    deviation if the flat package exceeds ~25 files.
 3. **PocketBase's own `pb_public/` and migrations directory** have no precedent here.
    `pb_data/` must be gitignored and dockerignored (§6.1, §6.3); if PocketBase Go
    migrations are used they are ordinary committed Go files under `internal/…` and follow
    the normal rules.
-4. **`slog` → zerolog bridge.** The MediGo constitution
-   (`medigo/.specify/memory/constitution.md`) explicitly records that this is **not
+4. **`slog` → zerolog bridge.** The MediKube constitution
+   (`medikube/.specify/memory/constitution.md`) explicitly records that this is **not
    achievable** in PocketBase v0.40.1 — `core.BaseApp.initLogger` hardcodes its slog handler
    with no injection point — and that PB's log persistence is disabled instead. The task
    brief's stack list says "a slog.Handler bridges PocketBase's internal logs into zerolog",
@@ -1019,5 +1049,5 @@ Things the house style does not settle, where the spec should decide explicitly:
    `task preview`, which renders views to standalone HTML via a Go test:
    `ARC_UI_PREVIEW_DIR="$PWD/docs/screenshots" go test ./internal/web/ -run TestWritePreview`).
    The deleted `medi-keep-go/scripts/screenshots.mjs` is the only Node-in-a-Go-project
-   precedent. MediGo's Playwright gate needs its own `task ui:smoke`, and its `node_modules/`
+   precedent. MediKube's Playwright gate needs its own `task ui:smoke`, and its `node_modules/`
    and report directories must be excluded in both ignore files (§6.1, §6.3).

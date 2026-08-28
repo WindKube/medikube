@@ -24,7 +24,7 @@ superuser-only as well.
 | `common` | `true` restricts to `is_common` entries (FR-038) |
 | `limit`, `cursor`, `count` | standard; `limit` default 25, max 100 |
 
-**No `patient` parameter exists.** This is the one resource in MediGo whose list is not
+**No `patient` parameter exists.** This is the one resource in MediKube whose list is not
 patient-scoped, because it contains nothing about anyone (FR-043).
 
 `200`:
@@ -107,5 +107,5 @@ by a **migration** whose `up` performs an idempotent upsert keyed on `loinc_code
 test asserts.
 
 Amending the catalogue means shipping a new extract and a new migration. There is no
-administrative UI for it, no import endpoint and no `medigo` subcommand — the catalogue is
+administrative UI for it, no import endpoint and no `medikube` subcommand — the catalogue is
 reference data that ships with the instance (FR-036, FR-037).

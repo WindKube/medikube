@@ -4,7 +4,7 @@ How a developer brings this phase up locally and convinces themselves, end to en
 including the parts that are easy to believe and hard to check, like "the refusal really is
 indistinguishable from a not-found" and "the migration really did move every medication".
 
-Everything below runs from `medigo/` unless stated. Every routine action is a Task, per the
+Everything below runs from `medikube/` unless stated. Every routine action is a Task, per the
 monorepo convention: you run tasks, not remembered command lines.
 
 ---
@@ -39,15 +39,15 @@ task run
 `task run` needs the environment. The minimum for a local instance:
 
 ```bash
-export MEDIGO_ENV=dev
-export MEDIGO_DEV=true
-export MEDIGO_DATA_DIR=./pb_data
-export MEDIGO_HTTP_ADDR=127.0.0.1:8090
-export MEDIGO_PUBLIC_URL=http://127.0.0.1:8090
-export MEDIGO_LOG_LEVEL=debug
-export MEDIGO_LOG_PRETTY=true
-export MEDIGO_AUTH_REGISTRATION_OPEN=true      # the seed opens it so the sign-up path is exercised
-export MEDIGO_FILES_PHOTO_MAX_BYTES=15728640   # 15 MiB; PocketBase's own default is 5 MiB
+export MEDIKUBE_ENV=dev
+export MEDIKUBE_DEV=true
+export MEDIKUBE_DATA_DIR=./pb_data
+export MEDIKUBE_HTTP_ADDR=127.0.0.1:8090
+export MEDIKUBE_PUBLIC_URL=http://127.0.0.1:8090
+export MEDIKUBE_LOG_LEVEL=debug
+export MEDIKUBE_LOG_PRETTY=true
+export MEDIKUBE_AUTH_REGISTRATION_OPEN=true    # the seed opens it so the sign-up path is exercised
+export MEDIKUBE_FILES_PHOTO_MAX_BYTES=15728640 # 15 MiB; PocketBase's own default is 5 MiB
 ```
 
 **Two things you should see at boot, and one you should not.**
@@ -64,7 +64,7 @@ export MEDIGO_FILES_PHOTO_MAX_BYTES=15728640   # 15 MiB; PocketBase's own defaul
 Sign in as the seeded account:
 
 ```
-amara@example.test / medigo-dev-password
+amara@example.test / medikube-dev-password
 ```
 
 ---
@@ -85,9 +85,11 @@ requirement it proves.
 4. Open a profile and upload a photograph. It appears in the list and in the switcher at a small
    size — that thumbnail was generated at upload, not on demand (FR-009).
 5. Replace the photograph. The old one is gone from disk, thumbnails included:
+
    ```bash
    find ./pb_data/storage -path '*thumbs_*' | sort     # exactly two files per patient with a photo
    ```
+
 6. Open a profile that has only a name and a date of birth. Missing details read as **absent** —
    not "0", not "unknown", not a blank box (FR-030, US1-6).
 
@@ -150,7 +152,7 @@ and address the first account's ids directly.
 A=$(jq -r .accountA.patientId internal/testsupport/fixtures.json)
 TOKEN_B=$(curl -s -XPOST localhost:8090/api/v1/auth/login \
   -H 'content-type: application/json' \
-  -d '{"email":"bo@example.test","password":"medigo-dev-password"}' | jq -r .token)
+  -d '{"email":"bo@example.test","password":"medikube-dev-password"}' | jq -r .token)
 
 curl -s -o /tmp/other.json -w '%{http_code}\n' localhost:8090/api/v1/patients/$A \
   -H "Authorization: Bearer $TOKEN_B"
@@ -193,7 +195,7 @@ curl -s -w '\n%{http_code}\n' localhost:8090/api/v1/records/medications \
 curl -s -o /dev/null -w '%{http_code}\n' "localhost:8090/api/v1/patients/$A/photo"   # 401
 curl -s "localhost:8090/api/v1/patients/$A/photo?size=100x100t" -H "Authorization: Bearer $TOKEN_B" \
   -o /dev/null -w '%{http_code}\n'                                                   # 404
-./medigo routes | jq -r '.[].path' | grep -c '^/api/files'                           # 0
+./medikube routes | jq -r '.[].path' | grep -c '^/api/files'                         # 0
 ```
 
 There is no `?token=` parameter anywhere in the inventory, and there never will be.
@@ -227,9 +229,9 @@ sqlite3 ./pb_data/data.db "
 SC-008. Exercise the whole surface, then grep what came out:
 
 ```bash
-task run 2>&1 | tee /tmp/medigo.log &
+task run 2>&1 | tee /tmp/medikube.log &
 task test:e2e
-grep -Ei 'amara|okonkwo|1987-|Ibuprofen|\.jpg|[0-9]+ [A-Z][a-z]+ Street' /tmp/medigo.log
+grep -Ei 'amara|okonkwo|1987-|Ibuprofen|\.jpg|[0-9]+ [A-Z][a-z]+ Street' /tmp/medikube.log
 # no output. Not one name, date of birth, address, medication name or file name.
 curl -s localhost:9090/metrics | grep -E 'patient_id|user_id|record_id'   # no output
 ```
@@ -243,7 +245,7 @@ task check          # gen + vet + lint + test -race
 task test:e2e       # Playwright, both viewports, derived route list
 task openapi        # regenerate api/openapi.json
 git diff --exit-code api/openapi.json    # must be clean, or the diff is reviewed and intentional
-./medigo routes | jq 'length'            # the inventory the smoke gate is built from
+./medikube routes | jq 'length'          # the inventory the smoke gate is built from
 ```
 
 **Prove the gate can go red before you trust it green** (constitution VIII, open risk R11). Break
@@ -271,4 +273,4 @@ the whole point of deriving the list from the binary (FR-056, SC-013).
 | Two identically named practitioners with no specialty both saved | `specialty` is storing `NULL` instead of `''`; SQLite treats NULLs as distinct in a unique index |
 | The SSE stream dies silently after five minutes | the `WriteTimeout` override on the `ServeEvent`'s `*http.Server` was lost. It passes every test shorter than five minutes |
 | A Datastar attribute does nothing at all | you wrote `data-on-click`. v1 uses a colon: `data-on:click`. `data-on-load` is now `data-init` |
-| The smoke gate is green on a page you know is broken | it is not in `medigo routes`, so it was never under test |
+| The smoke gate is green on a page you know is broken | it is not in `medikube routes`, so it was never under test |

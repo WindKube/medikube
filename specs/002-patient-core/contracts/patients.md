@@ -84,12 +84,14 @@ somebody can forget. A request carrying either field is rejected `422 validation
 **Sort**: `last_name, first_name, id` ascending. Not configurable in this phase.
 
 **200**
+
 ```json
 { "items": [ /* PatientSummary */ ],
   "next_cursor": null,
   "total": 3,
   "owned_count": 3 }
 ```
+
 `total` is returned **unconditionally** on this endpoint, not only under `?count=true` — FR-010
 requires the list to state how many there are, and a household is tens of rows (research D-29).
 `owned_count` is present so phase 005 can add `shared_count` without changing the envelope.
@@ -122,6 +124,7 @@ is created only by registration and by the migration (FR-005, research D-10).
 | 401 | no session | FR-043 |
 
 **Mandatory tests**
+
 - Four simultaneous faults → four `fields[]` entries in one response (US1-3).
 - `birth_date` = tomorrow → `date_in_future`; `birth_date` = today − 151y → `date_too_old`.
 - A body with `"is_self_record": true` → `422 unknown_field`, and the account's existing
@@ -185,6 +188,7 @@ the person's name and the count of records to be shown before anything is remove
 summary already carries both (research D-26). **There is no preview endpoint.**
 
 **Mandatory tests**
+
 - Delete a patient with 3 medications → 204; `SELECT COUNT(*) FROM medications WHERE patient='<id>'`
   is 0; no medication anywhere references the deleted id (US6-3, SC-010).
 - The photo file and its two thumbnails are gone from the filesystem (US6-2).

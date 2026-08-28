@@ -33,12 +33,12 @@ documentation:
    delete* when the emptied relation is `Required` (`:1619`). That one function gives us FR-026
    (deleting a patient destroys their records), FR-040 (deleting a practitioner clears the
    reference and preserves the record) and FR-017/FR-052 (deleting the patient in view clears
-   `users.active_patient`) with no MediGo code at all. The plan's job is to get the
+   `users.active_patient`) with no MediKube code at all. The plan's job is to get the
    `Required`/`CascadeDelete` matrix right and then *test* it, not to reimplement it.
 2. **The person in view is never consulted for authorization.** `users.active_patient` exists to
    pre-fill a switcher and to redirect `/medications` to `/medications?patient=…`. Every API
    handler takes its patient from the request. This is FR-015 and constitution VII, and it is
-   what stops MediGo growing upstream's second, implicit, un-authorized addressing scheme.
+   what stops MediKube growing upstream's second, implicit, un-authorized addressing scheme.
 3. **The photograph never leaves through PocketBase's file route.** `patients.photo` is
    `Protected: true` (asserted at boot), thumbnails are generated eagerly into PocketBase's own
    `thumbs_<filename>/<size>_<filename>` layout so PB's replace/delete cleanup still finds them,
@@ -64,10 +64,10 @@ to arc-ui's where they overlap, per HOUSE-PATTERNS):
 | `github.com/pocketbase/pocketbase` | v0.40.1 | collections, migrations, relation cascade/unset, file storage + `CreateThumb`, router, test harness |
 | `github.com/a-h/templ` | v0.3.1020 | 6 new pages, the patient switcher, chart header, empty states |
 | `github.com/starfederation/datastar-go` | v1.2.2 | switcher patch, create/edit drawers, list live-update |
-| `github.com/caarlos0/env/v11` | v11.4.1 | `MEDIGO_FILES_*` photo limits |
+| `github.com/caarlos0/env/v11` | v11.4.1 | `MEDIKUBE_FILES_*` photo limits |
 | `github.com/rs/zerolog` | v1.35.1 | the only logger; redacted patient/practitioner marshallers |
 | `github.com/getsentry/sentry-go` | v0.48.0 | scrubbed error reporting (already wired in 001) |
-| `github.com/prometheus/client_golang` | as 001 | `medigo_records_*`, `medigo_files_*` counters |
+| `github.com/prometheus/client_golang` | as 001 | `medikube_records_*`, `medikube_files_*` counters |
 | `go.opentelemetry.io/otel` | as 001 | spans on the new services and stores |
 | `github.com/samber/do` | as 001 | container providers for the three new services |
 | `github.com/samber/lo` | v1.53.0 | sparingly |
@@ -76,7 +76,7 @@ to arc-ui's where they overlap, per HOUSE-PATTERNS):
 | Playwright CLI | build-time only | 6 new smoke targets × 2 viewports |
 
 **Storage**: Embedded SQLite through PocketBase (`modernc.org/sqlite`, no cgo), data dir
-`MEDIGO_DATA_DIR` (`/data/pb_data`). Schema is code: reversible Go migrations registered into
+`MEDIKUBE_DATA_DIR` (`/data/pb_data`). Schema is code: reversible Go migrations registered into
 `core.AppMigrations`. Patient photographs live in PocketBase's local file storage under
 `<collectionId>/<recordId>/`, thumbnails under `.../thumbs_<filename>/`.
 
@@ -87,7 +87,7 @@ unit against hand-written fakes with `t.Parallel()`; integration against `tests.
 — VERIFIED-SOURCE-FACTS FACT 7); contract suites run against every implementation of an interface
 including the fakes; HTTP-level `tests.ApiScenario` (never sharing a `TestApp` across scenarios);
 templ render-to-buffer tests. Plus the Playwright smoke + console-error gate at 1440×900 and
-390×844, with its route list derived from `medigo routes`.
+390×844, with its route list derived from `medikube routes`.
 
 **Target Platform**: Linux server, single static binary from
 `gcr.io/distroless/static-debian12:nonroot`, `USER 65532:65532`, built for linux/amd64 and
@@ -99,6 +99,7 @@ hypermedia interactivity (templ + Datastar), and a hand-written JSON API. One mo
 no separate frontend build service, no Node at runtime.
 
 **Performance Goals**:
+
 - SC-004: patient chart summary — header, per-kind counts, recent activity — within **2 s** for a
   patient holding 50,000 records. Budget: one indexed `COUNT(*)` per registered kind (one kind
   today, fifteen by phase 004) plus one `LIMIT 10` read of `audit_events` on
@@ -112,6 +113,7 @@ no separate frontend build service, no Node at runtime.
   write transaction but inside the request.
 
 **Constraints**:
+
 - Single instance by construction; no horizontal scaling, no broker abstraction over the realtime
   hub (constitution Technology Constraints).
 - `CGO_ENABLED=0`; nothing in this phase may add a cgo dependency (relevant: image decoding is
@@ -139,7 +141,7 @@ component, 3 service packages, 3 store packages and 6 migrations.
 ### I. Simplicity Is A Gate (KISS) — **PASS (with one recorded entry)**
 
 - The specification asks for two directories (practitioners, places of care) plus a specialty
-  vocabulary. MediGo ships **one** `facilities` collection with a `kind` discriminator and a
+  vocabulary. MediKube ships **one** `facilities` collection with a `kind` discriminator and a
   **fixed Go enum** for specialty rather than a fourth collection — the two cuts SHARED-DESIGN
   §1.1 rows 3 and 5 already justified, and FR-033/FR-034 explicitly bless.
 - No caching layer, no counter table, no materialised chart. FR-028's per-kind counts are
@@ -215,7 +217,7 @@ component, 3 service packages, 3 store packages and 6 migrations.
 - The patient delete and the medication re-attribution both run in `app.RunInTransaction`.
 - `OnRecord*Request` hooks are not used anywhere in this phase — they never fire under the
   lockdown. The audit hooks are `OnRecordAfterCreateSuccess` / `…UpdateSuccess` / `…DeleteSuccess`.
-- Realtime stays MediGo's: `/api/v1/streams/records` becomes patient-scoped and re-authorises the
+- Realtime stays MediKube's: `/api/v1/streams/records` becomes patient-scoped and re-authorises the
   **patient** per subscriber per event. PocketBase's native realtime remains unused.
 
 ### VI. One Log Stream, One Trace Context — **PASS**
@@ -225,11 +227,11 @@ component, 3 service packages, 3 store packages and 6 migrations.
 - `person.Patient`, `directory.Practitioner` and `directory.Facility` each implement
   `MarshalZerologObject` emitting **only** the id and, for the patient, the owner id — so logging
   one by accident cannot leak a name or a date of birth.
-- New metrics: `medigo_records_total{kind}`, `medigo_files_photo_bytes`,
-  `medigo_files_thumb_duration_seconds{size}`, `medigo_patients_switch_total{outcome}`. Label sets
+- New metrics: `medikube_records_total{kind}`, `medikube_files_photo_bytes`,
+  `medikube_files_thumb_duration_seconds{size}`, `medikube_patients_switch_total{outcome}`. Label sets
   are bounded and contain no identifier.
 - Spans: `service.patient.*`, `store.patients.*`, `store.practitioners.*`, `store.facilities.*`.
-  Attributes from the allowlist only; `medigo.patient_id` is **not** on the allowlist.
+  Attributes from the allowlist only; `medikube.patient_id` is **not** on the allowlist.
 - Datastar's `ConsoleLog`/`ConsoleError` are not used; the whole inline-script SDK family stays
   banned (it would fail both the CSP and the Principle VIII console gate).
 
@@ -241,10 +243,10 @@ This is the phase where this principle earns its keep, so it is enumerated rathe
 |---|---|
 | FR-041 authorize from the data, never the caller | One checkpoint: `access.Authorizer.Patient(ctx, actor, patientID, need)`. Every service method's *first act*. The repository never authorizes; the handler never authorizes. |
 | FR-042 unreachable is indistinguishable from non-existent | The error taxonomy maps **every authorization failure on patient-scoped data** to `ErrNotFound` → 404 with the identical envelope a genuinely missing id produces. A response-body-equality test asserts the two are byte-identical. |
-| FR-044 no self-authorizing photo link | `Protected: true` + boot assertion + MediGo-owned route. PocketBase's file-token mechanism is never called. |
+| FR-044 no self-authorizing photo link | `Protected: true` + boot assertion + MediKube-owned route. PocketBase's file-token mechanism is never called. |
 | FR-045 audit everything, content never | `audit_events` gains `patient`. Person create/update/delete, photo set/delete, active-patient change and **every refused access** (as `access_denied`) write a row of (actor, action, target_kind, target_id, patient, request_id, occurred_at) and nothing else — there is no `ip` column and no content column (001 research D-19). |
 | FR-046 no PHI in diagnostics | Redacting `MarshalZerologObject` on all three new domain types; allowlisted span attributes; bounded metric labels; a test that greps the captured log stream after exercising every endpoint. |
-| FR-008 trust content, not the client | PocketBase sniffs with `mimetype.DetectReader`. **Its rejection message embeds the original filename** (`core/validators/file.go:63`) — a PHI leak — so MediGo maps PB validation errors into its own PHI-free envelope and never echoes PB's message. |
+| FR-008 trust content, not the client | PocketBase sniffs with `mimetype.DetectReader`. **Its rejection message embeds the original filename** (`core/validators/file.go:63`) — a PHI leak — so MediKube maps PB validation errors into its own PHI-free envelope and never echoes PB's message. |
 | Hard delete | No `deleted_at`. Deleting a patient cascades through `medications.patient` in one transaction and destroys the photo with the record. |
 
 ### VIII. The UI Must Prove It Renders — **PASS**
@@ -262,7 +264,7 @@ This is the phase where this principle earns its keep, so it is enumerated rathe
 ### IX. Compliance Is A Build Gate — **PASS**
 
 - The 20 new operations enter one declarative route table that simultaneously registers them,
-  emits `medigo routes` and drives OpenAPI generation, so registry, document and smoke coverage
+  emits `medikube routes` and drives OpenAPI generation, so registry, document and smoke coverage
   cannot drift. `api/openapi.json` is regenerated, committed and diffed in CI.
 - All six migrations supply a real `down`. The one whose reversal is lossy (dropping `patients`
   discards profile detail entered after the migration) carries that statement in the migration
@@ -309,12 +311,12 @@ specs/002-patient-core/
 └── tasks.md                      # Phase 2 output (/speckit-tasks)
 ```
 
-### Source Code (repository root: `medigo/`)
+### Source Code (repository root: `medikube/`)
 
 New files are marked `+`, amended files `~`. Everything else already exists from phase 001.
 
 ```text
-cmd/medigo/
+cmd/medikube/
 ~ main.go                                     register 3 new services + 6 migrations
 
 internal/config/
@@ -424,7 +426,7 @@ internal/testsupport/
 internal/testdata/pb_data/                    fixture rebuilt with the new collections
 
 e2e/
-~ smoke.spec.ts                               unchanged — targets come from `medigo routes`
+~ smoke.spec.ts                               unchanged — targets come from `medikube routes`
 + patient-switch.spec.ts                      the one genuinely stateful browser flow
 
 api/openapi.json                              regenerated, committed, diffed
@@ -447,9 +449,9 @@ what changes is which phase owns a piece, one operation's existence, and one env
 
 | Contract says | This phase does | Why |
 |---|---|---|
-| Patients, multi-patient switching and the patient chart are **phase 001**, and phase 001 is the `foundation` phase | They land **here**, and phase 001 ships accounts and medications instead | Phase 001's charter governs, and its own plan records the mirror-image decision: *"Phase 001 owns accounts and medications as its single kind. Patients arrive in 002."* This is the single largest relocation in the suite, and it is why this phase exists at all. The design — `patients` as the ownership anchor, `users.active_patient` as a non-authoritative pointer, the photo through MediGo's own route — is the contract's, verbatim. |
+| Patients, multi-patient switching and the patient chart are **phase 001**, and phase 001 is the `foundation` phase | They land **here**, and phase 001 ships accounts and medications instead | Phase 001's charter governs, and its own plan records the mirror-image decision: *"Phase 001 owns accounts and medications as its single kind. Patients arrive in 002."* This is the single largest relocation in the suite, and it is why this phase exists at all. The design — `patients` as the ownership anchor, `users.active_patient` as a non-authoritative pointer, the photo through MediKube's own route — is the contract's, verbatim. |
 | Phase 002 is 19 operations | **20** — the contract's 19 plus `getPatientChart`, `GET /api/v1/patients/{id}/summary` (operation **93** in the contract's additive numbering) | FR-029 and FR-030 require the chart header, the per-kind tile counts and the figures the delete confirmation must state, in one authorized read. Without it the chart page is one request per registered kind — 1 today, 15 by phase 004 — each re-running the same authorization for the same patient. One round trip instead of fifteen, and one place where the counts are decided. Contract operation total moves by **+1**; §2.3 records 93. |
-| Every list envelope carries `total` **only** under `?count=true` (§2.1 rule 5) | `GET /api/v1/patients` returns `total` and `owned_count` **unconditionally** | FR-010 requires the list itself to state how many people there are, and a household is tens of rows — the count is a `COUNT(*)` over a handful of ids, not the open-ended scan rule 5 exists to prevent. It is the **one** documented exception in the phase; every other list in this phase and every list in phases 003–006 follows rule 5 unchanged. `owned_count` is in the envelope from the start so phase 005 adds `shared_count` without changing the shape. [research D-29](./research.md#d-29). |
+| Every list envelope carries `total` **only** under `?count=true` (§2.1 rule 5) | `GET /api/v1/patients` returns `total` and `owned_count` **unconditionally** | FR-010 requires the list itself to state how many people there are, and a household is tens of rows — the count is a `COUNT(*)` over a handful of ids, not the open-ended scan rule 5 exists to prevent. It is the **one** documented exception in the phase; every other list in this phase and every list in phases 003–006 follows rule 5 unchanged. `owned_count` is in the envelope from the start so phase 005 adds `shared_count` without changing the shape. [research D-29](./research.md#d-29--cursor-pagination-with-explicit-sort-keys-per-new-list). |
 | The record kind path segment, per contract rule 2, is the plural generated from one Go constant | Corrected to `/api/v1/records/**medications**` throughout this phase's contracts and quickstart | An earlier draft of this phase used the singular `/records/medication`. The constant is created in phase 001, so the spelling is settled there, and phase 003's kind registry already declares the plural. Closes cross-artifact finding **H1**; phase 001's plan records the same correction from its side (its research D-05). |
 | `tags` and the `/tags` page are phase 002 | Not built here; **phase 003 owns them** | This phase's specification contains no requirement for tagging, and phase 003's US7 owns it end to end. Phase 003's own deviation table records the receiving half. |
 | `catalog_lab_tests` is phase 002 | Not built here; **phase 004 owns it** | Nothing in this phase's requirements needs a laboratory test catalogue, and phase 004 builds it where the results that use it live. Phase 004's plan records the receiving half. |
@@ -480,7 +482,7 @@ This phase is done when, and only when:
    (cross-artifact finding M7).
 2. Every one of the 20 new operations has an owner-succeeds / stranger-refused pair, and the
    refusal is byte-identical to a not-found (FR-055, SC-005).
-3. `medigo routes`, `api/openapi.json` and the Playwright coverage agree; the diff of
+3. `medikube routes`, `api/openapi.json` and the Playwright coverage agree; the diff of
    `api/openapi.json` in the phase's PR is reviewed and intentional (FR-056, Principle IX).
 4. The 6 new pages pass the smoke gate at both viewports on a freshly seeded instance, including
    in their empty states (SC-013).

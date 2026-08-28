@@ -1,0 +1,20 @@
+# Link integrity is what "the build" means in a repository with no compiler: the
+# assertion is that every relative link, image and heading anchor in the corpus
+# resolves inside the checkout.
+
+# Never the network. A docs build that goes red because a vendor's site is down,
+# rate-limits the runner, or blocks datacentre IPs teaches people to ignore it.
+# `--offline` is also passed on the command line so a bare `lychee .` behaves.
+offline = true
+
+# The anchors are the fragile part. Cross-file `#d-NN` citations between plan,
+# research, data-model and tasks are the spine of the spec corpus, and a renamed
+# heading silently breaks them; without this the check only proves files exist.
+include_fragments = "full"
+
+no_progress = true
+
+# Vendored, and rewritten wholesale by the tool that owns it: the Specify CLI for
+# the scaffolding, the design tool for the exported comp. lychee skips dotted
+# directories already, but the boundary is worth stating rather than inheriting.
+exclude_path = [".specify", ".claude", "design/source"]

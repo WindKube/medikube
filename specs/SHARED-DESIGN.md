@@ -1,4 +1,4 @@
-# MediGo — THE Shared Cross-Phase Design Contract
+# MediKube — THE Shared Cross-Phase Design Contract
 
 **Status: BINDING ON DESIGN.** This document is authoritative on the **design** — the domain
 model, the record route family and the API conventions, the UI shell and its landmark strings, the
@@ -7,7 +7,7 @@ list for phases 001–006 is written against it, and a later document that disag
 of those is wrong.
 
 **It is NOT authoritative on allocation.** *Which phase ships what* is settled by the six accepted
-phase charters under `/Users/krzysztof.wiatrzyk/private/monorepo/medigo/specs/`. Where §0, §1.2,
+phase charters under `/Users/krzysztof.wiatrzyk/private/monorepo/medikube/specs/`. Where §0, §1.2,
 §1.3, §1.5, §1.6, §2.3 or §3.1 disagrees with a charter about the phase a collection, an operation
 or a page belongs to, **the charter wins and this document is corrected**. Those sections were
 rewritten to the accepted allocation on **2026-08-27** and now carry it; the `foundation` /
@@ -15,7 +15,7 @@ rewritten to the accepted allocation on **2026-08-27** and now carry it; the `fo
 it.
 
 Where this document disagrees with
-`/Users/krzysztof.wiatrzyk/private/monorepo/medigo/.specify/memory/constitution.md`, the
+`/Users/krzysztof.wiatrzyk/private/monorepo/medikube/.specify/memory/constitution.md`, the
 constitution wins.
 
 **Inputs, in precedence order:** the constitution (v1.3.0) → `VERIFIED-SOURCE-FACTS.md` → the
@@ -48,7 +48,7 @@ the allocation this document originally carried.
 
 | Phase | Name | Owns |
 |---|---|---|
-| **001** | `walking-skeleton` | Platform, config, zerolog + the two-mechanism PocketBase log bridge, observability, the CRUD lockdown, PB-native auth behind MediGo DTOs, accounts (`users`), the audit-trail collection, the record-kind registry with **medications** as its single registered kind end to end, the route registry + OpenAPI gate, the Datastar SSE bridge, the Playwright gate and its two negative controls |
+| **001** | `walking-skeleton` | Platform, config, zerolog + the two-mechanism PocketBase log bridge, observability, the CRUD lockdown, PB-native auth behind MediKube DTOs, accounts (`users`), the audit-trail collection, the record-kind registry with **medications** as its single registered kind end to end, the route registry + OpenAPI gate, the Datastar SSE bridge, the Playwright gate and its two negative controls |
 | **002** | `patient-core` | Patients, ownership, active-patient switching, the patient chart and photo, the re-anchoring of medications onto `patient` — and the reference entities: practitioners, facilities (practices ∪ **pharmacies** ∪ hospitals ∪ labs ∪ imaging), and the practitioner **specialty** vocabulary as a fixed Go enum rather than a collection |
 | **003** | `clinical-records` | The remaining thirteen record kinds, the multi-relation link model, the one payload-carrying join, tags, the search index and unified search, the timeline |
 | **004** | `labs-and-attachments` | Lab results as the fifteenth kind, lab components and trends, the standardized lab-test catalogue, attachments (upload / serve / thumbnail / trash / restore) |
@@ -84,15 +84,15 @@ collections, the same route family, the same conventions, in a different order.
 3. **Every patient-scoped collection has `patient`** — `RelationField{CollectionId: patients,
    Required: true, MaxSelect: 1, CascadeDelete: true}`. There is no other route to a patient.
 4. **Every one of the five API rules on every collection is `nil`.** Superuser-only. Asserted at
-   boot; MediGo refuses to start if any non-system collection has a non-nil rule. `AuthRule` is
+   boot; MediKube refuses to start if any non-system collection has a non-nil rule. `AuthRule` is
    *not* one of the five and stays `""` on `users`, or PB native auth dies (VERIFIED-SOURCE-FACTS
    FACT 2).
-5. **Every `FileField` is `Protected: true`.** Asserted at boot; MediGo refuses to start
+5. **Every `FileField` is `Protected: true`.** Asserted at boot; MediKube refuses to start
    otherwise. Only two collections have file fields — `patients.photo` and `attachments.file` —
    which makes the assertion trivially auditable.
 6. Enum fields are `core.SelectField{MaxSelect: 1}` **and** a Go string type with a `Valid()`
    method in `internal/domain`. The two are generated from one Go source of truth so they cannot
-   drift. **All enum values are `snake_case`.** MediGo *chooses* these vocabularies; it does not
+   drift. **All enum values are `snake_case`.** MediKube *chooses* these vocabularies; it does not
    inherit them (only six of upstream's were ever declared).
 7. `notes` is `text`, max 5000, optional, on every clinical kind. It is PHI and is redacted in
    marshalling for logs.
@@ -106,15 +106,15 @@ collections, the same route family, the same conventions, in a different order.
     one `occurred_at`.
 11. Uniqueness is a collection index (`AddIndex`), because PocketBase has no per-field `Unique`.
 
-### 1.1 Where MediGo collapses upstream — the seven big cuts, stated plainly
+### 1.1 Where MediKube collapses upstream — the seven big cuts, stated plainly
 
-| # | Upstream | MediGo | Why |
+| # | Upstream | MediKube | Why |
 |---|---|---|---|
 | 1 | 17 link tables, 121 fields, ~44 endpoints | **6 multi-relation fields + 1 real join collection** | 12 of the 17 carried only `relevance_note`, which upstream's own bulk-create DTOs prove is per-*operation*, not per-*pair*. PocketBase multi-relations + back-relation traversal (`treatments_via_medications`) express the rest natively. Only `treatment_medications` (8 payload fields) survives as a collection. |
 | 2 | `symptoms` (definition) + `symptom_occurrences` (episodes), 34 fields, two-level | **one `symptoms` collection, one row per episode** | It was the only two-level model in the app. "Occurrence count" and "last occurrence" are `GROUP BY name`, not columns. `time_of_day` is deleted outright — it duplicates `occurred_at`. |
 | 3 | `practices` (17 fields, embedded locations JSON) + `pharmacies` (19 fields, flattened address columns) | **one `facilities` collection with `kind ∈ {practice, pharmacy, hospital, lab, imaging, other}`** | Two modellings of the same six address concepts in one codebase. One shape, one CRUD, one page. |
 | 4 | `entity_files` (16 ops, polymorphic, sync state machine) + `lab_result_files` (18 ops) + `/lab-results/{id}/files` (3 ops) | **one `attachments` collection, 6 ops** | Two complete file subsystems, one of them lab-only, plus a Paperless/Papra sync state machine that is out of scope. |
-| 5 | `medical_specialties` and `injury_types` as user-extensible FK tables | **select fields with MediGo vocabularies** | A required FK into a create-only, never-readable table (`medical_specialties` has no GET-by-id, no PUT, no DELETE) is not a reference model, it is an accident. |
+| 5 | `medical_specialties` and `injury_types` as user-extensible FK tables | **select fields with MediKube vocabularies** | A required FK into a create-only, never-readable table (`medical_specialties` has no GET-by-id, no PUT, no DELETE) is not a reference model, it is an accident. |
 | 6 | `patient_shares` (10 ops) + family-history shares (10 ops) + `report_templates.is_public`/`shared_with_family` | **one `shares` collection, `resource_kind ∈ {patient, family_member}`, 5 ops** | The product distinction (chart delegation vs pedigree exchange) is real and is preserved as a field. The second router, second bulk-invite, second revoke shape and second remove-my-access are not. |
 | 7 | 13 clinical record types × ~5 near-identical CRUD routers, plus 21 legacy `/patients/me` duplicates and 9 `/patients/{id}/{type}` fan-outs | **one `/api/v1/records/{kind}` route family, 6 operations, 15 registered kinds** | See §2.2. This single decision is what makes an 80–120 endpoint budget reachable while keeping every DTO explicitly typed. |
 
@@ -131,12 +131,12 @@ Paperless/Papra fields; the frontend-log endpoints.
 
 #### `users` — PocketBase **auth** collection, extended. Phase 001.
 
-PocketBase owns `id`, `email`, `emailVisibility`, `verified`, `password`, `tokenKey`. MediGo adds:
+PocketBase owns `id`, `email`, `emailVisibility`, `verified`, `password`, `tokenKey`. MediKube adds:
 
 | Field | Type | Req | Notes |
 |---|---|---|---|
 | `name` | text ≤120 | yes | display name |
-| `role` | select | yes | `user` \| `admin`. Default `user`. **Never settable through registration or self-update** — the DTOs omit it. `admin` is a MediGo application tier and is *not* a PocketBase superuser. |
+| `role` | select | yes | `user` \| `admin`. Default `user`. **Never settable through registration or self-update** — the DTOs omit it. `admin` is a MediKube application tier and is *not* a PocketBase superuser. |
 | `active_patient` | relation → patients, MaxSelect 1 | no | UI convenience only. **Never consulted for authorization.** Resolves to null when access is gone. |
 | `unit_system` | select | yes | `metric` \| `imperial`. Default `metric`. |
 | `locale` | text ≤10 | yes | default `en` |
@@ -165,7 +165,7 @@ carried over** — PocketBase's `_externalAuths` and its OAuth2 linking flow rep
 | `primary_practitioner` | relation → practitioners, MaxSelect 1 | no | practitioners arrive in the same phase |
 | `is_self_record` | bool | yes | default false; **partial unique index** `(owner) WHERE is_self_record = 1` |
 | `relationship_to_owner` | select | no | `self spouse partner parent child sibling ward other` |
-| `photo` | file, MaxSelect 1, **Protected: true**, MimeTypes `image/jpeg,image/png,image/webp`, MaxSize 15MiB, Thumbs `100x100t,400x400f` | no | thumbnails generated **eagerly** on upload (PB's lazy thumbnailer lives in the file route MediGo bypasses) |
+| `photo` | file, MaxSelect 1, **Protected: true**, MimeTypes `image/jpeg,image/png,image/webp`, MaxSize 15MiB, Thumbs `100x100t,400x400f` | no | thumbnails generated **eagerly** on upload (PB's lazy thumbnailer lives in the file route MediKube bypasses) |
 
 #### `tags` — Phase 003.
 
@@ -206,7 +206,7 @@ for the non-record actions. Retention is a config value; purge is a PB cron.
 | `mime` | text | yes | sniffed server-side, never trusted from the client |
 | `description` | text ≤500 | no | PHI |
 | `category` | select | no | `report lab_result imaging prescription insurance_card correspondence photo other` |
-| `deleted_at` | date | no | **the trash.** Non-null = in trash, excluded from every list, purged by a cron after `MEDIGO_RETENTION_TRASH_DAYS`. |
+| `deleted_at` | date | no | **the trash.** Non-null = in trash, excluded from every list, purged by a cron after `MEDIKUBE_RETENTION_TRASH_DAYS`. |
 | `uploaded_by` | relation → users, MaxSelect 1 | yes | |
 
 Indexes: `(patient, owner_kind, owner_id)`, `(deleted_at)`.
@@ -224,7 +224,7 @@ confined to two collections, which is what makes the `Protected: true` boot asse
 `patient` (relation, cascade, required), `kind` (select), `record_id` (text), `title` (text),
 `body` (text), `occurred_on` (date), `tags` (relation → tags, MaxSelect 0).
 Maintained by the same post-commit hooks that write the audit trail. One query, one
-authorization check, deterministic ordering. **MediGo MAY promise relevance ranking** — risk R3 is
+authorization check, deterministic ordering. **MediKube MAY promise relevance ranking** — risk R3 is
 CLOSED (VERIFIED-SOURCE-FACTS FACT 11 — FTS5, `MATCH` and the `rank` column all work in
 `modernc.org/sqlite` v1.57.0, the version PocketBase v0.40.1 pulls), so the *capability* hedge this
 document used to carry is withdrawn — **but MAY is not MUST, and phase 003 declined it.**
@@ -232,7 +232,7 @@ document used to carry is withdrawn — **but MAY is not MUST, and phase 003 dec
 FTS5 table buys: with results ordered by date there is nothing for `rank` to do. **The design is
 therefore an ordinary `search_index` collection matched with `LIKE`, ordered by date** — see 003's
 Deviations table and `003/contracts/search.md` §5. No FTS5 virtual table is created, and **no
-`medigo reindex` subcommand exists**; `001/contracts/cli.md` lists serve, migrate, seed, routes,
+`medikube reindex` subcommand exists**; `001/contracts/cli.md` lists serve, migrate, seed, routes,
 openapi and healthcheck, and nothing adds a seventh (amendment 2026-08-27, ANALYSIS N12).
 
 Had FTS5 been used it would have been a *separate* table PocketBase's migrations do not model —
@@ -262,7 +262,7 @@ Unique partial index on `(resource_kind, patient, family_member, grantee) WHERE 
 #### `invitations` — Phase 005.
 
 `sender` (relation → users, cascade, required), `recipient_email` (text, email, required —
-**MediGo can invite an address with no account yet**, which upstream could not),
+**MediKube can invite an address with no account yet**, which upstream could not),
 `recipient` (relation → users, MaxSelect 1, optional — resolved on accept),
 `kind` (select: `patient_share` | `family_history_share`),
 `resource_ids` (json — a validated `[]string` of patient or family_member ids; one invitation may
@@ -305,13 +305,15 @@ handler; that is a timeout in a request thread holding a SQLite connection.
 ### 1.3 Reference collections
 
 #### `practitioners` — Phase 002.
+
 `owner` (relation → users, cascade, required — reference data is per-user, not global),
-`name` (text 1..200, required), `specialty` (select — MediGo vocabulary of 42 values, seeded from
+`name` (text 1..200, required), `specialty` (select — MediKube vocabulary of 42 values, seeded from
 the standard specialty list, `other` included), `facility` (relation → facilities, MaxSelect 1),
 `phone` (text ≤40), `email` (email), `website` (url), `notes` (text ≤5000).
 Unique index `(owner, LOWER(name), specialty)`.
 
 #### `facilities` — Phase 002.
+
 `owner` (relation → users, cascade, required), `kind` (select: `practice pharmacy hospital lab
 imaging other`, required), `name` (text 1..200, required), `brand` (text ≤120),
 `street` `city` `region` `postal_code` `country` (text), `phone` `fax` (text ≤40), `email` (email),
@@ -321,6 +323,7 @@ Upstream's `PracticeLocationSchema[]` embedded array is dropped: a second locati
 facility row, which is what every query wanted anyway.
 
 #### `catalog_lab_tests` — Phase 004. Read-only, seeded from a vendored LOINC-derived extract.
+
 `loinc_code` (text, unique index), `name` (text, required), `short_name` (text),
 `default_unit` (text), `category` (select — the lab category vocabulary), `synonyms` (json `[]string`),
 `is_common` (bool), `ref_low` `ref_high` (number, optional).
@@ -343,7 +346,7 @@ written down.
 
 ### 1.4 The canonical enum vocabularies (every kind uses them)
 
-MediGo **chooses** these. Only six of upstream's enums were ever declared; the rest lived in
+MediKube **chooses** these. Only six of upstream's enums were ever declared; the rest lived in
 Pydantic validators that FastAPI could not reflect. This is a licence, not a loss.
 
 **Who defines what:** 001 defines `TherapyStatus` plus `medication.type` and `medication.route`
@@ -488,7 +491,7 @@ the two must never be conflated in a roll-up.
 2. **Plural, kebab-case resource segments.** `/lab-components`, `/report-templates`. Path
    parameters are `{id}` or `{kind}`. **One spelling of every record kind everywhere** —
    singular `snake_case` in `kind` values and enums (`lab_result`), plural kebab-case in paths
-   (`/lab-results`). Upstream had three spellings of `lab_result` in one API; MediGo has exactly
+   (`/lab-results`). Upstream had three spellings of `lab_result` in one API; MediKube has exactly
    these two, and they are generated from one Go constant.
 3. **Nesting depth is at most one.** `/api/v1/treatments/{id}/medications` is legal;
    `/api/v1/patients/{id}/medications/{mid}/…` is not. Everything else is a top-level resource
@@ -517,12 +520,14 @@ the two must never be conflated in a roll-up.
     uniqueness indexes where they matter and by a disabled submit button where they do not.
     (Explicit YAGNI decision under Principle I.)
 12. **Error envelope**, always, on every non-2xx:
+
     ```json
     { "error": { "code": "validation_failed",
                  "message": "human-readable, PHI-free",
                  "request_id": "…",
                  "fields": [ { "field": "dosage", "code": "required", "message": "…" } ] } }
     ```
+
 13. **A resource the caller may not see returns `404`, not `403`** — for anything patient-scoped,
     existence is itself PHI. `403` is reserved for operations on resources whose existence is
     already known to the caller (e.g. editing a patient shared to you at `view`).
@@ -549,7 +554,7 @@ DELETE /api/v1/records/{kind}/{id}        delete
 and response bodies are `oneOf` with `kind` as the discriminator, so **every kind still has its
 own explicit, fully typed DTO** — the polymorphism is in the routing table, not in the schema.
 
-MediKeep spent roughly 65 operations, thirteen routers, and 21 legacy duplicates on this. MediGo
+MediKeep spent roughly 65 operations, thirteen routers, and 21 legacy duplicates on this. MediKube
 spends six. Adding a fourteenth clinical record type in a future phase adds **zero** routes and
 zero OpenAPI paths — it adds one `oneOf` branch and one registry entry.
 
@@ -625,7 +630,7 @@ separate route (Principle I). `medications` is the single kind registered behind
 | 16 | PATCH | `/api/v1/patients/{id}` | |
 | 17 | DELETE | `/api/v1/patients/{id}` | Owner only. Hard cascade. Confirmed in the UI, audited. |
 | 18 | PUT | `/api/v1/patients/{id}/photo` | Multipart. Thumbnails generated eagerly. |
-| 19 | GET | `/api/v1/patients/{id}/photo` | `?size=100x100t\|400x400f\|original`. Served through MediGo's own route via `app.NewFilesystem()`. **No file token, ever.** |
+| 19 | GET | `/api/v1/patients/{id}/photo` | `?size=100x100t\|400x400f\|original`. Served through MediKube's own route via `app.NewFilesystem()`. **No file token, ever.** |
 | 20 | DELETE | `/api/v1/patients/{id}/photo` | |
 | **93** | GET | `/api/v1/patients/{id}/summary` | **NEW.** The patient chart header and per-kind tile counts in one authorized read, plus the figures the delete confirmation must state. One round trip instead of one per kind. |
 | 12 | PUT | `/api/v1/me/active-patient` | Sets the switcher. Collapses upstream's `/switch` + `/active/current` + `/self-record` + `/owned/list`. **Never consulted for authorization.** |
@@ -710,7 +715,7 @@ operation for it. That is the point of the single `access.Authorizer` seam.
 | 88 | **POST** | `/api/v1/admin/backups/{name}/download` | **Method changed from `GET`.** The archive is the whole instance in one file, so the download re-authenticates: an ordinary `<form method="post">` with a password field — no JavaScript, and no credential in a URL. |
 | 89 | POST | `/api/v1/admin/backups/{name}/restore` | **Always takes a safety backup first** and returns its id. Requires a confirmation phrase and the password in the body. |
 | 90 | DELETE | `/api/v1/admin/backups/{name}` | |
-| 4 | POST | `/api/v1/auth/oauth2` | Sign-in through an external identity provider the operator configured. **Public** — the only public operation in this phase. Wraps PocketBase's `authWithOAuth2` and its `_externalAuths` linking; MediGo adds one DTO so a provider sign-in yields the same session, cookie and audit row as a password sign-in, and so `role` and `disabled_at` are unreachable from the request. `404` — identical to an unknown provider name — when no provider is configured. |
+| 4 | POST | `/api/v1/auth/oauth2` | Sign-in through an external identity provider the operator configured. **Public** — the only public operation in this phase. Wraps PocketBase's `authWithOAuth2` and its `_externalAuths` linking; MediKube adds one DTO so a provider sign-in yields the same session, cookie and audit row as a password sign-in, and so `role` and `disabled_at` are unreachable from the request. `404` — identical to an unknown provider name — when no provider is configured. |
 
 **Formerly deferred, now allocated**
 
@@ -718,7 +723,7 @@ Ops **4**, **7** and **8** were listed here as "allocated to NO phase" in an ear
 That is closed: **7 and 8 belong to phase 001** with the two new confirmation operations 94 and
 95, and **4 belongs to phase 006**, with the operator surface that configures providers. Both
 halves are recorded in the receiving phases' Deviations tables. PocketBase's own OAuth2, reset and
-verification endpoints remain reachable as documented externals (§2.4) — MediGo's routes are the
+verification endpoints remain reachable as documented externals (§2.4) — MediKube's routes are the
 supported paths, and both call the same code.
 
 **Dropped**
@@ -814,7 +819,7 @@ routing: 2 in 001, 26 in 003, 2 in 004.
 and its six siblings are query strings on registered kind lists (§3.2), because the specification
 requires a status view to *be* a narrowing of that kind's list. They are registered as
 `SmokeVariants` on their route — additional concrete URLs the Playwright gate must also visit,
-emitted inside that route's `medigo routes` entry, **not counted as pages**. That is what keeps a
+emitted inside that route's `medikube routes` entry, **not counted as pages**. That is what keeps a
 "helpful empty state on every status view" inside the gate rather than outside it.
 
 **Phase 001 — 9 pages**
@@ -935,7 +940,7 @@ and every status view) to render shared charts, adding no page.
 | `/admin/backups` | List, take, upload, preview, download, restore, delete. | `region[name="Backups"]` |
 
 **Page-action routes are a fourth route class, and they are not pages.** `Kind: page_action` in
-`medigo routes`, deliberately **excluded** from `api/openapi.json`, no ARIA landmark, and each one
+`medikube routes`, deliberately **excluded** from `api/openapi.json`, no ARIA landmark, and each one
 **declares the Playwright spec that exercises it** — `e2e/routes.gate.spec.ts` fails the build if
 that spec does not exist or does not reference the route. Seven exist: four in 004 (the multipart
 upload action and three HTML fragments) and three in 006 (`GET /reports/selection`,
@@ -946,7 +951,7 @@ or exposure to PocketBase's five-minute `WriteTimeout`.
 **The three auth pages are phase 001's and ARE in the route registry.** An earlier revision of this
 document deferred `/forgot-password`, `/reset-password/{token}` and `/verify-email/{token}` out of
 the suite; they are built by phase 001 with operations 7, 8, 94 and 95 (§2.3), and they are inside
-the 58. Under Principle IX the page inventory, the `medigo routes` output and the Playwright route
+the 58. Under Principle IX the page inventory, the `medikube routes` output and the Playwright route
 list are one list, so a page in this table and absent from the application fails the gate — and so
 does the reverse. **External sign-in adds no page**: phase 006 adds a provider control to the
 existing `/login` page, rendered only when a provider is configured.
@@ -976,7 +981,7 @@ Principle VIII asks for.
 
 ### 3.3 Facts about this UI that must be stated, not discovered
 
-- **MediGo does not work with JavaScript disabled.** Datastar binds nothing, `data-bind`
+- **MediKube does not work with JavaScript disabled.** Datastar binds nothing, `data-bind`
   populates no signals, and a form submit sends an empty body. This is structural, not a bug, and
   the spec says so.
 - `script-src 'unsafe-eval'` is permanent and accepted. Every other CSP directive is strict.
@@ -1004,7 +1009,7 @@ Principle VIII asks for.
 ## 4. THE PACKAGE LAYOUT
 
 ```
-cmd/medigo/
+cmd/medikube/
   main.go                 Composition root. Builds config, logger, container, PocketBase, registry; wires Cobra subcommands; the ONLY place that panics.
 
 internal/config/          The one caarlos0/env struct + boot validation. No other config mechanism exists.
@@ -1062,7 +1067,7 @@ assets/input.css              Tailwind entrypoint; scans ../internal/web/**/*.te
 **The only packages permitted to import `github.com/pocketbase/pocketbase/...` are the ten marked
 `[PB]` above:** `internal/logging`, `internal/obs`, `internal/store/**`, `internal/platform/pb`,
 `internal/httproute`, `internal/web` (and its four subpackages), `internal/cli`, and
-`cmd/medigo`. `internal/testsupport` may import `pocketbase/tests`.
+`cmd/medikube`. `internal/testsupport` may import `pocketbase/tests`.
 
 **No other package may.** In particular `internal/domain/**` and `internal/service/**` may import
 neither PocketBase, nor `net/http`, nor `github.com/a-h/templ`, nor any generated `*_templ.go`
@@ -1354,6 +1359,7 @@ type Page[T any] struct {
 	Total      *int    `json:"total,omitempty"` // only when ?count=true
 }
 ```
+
 Cursors are opaque, HMAC-signed, and encode `(sort keys, last values, last id)` — never an offset,
 so a concurrent insert cannot duplicate or skip a row. `limit` default 25, max 100. Every list
 endpoint in the API, without exception, uses this shape; `GET /api/v1/search` uses **one per
@@ -1401,7 +1407,7 @@ Resolution, in order: superuser → allow (and audit); patient owner → `PermOw
   correctness path; a cron remains only for tidiness.
 - Permission is a property of the route, **never a client-supplied parameter**. Upstream's
   `required_permission` query parameter — present on 41 operations, defaulting to `view` even on
-  writes — does not exist in MediGo.
+  writes — does not exist in MediKube.
 - Collection API rules are **not** a second authorization layer: they are all `nil`. Defence in
   depth comes from the boot assertion, the `-1019` prefix middleware, and a
   `tests.ApiScenario` per collection proving the auto-CRUD route 404s for a normal user.
@@ -1422,12 +1428,12 @@ Resolution, in order: superuser → allow (and audit); patient owner → `PermOw
 4. `PUT /api/v1/me/active-patient` authorizes the target before writing the pointer.
 
 Upstream ran both mechanisms simultaneously, which is the single biggest source of its 500-route
-sprawl. MediGo runs exactly one.
+sprawl. MediKube runs exactly one.
 
 ### 6.7 Configuration
 
-One struct, `internal/config.Config`, `caarlos0/env/v11`, global prefix `MEDIGO_`, validated at
-boot, no config files, no second mechanism **that MediGo defines**. Top-level: `Env`, `Dev`,
+One struct, `internal/config.Config`, `caarlos0/env/v11`, global prefix `MEDIKUBE_`, validated at
+boot, no config files, no second mechanism **that MediKube defines**. Top-level: `Env`, `Dev`,
 `DataDir` (`/data/pb_data`), `HTTPAddr`, `PublicURL` (`required,notEmpty`), `DrainDelay`,
 `DrainMax`, `TrustedProxies`.
 Nested with `envPrefix`: `LOG_` (level, pretty), `SENTRY_` (dsn `file,unset`, environment,
@@ -1436,12 +1442,12 @@ sample_ratio, headers), `FILES_` (max_upload_bytes, allowed_mime, thumb sizes),
 `AUTH_` (registration_open, require_verified_email, session_ttl, oauth2_enabled),
 `RETENTION_` (trash_days=30, audit_days=730, export_days=7, backup_keep=14).
 
-**There is no `MEDIGO_ADMIN_*` group, and there must not be.** Constitution v1.3.0 carves
+**There is no `MEDIKUBE_ADMIN_*` group, and there must not be.** Constitution v1.3.0 carves
 PocketBase's own `Settings()` store — SMTP, S3, backup schedule, OAuth2 providers, the superuser IP
 allowlist and superuser MFA — out of the "caarlos0/env is the only configuration mechanism" rule:
 it is database-backed, edited through the admin UI, and part of the platform Principle V forbids
-reimplementing. **MediGo MUST NOT mirror any of it into environment variables and MUST NOT build
-its own UI for it.** What MediGo does instead is *read* it at boot and warn loudly when a setting
+reimplementing. **MediKube MUST NOT mirror any of it into environment variables and MUST NOT build
+its own UI for it.** What MediKube does instead is *read* it at boot and warn loudly when a setting
 its features depend on is unconfigured — the IP allowlist from `app.Settings().SuperuserIPs`, MFA
 from the superusers collection's `MFA.Enabled`, SMTP from `Settings().SMTP` (§8 R6 and R10, and
 VERIFIED-SOURCE-FACTS FACT 10). The posture is surfaced by operation 81 and on `/admin`.
@@ -1451,7 +1457,7 @@ logged, and are never persisted in plaintext.
 
 ### 6.8 Metric and span naming
 
-**Metrics:** `medigo_<subsystem>_<name>_<unit>`. Subsystems: `http`, `db`, `sse`, `records`,
+**Metrics:** `medikube_<subsystem>_<name>_<unit>`. Subsystems: `http`, `db`, `sse`, `records`,
 `auth`, `shares`, `files`, `exports`, `backup`, `build`.
 Labels are bounded and allowlisted: `route` (the **registered pattern** from
 `http.Request.Pattern`, never the resolved path), `method`, `status`, `kind` (15 values),
@@ -1461,8 +1467,8 @@ ever becomes a label** — that is unbounded cardinality *and* PII in the monito
 
 **Spans:** server spans are `HTTP {METHOD} {route pattern}`; service spans are
 `service.{package}.{Method}`; store spans are `store.{collection}.{op}`; otelsql emits `db.query`.
-Attributes are an allowlist: `http.*`, `db.system`, `medigo.kind`, `medigo.op`, `medigo.result`,
-`medigo.request_id`. Never `medigo.patient_id` and never a free-text field.
+Attributes are an allowlist: `http.*`, `db.system`, `medikube.kind`, `medikube.op`, `medikube.result`,
+`medikube.request_id`. Never `medikube.patient_id` and never a free-text field.
 
 **Logs:** zerolog only, JSON to stdout, one event per meaningful occurrence, every line carrying
 `request_id` and — when tracing is on — `trace_id` and `span_id`. `app.Logger()` is banned by
@@ -1475,22 +1481,22 @@ three systems must not double-report one event.
 
 ---
 
-## 7. POCKETBASE PROVIDES vs MEDIGO BUILDS
+## 7. POCKETBASE PROVIDES vs MEDIKUBE BUILDS
 
-| Concern | PocketBase provides (do NOT rebuild) | MediGo builds |
+| Concern | PocketBase provides (do NOT rebuild) | MediKube builds |
 |---|---|---|
 | **HTTP server & router** | `apis.NewRouter`, route groups, middleware chain, `WrapStdHandler`/`WrapStdMiddleware` for OTel/Prometheus/Sentry, rate limiting | The `httproute.Registry`, every `/api/v1` handler, the CSP and security headers (PB's `securityHeaders()` sets **no** CSP for app routes), the `-1019` lockdown middleware, the `WriteTimeout` override |
 | **Persistence** | SQLite (pure-Go `modernc.org/sqlite`), migrations with enforced up+down, `RunInTransaction`, indexes, relations, cascade delete, back-relation traversal | Collection definitions as Go migrations, typed repositories, the domain↔record mapping, all query building |
 | **Authentication** | Password auth, token issue/refresh/duration, **password reset**, email verification, email change, MFA/OTP, `_externalAuths`, superuser impersonation | Thin `/api/v1/auth/*` DTO wrappers completing through `apis.RecordAuthResponse`, session cookie handling, the registration transaction (user + self-record patient), login auditing |
 | **OAuth2 / SSO** | Provider config, the whole authorize/callback exchange, **linking a provider to an existing auth record**, `/api/oauth2-redirect` | One `POST /api/v1/auth/oauth2` DTO wrapper (op 4, **phase 006**). **The entire hand-rolled SSO subsystem is deleted** — `initiate`, `callback`, `resolve-conflict`, `resolve-github-link`, `temp_token`, `sso_metadata`, `sso_linking_preference`, `account_linked_at`, `external_id`, `auth_method` |
-| **File storage** | Local or S3 backends (config, not code), MIME/size validation, `MaxSelect`, deletion with the owning record, `filesystem.Serve` with Range/ETag/Content-Disposition quoting, `CreateThumb` | **All file serving.** PB's `/api/files/` route is unusable both ways: unprotected fields are served to anonymous callers (`apis/file.go:109` has no `else`), and protected fields 404 for everyone under nil `ViewRule`. So: `Protected: true` everywhere + boot assertion, MediGo's own `/api/v1` routes over `app.NewFilesystem()`, **eager** thumbnails in a `TxInfo().OnComplete` callback, no file tokens (a credential in a URL is a PHI leak) |
+| **File storage** | Local or S3 backends (config, not code), MIME/size validation, `MaxSelect`, deletion with the owning record, `filesystem.Serve` with Range/ETag/Content-Disposition quoting, `CreateThumb` | **All file serving.** PB's `/api/files/` route is unusable both ways: unprotected fields are served to anonymous callers (`apis/file.go:109` has no `else`), and protected fields 404 for everyone under nil `ViewRule`. So: `Protected: true` everywhere + boot assertion, MediKube's own `/api/v1` routes over `app.NewFilesystem()`, **eager** thumbnails in a `TxInfo().OnComplete` callback, no file tokens (a credential in a URL is a PHI leak) |
 | **Backup / restore** | `app.CreateBackup` / `RestoreBackup`, `/api/backups`, cron auto-backup with `maxKeep`, optional S3 backup storage, the dashboard UI | Four thin wrappers, plus the two things worth keeping from upstream: **restore preview** and **an automatic safety backup before every restore**. Upstream's `create-database`/`create-files`/`create-full` split, three cleanup variants, `retention/stats`, schedule settings and history CSV are all deleted |
 | **Admin UI** | `/_/` — collection browser, per-record CRUD, filters, relation navigation, schema view, settings, backups, cron inspector, logs viewer. **It ships in production.** | **No bespoke replacement.** Hardening only: mandatory superuser MFA, mandatory IP allowlist, every admin session audited, a loud boot warning when either is unconfigured. Upstream's 9 `/admin/models/*` routes, its reflection layer, both `/admin/bulk/*` routes and its generic CSV exporter are deleted |
 | **Collection API rules** | A full rule language with relation traversal and `@now` comparison | **Not used as authorization.** All five rules are `nil` on every collection — superuser-only — because a rule expressive enough to encode sharing would re-open `GET /api/collections/patients/records` as a second, undocumented, un-versioned public API. Defence in depth is the boot assertion + the prefix middleware + a per-collection `ApiScenario` proving the CRUD route 404s. `AuthRule` stays `""`; it is not one of the five |
-| **Realtime** | `/api/realtime`, `SubscriptionsBroker` | **100% MediGo's.** PB's native realtime is unusable for three independent verified reasons (rules derived from nil `ViewRule`/`ListRule` so every broadcast is silently skipped; its event names are not Datastar's two; its two-step handshake is impossible from a Datastar attribute). MediGo runs an in-process hub fed by post-commit record hooks that publishes **IDs only**, and per-subscriber Datastar SSE handlers that re-fetch, **re-authorise**, render and patch |
+| **Realtime** | `/api/realtime`, `SubscriptionsBroker` | **100% MediKube's.** PB's native realtime is unusable for three independent verified reasons (rules derived from nil `ViewRule`/`ListRule` so every broadcast is silently skipped; its event names are not Datastar's two; its two-step handshake is impossible from a Datastar attribute). MediKube runs an in-process hub fed by post-commit record hooks that publishes **IDs only**, and per-subscriber Datastar SSE handlers that re-fetch, **re-authorise**, render and patch |
 | **Logging** | `_logs` aux DB, retention setting, dashboard viewer | Everything. `_logs` is intercepted to zero rows; zerolog is the only stream. PB's own framework logs are bridged by both mechanisms |
 | **Scheduling** | `app.Cron()` | The jobs: trash purge, audit purge, export-artifact purge, invitation/share tidy sweep, storage-footprint gauge refresh, export worker |
-| **CLI** | `RootCmd` is a real `*cobra.Command`, fully bootstrapped for custom subcommands | `medigo seed`, `medigo routes`, `medigo openapi`, `medigo healthcheck`, `medigo purge`. **No second CLI framework.** Two traps: the root sets `FParseErrWhitelist{UnknownFlags: true}` (validate flags in `RunE`) and `SetErr(&nopWrite{})` discards cobra's error output (print it in `main`) |
+| **CLI** | `RootCmd` is a real `*cobra.Command`, fully bootstrapped for custom subcommands | `medikube seed`, `medikube routes`, `medikube openapi`, `medikube healthcheck`, `medikube purge`. **No second CLI framework.** Two traps: the root sets `FParseErrWhitelist{UnknownFlags: true}` (validate flags in `RunE`) and `SetErr(&nopWrite{})` discards cobra's error output (print it in `main`) |
 | **Testing** | `tests.NewTestApp` (clones a fixture data dir into a temp dir; genuinely isolated, `t.Parallel()`-safe, ~11 ms), `tests.ApiScenario` with `ExpectedEvents` | The fixture data dir, the fakes, the contract suites, the Playwright gate. **Never share a `TestApp` across scenarios** — `bindUIExtensions` re-enters on every `OnServe` and the handler chain grows until the stack overflows |
 | **Not provided at all** | — | Row-level sharing, invitations, the domain audit trail, cross-collection search, reporting, export, tags-as-relations, multi-patient ownership and switching, the entire UI |
 
@@ -1505,14 +1511,14 @@ vanishes without a record looks like a risk nobody ever thought about.**
 | # | Risk | Why it matters | Phase to close it |
 |---|---|---|---|
 | ~~R1~~ | **CLOSED — VERIFIED-SOURCE-FACTS FACT 9.** OpenAPI `oneOf` + discriminator generation from Go types. **Proven by building and running it**, ahead of phase 001, with `getkin/kin-openapi` **v0.144.0** (pure Go, cgo-free, a document model and not an HTTP framework, so it does not collide with the ban on a second router; admitted to the stack by constitution v1.3.0). Two kinds were registered, one component schema emitted per kind, one `Record` schema with `oneOf` + `discriminator {propertyName: "kind", mapping}`, one path `POST /api/v1/records/{kind}` with `kind` as an `enum`; the document was marshalled, **reloaded through `openapi3.NewLoader()`** and validated, and every registered kind was asserted present in the discriminator mapping. Two traps for whoever implements it: the gate MUST marshal-then-load (validating in place fails with "found unresolved ref", because a programmatically built `SchemaRef` carries only `Ref` and no `Value`), and `Discriminator.Mapping` is `map[string]openapi3.MappingRef`, not `map[string]string`. | **This was the one risk that could have invalidated a phase, and it did not.** The 90-operation shape held: §2.3's budget (now 94 for unrelated reasons) and phase 003's **3-route** shape both stand, and the record route family is safe to build on. | **CLOSED.** 001 still carries the task — with two kinds — as a permanent regression gate rather than as an open question. |
-| R2 | **Go 1.27 `encoding/json/v2` retrofit semantics in MediGo's own DTOs.** nil-vs-empty slices, `json.RawMessage`, duplicate-key rejection and case-insensitive matching are not fully backward compatible, and `tests.ApiScenario` normalises bodies through `jsontext` before substring matching — so `ExpectedContent` compares against *re-encoded* JSON. | Silent wire-shape changes in a medical API. | 001 |
-| ~~R3~~ | **CLOSED — VERIFIED-SOURCE-FACTS FACT 11.** FTS5 **is** compiled into `modernc.org/sqlite` v1.57.0, the exact version PocketBase v0.40.1 pulls transitively, and so are `MATCH` and the `rank` column (FTS3 and FTS4 are not, which is irrelevant — FTS5 supersedes both). The JSON functions are present too, despite `JSON` not appearing in `compile_options`, which in modern SQLite is expected and is not evidence of absence. | **Search MAY legitimately claim relevance ranking**; §1.2's `LIKE`-with-date-order hedge is withdrawn. **The capability is available and deliberately unused**: FR-073 declines relevance ranking, so 003 builds `LIKE` over an ordinary `search_index` collection ordered by date, no FTS5 virtual table and no `medigo reindex` command (§1.2; amendment 2026-08-27, ANALYSIS N12). The one thing that binds either way: deleting a record MUST delete its index row, or search leaks the titles of deleted records — Principle VII. | **CLOSED.** Owned by 003, which holds the search index and unified search and has recorded the mechanism choice in its Deviations table. |
+| R2 | **Go 1.27 `encoding/json/v2` retrofit semantics in MediKube's own DTOs.** nil-vs-empty slices, `json.RawMessage`, duplicate-key rejection and case-insensitive matching are not fully backward compatible, and `tests.ApiScenario` normalises bodies through `jsontext` before substring matching — so `ExpectedContent` compares against *re-encoded* JSON. | Silent wire-shape changes in a medical API. | 001 |
+| ~~R3~~ | **CLOSED — VERIFIED-SOURCE-FACTS FACT 11.** FTS5 **is** compiled into `modernc.org/sqlite` v1.57.0, the exact version PocketBase v0.40.1 pulls transitively, and so are `MATCH` and the `rank` column (FTS3 and FTS4 are not, which is irrelevant — FTS5 supersedes both). The JSON functions are present too, despite `JSON` not appearing in `compile_options`, which in modern SQLite is expected and is not evidence of absence. | **Search MAY legitimately claim relevance ranking**; §1.2's `LIKE`-with-date-order hedge is withdrawn. **The capability is available and deliberately unused**: FR-073 declines relevance ranking, so 003 builds `LIKE` over an ordinary `search_index` collection ordered by date, no FTS5 virtual table and no `medikube reindex` command (§1.2; amendment 2026-08-27, ANALYSIS N12). The one thing that binds either way: deleting a record MUST delete its index row, or search leaks the titles of deleted records — Principle VII. | **CLOSED.** Owned by 003, which holds the search index and unified search and has recorded the mechanism choice in its Deviations table. |
 | R4 | **PDF generation.** No library chosen. Pure-Go and cgo-free is mandatory (`maroto`, `gofpdf`, `unipdf` licensing). Headless Chrome is forbidden — it is Node-adjacent and would not fit distroless. | Reports are a phase 006 deliverable and PDF is one of three export formats. | 006 — decide in that phase's plan, not before |
 | R5 | **Thumbnail generation for non-image attachments.** PB's `CreateThumb` handles images. PDFs, HEIC and TIFF need either a pure-Go decoder or a generic type icon. HEIC in particular has no cgo-free decoder. | Attachments are mostly lab PDFs and phone photos. | 004 — decide: generic icons for anything PB cannot thumb |
 | ~~R6~~ | **CLOSED — VERIFIED-SOURCE-FACTS FACT 10.** Both are readable from Go at boot, **but from two DIFFERENT places, and a plan that assumes they sit together is wrong.** The IP allowlist is on global settings: `core/settings_model.go:125`, `SuperuserIPs []string` — warn on `len(app.Settings().SuperuserIPs) == 0`. MFA is on the **superusers auth collection**, not on settings: find the collection by `core.CollectionNameSuperusers` and read `collection.MFA.Enabled` (`MFAConfig` at `core/collection_model_auth_options.go:348`). | Constitution VII, and it gates the "admin UI ships in production" decision. Two things the boot warning must say rather than merely reporting "MFA off": PocketBase **refuses** to enable MFA unless the collection has at least two auth methods enabled (`validation_mfa_not_enough_auths`), so it is not a single toggle; and a **non-empty** `MFAConfig.Rule` is a partial rollout — some superuser can still sign in without a second factor — and MUST trigger the warning too. | **CLOSED.** Implemented by 001; the posture is surfaced by operation 81 and on `/admin`. |
 | R7 | **The >5-minute SSE liveness test in CI.** PocketBase's hardcoded 5-minute `WriteTimeout` passes every test shorter than five minutes. A CI job that genuinely holds a stream open for >5 minutes is slow and awkward, but without it the fix regresses invisibly the first time someone refactors `newStream`. | The failure mode is silent and user-visible. | 001 writes the helper; 006 owns the CI job |
 | R8 | **PocketBase upgrade fragility.** Three workarounds sit on unexported internals: the `pb.App` logger decorator, the `OnModelCreate("_logs")` interception, and the copied `DefaultDBConnect` pragma string for otelsql. All three must be re-verified on every PB upgrade. | A pragma drift silently loses WAL or foreign keys. | 001 creates the checklist; every phase re-runs it |
-| R9 | **Export job durability.** MediGo is single-instance with an in-process worker. A restart mid-export leaves a `running` job. Needs a startup reconciliation that marks orphaned jobs `failed`. | Small, but it will look like a hang to a user. | 006 |
+| R9 | **Export job durability.** MediKube is single-instance with an in-process worker. A restart mid-export leaves a `running` job. Needs a startup reconciliation that marks orphaned jobs `failed`. | Small, but it will look like a hang to a user. | 006 |
 | R10 | **Email deliverability for invitations.** Invitations to an address with no account depend on PocketBase's SMTP settings being configured. An unconfigured self-hosted instance silently drops them. | Phase 005's headline feature. | 005 — surface SMTP state in `/api/v1/admin/system` and warn at boot |
 | R11 | **The Playwright gate has never actually run a browser** in any research environment. An always-green gate is worse than no gate. | Principle VIII. | **001 exit criterion: prove the gate goes RED on a deliberately broken page.** |
 | R12 | **`ETag`/`If-Match` on PATCH and DELETE** adds a required header to every clinical mutation. If the Datastar forms cannot carry it cleanly it becomes friction rather than safety. | §2.1 rule 10 is a design commitment. | 001 — prove it on medications, its single registered kind |
@@ -1530,6 +1536,6 @@ package, and headless-browser PDF remains forbidden; 006), R5 (non-image thumbna
 >5-minute SSE liveness job, 001 writes the helper and 006 owns the CI job), R8 (PocketBase upgrade
 fragility — three workarounds on unexported internals, re-verified every phase), R9 (export job
 durability, 006), R10 (SMTP deliverability for invitations — note that constitution v1.3.0 now
-carves PocketBase's own `Settings()` store out of the caarlos0/env rule and *requires* MediGo to
+carves PocketBase's own `Settings()` store out of the caarlos0/env rule and *requires* MediKube to
 surface an unconfigured SMTP state and warn at boot rather than fail quietly; 005 and 006),
 R11 (prove the Playwright gate goes RED, 001), R12 (`ETag`/`If-Match` through Datastar forms, 001).

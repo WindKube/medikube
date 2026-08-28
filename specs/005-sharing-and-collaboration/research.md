@@ -58,6 +58,7 @@ a revoked row and a lapsed row are both excluded and that a second active grant 
 `(resource, grantee)` is rejected by the index rather than by a service check.
 
 **Alternatives considered**:
+
 - *Use PocketBase's filter DSL (`revoked_at = null`), which normalises this internally.* Rejected:
   the DSL never appears above `internal/store` (shared design §2.1 rule 7), and hiding the trap
   behind a DSL means the next person writing raw dbx hits it again.
@@ -82,6 +83,7 @@ expired share was honoured until the cron ran (domain-platform §3.2, §3.3). A 
 late.
 
 **Alternatives considered**:
+
 - *A sweeper that flips `revoked_at` when `expires_at` passes.* Rejected: it makes correctness
   depend on a job, which FR-034 forbids by name. It survives only as tidy-up ([D-19](#d-19)).
 - *Evaluate expiry in the service after loading the row.* Rejected: it works, but it moves a
@@ -102,7 +104,7 @@ tests/app.go:500   t.OnMailerSend().Bind(... e.Mailer = t.TestMailer ...)   // P
 Read together: any message sent through `NewMailClient()` passes through `OnMailerSend`, and the
 test harness binds a handler that swaps the mailer — so `core/base.go:713` routes the message to
 `TestApp.TestMailer` instead of a real server. Every invitation email is therefore **captured and
-assertable in tests with no MediGo-owned seam at all**: `app.TestMailer.Messages()` gives the
+assertable in tests with no MediKube-owned seam at all**: `app.TestMailer.Messages()` gives the
 `*mailer.Message` (`tools/mailer/mailer.go:12` — `From, To, Subject, HTML, Text, Headers`).
 
 `internal/platform/mail.Mailer` implements the consumer-declared `share.Mailer` port, renders the
@@ -114,7 +116,8 @@ reason it is worth obeying here — a hand-rolled `net/smtp` client would need a
 CI to assert FR-023's "the email names nobody".
 
 **Alternatives considered**:
-- *`net/smtp` directly with config from `MEDIGO_SMTP_*`.* Rejected: a second configuration
+
+- *`net/smtp` directly with config from `MEDIKUBE_SMTP_*`.* Rejected: a second configuration
   mechanism for a subsystem PocketBase already configures, encrypted at rest, editable in the admin
   UI that ships in production.
 - *Reuse `OnMailerRecord*Send` templates.* Rejected: those are bound to auth flows on an auth
@@ -136,6 +139,7 @@ notices. Shared-design risk R7 assigns the long-running CI job to phase 006; thi
 Go-level assertion (`//go:build slowsse`, ~6 minutes) so the regression is catchable now.
 
 **Alternatives considered**:
+
 - *Trust the phase-001 helper.* Rejected: the failure is silent, user-visible and reintroduced by
   any handler that opens a stream by hand.
 - *Short-poll notices instead of streaming.* Rejected — see Complexity Tracking (a).
@@ -152,12 +156,12 @@ tools/mailer/sendmail.go:60   cmdPath, err := findSendmailPath()
 tools/mailer/sendmail.go:85   sendmail := exec.Command(cmdPath, "-i", "-t")
 ```
 
-With SMTP disabled, PocketBase falls back to exec'ing a local `sendmail` binary. MediGo's runtime
+With SMTP disabled, PocketBase falls back to exec'ing a local `sendmail` binary. MediKube's runtime
 image is `gcr.io/distroless/static-debian12:nonroot` — no shell, no `sendmail`, so the call fails at
 `exec`. Worse, on a developer's machine it might *succeed* and silently drop mail into a local
 queue.
 
-MediGo therefore exposes `share.Mailer.Configured(ctx) bool` returning `Settings().SMTP.Enabled`,
+MediKube therefore exposes `share.Mailer.Configured(ctx) bool` returning `Settings().SMTP.Enabled`,
 and:
 
 1. warns loudly at boot when it is false — **this warning already exists**: phase 001 emits it for
@@ -176,9 +180,10 @@ and:
 read before the user presses the button, not an error discovered after.
 
 **Alternatives considered**:
+
 - *Send and report the failure.* Rejected: FR-022 requires refusing *up front*, and a `Sendmail`
   that succeeds into a black hole is worse than an error.
-- *A `MEDIGO_MAIL_ENABLED` config flag.* Rejected: a second source of truth that can disagree with
+- *A `MEDIKUBE_MAIL_ENABLED` config flag.* Rejected: a second source of truth that can disagree with
   the setting that actually decides, editable in a second place.
 
 ---
@@ -221,6 +226,7 @@ requirements are real; one of them is conditional on a configuration the spec it
 misconfiguration.
 
 **Alternatives considered**:
+
 - *Refuse all invitations when SMTP is off.* Preserves FR-018 perfectly, and contradicts FR-022's
   explicit instruction to keep delivering in-app. Rejected on the spec's own words.
 - *Accept and silently drop the unknown-address invitation.* Preserves indistinguishability and
@@ -250,6 +256,7 @@ and the boundary is machine-checkable — the `403` is producible only from a co
 already resolved a `Grant` for that resource.
 
 **Alternatives considered**:
+
 - *`404` everywhere, including the viewer's write.* Rejected: a chart that is visibly on screen and
   answers "does not exist" when you press Save is a bug report, not a security control.
 - *`403` for every refusal.* Rejected: it converts every 404 into an existence oracle over the whole
@@ -325,7 +332,7 @@ grants access to somebody else's chart.
 **Decision — the double-accept race is closed by SQLite's single-writer transaction plus a
 compare-and-set on `status`, not by an advisory lock.**
 
-MediGo is single-instance by construction (constitution Technology Constraints) and PocketBase's
+MediKube is single-instance by construction (constitution Technology Constraints) and PocketBase's
 data store is one SQLite database with one writer. `app.RunInTransaction` holds the write lock, so
 a re-read of `invitations.status` inside the transaction followed by a write is a genuine
 compare-and-set: the losing transaction re-reads `accepted` and returns
@@ -340,6 +347,7 @@ speculative distributed-lock seam, and the Technology Constraints forbid the dep
 need it.
 
 **Alternatives considered**:
+
 - *An advisory lock table.* Rejected: machinery for a concurrency model this instance cannot have.
 - *Rely on the unique index alone.* Rejected: it yields a constraint violation, not a state-aware
   error message, and FR-032 requires telling the caller which state it is in.
@@ -365,6 +373,7 @@ type and the `Location` header explicitly, and OpenAPI declares the response sch
 `InvitationSummary`.
 
 **Alternatives considered**:
+
 - *`POST /api/v1/invitations`.* Cleaner REST, one resource owning its own state machine. Rejected as
   a deviation from a binding contract that buys nothing a documented `Location` header does not.
 - *`202 Accepted`.* Rejected: nothing is deferred; the invitation exists synchronously when the call
@@ -385,6 +394,7 @@ writes both collections in one transaction, and splitting them would put a trans
 across a service boundary, which is where distributed-transaction bugs are born.
 
 **Alternatives considered**:
+
 - *Split into `share.Service` and `invitation.Service`.* Rejected: the accept path needs both inside
   one transaction; the split would need a shared unit-of-work abstraction, which is more machinery
   than it removes.
@@ -406,10 +416,11 @@ every entry a 15-character PocketBase id, all of one kind, all owned by the send
 (FR-016, re-checked at accept per [D-10](#d-10)).
 
 **Rationale**: shared design §1.2 specifies `resource_ids (json — a validated []string)`. Validated
-Go structs in a `json` field are the established MediGo pattern for value lists that are only ever
+Go structs in a `json` field are the established MediKube pattern for value lists that are only ever
 read with their parent (shared design §1.5).
 
 **Alternatives considered**:
+
 - *An `invitation_resources` join collection.* Rejected: referential integrity nobody uses, a join
   on every read, and a second cleanup path — for a list read only with its parent and discarded
   when the invitation reaches a terminal state.
@@ -423,7 +434,7 @@ link, stored only as its SHA-256 hex digest under a unique index, and never logg
 
 `token = base64url(crypto/rand 32 bytes)` (43 characters, no padding);
 `token_hash = hex(sha256(token))`; lookup is by `token_hash`. The link is
-`{MEDIGO_PUBLIC_URL}/invite/{token}`.
+`{MEDIKUBE_PUBLIC_URL}/invite/{token}`.
 
 FR-024 is then satisfied in all four of its parts: unguessable (256 bits); not readable back out of
 the instance (only the digest is stored, including in the superuser admin UI); dead the moment the
@@ -439,6 +450,7 @@ because a 256-bit random value has no guessable preimage — a KDF would defend 
 attack that cannot exist.
 
 **Alternatives considered**:
+
 - *PocketBase's own token machinery (`NewStaticAuthToken`, file tokens).* Rejected: those mint
   credentials for auth records, and constitution VII forbids the file-token pattern outright — a
   credential in a URL. This credential *must* be in a URL (it is an emailed link), which is exactly
@@ -500,7 +512,7 @@ three things, none of them load-bearing.**
    yet been tidied, then stamps `revoked_at = expires_at, revoked_by = ''` so it is written once;
 2. moves `pending` invitations whose `expires_at` has passed to `expired` (they are **already**
    refused by the read path — this only tidies the list);
-3. deletes invitations in a terminal state older than `MEDIGO_SHARING_INVITATION_RETENTION_DAYS`
+3. deletes invitations in a terminal state older than `MEDIKUBE_SHARING_INVITATION_RETENTION_DAYS`
    (default 90), leaving their audit events behind (FR-033).
 
 Both audit-writing steps run with **no HTTP request**, and `audit_events.request_id` is `Required`,
@@ -519,6 +531,7 @@ scheduled pass is the cheapest honest place. Doing it in the read path would put
 every refusal.
 
 **Alternatives considered**:
+
 - *Emit `share_expire` from the Authorizer the first time it observes a lapse.* Rejected: a write on
   a read path, on the hottest function in the application, triggered by an unauthenticated-ish
   request pattern — an amplification vector.
@@ -543,6 +556,7 @@ idempotency key (domain-platform §11). The spec excludes every one of them by n
 would be YAGNI with a migration.
 
 **Alternatives considered**:
+
 - *Persist notices so they survive a reconnect.* Rejected: a durable inbox, a read/unread state, a
   retention policy and a purge — for a courtesy.
 - *Reuse `audit_events` as the notice source.* Rejected: the audit trail is deliberately
@@ -590,6 +604,7 @@ account uses across its household is not. Implementation:
   grantee.
 
 **Alternatives considered**:
+
 - *Resolve a shared record's tags against the grantee's own vocabulary.* Rejected: the record would
   read differently to two people looking at the same chart.
 - *Expose the owner's vocabulary for the picker.* Rejected by FR-059 and by the spec's stated
@@ -629,6 +644,7 @@ correctness requirement (0 repeats, 0 skips, while grants are changing) is, and 
 gives it.
 
 **Alternatives considered**:
+
 - *Two separate lists, owned and shared.* Rejected by FR-055 (one list, visibly distinguished,
   each group counted) and it makes paging across the boundary incoherent.
 - *A materialised `accessible_patients` table.* A cache with an invalidation protocol, for a query
@@ -660,6 +676,7 @@ Principle VII. Phase 006 FR-075 already applies the same asymmetry to the trail 
 is unaudited, exporting it is audited.
 
 **Alternatives considered**:
+
 - *Audit every read including lists.* Rejected by the spec, and it would multiply the trail by the
   page size on a screen that scrolls.
 - *Audit the owner's own reads too* — phase 004's original FR-076. Rejected: it answers no question
@@ -678,11 +695,11 @@ defaults, none required:
 
 | Env | Default | Bounds | Why |
 |---|---|---|---|
-| `MEDIGO_SHARING_INVITATION_TTL` | `168h` | 1h..8760h | FR-017's default 7 days, settable 1 hour to 1 year |
-| `MEDIGO_SHARING_INVITATION_TTL_MIN` | `1h` | — | FR-017's floor, validated at boot |
-| `MEDIGO_SHARING_INVITATION_TTL_MAX` | `8760h` | — | FR-017's ceiling (1 year) |
-| `MEDIGO_SHARING_MAX_RESOURCES_PER_INVITATION` | `50` | 1..200 | [D-14](#d-14) |
-| `MEDIGO_SHARING_INVITATION_RETENTION_DAYS` | `90` | 1..3650 | FR-033's documented retention |
+| `MEDIKUBE_SHARING_INVITATION_TTL` | `168h` | 1h..8760h | FR-017's default 7 days, settable 1 hour to 1 year |
+| `MEDIKUBE_SHARING_INVITATION_TTL_MIN` | `1h` | — | FR-017's floor, validated at boot |
+| `MEDIKUBE_SHARING_INVITATION_TTL_MAX` | `8760h` | — | FR-017's ceiling (1 year) |
+| `MEDIKUBE_SHARING_MAX_RESOURCES_PER_INVITATION` | `50` | 1..200 | [D-14](#d-14) |
+| `MEDIKUBE_SHARING_INVITATION_RETENTION_DAYS` | `90` | 1..3650 | FR-033's documented retention |
 
 No secret is added. Nothing here changes an authorization decision, so nothing here can widen
 access by misconfiguration.

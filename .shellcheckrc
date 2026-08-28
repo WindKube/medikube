@@ -1,0 +1,7 @@
+# SC1091 fires on `source "$SCRIPT_DIR/common.sh"` in the vendored Specify
+# scripts: the path is only known at run time, so shellcheck cannot follow it.
+# `source-path=SCRIPTDIR` makes it follow, but then every variable common.sh
+# exports draws a bogus SC2153 "possible misspelling". The finding says nothing
+# about correctness either way, so it is off and everything else runs at full
+# default severity.
+disable=SC1091

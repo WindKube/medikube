@@ -12,9 +12,9 @@ dominate the dashboards.
 dossier proposes `/api/v1/health/live` and `/api/v1/health/ready`; the contract is the binding
 document. Stated here so nobody has to diff them.)
 
-**PocketBase's own `GET /api/health` is left alone and is not MediGo's.** It returns 200
+**PocketBase's own `GET /api/health` is left alone and is not MediKube's.** It returns 200
 unconditionally and leaks `canBackup`, `realIP` and `possibleProxyHeader` to superusers. It is a
-liveness probe and nothing more, and MediGo does not build on it.
+liveness probe and nothing more, and MediKube does not build on it.
 
 ---
 
@@ -23,6 +23,7 @@ liveness probe and nothing more, and MediGo does not build on it.
 **Public. Touches no database. Touches no filesystem. Answers about the process and nothing else.**
 
 **200**
+
 ```json
 { "status": "ok", "version": "1.2.3", "started_at": "2026-08-27T09:14:02Z" }
 ```
@@ -45,18 +46,21 @@ separate route; this payload is where the version lives (Principle I).
 **Public.** Answers whether the instance can serve.
 
 **200**
+
 ```json
 { "status": "ready",
   "checks": { "database": "ok", "migrations": "ok", "storage": "ok" } }
 ```
 
 **503**
+
 ```json
 { "status": "not_ready",
   "checks": { "database": "error", "migrations": "ok", "storage": "ok" } }
 ```
 
 **503 while draining**
+
 ```json
 { "status": "draining", "checks": {} }
 ```
@@ -96,13 +100,13 @@ error` is that reason, and it is a check name rather than a sentence.
 on `ServeConfig`**. Any request still running after one second has its connection cut
 mid-response.
 
-MediGo binds its own `OnTerminate` handler at priority **`-10000`**, so it runs **before**
+MediKube binds its own `OnTerminate` handler at priority **`-10000`**, so it runs **before**
 PocketBase's:
 
 1. flip readiness to false — `readyz` starts answering `503 draining`, so a load balancer or an
    orchestrator stops routing new work;
-2. sleep `MEDIGO_DRAIN_DELAY` (default 5 s) so that stops being noticed;
-3. wait up to `MEDIGO_DRAIN_MAX` (default 25 s) on MediGo's own in-flight counter;
+2. sleep `MEDIKUBE_DRAIN_DELAY` (default 5 s) so that stops being noticed;
+3. wait up to `MEDIKUBE_DRAIN_MAX` (default 25 s) on MediKube's own in-flight counter;
 4. `e.Next()`.
 
 By the time PocketBase's one-second window opens there is nothing in flight, so its value no
@@ -110,7 +114,7 @@ longer matters. This is the standard fail-readiness-then-drain pattern and FR-06
 almost word for word: "stop accepting new work, finish work in flight within a bounded period,
 and close storage without loss or corruption".
 
-`MEDIGO_DRAIN_MAX` must exceed `MEDIGO_DRAIN_DELAY`, and the config validator refuses to start
+`MEDIKUBE_DRAIN_MAX` must exceed `MEDIKUBE_DRAIN_DELAY`, and the config validator refuses to start
 otherwise.
 
 **Note**: `TerminateEvent.IsRestart` exists — on a restart PocketBase waits an extra 3 seconds for
@@ -118,11 +122,11 @@ otherwise.
 
 ---
 
-## `medigo healthcheck`
+## `medikube healthcheck`
 
 The distroless runtime image has no shell, no `curl` and no `wget`, so a Dockerfile `HEALTHCHECK`
 is impossible. FR-058 asks for a command that checks the health of a running instance "from within
-its own environment", and this is it: `medigo healthcheck` dials
+its own environment", and this is it: `medikube healthcheck` dials
 `http://127.0.0.1:{port}/api/v1/readyz`, exits `0` on `200` and non-zero otherwise, and prints
 nothing on success. It is what a compose file or an orchestrator probes with. See
 [cli.md](./cli.md).

@@ -88,12 +88,12 @@ The offer, and the only way a grant comes into being (FR-013).
 | `recipient_email` | email | ✓ | **may belong to no account** (FR-014). Stored as typed; matched **case-insensitively** everywhere (FR-025, edge case "different casing") |
 | `recipient` | relation → `users`, MaxSelect 1 | | `''` until accepted; resolved **at accept time**, so a later address change does not break a grant (edge case "the invited address changes") |
 | `kind` | select, MaxSelect 1 | ✓ | `patient_share` \| `family_history_share` |
-| `resource_ids` | json | ✓ | validated Go `[]string`: 1..`MEDIGO_SHARING_MAX_RESOURCES_PER_INVITATION` (default 50), no duplicates, every entry a 15-char id, all of the kind implied by `kind` ([D-14](./research.md#d-14)) |
+| `resource_ids` | json | ✓ | validated Go `[]string`: 1..`MEDIKUBE_SHARING_MAX_RESOURCES_PER_INVITATION` (default 50), no duplicates, every entry a 15-char id, all of the kind implied by `kind` ([D-14](./research.md#d-14)) |
 | `level` | select, MaxSelect 1 | ✓ | `view` \| `edit`. `edit` refused when `kind = family_history_share` (FR-007) |
 | `note` | text ≤500 | | the sender's own words. Shown in the preview and the email (FR-023) and copied onto every grant it creates |
 | `status` | select, MaxSelect 1 | ✓ | `pending` \| `accepted` \| `rejected` \| `cancelled` \| `revoked` \| `expired` — §3 |
 | `token_hash` | text, 64 chars | ✓ | hex SHA-256 of the emailed credential. **The credential itself is never stored** ([D-15](./research.md#d-15)) |
-| `expires_at` | date | ✓ | required. Default now+`MEDIGO_SHARING_INVITATION_TTL` (168h); settable between 1h and 1y (FR-017) |
+| `expires_at` | date | ✓ | required. Default now+`MEDIKUBE_SHARING_INVITATION_TTL` (168h); settable between 1h and 1y (FR-017) |
 | `responded_at` | date | | set by `respond` only |
 | `response_note` | text ≤500 | | the recipient's optional note on accept or decline (FR-027) |
 | `delivery` | select, MaxSelect 1 | ✓ | `email` \| `in_app_only`. Records what actually happened at send, so the sender's list can say "no email could be sent" truthfully (FR-022) |
@@ -229,7 +229,7 @@ pass, which has no HTTP request.** `audit_events.request_id` is `Required`, so b
 **run id** on the tidy's context, minted by the same helper that mints request ids and carried on
 that run's zerolog lines; every row of one tidy run shares one value, so "which run lapsed this
 grant" is one query (001 [data-model](../001-walking-skeleton/data-model.md) §3, 001 T240). The same
-holds when the pass is run once from `medigo purge --sharing`.
+holds when the pass is run once from `medikube purge --sharing`.
 
 ---
 
@@ -300,24 +300,24 @@ value is still readable; this is documented in the migration file as required by
 
 ---
 
-## 7. Seed fixtures (`medigo seed`) — deterministic, and shaped by what the tests need
+## 7. Seed fixtures (`medikube seed`) — deterministic, and shaped by what the tests need
 
 | Account | Holds | Exists for |
 |---|---|---|
-| `owner@medigo.local` | 2 patients (one with 3 relatives), records of every kind, 1 attachment | the grantor in every story |
-| `viewer@medigo.local` | an **accepted** `view` grant on patient A | US1, US3's viewer, the widened-authorization matrix |
-| `editor@medigo.local` | an **accepted** `edit` grant on patient A | US3 |
-| `cousin@medigo.local` | an accepted `view` grant on **one relative** of patient A | US4 and the isolation suite |
-| `stranger@medigo.local` | nothing at all | the 404 row of every matrix |
-| `empty@medigo.local` | nothing shared in **either** direction | FR-040 / SC-019 — the empty-state landmark assertion |
-| `left@medigo.local` | a **revoked** grant (`revoked_by = grantee`) on patient A | US2, and the "they left" vs "I revoked" distinction |
-| `lapsed@medigo.local` | a grant with `expires_at` in the past | US2 scenario 5, and the lapsed row of every matrix |
-| `disabled@medigo.local` | an active grant, `users.disabled_at` set | FR-048's disabled-account clause |
+| `owner@medikube.local` | 2 patients (one with 3 relatives), records of every kind, 1 attachment | the grantor in every story |
+| `viewer@medikube.local` | an **accepted** `view` grant on patient A | US1, US3's viewer, the widened-authorization matrix |
+| `editor@medikube.local` | an **accepted** `edit` grant on patient A | US3 |
+| `cousin@medikube.local` | an accepted `view` grant on **one relative** of patient A | US4 and the isolation suite |
+| `stranger@medikube.local` | nothing at all | the 404 row of every matrix |
+| `empty@medikube.local` | nothing shared in **either** direction | FR-040 / SC-019 — the empty-state landmark assertion |
+| `left@medikube.local` | a **revoked** grant (`revoked_by = grantee`) on patient A | US2, and the "they left" vs "I revoked" distinction |
+| `lapsed@medikube.local` | a grant with `expires_at` in the past | US2 scenario 5, and the lapsed row of every matrix |
+| `disabled@medikube.local` | an active grant, `users.disabled_at` set | FR-048's disabled-account clause |
 
 Plus invitations in every state: one `pending` to an address with **no account**
-(`newcomer@medigo.local`, deliberately unregistered — US5 scenarios 1–2), one `pending` whose
+(`newcomer@medikube.local`, deliberately unregistered — US5 scenarios 1–2), one `pending` whose
 `expires_at` is in the past, one `accepted`, one `rejected` with a note, one `cancelled`, one
-`revoked`. The pending invitation's **plaintext token is written to `medigo seed`'s output** so the
+`revoked`. The pending invitation's **plaintext token is written to `medikube seed`'s output** so the
 Playwright spec can visit `/invite/{token}`; it is a seed fixture on a throwaway instance and is
 never printed by the server at runtime.
 

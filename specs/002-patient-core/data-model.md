@@ -53,15 +53,18 @@ A place where care happens. One collection for all six kinds (research D-24).
 `practice` `pharmacy` `hospital` `lab` `imaging` `other`
 
 **Indexes**
+
 ```sql
 CREATE INDEX idx_facilities_owner       ON facilities (owner);
 CREATE INDEX idx_facilities_owner_kind  ON facilities (owner, kind);
 CREATE INDEX idx_facilities_owner_name  ON facilities (owner, name);
 ```
+
 **Deliberately no unique index on name** — FR-035 and US5-3: two branches of one chain are two
 rows sharing a name.
 
 **Validation (`directory.Facility.Validate()`, all offending fields reported at once)**
+
 - `kind` must satisfy `FacilityKind.Valid()`.
 - `name` trimmed, 1..200 after trimming.
 - `email` parses as an address when non-empty; `website`/`portal_url` parse as absolute `http(s)`
@@ -97,6 +100,7 @@ exactly 42 the `other` value is the one that must never be removed. The Go gener
 and the select field from the same slice, so the two cannot disagree.)*
 
 **Indexes**
+
 ```sql
 CREATE UNIQUE INDEX idx_practitioners_owner_name_specialty
     ON practitioners (owner, LOWER(name), specialty);   -- FR-038
@@ -106,6 +110,7 @@ CREATE INDEX idx_practitioners_facility   ON practitioners (facility);
 ```
 
 **Validation**
+
 - `name` trimmed 1..200.
 - `specialty`, when non-empty, must satisfy `Specialty.Valid()`.
 - Duplicate `(owner, lower(name), specialty)` → `domain.ErrConflict` → **409** with the message
@@ -149,6 +154,7 @@ value, and an integration test asserts no other row ever does.
 concepts, per SHARED-DESIGN §1.2.
 
 **Indexes**
+
 ```sql
 CREATE UNIQUE INDEX idx_patients_self ON patients (owner) WHERE is_self_record = 1;   -- FR-004
 CREATE INDEX idx_patients_owner_name  ON patients (owner, last_name, first_name, id); -- list + cursor
@@ -176,6 +182,7 @@ table-driven test submits a payload with four simultaneous faults and asserts fo
 entries.
 
 **Derived, never stored**
+
 - `age` — `person.AgeAt(birth_date, now)` (FR-006, D-20). Renders "0 days" for a patient born
   today (US4-4) and "not recorded" for an empty `birth_date`.
 - `display.height` / `display.weight` — converted from SI per the actor's `unit_system` (FR-007,
@@ -227,6 +234,7 @@ recorded action concerned").
 | `patient` | relation → `patients` | no | `MaxSelect: 1`, `CascadeDelete: false` | null for non-patient actions. Auto-unset when the patient is deleted, so a historical entry survives without pointing at a ghost. |
 
 **New index**
+
 ```sql
 CREATE INDEX idx_audit_patient_time ON audit_events (patient, occurred_at DESC, id DESC);  -- FR-029, SC-004; `id DESC` so phase 006's keyset reader stays index-only and creates no second index (ANALYSIS)
 ```
@@ -235,6 +243,7 @@ CREATE INDEX idx_audit_patient_time ON audit_events (patient, occurred_at DESC, 
 design contract's **complete** vocabulary — twenty actions and twenty-three target kinds — so this
 phase adds only what the contract does not name, and its migration test asserts the **complete**
 expected set rather than this delta (ANALYSIS C1):
+
 - `action` — adds **`switch_patient`** for FR-020/FR-045's "every change to the person in view".
   The values this phase *writes* — `create`, `update`, `delete`, `read_sensitive` (a photo fetched
   by somebody who is not the owner) and `access_denied` — all exist from phase 001.
@@ -281,15 +290,18 @@ Phase 001 modelled a medication as belonging to a `users` row. After this phase 
 | `owner` | **removed** | — | — | replaced entirely by `patient` |
 
 **New indexes**
+
 ```sql
 CREATE INDEX idx_medications_patient        ON medications (patient);                      -- SC-004 counts
 CREATE INDEX idx_medications_patient_start  ON medications (patient, started_on DESC, id); -- list + cursor
 CREATE INDEX idx_medications_practitioner   ON medications (practitioner);                 -- FR-040 usage count
 CREATE INDEX idx_medications_pharmacy       ON medications (pharmacy);                     -- FR-040 usage count
 ```
+
 The old `(owner, …)` indexes are dropped in the same migration.
 
 **Attribution rules**
+
 - FR-021: `patient` is `Required`, so a medication attributed to nobody is impossible at the
   storage layer as well as the service layer.
 - FR-024: `MedicationPatch` **has no `patient` field**. Re-attribution is refused by DTO shape, not
@@ -324,8 +336,8 @@ Reading the diagram for the two destructive paths:
   account pointing at it and `audit_events.patient` on every historical entry; the photo and its
   thumbnails are removed with the record by PocketBase's file-field cleanup. One transaction.
 
-Both behaviours are PocketBase's (`core/record_model.go:1587-1626`), not MediGo's, and both are
-asserted by integration tests because MediGo depends on them (research D-06).
+Both behaviours are PocketBase's (`core/record_model.go:1587-1626`), not MediKube's, and both are
+asserted by integration tests because MediKube depends on them (research D-06).
 
 ---
 
@@ -368,7 +380,7 @@ function, not in a README.
 
 ## 9. Fixture and seed data
 
-`internal/testdata/pb_data` (cloned by every `tests.NewTestApp`) and `medigo seed` produce the same
+`internal/testdata/pb_data` (cloned by every `tests.NewTestApp`) and `medikube seed` produce the same
 deterministic set. Ids are exported from `internal/testsupport/fixtures.go` so no test contains a
 literal.
 

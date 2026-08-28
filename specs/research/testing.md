@@ -1,4 +1,4 @@
-# MediGo — Testing & Verification Strategy
+# MediKube — Testing & Verification Strategy
 
 Everything below was verified by building and running it against PocketBase
 v0.40.1, `datastar-go` v1.2.2, `templ` v0.3.1020, testify v1.12.1 and Playwright
@@ -8,7 +8,7 @@ could not execute something, I say so explicitly.
 Working prototype lives in the scratchpad:
 
 - `scratchpad/pbbench/` — Go: PB test-app benchmarks, SSE tests, route registry
-- `scratchpad/gate/` — the Playwright gate + a stand-in `medigo` binary
+- `scratchpad/gate/` — the Playwright gate + a stand-in `medikube` binary
 
 ---
 
@@ -167,16 +167,16 @@ Generate it once, commit it:
 
 ```bash
 # one-off, from the repo root
-go run ./cmd/medigo serve --dir=./internal/testsupport/pb_data --automigrate=0
+go run ./cmd/medikube serve --dir=./internal/testsupport/pb_data --automigrate=0
 # create collections + seed records in the dashboard, then Ctrl-C and commit
 ```
 
-For MediGo I would **not** create the fixture through the dashboard by hand.
+For MediKube I would **not** create the fixture through the dashboard by hand.
 Schema is code (migrations), so generate it:
 
 ```go
 // internal/testsupport/fixture.go
-//go:generate go run ./cmd/medigo fixture --out ./pb_data
+//go:generate go run ./cmd/medikube fixture --out ./pb_data
 ```
 
 ...and have `fixture` boot a `pocketbase.New()` against an empty dir, run
@@ -192,7 +192,7 @@ import (
 	"net/http"
 	"testing"
 
-	"medigo/internal/testsupport"
+	"medikube/internal/testsupport"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
@@ -201,8 +201,8 @@ import (
 func TestPatientsEndpoint(t *testing.T) {
 	t.Parallel()
 
-	userToken := testsupport.Token(t, "users", "owner@medigo.test")
-	otherToken := testsupport.Token(t, "users", "stranger@medigo.test")
+	userToken := testsupport.Token(t, "users", "owner@medikube.test")
+	otherToken := testsupport.Token(t, "users", "stranger@medikube.test")
 
 	scenarios := []tests.ApiScenario{
 		{
@@ -250,7 +250,7 @@ package testsupport
 import (
 	"testing"
 
-	"medigo/internal/httproute"
+	"medikube/internal/httproute"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
@@ -259,7 +259,7 @@ import (
 
 const DataDir = "../../internal/testsupport/pb_data"
 
-// NewApp returns a fully wired, isolated MediGo app.
+// NewApp returns a fully wired, isolated MediKube app.
 func NewApp(t testing.TB) *tests.TestApp {
 	t.Helper()
 	app, err := tests.NewTestApp(DataDir)
@@ -530,7 +530,7 @@ The options, judged under KISS:
 **Recommendation: hand-written fakes, in a `<pkg>test` sub-package, verified by
 the contract suite.** No generator, no `mock.Mock`, nothing to regenerate.
 
-The whole justification is that MediGo's interfaces are *small* — that is what
+The whole justification is that MediKube's interfaces are *small* — that is what
 Principle II buys you. Generated mocks pay off when you must stub a 20-method
 vendor interface; they are pure overhead for a 4-method port you designed
 yourself. And the contract suite already solves the one real problem
@@ -546,7 +546,7 @@ import (
 	"context"
 	"sync"
 
-	"medigo/internal/labs"
+	"medikube/internal/labs"
 )
 
 // FakeRepo is an in-memory labs.Repository. It is behaviourally real: it is
@@ -925,7 +925,7 @@ go tool cover -func=coverage.out | tail -1
 ```
 
 Note `-coverpkg=./...` is **required**: without it, code exercised from a
-different package's test (which is most of MediGo, since handler tests drive
+different package's test (which is most of MediKube, since handler tests drive
 services) is reported as 0%. On the prototype the same suite reported 0.0%
 without `-coverpkg` and 78.0% with it. This single flag is the difference
 between a meaningful number and a meaningless one.
@@ -992,6 +992,7 @@ I checked whether the route list can be recovered from the router after the
 fact. **It cannot.**
 
 - PocketBase's `RouterGroup.children` is **unexported**:
+
   ```go
   type RouterGroup[T hook.Resolver] struct {
       excludedMiddlewares map[string]struct{}
@@ -1000,6 +1001,7 @@ fact. **It cannot.**
       Middlewares []*hook.Handler[T]
   }
   ```
+
 - `Router.BuildMux()` returns an `http.Handler`, and Go 1.27's `http.ServeMux`
   still exposes **no** pattern-enumeration API (only `Handler(*Request)`, which
   requires you to already know the path).
@@ -1011,7 +1013,7 @@ through**, where describing a route and registering it are the same call.
 ### The mechanism
 
 The design point that makes this work: **describing routes is separated from
-binding them**, so `medigo routes` needs no database, no port, and no
+binding them**, so `medikube routes` needs no database, no port, and no
 migrations — it is a pure function of the binary.
 
 ```go
@@ -1063,7 +1065,7 @@ type entry struct {
 	handler func(*core.RequestEvent) error
 }
 
-// Registry is the single source of truth for every route MediGo serves.
+// Registry is the single source of truth for every route MediKube serves.
 type Registry struct {
 	entries []entry
 	seen    map[string]struct{}
@@ -1311,7 +1313,7 @@ Taskfile:
   openapi:
     desc: Regenerate the OpenAPI document from the route registry
     cmds:
-      - go run ./cmd/medigo openapi --out api/openapi.json
+      - go run ./cmd/medikube openapi --out api/openapi.json
 
   openapi:check:
     desc: Fail if the committed OpenAPI document is stale
@@ -1343,8 +1345,8 @@ Playwright is a devDependency and a CI tool. It never enters the runtime image.
 The separation is structural, not a convention:
 
 ```
-medigo/
-  cmd/medigo/            # the Go binary — the only thing shipped
+medikube/
+  cmd/medikube/          # the Go binary — the only thing shipped
   internal/
   api/openapi.json
   e2e/                   # <-- Playwright lives here, entirely
@@ -1362,9 +1364,9 @@ medigo/
   never `e2e/`. Add `e2e/` and `**/node_modules/` to `.dockerignore`.
   (Per the monorepo memory note: a new project must be added to the root
   `/.dockerignore` allowlist *and* `build-image.yaml`, or its Docker build fails
-  with a misleading "file not found". Do that for `medigo/` and make sure the
+  with a misleading "file not found". Do that for `medikube/` and make sure the
   allowlist does not accidentally pull in `e2e/`.)
-- The gate runs `./medigo serve` — the **built binary**, the same artifact CI
+- The gate runs `./medikube serve` — the **built binary**, the same artifact CI
   ships. Playwright shells out to it; it does not link against anything Go.
 
 CI invocation:
@@ -1419,7 +1421,7 @@ export type Route = {
 };
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const BIN = process.env.MEDIGO_BIN ?? path.resolve(here, '..', 'medigo');
+const BIN = process.env.MEDIKUBE_BIN ?? path.resolve(here, '..', 'medikube');
 
 /**
  * The inventory comes from the binary under test, not from a list in this repo.
@@ -1429,7 +1431,7 @@ const BIN = process.env.MEDIGO_BIN ?? path.resolve(here, '..', 'medigo');
 export function loadRoutes(): Route[] {
   const out = execFileSync(BIN, ['routes'], { encoding: 'utf8' });
   const routes = JSON.parse(out) as Route[];
-  if (routes.length === 0) throw new Error('medigo routes returned nothing');
+  if (routes.length === 0) throw new Error('medikube routes returned nothing');
   return routes;
 }
 
@@ -1477,7 +1479,7 @@ TypeScript touched:
 ```
 
 ```
-$ go build -o medigo ./cmd/medigo && npx playwright test --list
+$ go build -o medikube ./cmd/medikube && npx playwright test --list
   ...
   [desktop] › smoke.spec.ts › smoke /sharing/invitations
   [mobile]  › smoke.spec.ts › smoke /sharing/invitations
@@ -1519,7 +1521,7 @@ Two points worth defending:
 
 ### Auth
 
-A `medigo seed` subcommand builds the deterministic fixture; the gate logs in
+A `medikube seed` subcommand builds the deterministic fixture; the gate logs in
 once and reuses `storageState`.
 
 ```go
@@ -1554,7 +1556,7 @@ const FILE = 'e2e/.auth/user.json';
  */
 setup('authenticate as the seeded user', async ({ page, request }) => {
   const res = await request.post('/api/v1/auth/login', {
-    data: { email: 'smoke@medigo.test', password: process.env.MEDIGO_SEED_PASSWORD! },
+    data: { email: 'smoke@medikube.test', password: process.env.MEDIKUBE_SEED_PASSWORD! },
   });
   expect(res.status(), 'seeded login must succeed').toBeLessThan(300);
 
@@ -1582,11 +1584,11 @@ fresh database per run:
     deps: [build]
     cmds:
       - rm -rf .gate/pb_data
-      - ./medigo migrate up --dir .gate/pb_data
-      - ./medigo seed --dir .gate/pb_data
+      - ./medikube migrate up --dir .gate/pb_data
+      - ./medikube seed --dir .gate/pb_data
       - cd e2e && npx playwright test
     env:
-      MEDIGO_DATA_DIR: .gate/pb_data
+      MEDIKUBE_DATA_DIR: .gate/pb_data
 ```
 
 Deleting and re-seeding is the whole trick: a gate that runs against a database
@@ -1661,12 +1663,12 @@ A dedicated job, after the Go job, blocking merge:
         with: { go-version: '1.27.x' }
 
       - name: Build the binary under test
-        run: go build -trimpath -o medigo ./cmd/medigo
+        run: go build -trimpath -o medikube ./cmd/medikube
 
       - name: Seed a deterministic database
         run: |
-          ./medigo migrate up --dir .gate/pb_data
-          ./medigo seed --dir .gate/pb_data
+          ./medikube migrate up --dir .gate/pb_data
+          ./medikube seed --dir .gate/pb_data
 
       - name: Install the gate's dependencies
         working-directory: e2e
@@ -1677,8 +1679,8 @@ A dedicated job, after the Go job, blocking merge:
         run: npx playwright test
         env:
           CI: '1'
-          MEDIGO_DATA_DIR: ${{ github.workspace }}/.gate/pb_data
-          MEDIGO_SEED_PASSWORD: ${{ secrets.MEDIGO_SEED_PASSWORD }}
+          MEDIKUBE_DATA_DIR: ${{ github.workspace }}/.gate/pb_data
+          MEDIKUBE_SEED_PASSWORD: ${{ secrets.MEDIKUBE_SEED_PASSWORD }}
 
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -1700,7 +1702,7 @@ fails for "this page is broken").
 ```ts
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = Number(process.env.MEDIGO_PORT ?? 8090);
+const PORT = Number(process.env.MEDIKUBE_PORT ?? 8090);
 const BASE = `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
@@ -1738,15 +1740,15 @@ export default defineConfig({
 
   // Bring up the REAL binary. Playwright shells out to it; no Node in runtime.
   webServer: {
-    command: '../medigo serve --http 127.0.0.1:' + PORT,
+    command: '../medikube serve --http 127.0.0.1:' + PORT,
     url: `${BASE}/login`,          // poll until it answers — the right fix for the start race
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',
     stderr: 'pipe',
     timeout: 60_000,
     env: {
-      MEDIGO_DATA_DIR: process.env.MEDIGO_DATA_DIR ?? '../.gate/pb_data',
-      MEDIGO_LOG_LEVEL: 'warn',
+      MEDIKUBE_DATA_DIR: process.env.MEDIKUBE_DATA_DIR ?? '../.gate/pb_data',
+      MEDIKUBE_LOG_LEVEL: 'warn',
     },
   },
 
@@ -1786,7 +1788,7 @@ import { smokeTargets, parseLandmark } from './routes';
  */
 const IGNORED_CONSOLE: RegExp[] = [];
 
-/** Requests MediGo does not own. */
+/** Requests MediKube does not own. */
 const IGNORED_REQUESTS = [/\/favicon\.ico$/];
 
 type Collected = {

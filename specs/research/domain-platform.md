@@ -137,7 +137,7 @@ all required in the response), not a JSON blob.
 | `session_timeout_minutes` | int? | `120` | yes | "controls the frontend inactivity timer only. JWT expiry is fixed at server config and does not change with this preference" — a **cosmetic** security control |
 | `language` | string? | `"en"` | yes | no enum |
 | `date_format` | string? | `"mdy"` | yes | no enum; `mdy`/`dmy`/`ymd` implied |
-| `paperless_enabled` | bool? | `false` | yes | out of MediGo scope |
+| `paperless_enabled` | bool? | `false` | yes | out of MediKube scope |
 | `paperless_url` | string? | — | yes | |
 | `paperless_api_token` | string? | — | **no** (write-only via separate path) | returned as raw field *and* as `paperless_has_token` |
 | `paperless_username` | string? | — | yes | |
@@ -153,7 +153,7 @@ all required in the response), not a JSON blob.
 | `paperless_has_credentials` | bool | `false` | response-only | computed |
 | `papra_has_token` | bool | `false` | response-only | computed |
 
-**Real MediGo-relevant preferences: exactly four** — `unit_system`, `session_timeout_minutes`, `language`,
+**Real MediKube-relevant preferences: exactly four** — `unit_system`, `session_timeout_minutes`, `language`,
 `date_format`. The other twelve are Paperless/Papra integration config (dropped) and should not be carried over.
 Note the design smell: secrets are modelled as normal nullable string fields *and* as `*_has_*` booleans, so the
 response schema advertises fields the API may or may not redact.
@@ -503,6 +503,7 @@ pending ──(actual upload finishes)──> synced
    └──> processing ──(task completes)──> synced
                     ──(task fails)────> failed
 ```
+
 - `POST /{entity_type}/{entity_id}/files/pending` creates a **record with no bytes**
   (`file_name*, file_size*, file_type*, description?, category?, storage_backend?`) so async uploads are trackable.
 - `PUT /files/{file_id}/status` (form-encoded) `{actual_file_path*, sync_status="synced", paperless_document_id?}`
@@ -519,6 +520,7 @@ get, delete, `PUT metadata` (form: `description?, category?`), download, view, `
 `sync/papra`.
 
 **Download vs view:**
+
 - `GET /files/{file_id}/download` → attachment disposition, works across local + paperless.
 - `GET /files/{file_id}/view?token=<jwt>` → `Content-Disposition: inline`, and **accepts the JWT as a query
   parameter** "to enable opening files in new browser tabs where Authorization headers are not automatically
@@ -568,6 +570,7 @@ both typed `any`. Two endpoints, same concern, different routers.
 | `created_by_name` | string? | no | | denormalized |
 
 `TrendChartSelection{vital_charts: VitalChartRequest[], lab_test_charts: LabTestChartRequest[]}`
+
 - `VitalChartRequest{vital_type* (a raw DB column name), date_from?, date_to?}`
 - `LabTestChartRequest{test_name* (1..500), unit?, date_from?, date_to?}` — `unit` "scopes the trend to a
   single unit so values recorded in different units are not merged. Omit on legacy templates for
@@ -578,6 +581,7 @@ report_title?="Custom Medical Report", include_patient_info=true, include_profil
 include_summary=true, date_range?{start_date?, end_date?}}` → PDF (response typed `any`). Synchronous.
 
 **Supporting reads:**
+
 - `GET /available-trend-data` → which vital types + lab test names actually have data (untyped).
 - `POST /trend-chart-counts` (body `TrendChartSelection`) → per-chart data-point counts for the picker.
 - `GET /data-summary` → `DataSummaryResponse{categories: map<string, CategorySummary>, total_records, last_updated?}`
@@ -686,6 +690,7 @@ POST /admin/restore/upload  (multipart file*)        → UploadBackupResponse{su
                                                         backup_type, backup_size, backup_description}
                                                      accepts .sql (db) and .zip (files/full)
 ```
+
 The important behaviour: **execute always takes a safety backup first** (`safety_backup_id` is required in
 the response). `preview` is a POST because it is expensive, not because it mutates. Upload registers an
 external artefact as a normal backup row, after which the same token/preview/execute flow applies.
@@ -856,6 +861,7 @@ superuser impersonation, and **built-in OAuth2 providers including linking a pro
 auth record**.
 
 Delete outright:
+
 - The entire hand-rolled SSO flow (`initiate`, `callback`, `resolve-conflict`, `resolve-github-link`,
   `test-connection`, `temp_token`, `sso_metadata`, `sso_linking_preference`, `account_linked_at`,
   `external_id`, `auth_method`). PB stores external identities in `_externalAuths` and its
@@ -884,6 +890,7 @@ served only with a short-lived file token**.
 
 Recommendation: **kill the polymorphic `entity_files` table.** Put a `files` (multi) file field directly on
 each clinical collection that needs attachments. Consequences:
+
 - `entity_type` + `entity_id` polymorphism → gone, replaced by real relations and real API rules.
 - `batch-counts` (both variants) → gone; a count is `len(record.GetStringSlice("files"))`, returned inline
   with the record.
@@ -992,6 +999,7 @@ type Share struct {
 ```
 
 Design decisions to lock in:
+
 - **Two permission levels, `view` and `edit`.** `full` is undefined upstream; delete is owner-only anyway.
 - **Drop `custom_permissions` entirely.** Free-form JSON that nothing reads is a liability.
 - **`RevokedAt`/`ExpiresAt` timestamps instead of `is_active`** — you get "when" for free and expiry becomes
@@ -1012,6 +1020,7 @@ Endpoint budget: `POST /api/v1/shares` (single or bulk via `resource_ids[]`),
 
 Keep the single generic invitation table and the state machine
 (`pending → accepted | rejected | cancelled | expired`, `accepted → revoked`). Fix two things:
+
 - **Replace `context_data: object` with a typed discriminated payload** per `invitation_type`
   (Go structs + a `kind` select field). Free-form JSON is why nothing upstream is validatable.
 - **Allow inviting an email address that has no account yet** (upstream requires `sent_to_user_id`, i.e.
@@ -1034,6 +1043,7 @@ Server-driven filter options become a static list generated from your Go enums, 
 ### B4. Reporting & export — fully bespoke, and worth doing properly
 
 PB has nothing here. Keep:
+
 - The **`RecordSummary` / `CategorySummary` projection** — upstream's one good abstraction. One endpoint:
   `GET /api/v1/reports/data-summary?patient_id=` doubling as the export summary and the dashboard counters
   (kills three duplicate counter endpoints).
@@ -1074,6 +1084,7 @@ put `deleted_at` in the base model from day one — retrofitting it later touche
 
 PB gives you filter expressions per collection, not a cross-collection unified search. Keep one endpoint,
 keep the grouped-by-type response (it's right), and fix the flaws:
+
 - Split "list" from "search": `q` optional-means-list-everything is why `pagination` is incoherent.
 - Make `types` a **typed enum** and pick **one spelling** for record-type identifiers across search, tags,
   files and exports (upstream has three: `lab_result` / `lab-result` / `lab_results`).
@@ -1088,6 +1099,7 @@ keep the grouped-by-type response (it's right), and fix the flaws:
 The single highest-leverage small fix in the whole platform surface. Make tags a real collection
 (`tags{ name, color, owner }`) and put a **multi-relation** `tags` field on each clinical collection.
 Then, for free:
+
 - **Rename** = update one `tags` record. Delete `PUT /tags/rename` **and** `PUT /tags/replace` (which was
   only ever a merge-on-collision workaround for string arrays).
 - **Delete** = delete one record; PB's relation cascade removes it from every referencing record.
@@ -1106,6 +1118,7 @@ apply to shared records too.
 ### B8. Multi-patient ownership & switching — bespoke, but simplify hard
 
 PB has no notion of "acting as". Keep bespoke:
+
 - `patients.owner` relation + `is_self_record` with a partial-unique constraint per owner.
 - `users.active_patient` relation, validated on read (return null when access is gone).
 - **Pick ONE mechanism.** Upstream carries both an active-patient pointer *and* `?patient_id=` on ~40

@@ -15,7 +15,7 @@ type ReportSummary struct {
     Patient   string          `json:"patient"`            // opaque id, echoed
     Kinds     []KindCount     `json:"kinds"`              // ALWAYS every registered kind, zeros included
     Total     int             `json:"total"`
-    Limit     int             `json:"limit"`              // MEDIGO_REPORT_MAX_RECORDS, so the UI can warn early
+    Limit     int             `json:"limit"`              // MEDIKUBE_REPORT_MAX_RECORDS, so the UI can warn early
     OverLimit bool            `json:"over_limit"`         // Total > Limit (FR-010)
     Filters   ReportFilters   `json:"filters"`            // the narrowing that produced these numbers
 }
@@ -31,8 +31,8 @@ type TrendsResponse struct {
     Patient   string        `json:"patient"`
     Vitals    []TrendSeries `json:"vitals"`
     Labs      []TrendSeries `json:"labs"`
-    Minimum   int           `json:"minimum"`     // MEDIGO_REPORT_MIN_CHART_POINTS, published (FR-017)
-    MaxCharts int           `json:"max_charts"`  // MEDIGO_REPORT_MAX_CHARTS, published (FR-023)
+    Minimum   int           `json:"minimum"`     // MEDIKUBE_REPORT_MIN_CHART_POINTS, published (FR-017)
+    MaxCharts int           `json:"max_charts"`  // MEDIKUBE_REPORT_MAX_CHARTS, published (FR-023)
 }
 
 type TrendSeries struct {

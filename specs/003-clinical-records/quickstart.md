@@ -18,7 +18,7 @@ go version        # must print go1.27.x — NOT 1.26.5
 go1.27"*. Unset it.
 
 ```bash
-cd /Users/krzysztof.wiatrzyk/private/monorepo/medigo
+cd /Users/krzysztof.wiatrzyk/private/monorepo/medikube
 unset GOTOOLCHAIN
 task install:tailwind          # pinned standalone binary; note the x64-not-amd64 asset name
 task install:golangci-lint     # v2; v1 does not understand Go 1.27
@@ -57,7 +57,7 @@ field is served to anonymous callers.
 ## 2. Seed a chart worth looking at
 
 ```bash
-task seed                      # medigo seed — deterministic, idempotent
+task seed                      # medikube seed — deterministic, idempotent
 ```
 
 The seed creates the Playwright test user, three patients, and records across every one of the
@@ -75,6 +75,7 @@ Sign in at <http://localhost:8090/login> with the credentials the seed prints.
 Each block below is the story's Independent Test from `spec.md`, done by hand.
 
 ### US1 — what would hurt me in an emergency
+
 1. `/allergies` on an empty patient → an explanation and an obvious create action, **not** a blank
    screen (FR-008).
 2. Record two allergies: one `penicillin` / `anaphylaxis` / `life_threatening` / `active`, one
@@ -89,6 +90,7 @@ Each block below is the story's Independent Test from `spec.md`, done by hand.
    indistinguishable from the record not existing (FR-082).
 
 ### US2 — the care I have received
+
 1. `/encounters` → create with a reason and a date; attach a practitioner and a facility from the
    phase-002 directories. Fill `assessment` and `plan`; confirm neither is presented as a diagnosis
    (FR-023).
@@ -100,6 +102,7 @@ Each block below is the story's Independent Test from `spec.md`, done by hand.
    recorded the relationship twice (FR-021).
 
 ### US3 — how I feel and what the numbers say
+
 1. `/symptoms` → record "dizziness" four times on different dates. Four episodes, no definition
    ever created (FR-030). The list states **4 episodes** and the most recent date (FR-031). Delete
    one; the count is 3 immediately (SC-016).
@@ -111,6 +114,7 @@ Each block below is the story's Independent Test from `spec.md`, done by hand.
    field.
 
 ### US4 — prevention and what happened to me
+
 1. `/immunizations` → one with dose number, lot number, manufacturer, site and route. Then try
    `dose_number: 0` → refused (FR-039).
 2. `/injuries` → the type list is fixed, includes `other`, and offers no way to add a value
@@ -118,6 +122,7 @@ Each block below is the story's Independent Test from `spec.md`, done by hand.
 3. `?unresolved=true` excludes a `resolved` injury (US4-5).
 
 ### US5 — cover and equipment
+
 1. `/insurance` → record a policy with `coverage` amounts and a `currency`. Omit the currency with
    an amount present → `422` (FR-044).
 2. Mark a second policy primary; the first is displaced and the UI explains it (FR-045).
@@ -128,6 +133,7 @@ Each block below is the story's Independent Test from `spec.md`, done by hand.
 5. `grep -ri 'the member number you typed' <the log output>` finds nothing (FR-047, US5-5).
 
 ### US6 — connect the records that belong together
+
 1. From a condition, link two medications. Open either medication: the condition is there, recorded
    once (FR-055, US6-1).
 2. Link a symptom to a medication as **suspected cause**, and another as **treats**. The role is
@@ -142,6 +148,7 @@ Each block below is the story's Independent Test from `spec.md`, done by hand.
 6. Delete the condition. The medications survive and show no dangling link (FR-058, US6-4).
 
 ### US7 — tags
+
 1. `/tags` → create "cardiology". Create "Cardiology" → refused as a duplicate (FR-063).
 2. Apply it across five kinds. Rename it; every record follows and none loses it (FR-065).
 3. Delete it: the confirmation states **how many records carry it** first; afterwards every one of
@@ -150,6 +157,7 @@ Each block below is the story's Independent Test from `spec.md`, done by hand.
    (FR-062).
 
 ### US8 — find anything
+
 1. `/search?patient=…` → a term present in three kinds returns three groups, each paged separately
    and each stating whether more exist (FR-072).
 2. Remove `?patient=` → refused, with no fallback to whoever is in view (FR-070).
@@ -158,6 +166,7 @@ Each block below is the story's Independent Test from `spec.md`, done by hand.
 4. `grep -i '<your search term>' <the log output>` finds **nothing** (FR-075).
 
 ### US9 — the current picture
+
 1. `/timeline?patient=…` → records of eight kinds interleaved in date order, each stating its kind,
    its summary and its date (FR-076).
 2. Narrow to two kinds and a three-month window: the narrowing is visible and removable (FR-077).
@@ -170,6 +179,7 @@ Each block below is the story's Independent Test from `spec.md`, done by hand.
 5. An empty patient shows a helpful empty state on every one of them, not a row of zeros (FR-080).
 
 ### US10 — family history
+
 1. `/family-history` → record three relatives, one deceased, one with two conditions each carrying
    an age at diagnosis (FR-052, FR-053).
 2. A death year earlier than the birth year → refused with both reported (FR-054).
@@ -201,7 +211,7 @@ task check                       # gen + vet + lint + test
 task test                        # go test -race -count=1 ./...
 task openapi                     # regenerate api/openapi.json
 git diff --exit-code api/openapi.json     # MUST be clean — an unintended API change is a diff
-task routes                      # medigo routes -> the JSON inventory
+task routes                      # medikube routes -> the JSON inventory
 task test:e2e                    # Playwright, both viewports
 ```
 
@@ -211,7 +221,7 @@ Four gates fail the build independently:
 |---|---|
 | `internal/openapi/gate_test.go` | a registered `operationId` is missing from `api/openapi.json`, or vice versa |
 | `internal/records/registry_completeness_test.go` | a `kind.Kind` value lacks a registry entry, a `oneOf` branch with a `kind` discriminator, two page routes, a default sort, a searchable-field declaration, a seed fixture or two smoke cases |
-| `e2e/routes.gate.spec.ts` | a route from `medigo routes` with `Page: true` has no smoke case |
+| `e2e/routes.gate.spec.ts` | a route from `medikube routes` with `Page: true` has no smoke case |
 | `golangci-lint run` | `depguard` (a service or domain package imported PocketBase, `net/http` or templ), `forbidigo` (`app.Logger()`, `fmt.Print*`, `log.*`, `OnRecord*Request`, the Datastar inline-script family, a Datastar Pro attribute) |
 
 Occasional / nightly:

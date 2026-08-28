@@ -3,9 +3,9 @@
 Nine operations. Requirements covered: FR-001 … FR-010, FR-034, FR-036, FR-041, FR-054,
 FR-073 … FR-077.
 
-PocketBase owns the mechanism; MediGo owns the shapes. Login completes through
+PocketBase owns the mechanism; MediKube owns the shapes. Login completes through
 `apis.RecordAuthResponse(e, rec, core.RequestInfoContextPasswordAuth, nil)`, which mints the
-token, fires `OnRecordAuthRequest` and records the auth origin. MediGo never mints a token, never
+token, fires `OnRecordAuthRequest` and records the auth origin. MediKube never mints a token, never
 hashes a password and never re-implements refresh (research D-13).
 
 **Password recovery and email confirmation are in this document** (cross-artifact finding H7).
@@ -13,7 +13,7 @@ Both are wired to PocketBase's own flows: `mails.SendRecordPasswordReset` and
 `mails.SendRecordVerification` build and send the message,
 `app.FindAuthRecordByToken(token, core.TokenTypePasswordReset)` — or `core.TokenTypeVerification` —
 validates the token, and `SetPassword` + `Save` rotates `tokenKey`, which is the same mechanism
-that makes `logout` and `changePassword` end every other session. MediGo mints no token, renders no
+that makes `logout` and `changePassword` end every other session. MediKube mints no token, renders no
 email template and stores no reset state. The token lifetimes are PocketBase's collection defaults:
 **30 minutes** for a reset token, **24 hours** for a confirmation token
 (`core/collection_model_auth_options.go`).
@@ -23,7 +23,7 @@ design contract operation 4) belongs to **phase 006**, with the operator surface
 providers. `OAuth2.Enabled` is `false` on `users` in this phase.
 
 **Everything in this file depends on the operator having configured outgoing mail**, which lives in
-PocketBase's `Settings()` store rather than in `MEDIGO_*` — the carve-out the constitution's
+PocketBase's `Settings()` store rather than in `MEDIKUBE_*` — the carve-out the constitution's
 Technology Constraints make for exactly this reason. When `Settings().SMTP.Enabled` is false,
 `app.NewMailClient()` returns `&mailer.Sendmail{}`, a shell-out to a local `sendmail` binary the
 distroless image does not contain, so the send **fails** rather than silently disappearing. FR-076
@@ -83,6 +83,7 @@ with field code `unknown_field`, and the same test covers both.
 password rules to publish.
 
 **200**
+
 ```json
 { "registration_open": false,
   "password_rules": { "min_length": 8, "max_length": 200,
@@ -101,7 +102,7 @@ nothing about anybody.
 
 | Case | Status | Body |
 |---|---|---|
-| success | `201` + `Location: /api/v1/me` + `Set-Cookie: medigo_session` | `Session` |
+| success | `201` + `Location: /api/v1/me` + `Set-Cookie: medikube_session` | `Session` |
 | registration closed | `403` | `registration_closed` |
 | email already registered, in any letter case | `409` | `conflict`, message "that address cannot be used" |
 | invalid email / name / password | `422` | `validation_failed`, **every** offending field at once |
@@ -112,7 +113,7 @@ nothing about anybody.
 
 - **FR-001**: email, display name and password. Nothing else is required, and nothing else is
   accepted.
-- **FR-002**: when `MEDIGO_AUTH_REGISTRATION_OPEN=false`, every attempt is refused. The `/register`
+- **FR-002**: when `MEDIKUBE_AUTH_REGISTRATION_OPEN=false`, every attempt is refused. The `/register`
   page still renders inside the normal shell with a plain explanation, because a bare 404 would
   fail the smoke gate's landmark assertion.
 - **FR-003**: the `LOWER(email)` unique index makes `Amara@x.test` and `amara@x.test` the same
@@ -124,7 +125,7 @@ nothing about anybody.
   refused with `same_as_email` / `same_as_name`.
 - **FR-036**: writes one `create` / `user` audit row and one `login` / `user` row.
 
-**The conflict message names no address.** "That address cannot be used" rather than "amara@x.test
+**The conflict message names no address.** "That address cannot be used" rather than "`amara@x.test`
 is already registered": the second confirms to an anonymous caller that a specific person has an
 account here, which on a self-hosted medical instance is a disclosure. The registering person
 already knows which address they typed.
@@ -142,7 +143,7 @@ directly against the database; a closed instance refuses and leaves no row.
 
 | Case | Status | Body |
 |---|---|---|
-| success | `200` + `Set-Cookie: medigo_session` | `Session` |
+| success | `200` + `Set-Cookie: medikube_session` | `Session` |
 | unknown address | `401` | `unauthenticated` |
 | known address, wrong password | `401` | `unauthenticated` — **byte-identical to the line above** |
 | account has `disabled_at` set | `401` | `unauthenticated` — **byte-identical again** |
@@ -162,7 +163,7 @@ is disabled" tells an attacker that the address is registered.
 
 **FR-006**: every failure writes a `login_failed` / `user` audit row. PocketBase's rate limiter is
 **enabled** at boot — it defaults to off — with a rule on this route, configured from
-`MEDIGO_AUTH_LOGIN_RATE`. `/api/v1/streams/records` is exempted from the limiter, or a server
+`MEDIKUBE_AUTH_LOGIN_RATE`. `/api/v1/streams/records` is exempted from the limiter, or a server
 restart plus Datastar's reconnect loop locks every open tab out (research D-18).
 
 **The `login_failed` row never carries the attempted email address** — `target_id` is the account
@@ -190,7 +191,7 @@ through PocketBase's native route also produces a `login` audit row.
 | no or expired session | `401 unauthenticated` |
 | the token was invalidated by a password change or a sign-out elsewhere | `401 unauthenticated` |
 
-**FR-008.** The session lifetime is `MEDIGO_AUTH_SESSION_TTL`, default **7 days**, written into
+**FR-008.** The session lifetime is `MEDIKUBE_AUTH_SESSION_TTL`, default **7 days**, written into
 the `users` collection's `AuthToken.Duration` at boot. When it expires the person is asked to sign
 in again **and told why** — the sign-in page renders an explanation when it is reached with
 `?reason=expired`, which the page layer sets on a `401` redirect (FR-008, and the Edge Case about
@@ -204,7 +205,7 @@ a session expiring mid-form).
 
 | Case | Status |
 |---|---|
-| success | `204` + `Set-Cookie: medigo_session=; Max-Age=0` |
+| success | `204` + `Set-Cookie: medikube_session=; Max-Age=0` |
 | no session | `401 unauthenticated` |
 
 **FR-007 in full: the ended session must not be usable again from anywhere it was still open.**
@@ -220,7 +221,6 @@ Writes a `logout` / `user` audit row.
 **Mandatory test.** Sign in from two sessions; sign out from one; assert the other's next request
 is `401`, and that it lands on the sign-in page rather than on a broken page (Edge Cases: "A
 person signs out in one place while another place has a list open").
-
 
 ---
 
@@ -316,7 +316,7 @@ success, a session opened before the reset is `401` on its next request.
 
 **Requires a session.** Sends the confirmation message again to the signed-in account's own
 address. It takes **no body**: the address is read from the authenticated record, never from the
-request, because accepting one would let a signed-in caller aim MediGo's mailer at a stranger.
+request, because accepting one would let a signed-in caller aim MediKube's mailer at a stranger.
 
 | Case | Status |
 |---|---|

@@ -145,7 +145,7 @@ requires without a second round trip.
 `If-Match` **required**. **204**.
 
 **Every referencing record survives with the reference cleared.** This is PocketBase's
-`deleteRefRecords` behaviour, not MediGo code: a non-cascading, non-required relation has the id
+`deleteRefRecords` behaviour, not MediKube code: a non-cascading, non-required relation has the id
 unset and the referencing record re-saved (`core/record_model.go:1618-1626`, research D-06). It
 applies to `patients.primary_practitioner` and `medications.practitioner`.
 
@@ -157,6 +157,7 @@ applies to `patients.primary_practitioner` and `medications.practitioner`.
 | 401 | no session | |
 
 **Mandatory tests**
+
 - Create a practitioner, name it as a patient's `primary_practitioner` and as a medication's
   `practitioner`, delete it → both records still exist, both references are now empty (US5-5).
 - The `usage` numbers reported before the delete equal the number of records actually modified.

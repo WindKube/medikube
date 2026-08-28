@@ -86,7 +86,7 @@ patient · grantee reaching the owner's directory · grantee reaching another of
 | 422 | `self_share` | FR-021 / FR-011 — inviting your own address |
 | 422 | `family_history_view_only` | FR-007 |
 | 422 | `email_not_configured` | [D-06](../research.md#d-06) — SMTP off **and** the address has no account |
-| 422 | `too_many_resources` | more than `MEDIGO_SHARING_MAX_RESOURCES_PER_INVITATION` |
+| 422 | `too_many_resources` | more than `MEDIKUBE_SHARING_MAX_RESOURCES_PER_INVITATION` |
 | 429 | `rate_limited` | the public token preview, and the send endpoint |
 | 500 | `internal_error` | message always `"internal error"` |
 
@@ -111,7 +111,7 @@ disabled. If a grant exists but does not carry the needed permission, the result
 
 **The active patient is never consulted for authorization.** Permission is a property of the route,
 never a client-supplied parameter — upstream's `required_permission` query parameter does not exist
-in MediGo.
+in MediKube.
 
 ## The six-actor matrix
 
