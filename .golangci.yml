@@ -163,7 +163,10 @@ linters:
           msg: >-
             Constitution Principle VI. Use the injected zerolog logger; stdout
             writes that are not JSON break the one-stream promise.
-        - pattern: \.OnRecord(Create|Update|Delete|View|List)Request$
+        # `Records?` and not `Record`: the list hook is spelled
+        # OnRecordsListRequest, with the plural on Record, so a pattern anchored
+        # on the singular silently exempts exactly one member of the family.
+        - pattern: \.OnRecords?(Create|Update|Delete|View|List)Request$
           msg: >-
             Constitution Principle V and research D-14. The record-CRUD request
             hooks are bound inside the built-in CRUD handlers, which the lockdown
@@ -213,9 +216,15 @@ linters:
           - forbidigo
         text: log/slog|app\.Logger\(\)
 
-      # The one file allowed to name the record-CRUD hook family, so that a
-      # deliberate exception is visible in one place instead of scattered.
-      - path: internal/platform/pb/hooks\.go
+      # The only two files allowed to name the record-CRUD hook family, so that
+      # a deliberate exception is visible in one place instead of scattered:
+      # hooks.go, which is where a binding would go if one were ever justified,
+      # and hooks_never_fire_test.go, which is the evidence for the rule. That
+      # test binds the whole family and proves it is never invoked under the
+      # lockdown; without it the ban reads as dogma. The exception is spelled as
+      # those two paths rather than as a blanket _test.go carve-out, because a
+      # blanket one would let the ban be violated in any test in the repository.
+      - path: internal/platform/pb/hooks(_never_fire_test)?\.go
         linters:
           - forbidigo
         text: record-CRUD request hooks

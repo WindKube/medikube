@@ -18,10 +18,15 @@ the model is revised. `plan.md` outranks both for versions and package layout.
 
 ## D2 — Length arithmetic predates the MediKube rename
 
-`medigo_` is 7 characters; `medikube_` is 9. Every proof that sized a field by
-counting a prefixed identifier is off by two per occurrence. `audit_events.target_id`
-is specified at `Max 64` and phase 006 writes ~40-character archive names into it,
-so the margin was never large.
+The old project's snake_case prefix was 7 characters; `medikube_` is 9. Every proof
+that sized a field by counting a prefixed identifier is off by two per occurrence.
+`audit_events.target_id` is specified at `Max 64` and phase 006 writes
+~40-character archive names into it, so the margin was never large.
+
+The old spelling is deliberately not written out above. `scripts/check-naming.sh`
+sweeps every tracked file and excludes only itself, so prose that quotes the old
+name fails the gate — and an allowlist for prose is exactly how the name comes
+back.
 
 *Action:* re-derive any length proof before relying on it; do not trust a figure
 that was written before the rename.

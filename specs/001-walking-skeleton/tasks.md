@@ -189,67 +189,67 @@ exists.
 
 ### The platform: PocketBase, locked down
 
-- [ ] T051 [P] TEST `internal/platform/pb/app_test.go` — `pocketbase.NewWithConfig` with
+- [x] T051 [P] TEST `internal/platform/pb/app_test.go` — `pocketbase.NewWithConfig` with
   `HideStartBanner`, an explicit `DefaultDataDir` and the `DBConnect` hook.
-- [ ] T052 Implement `internal/platform/pb/app.go`.
-- [ ] T053 [P] TEST `internal/platform/pb/settings_test.go` — after boot: `Batch.Enabled == false`,
+- [x] T052 Implement `internal/platform/pb/app.go`.
+- [x] T053 [P] TEST `internal/platform/pb/settings_test.go` — after boot: `Batch.Enabled == false`,
   `Logs.MaxDays == 1`, rate limits and token TTLs match the MediKube config. Settings are written
   from validated env at boot and never hand-edited in the admin UI (ANALYSIS M4).
-- [ ] T054 Implement `internal/platform/pb/settings.go`.
-- [ ] T055 [P] TEST `internal/platform/pb/lockdown_test.go` — **the most important test in the
+- [x] T054 Implement `internal/platform/pb/settings.go`.
+- [x] T055 [P] TEST `internal/platform/pb/lockdown_test.go` — **the most important test in the
   phase.** For anonymous and for an ordinary signed-in user: every method on
   `/api/collections/{c}/records[/{id}]` returns **404** for every collection, and `POST /api/batch`
   returns 404. For a superuser the subtree still works.
-- [ ] T056 [P] TEST `internal/platform/pb/lockdown_priority_test.go` — the middleware is bound at
+- [x] T056 [P] TEST `internal/platform/pb/lockdown_priority_test.go` — the middleware is bound at
   **-1019**, after `loadAuthToken` at -1020, asserted against the bound middleware list. Bound
   earlier it cannot see the authenticated actor; bound later the built-in handler has already run.
-- [ ] T057 TEST `internal/platform/pb/hooks_never_fire_test.go` — binding an `OnRecordCreateRequest`
+- [x] T057 TEST `internal/platform/pb/hooks_never_fire_test.go` — binding an `OnRecordCreateRequest`
   hook and issuing every request that could plausibly trigger it produces **zero** invocations
   under the lockdown, because those hooks live inside the CRUD handlers the lockdown disables.
   This test is the evidence behind the forbidigo rule, and without it the ban reads as dogma
   (reconciliation C13).
-- [ ] T058 TEST `internal/platform/pb/lockdown_auth_test.go` — **all fourteen** PocketBase auth
+- [x] T058 TEST `internal/platform/pb/lockdown_auth_test.go` — **all fourteen** PocketBase auth
   routes under `/api/collections/` remain reachable and behave normally: `auth-methods`,
   `auth-with-password`, `auth-with-oauth2`, `auth-refresh`, `request-verification`,
   `confirm-verification`, `request-password-reset`, `confirm-password-reset`,
   `request-email-change`, `confirm-email-change`, `impersonate`, and the superusers equivalents
   (VERIFIED FACT 2). A prefix match one segment too greedy breaks every phase after this one.
-- [ ] T059 Implement `internal/platform/pb/lockdown.go` — the middleware at priority **-1019**,
+- [x] T059 Implement `internal/platform/pb/lockdown.go` — the middleware at priority **-1019**,
   immediately after `loadAuthToken` at -1020, scoped to the `/records` subtree.
-- [ ] T060 [P] TEST `internal/platform/pb/assert_test.go` — the boot assertions **refuse to start**
+- [x] T060 [P] TEST `internal/platform/pb/assert_test.go` — the boot assertions **refuse to start**
   when any non-system collection has a non-nil API rule, when `Batch` is enabled, and when any
   `FileField` has `Protected: false`. Each is asserted as a distinct refusal with its own message.
-- [ ] T061 Implement `internal/platform/pb/assert.go`.
-- [ ] T062 [P] TEST `internal/platform/pb/protected_files_test.go` — a synthetic collection with a
+- [x] T061 Implement `internal/platform/pb/assert.go`.
+- [x] T062 [P] TEST `internal/platform/pb/protected_files_test.go` — a synthetic collection with a
   `FileField` whose `Protected` is false makes the boot assertion refuse. No file field ships in
   this phase; the assertion does, because phase 002 adds one and a file served to a stranger is
   exactly the failure Principle VII exists to prevent.
-- [ ] T063 [P] TEST `internal/platform/pb/no_file_routes_test.go` — `GET /api/files/...` is
+- [x] T063 [P] TEST `internal/platform/pb/no_file_routes_test.go` — `GET /api/files/...` is
   unreachable for every collection and no MediKube route issues a PocketBase file token. Files are
   served only from MediKube's own `/api/v1` routes, with authorization applied.
-- [ ] T064 [P] TEST `internal/platform/pb/adminwarn_test.go` — the warning fires on each of the four
+- [x] T064 [P] TEST `internal/platform/pb/adminwarn_test.go` — the warning fires on each of the four
   conditions independently: empty `Settings().SuperuserIPs`, superusers-collection `MFA.Enabled`
   false, a **non-empty `MFA.Rule`** (a partial rollout that reads as "on"), and fewer than two
   enabled auth methods (VERIFIED FACT 10, research D-32). This is FR-040's start-up warning.
-- [ ] T065 Implement `internal/platform/pb/adminwarn.go` (FR-040).
-- [ ] T066 [P] TEST `internal/platform/pb/serve_test.go` — middleware bind order is exactly as
+- [x] T065 Implement `internal/platform/pb/adminwarn.go` (FR-040).
+- [x] T066 [P] TEST `internal/platform/pb/serve_test.go` — middleware bind order is exactly as
   designed, and `se.Server.WriteTimeout` has been overridden away from PocketBase's hardcoded
   five minutes before the listener starts (research D-34, reconciliation C9).
-- [ ] T067 Implement `internal/platform/pb/serve.go` — the `OnServe` binding: WriteTimeout override,
+- [x] T067 Implement `internal/platform/pb/serve.go` — the `OnServe` binding: WriteTimeout override,
   middleware order, and `httproute.Registry.Bind(se)`.
 
 ### Migrations and the schema
 
-- [ ] T068 [P] TEST `internal/store/migrations/reversible_test.go` — for **every** registered
+- [x] T068 [P] TEST `internal/store/migrations/reversible_test.go` — for **every** registered
   migration, up → down → up leaves an identical schema. Reversibility is by construction
   (`Register(up, down, filename)`) but only a test proves it (VERIFIED FACT 8, FR-059).
-- [ ] T069 Implement `internal/store/migrations/1756100100_users_profile.go` — amend `users` with
+- [x] T069 Implement `internal/store/migrations/1756100100_users_profile.go` — amend `users` with
   the seven MediKube fields, set all five API rules to nil, leave `AuthRule` as
   `types.Pointer("")`, add `idx_users_email_lower`, set token config (data-model §1).
-- [ ] T070 Implement `internal/store/migrations/1756100200_medications.go` — create `medications`
+- [x] T070 Implement `internal/store/migrations/1756100200_medications.go` — create `medications`
   with thirteen fields, three enums, `owner → users` **`Required: true, CascadeDelete: true`**,
   five indexes each ending in `id` for cursor stability (data-model §2).
-- [ ] T070a [P] TEST `internal/store/migrations/audit_vocab_test.go` — the **complete** declared
+- [x] T070a [P] TEST `internal/store/migrations/audit_vocab_test.go` — the **complete** declared
   vocabulary, not a delta: `audit_events.action` has exactly the twenty values of data-model §3
   and `target_kind` exactly the twenty-three, asserted set-equal (extra values fail too, so a
   later phase cannot quietly widen the trail). This is the test every later phase's vocabulary
@@ -258,67 +258,67 @@ exists.
   the two field sizes the later phases depend on**: `target_id` is `Max 64` (phase 006 writes
   20–31-character job names and ~40-character archive names into it) and `request_id` is `Max 64`
   **and `Required`** — a row that correlates to nothing must not be writable (ANALYSIS).
-- [ ] T071 Implement `internal/store/migrations/1756100300_audit_events.go` — create `audit_events`
+- [x] T071 Implement `internal/store/migrations/1756100300_audit_events.go` — create `audit_events`
   with seven fields, **no `ip` column, no `reason` column, no `affected` column, no content
   column**, three enums declaring the **complete** vocabulary of data-model §3 (four actor kinds,
   **twenty** actions, **twenty-three** target kinds), `target_id` at **`Max 64`** and `request_id`
   at **`Max 64`, `Required`**, and the **three indexes carrying phase 006's tiebreaker columns**
   so 006 creates no index of its own and none collides by name (data-model §3, research D-19,
   ANALYSIS).
-- [ ] T072 Implement `internal/store/migrations/register.go` and `assertions.go`.
-- [ ] T073 [P] TEST `internal/store/migrations/applied_set_test.go` — the applied migration set
+- [x] T072 Implement `internal/store/migrations/register.go` and `assertions.go`.
+- [x] T073 [P] TEST `internal/store/migrations/applied_set_test.go` — the applied migration set
   equals the registered set, which is exactly what `readyz`'s `migrations` check reports.
-- [ ] T074 [P] TEST `internal/store/migrations/settings_persist_test.go` — the settings written at
+- [x] T074 [P] TEST `internal/store/migrations/settings_persist_test.go` — the settings written at
   boot survive a restart and are re-asserted rather than assumed (ANALYSIS M4).
-- [ ] T075 TEST `internal/store/migrations/assertions_test.go` — the cascade matrix is exactly as
+- [x] T075 TEST `internal/store/migrations/assertions_test.go` — the cascade matrix is exactly as
   data-model §4 states. **`medications.owner` must be `Required: true` AND `CascadeDelete: true`**;
   a one-character flip leaves orphaned medications after an account delete and silently breaks
   FR-014 and SC-012 with no other symptom.
-- [ ] T076 [P] TEST `internal/store/migrations/empty_start_test.go` — the instance starts against a
+- [x] T076 [P] TEST `internal/store/migrations/empty_start_test.go` — the instance starts against a
   completely empty data directory and creates everything it needs (FR-063).
 
 ### The store layer
 
-- [ ] T077 [P] TEST `internal/store/cursor_test.go` — a cursor round-trips; a **tampered** cursor is
+- [x] T077 [P] TEST `internal/store/cursor_test.go` — a cursor round-trips; a **tampered** cursor is
   rejected rather than trusted; the encoding is keyset, never an offset; and a cursor issued
   before a restart still validates afterwards (research D-25, CT-3).
-- [ ] T078 Implement `internal/store/cursor.go` — opaque HMAC-signed keyset cursors, key derived by
+- [x] T078 Implement `internal/store/cursor.go` — opaque HMAC-signed keyset cursors, key derived by
   HKDF from PocketBase's persisted auth-token secret with `MEDIKUBE_CURSOR_KEY` as an override
   (**CT-3** — confirm the exact secret field name against v0.40.1 at implementation time).
-- [ ] T079 [P] TEST `internal/store/mapping_test.go` — `*core.Record` ↔ domain in both directions,
+- [x] T079 [P] TEST `internal/store/mapping_test.go` — `*core.Record` ↔ domain in both directions,
   including the calendar-date handling and `encoding/json/v2`'s stricter semantics (research D-28).
-- [ ] T080 Implement `internal/store/mapping.go` and `internal/store/tx.go`.
-- [ ] T081 [P] TEST `internal/store/tx_test.go` — a failing operation inside `RunInTransaction`
+- [x] T080 Implement `internal/store/mapping.go` and `internal/store/tx.go`.
+- [x] T081 [P] TEST `internal/store/tx_test.go` — a failing operation inside `RunInTransaction`
   rolls back completely and publishes no realtime event.
-- [ ] T082 [P] TEST `internal/store/cursor_sort_test.go` — a cursor issued under one sort order is
+- [x] T082 [P] TEST `internal/store/cursor_sort_test.go` — a cursor issued under one sort order is
   rejected under another rather than silently paging through a different sequence (FR-023).
-- [ ] T083 [P] TEST `internal/store/filter_test.go` — the typed query builder produces the expected
+- [x] T083 [P] TEST `internal/store/filter_test.go` — the typed query builder produces the expected
   PocketBase filter string and **no filter DSL string appears outside this package**, asserted by
   a source walk.
-- [ ] T084 Implement `internal/store/filter.go`.
+- [x] T084 Implement `internal/store/filter.go`.
 
 ### Test support — the harness every later phase inherits
 
-- [ ] T085 Create `internal/testdata/pb_data/` — the committed fixture directory every
+- [x] T085 Create `internal/testdata/pb_data/` — the committed fixture directory every
   `tests.NewTestApp` clones (VERIFIED FACT 7; ~11 ms per clone).
-- [ ] T086 Implement `internal/testsupport/app.go` — `TestAppFactory` returning a **new** app per
+- [x] T086 Implement `internal/testsupport/app.go` — `TestAppFactory` returning a **new** app per
   call.
-- [ ] T087 TEST `internal/testsupport/app_test.go` — two factory calls produce independent apps, and
+- [x] T087 TEST `internal/testsupport/app_test.go` — two factory calls produce independent apps, and
   a guard test documents why an `ApiScenario` must never share a `tests.TestApp`: the shared case
   recurses infinitely and blows the stack (reconciliation C14).
-- [ ] T088 [P] Implement `internal/testsupport/fixtures.go` — the seeded ids as exported constants,
+- [x] T088 [P] Implement `internal/testsupport/fixtures.go` — the seeded ids as exported constants,
   so no later phase hardcodes an id string.
-- [ ] T089 [P] Implement `internal/testsupport/phileak/capture.go` — captures **all four**
+- [x] T089 [P] Implement `internal/testsupport/phileak/capture.go` — captures **all four**
   diagnostic sinks for the PHI-leak suite: the zerolog stream, the Prometheus gatherer output
   (names and label values), an OTel `tracetest.SpanRecorder` and a stub Sentry transport. This is
   the package phases 002–006 extend; there is deliberately **no** second `logcapture.go` and no
   `internal/obs/phi_leak_test.go` (cross-artifact finding M6).
-- [ ] T090 Implement `internal/testsupport/authz.go` — `RunOwnershipMatrix(t, cases)`, the
+- [x] T090 Implement `internal/testsupport/authz.go` — `RunOwnershipMatrix(t, cases)`, the
   owner-succeeds / stranger-refused table **phases 002–005 extend rather than reinvent**.
-- [ ] T091 [P] TEST `internal/testsupport/authz_test.go` — a self-test: a deliberately permissive
+- [x] T091 [P] TEST `internal/testsupport/authz_test.go` — a self-test: a deliberately permissive
   fake handler makes `RunOwnershipMatrix` **fail**. A matrix that cannot fail proves nothing, and
   five later phases depend on this one helper.
-- [ ] T092 [P] TEST `internal/testsupport/fixtures_test.go` — the exported fixture constants match
+- [x] T092 [P] TEST `internal/testsupport/fixtures_test.go` — the exported fixture constants match
   what `medikube seed` actually writes, so a drifting seed breaks the harness loudly.
 
 ### The route registry, OpenAPI and the record family

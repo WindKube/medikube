@@ -55,6 +55,22 @@ internal/web/static/app.css
 pb_data/
 *.db*
 
+# ...with exactly one exception: internal/testdata/pb_data is the fixture every
+# tests.NewTestApp clones, and it is committed on purpose. It holds seeded demo
+# accounts and nothing else. The directory has to be un-excluded before its
+# contents can be, because git does not descend into an excluded directory, and
+# both negations are anchored with a leading slash so no other pb_data anywhere
+# in the tree is caught by them.
+!/internal/testdata/pb_data/
+!/internal/testdata/pb_data/**
+
+# The WAL and shared-memory sidecars are never committed. They are checkpointed
+# into data.db before the fixture is written, and a committed one would be
+# replayed over the committed database on the next clone.
+/internal/testdata/pb_data/**/*.db-wal
+/internal/testdata/pb_data/**/*.db-shm
+/internal/testdata/pb_data/**/*.db-journal
+
 # Playwright's install and its run output.
 e2e/node_modules
 e2e/test-results
