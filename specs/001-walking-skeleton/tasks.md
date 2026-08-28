@@ -105,85 +105,85 @@ exists.
 
 ### Configuration and the log stream
 
-- [ ] T018 [P] TEST `internal/config/config_test.go` — every `MEDIKUBE_` variable parses, defaults
+- [x] T018 [P] TEST `internal/config/config_test.go` — every `MEDIKUBE_` variable parses, defaults
   apply, an absent `MEDIKUBE_DATA_DIR` fails, `MEDIKUBE_DRAIN_MAX <= MEDIKUBE_DRAIN_DELAY` fails, and
   **every** validation problem is reported in one error rather than the first (FR-051). `MEDIKUBE_DATA_DIR`
   is the one location everything the instance holds lives under (FR-061).
-- [ ] T019 [P] TEST `internal/config/redact_test.go` — marshalling the config to zerolog emits no
+- [x] T019 [P] TEST `internal/config/redact_test.go` — marshalling the config to zerolog emits no
   secret value for any secret-bearing field, asserted field by field via reflection so a newly
   added secret fails the test by default (FR-041).
-- [ ] T020 Implement `internal/config/config.go` — the ONE `caarlos0/env` struct, `MEDIKUBE_` prefix,
+- [x] T020 Implement `internal/config/config.go` — the ONE `caarlos0/env` struct, `MEDIKUBE_` prefix,
   per the observability dossier's field list. **No Viper.**
-- [ ] T021 Implement `internal/config/validate.go` using `errors.Join`.
-- [ ] T022 Implement `internal/config/redact.go` — `MarshalZerologObject` redacting every secret.
-- [ ] T023 [P] TEST `internal/logging/logger_test.go` — level, pretty mode, request-scoped child
+- [x] T021 Implement `internal/config/validate.go` using `errors.Join`.
+- [x] T022 Implement `internal/config/redact.go` — `MarshalZerologObject` redacting every secret.
+- [x] T023 [P] TEST `internal/logging/logger_test.go` — level, pretty mode, request-scoped child
   loggers, and that the correlation id appears on every line (FR-053, FR-054).
-- [ ] T024 [P] TEST `internal/obs/request_log_test.go` — the request logger records method, path,
+- [x] T024 [P] TEST `internal/obs/request_log_test.go` — the request logger records method, path,
   status, duration and correlation id and **never** a request or response body, a query string or
   a cookie (FR-038).
-- [ ] T025 [P] TEST `internal/logging/pbbridge_test.go` — a log written through PocketBase's own
+- [x] T025 [P] TEST `internal/logging/pbbridge_test.go` — a log written through PocketBase's own
   framework logger arrives in the captured zerolog stream. **Mechanism 1**: the exported embedded
   `pb.App` field is reassigned to a decorator (CT-1).
-- [ ] T026 [P] TEST `internal/logging/pblogs_test.go` — a record written to the `_logs` collection is
+- [x] T026 [P] TEST `internal/logging/pblogs_test.go` — a record written to the `_logs` collection is
   diverted to zerolog and **not** persisted. **Mechanism 2**: `OnModelCreate("_logs")` returning
   **without** calling `e.Next()`. The same test asserts `Logs.MaxDays == 1`: at `0` PocketBase's
   internal `BeforeAddFunc` short-circuits on `MaxDays > 0` and this hook never fires (research
   D-29, reconciliation C4).
-- [ ] T027 Implement `internal/logging/logger.go`.
-- [ ] T028 Implement `internal/logging/pbbridge.go` (mechanism 1).
-- [ ] T029 Implement `internal/logging/pblogs.go` (mechanism 2).
-- [ ] T030 Implement `internal/logging/redact.go` — the shared redaction helpers the domain
+- [x] T027 Implement `internal/logging/logger.go`.
+- [x] T028 Implement `internal/logging/pbbridge.go` (mechanism 1).
+- [x] T029 Implement `internal/logging/pblogs.go` (mechanism 2).
+- [x] T030 Implement `internal/logging/redact.go` — the shared redaction helpers the domain
   marshallers use.
-- [ ] T031 TEST `internal/logging/singlestream_test.go` — a source-walking test asserting **zero**
+- [x] T031 TEST `internal/logging/singlestream_test.go` — a source-walking test asserting **zero**
   uses of `slog`, `log.Print*` or `fmt.Print*` outside `internal/logging`, and **zero** downcasts
   of `core.App` to `*pocketbase.PocketBase`. This is the test that keeps CT-1's workaround
   contained (Principle VI).
-- [ ] T032 [P] TEST `internal/logging/coverage_test.go` — the bridge captures PocketBase's cron,
+- [x] T032 [P] TEST `internal/logging/coverage_test.go` — the bridge captures PocketBase's cron,
   mailer and migration logs too, not only request logs. Mechanism 1 alone misses the transactional
   path because `createTxApp` does `clone := *app` on a `*BaseApp`; mechanism 2 alone misses
   everything that never reaches `_logs`. Both, or there is a hole (CT-1).
-- [ ] T033 [P] TEST `internal/config/documented_test.go` — every field of the config struct appears
+- [x] T033 [P] TEST `internal/config/documented_test.go` — every field of the config struct appears
   in `README.md`'s documented environment and in `quickstart.md`, asserted by reflection. A new
   setting nobody documented fails the build (FR-051).
 
 ### Domain primitives — stdlib and zerolog only
 
-- [ ] T034 [P] TEST `internal/domain/errors_test.go` — every sentinel is distinct and
+- [x] T034 [P] TEST `internal/domain/errors_test.go` — every sentinel is distinct and
   `errors.Is`-matchable through wrapping.
-- [ ] T035 [P] TEST `internal/domain/validation_test.go` — a `*ValidationError` carries **every**
+- [x] T035 [P] TEST `internal/domain/validation_test.go` — a `*ValidationError` carries **every**
   offending field at once, each with a machine code and a message (FR-027).
-- [ ] T036 [P] TEST `internal/domain/validation_envelope_test.go` — the JSON shape of a
+- [x] T036 [P] TEST `internal/domain/validation_envelope_test.go` — the JSON shape of a
   `*ValidationError` matches contracts/README.md's envelope exactly, field for field, so the
   client contract cannot drift from the domain type.
-- [ ] T037 [P] TEST `internal/domain/date_test.go` — `clinical.Date` shows the identical calendar day
+- [x] T037 [P] TEST `internal/domain/date_test.go` — `clinical.Date` shows the identical calendar day
   under `UTC`, `Pacific/Auckland` and `America/Los_Angeles`, and round-trips through JSON and
   through the store mapping unchanged (FR-019, research D-27).
-- [ ] T038 [P] TEST `internal/domain/page_test.go` — `Page[T]` and `SortKey`.
-- [ ] T039 [P] Implement `internal/domain/errors.go` — `ErrNotFound`, `ErrForbidden`,
+- [x] T038 [P] TEST `internal/domain/page_test.go` — `Page[T]` and `SortKey`.
+- [x] T039 [P] Implement `internal/domain/errors.go` — `ErrNotFound`, `ErrForbidden`,
   `ErrUnauthenticated`, `ErrVersionMismatch`, `ErrConflict`, `ErrRateLimited`.
-- [ ] T040 [P] Implement `internal/domain/validation.go`.
-- [ ] T041 [P] Implement `internal/domain/date.go`.
-- [ ] T042 [P] Implement `internal/domain/page.go`.
-- [ ] T043 TEST `internal/architecture/domain_imports_test.go` — no package under
+- [x] T040 [P] Implement `internal/domain/validation.go`.
+- [x] T041 [P] Implement `internal/domain/date.go`.
+- [x] T042 [P] Implement `internal/domain/page.go`.
+- [x] T043 TEST `internal/architecture/domain_imports_test.go` — no package under
   `internal/domain` imports `net/http`, a database driver, or anything beyond the standard library
   and zerolog. depguard covers PocketBase; this covers the rest of the seam (Principle II).
-- [ ] T044 [P] TEST `internal/domain/kind/kind_test.go` — the mapping from `Kind` to enum spelling,
+- [x] T044 [P] TEST `internal/domain/kind/kind_test.go` — the mapping from `Kind` to enum spelling,
   **plural** path segment and collection name is total and injective in both directions, and
   round-trips. This test is what stops the singular/plural drift that cross-artifact finding H1
   records (research D-05).
-- [ ] T045 Implement `internal/domain/kind/kind.go` — `Kind`, `Segment()`, `Collection()`,
+- [x] T045 Implement `internal/domain/kind/kind.go` — `Kind`, `Segment()`, `Collection()`,
   `Enum()`, `Kinds()`. **This constant is the single source of the path spelling for every phase
   after this one.**
-- [ ] T046 TEST `internal/architecture/kind_literals_test.go` — a source walk asserting **no string
+- [x] T046 TEST `internal/architecture/kind_literals_test.go` — a source walk asserting **no string
   literal** spelling a kind's path segment or collection name exists outside
   `internal/domain/kind/kind.go`. This is the mechanical form of research D-05 and the reason
   cross-artifact finding H1 cannot recur.
-- [ ] T047 [P] TEST `internal/domain/access/actor_test.go` — `Actor` construction and
+- [x] T047 [P] TEST `internal/domain/access/actor_test.go` — `Actor` construction and
   `Permission`/`Grant` semantics.
-- [ ] T048 [P] Implement `internal/domain/access/actor.go` and `permission.go`.
-- [ ] T049 [P] TEST `internal/domain/audit/enums_test.go` — `ActorKind`, `Action` (all ten values
+- [x] T048 [P] Implement `internal/domain/access/actor.go` and `permission.go`.
+- [x] T049 [P] TEST `internal/domain/audit/enums_test.go` — `ActorKind`, `Action` (all ten values
   including `access_denied`), `TargetKind`, each with `Valid()` (data-model §3, research D-20).
-- [ ] T050 [P] Implement `internal/domain/audit/event.go` and `enums.go`. **`Event` has no content
+- [x] T050 [P] Implement `internal/domain/audit/event.go` and `enums.go`. **`Event` has no content
   field and no free-text field** — the shape itself is what makes FR-038 structural rather than
   a review item.
 
@@ -441,14 +441,14 @@ confirm the row is gone from stored data. All nine of US1's acceptance scenarios
 
 ### Tests for User Story 1 ⚠️ write first, watch them fail
 
-- [ ] T134 [P] [US1] TEST `internal/domain/clinical/enums_test.go` — `MedicationType`,
+- [x] T134 [P] [US1] TEST `internal/domain/clinical/enums_test.go` — `MedicationType`,
   `MedicationRoute` and `TherapyStatus` accept **exactly** the published values and reject
   everything else, including near misses and different casing (FR-016, data-model §2).
-- [ ] T135 [P] [US1] TEST `internal/domain/clinical/validate_test.go` — every rule in data-model §2's
+- [x] T135 [P] [US1] TEST `internal/domain/clinical/validate_test.go` — every rule in data-model §2's
   validation table, plus: an end date before the start date is refused (FR-018), a future start
   date beyond the allowed window is refused, every free-text maximum is enforced (FR-017), and
   **all** violations come back in one `*ValidationError` (FR-027).
-- [ ] T136 [P] [US1] TEST `internal/domain/clinical/medication_test.go` — `MarshalZerologObject`
+- [x] T136 [P] [US1] TEST `internal/domain/clinical/medication_test.go` — `MarshalZerologObject`
   emits the id and **never** the name, dose, reason or notes (FR-038, SC-005).
 - [ ] T137 [P] [US1] TEST `internal/service/medication/service_test.go` against the fake repository —
   **authorization is called before every read and every write**, and a service method that skips
@@ -530,11 +530,11 @@ confirm the row is gone from stored data. All nine of US1's acceptance scenarios
 
 ### Implementation for User Story 1
 
-- [ ] T161 [P] [US1] Implement `internal/domain/clinical/enums.go` — the three enumerations with
+- [x] T161 [P] [US1] Implement `internal/domain/clinical/enums.go` — the three enumerations with
   `Valid()`, exact values per data-model §2.
-- [ ] T162 [P] [US1] Implement `internal/domain/clinical/medication.go` — the entity and its
+- [x] T162 [P] [US1] Implement `internal/domain/clinical/medication.go` — the entity and its
   redacting `MarshalZerologObject`.
-- [ ] T163 [US1] Implement `internal/domain/clinical/validate.go` — every field checked, every
+- [x] T163 [US1] Implement `internal/domain/clinical/validate.go` — every field checked, every
   violation collected, one error returned.
 - [ ] T164 [US1] Implement `internal/service/medication/ports.go` — `Repository`, `Authorizer`,
   `Auditor`. Interfaces at the seam, defined by the consumer (Principle II).
@@ -605,12 +605,12 @@ under it is gone from stored data.
 
 ### Tests for User Story 2 ⚠️ write first, watch them fail
 
-- [ ] T186 [P] [US2] TEST `internal/domain/identity/password_test.go` — the published rules:
+- [x] T186 [P] [US2] TEST `internal/domain/identity/password_test.go` — the published rules:
   minimum eight characters, the refusal message states the rule, and the rules the API publishes
   are **the same values** the validator enforces, asserted from one source (FR-004).
-- [ ] T187 [P] [US2] TEST `internal/domain/identity/enums_test.go` — `Role`, `UnitSystem`,
+- [x] T187 [P] [US2] TEST `internal/domain/identity/enums_test.go` — `Role`, `UnitSystem`,
   `DateFormat`, `Theme` with `Valid()` (data-model §1).
-- [ ] T188 [P] [US2] TEST `internal/domain/identity/validate_test.go` — display-name limits, email
+- [x] T188 [P] [US2] TEST `internal/domain/identity/validate_test.go` — display-name limits, email
   shape, and that `role` and `status` are **not settable** from any user-supplied structure
   (FR-012).
 - [ ] T189 [P] [US2] TEST `internal/service/identity/identitytest/contract.go` — the contract suite
@@ -685,7 +685,7 @@ under it is gone from stored data.
 
 ### Implementation for User Story 2
 
-- [ ] T208 [P] [US2] Implement `internal/domain/identity/{user.go,enums.go,password.go,validate.go}`.
+- [x] T208 [P] [US2] Implement `internal/domain/identity/{user.go,enums.go,password.go,validate.go}`.
 - [ ] T209 [US2] Implement `internal/service/identity/ports.go` — `Repository`, `Authenticator`,
   `Auditor`, `Clock`.
 - [ ] T210 [US2] Implement `internal/service/identity/service.go` and `session.go`.
