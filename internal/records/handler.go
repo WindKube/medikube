@@ -292,13 +292,18 @@ func decode(body []byte, target any) error {
 // 99999999999999999999 into Go int`, and the RFC3339 parse failure quotes the
 // string in full — and on this application's DTOs the submitted value is
 // medical data. The JSON pointer is machine-recoverable and carries only the
-// member name, which is a field name MediKube published (research D-28).
+// member name (research D-28).
+//
+// The member name goes through domain.SafeFieldName first, and it has to. For
+// an unknown member the name is by definition one MediKube does not publish:
+// it is whatever the client sent, unbounded and unfiltered, and it would
+// otherwise reach both the response body and the one log stream verbatim.
 func decodeFailure(err error) error {
 	var invalid domain.ValidationError
 
 	var semantic *json.SemanticError
 	if errors.As(err, &semantic) {
-		field := semantic.JSONPointer.LastToken()
+		field := domain.SafeFieldName(semantic.JSONPointer.LastToken())
 		if field == "" {
 			field = "body"
 		}
@@ -319,7 +324,7 @@ func decodeFailure(err error) error {
 	// still names the member, which is a field name MediKube published.
 	var syntactic *jsontext.SyntacticError
 	if errors.As(err, &syntactic) {
-		if field := syntactic.JSONPointer.LastToken(); field != "" {
+		if field := domain.SafeFieldName(syntactic.JSONPointer.LastToken()); field != "" {
 			invalid.Add(field, domain.CodeInvalidValue, "the field was sent more than once")
 
 			return invalid.OrNil()

@@ -2,6 +2,7 @@ package pb
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/pocketbase/pocketbase/apis"
@@ -46,6 +47,24 @@ type ServeOptions struct {
 	// Routes is MediKube's route table. Nil is valid — a build that serves
 	// nothing but the platform is a build.
 	Routes RouteBinder
+
+	// Outermost wraps the http.Handler PocketBase builds, from outside
+	// PocketBase's router entirely.
+	//
+	// A middleware in Middlewares is bound on the router and therefore only
+	// ever sees a request the router routed. A CORS preflight is answered at
+	// -1041 without continuing the chain, and net/http's path-normalising
+	// redirects are answered by ServeMux before it looks for a handler at all;
+	// neither reaches any hook. This is the only seam from which both are
+	// visible, and internal/web/edge.go is what goes in it.
+	//
+	// It is a plain net/http middleware, injected rather than constructed
+	// here: the header set and the log line it writes belong to the HTTP edge,
+	// and internal/web already reaches for this package from its own tests, so
+	// naming it here would be an import cycle.
+	//
+	// Nil is valid and is what every test that does not need it passes.
+	Outermost func(http.Handler) http.Handler
 }
 
 // BindServe installs MediKube's OnServe binding: the write timeout, the
@@ -112,7 +131,27 @@ func BindServe(app core.App, opts ServeOptions) {
 				return err
 			}
 
-			return se.Next()
+			if err := se.Next(); err != nil {
+				return err
+			}
+
+			// After se.Next(), which is the whole point. PocketBase's terminal
+			// OnServe handler is what calls e.Router.BuildMux() and assigns the
+			// result to e.Server.Handler (apis/serve.go:217-223), and it runs
+			// once every bound handler has continued the chain — so this is the
+			// first moment the built handler exists and the last at which it
+			// can still be wrapped.
+			//
+			// se.Server is nil under tests.ApiScenario, which builds the event
+			// by hand with only App and Router (tests/api.go:189-195) and then
+			// drives the mux directly. Anything installed here is structurally
+			// invisible to it; testsupport.NewEdgeHandler is the harness that
+			// can see it.
+			if opts.Outermost != nil && se.Server != nil && se.Server.Handler != nil {
+				se.Server.Handler = opts.Outermost(se.Server.Handler)
+			}
+
+			return nil
 		},
 	})
 }

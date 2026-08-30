@@ -4,6 +4,7 @@ import (
 	json "encoding/json/v2"
 	"errors"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -307,4 +308,72 @@ func TestDecodeBytesRefusesANilTarget(t *testing.T) {
 	require.Error(t, DecodeBytes([]byte(`{}`), nil))
 	assert.False(t, errors.As(DecodeBytes([]byte(`{}`), nil), new(*domain.ValidationError)),
 		"a wiring mistake was reported to the client as their fault")
+}
+
+// The member name in an unknown-member refusal is not a name MediKube
+// published: for json.ErrUnknownName it is BY DEFINITION one MediKube does not
+// know, which makes it attacker-controlled free text on its way into the
+// response body and into the one log stream.
+//
+// So two things must both hold: a legitimate client's typo still names the
+// field it meant, and nothing else survives at whatever length or in whatever
+// alphabet it arrived.
+func TestAnUnknownMemberIsNamedBackBoundedAndRestricted(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		body  string
+		field string
+	}{
+		{
+			name:  "a developer's typo is still useful",
+			body:  `{"dosge":"a"}`,
+			field: "dosge",
+		},
+		{
+			name:  "a newline cannot inject a second log line",
+			body:  `{"a\nlevel=fatal":1}`,
+			field: "a_level_fatal",
+		},
+		{
+			name:  "a quote cannot close a JSON string in the stream",
+			body:  `{"a\",\"injected\":\"":1}`,
+			field: "a___injected___",
+		},
+		{
+			name:  "an escape sequence cannot repaint a terminal",
+			body:  `{"a\u001b[31mb":1}`,
+			field: "a__31mb",
+		},
+		{
+			name:  "a name of a hundred thousand bytes is bounded",
+			body:  `{"` + strings.Repeat("z", 100_000) + `":1}`,
+			field: strings.Repeat("z", domain.MaxFieldNameLen),
+		},
+	}
+
+	for _, one := range cases {
+		t.Run(one.name, func(t *testing.T) {
+			t.Parallel()
+
+			var patch patchFixture
+			err := DecodeBytes([]byte(one.body), &patch)
+			require.Error(t, err)
+
+			var invalid *domain.ValidationError
+			require.ErrorAs(t, err, &invalid)
+			require.Len(t, invalid.Fields, 1)
+
+			assert.Equal(t, domain.CodeUnknownField, invalid.Fields[0].Code)
+			assert.Equal(t, one.field, invalid.Fields[0].Field)
+
+			// Error() is the string that reaches the one log stream and the
+			// error-reporting destination.
+			assert.LessOrEqual(t, len(err.Error()), 128,
+				"an unbounded member name reached the one log stream")
+			assert.NotContains(t, err.Error(), "\n")
+			assert.NotContains(t, err.Error(), `"`)
+		})
+	}
 }

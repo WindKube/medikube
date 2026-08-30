@@ -1,6 +1,8 @@
 package web
 
 import (
+	"net/http"
+
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/hook"
@@ -66,6 +68,11 @@ const StrictTransportSecurity = "max-age=31536000; includeSubDomains"
 // medication, handed to whatever they click through to.
 const ReferrerPolicy = "no-referrer"
 
+// headerContentSecurityPolicy is spelled once, because three places now
+// compare against it and a typo in any of them is a policy silently not
+// applied rather than a build failure.
+const headerContentSecurityPolicy = "Content-Security-Policy"
+
 // AdminUIPattern is the route PocketBase serves its superuser admin UI on
 // (apis/serve.go:84). It is the router's own matched pattern, which is the same
 // discriminator the lockdown uses and the only one that cannot fire on a path
@@ -89,11 +96,7 @@ func SecurityHeaders() *hook.Handler[*core.RequestEvent] {
 		Func: func(e *core.RequestEvent) error {
 			header := e.Response.Header()
 
-			header.Set("X-Content-Type-Options", "nosniff")
-			header.Set("X-Frame-Options", "DENY")
-			header.Set("Cross-Origin-Opener-Policy", "same-origin")
-			header.Set("Referrer-Policy", ReferrerPolicy)
-			header.Set("Strict-Transport-Security", StrictTransportSecurity)
+			writeUnconditionalHeaders(header)
 
 			// The one exemption, and it is not a hole: /_/ is a documented
 			// external in the route registry, its existence is public, and
@@ -103,12 +106,26 @@ func SecurityHeaders() *hook.Handler[*core.RequestEvent] {
 			// constitution VII keeps it in production as the break-glass
 			// interface — a blank one is a door that does not open.
 			if e.Request.Pattern != AdminUIPattern {
-				header.Set("Content-Security-Policy", ContentSecurityPolicy)
+				header.Set(headerContentSecurityPolicy, ContentSecurityPolicy)
 			}
 
 			return e.Next()
 		},
 	}
+}
+
+// writeUnconditionalHeaders writes the five headers that are identical on every
+// response MediKube serves, whoever answers.
+//
+// The content security policy is deliberately not among them: it is the one
+// header of the set another handler in this process legitimately owns, and
+// [Outermost] fills it in at the moment the headers are committed instead.
+func writeUnconditionalHeaders(header http.Header) {
+	header.Set("X-Content-Type-Options", "nosniff")
+	header.Set("X-Frame-Options", "DENY")
+	header.Set("Cross-Origin-Opener-Policy", "same-origin")
+	header.Set("Referrer-Policy", ReferrerPolicy)
+	header.Set("Strict-Transport-Security", StrictTransportSecurity)
 }
 
 // SecurityBinder installs MediKube's security headers in place of PocketBase's.

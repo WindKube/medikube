@@ -482,3 +482,72 @@ func TestAHandlerOverAnEmptyRegistryIsAllNotFound(t *testing.T) {
 		})
 	}
 }
+
+// The generic handler has its own copy of the decode-failure translation, so it
+// has its own copy of this hole and needs its own proof that it is closed.
+//
+// For json.ErrUnknownName the member name is BY DEFINITION one MediKube does
+// not publish: it is whatever the client sent, and it travels into the response
+// body and into the one log stream. A typo still has to name the field the
+// client meant; nothing else survives at whatever length or in whatever
+// alphabet it arrived.
+func TestAnUnknownFieldIsNamedBackBoundedAndRestricted(t *testing.T) {
+	t.Parallel()
+
+	handler := records.NewHandler(twoKindRegistry(t))
+
+	cases := []struct {
+		name  string
+		body  string
+		field string
+	}{
+		{
+			name:  "a developer's typo is still useful",
+			body:  `{"name":"n","dosge":"1"}`,
+			field: "dosge",
+		},
+		{
+			name:  "a newline cannot inject a second log line",
+			body:  `{"name":"n","a\nlevel=fatal":1}`,
+			field: "a_level_fatal",
+		},
+		{
+			name:  "a quote cannot close a JSON string in the stream",
+			body:  `{"name":"n","a\",\"injected\":\"":1}`,
+			field: "a___injected___",
+		},
+		{
+			name:  "an escape sequence cannot repaint a terminal",
+			body:  `{"name":"n","a\u001b[31mb":1}`,
+			field: "a__31mb",
+		},
+		{
+			name:  "a name of a hundred thousand bytes is bounded",
+			body:  `{"name":"n","` + strings.Repeat("z", 100_000) + `":1}`,
+			field: strings.Repeat("z", domain.MaxFieldNameLen),
+		},
+	}
+
+	for _, one := range cases {
+		t.Run(one.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := handler.Create(context.Background(), owner(), kind.Medication.Segment(), []byte(one.body))
+			require.Error(t, err)
+
+			var invalid *domain.ValidationError
+			require.ErrorAs(t, err, &invalid)
+			require.Len(t, invalid.Fields, 1)
+
+			assert.Equal(t, domain.CodeUnknownField, invalid.Fields[0].Code)
+			assert.Equal(t, one.field, invalid.Fields[0].Field)
+
+			// Error() is the string that reaches the one log stream and the
+			// error-reporting destination.
+			assert.LessOrEqual(t, len(err.Error()), 128,
+				"an unbounded member name reached the one log stream")
+			assert.NotContains(t, err.Error(), "\n")
+			assert.NotContains(t, err.Error(), `"`)
+		})
+	}
+}

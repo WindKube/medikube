@@ -56,9 +56,35 @@ func main() {
 	}
 }
 
+// versionRequested reports whether the invocation is only asking what this
+// binary is.
+//
+// Asking a binary its version must not require configuring it. Everything below
+// needs a valid MEDIKUBE_PUBLIC_URL and a data directory it can open; a release
+// pipeline identifying an image it has just built has neither, and should not
+// have to invent them to get an answer.
+func versionRequested(args []string) bool {
+	if len(args) == 0 {
+		return true
+	}
+
+	switch args[0] {
+	case "version", "--version", "-v":
+		return true
+	default:
+		return false
+	}
+}
+
 // run loads the configuration, assembles the instance and hands control to
 // PocketBase's command surface.
 func run() error {
+	if versionRequested(os.Args[1:]) {
+		_, err := fmt.Fprintf(os.Stdout, "medikube %s\n", version)
+
+		return err
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		// There is no configured logger yet, and the reason there is none is
@@ -153,6 +179,11 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 		// PocketBase's own and a route bound before that would be served
 		// under the wrong policy for the length of one boot.
 		Routes: binders{web.SecurityBinder{}, registry},
+		// Outside PocketBase's router altogether, which is the only place a
+		// CORS preflight and a ServeMux path-normalising redirect are visible
+		// at all. Without it every OPTIONS response carries no security
+		// headers and every `//` or `/../` redirect leaves no log line.
+		Outermost: web.Outermost(log),
 	})
 
 	bindBootGate(app, cfg, log)

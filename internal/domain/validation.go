@@ -102,3 +102,59 @@ func (e *ValidationError) MarshalJSON() ([]byte, error) {
 		Fields  []FieldError `json:"fields"`
 	}{Code: CodeValidationFailed, Message: ValidationMessage, Fields: fields})
 }
+
+// MaxFieldNameLen bounds the field name in a refusal.
+//
+// MediKube's own longest published member name is under twenty characters, and
+// a client's typo of one is about as long. Sixty-four is generous for the case
+// this has to stay useful for and short enough that the case it exists for —
+// a member name of a megabyte — costs one log line the size of a tweet.
+const MaxFieldNameLen = 64
+
+// SafeFieldName is what a member name a client sent must pass through before
+// it reaches a refusal.
+//
+// For json.ErrUnknownName the token is BY DEFINITION a name MediKube does not
+// publish: it is attacker-controlled free text, and it goes into the response
+// body and into the one log stream. Unbounded, that is a log-volume vector and
+// a general-purpose echo channel in an application that holds medical records.
+//
+// The policy is truncate-then-restrict, in that order so that the work is
+// bounded by the limit rather than by what was sent:
+//
+//   - Everything past MaxFieldNameLen bytes is dropped.
+//   - Every byte outside [A-Za-z0-9_-] becomes '_'. That is the whole
+//     vocabulary MediKube's own DTO members are spelled in, so a legitimate
+//     name survives byte for byte and a typo of one still names the field the
+//     client meant. A control character, a newline, a quote and a UTF-8
+//     continuation byte all do not — including the split rune truncation can
+//     leave behind, so the result is always plain ASCII whatever the encoder
+//     downstream does with it.
+//
+// Substitution rather than rejection, because "the field is not one this
+// operation accepts" naming `na_me` still tells a developer where to look,
+// and naming nothing does not.
+//
+// The empty string is returned unchanged: a pointer with no member to name is
+// a different refusal, and each caller has its own.
+func SafeFieldName(name string) string {
+	if name == "" {
+		return ""
+	}
+
+	if len(name) > MaxFieldNameLen {
+		name = name[:MaxFieldNameLen]
+	}
+
+	safe := []byte(name)
+
+	for i, b := range safe {
+		switch {
+		case b >= 'a' && b <= 'z', b >= 'A' && b <= 'Z', b >= '0' && b <= '9', b == '_', b == '-':
+		default:
+			safe[i] = '_'
+		}
+	}
+
+	return string(safe)
+}

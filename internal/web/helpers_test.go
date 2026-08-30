@@ -1,27 +1,169 @@
 package web
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/hook"
 	"github.com/pocketbase/pocketbase/tools/router"
+	"github.com/pocketbase/pocketbase/ui"
 	"github.com/rs/zerolog"
 
 	"medikube/internal/config"
 	"medikube/internal/logging"
+	"medikube/internal/obs"
+	"medikube/internal/platform/pb"
 	"medikube/internal/testsupport"
 )
 
 // discardLogger is MediKube's real logger writing nowhere. It goes through
 // internal/logging rather than zerolog.New so the field names and the redaction
 // on the path are the ones the application has.
-func discardLogger() zerolog.Logger {
-	return logging.NewTo(io.Discard, config.LogConfig{Level: zerolog.LevelInfoValue}, "test")
+func discardLogger() zerolog.Logger { return logTo(io.Discard) }
+
+// logTo is the same logger pointed at a sink a test can read, for the
+// assertions that are about the log stream itself rather than about a response.
+func logTo(sink io.Writer) zerolog.Logger {
+	return logging.NewTo(sink, config.LogConfig{Level: zerolog.LevelInfoValue}, "test")
+}
+
+// logSink collects the log stream and counts the lines in it.
+//
+// It locks because zerolog leaves serialisation to the destination, and the
+// handler under test writes from whichever goroutine net/http gave the request.
+type logSink struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (s *logSink) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.buf.Write(p)
+}
+
+// lines returns the log lines written so far, without the trailing blank one.
+func (s *logSink) lines() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	trimmed := strings.TrimRight(s.buf.String(), "\n")
+	if trimmed == "" {
+		return nil
+	}
+
+	return strings.Split(trimmed, "\n")
+}
+
+// serveBinders composes several binders into the one seam
+// pb.ServeOptions.Routes has, the way cmd/medikube does.
+type serveBinders []testsupport.ServeBinder
+
+func (b serveBinders) Bind(se *core.ServeEvent) error {
+	for _, one := range b {
+		if err := one.Bind(se); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// cors binds PocketBase's CORS middleware exactly as apis.Serve binds it
+// (apis/serve.go:76-79).
+//
+// apis.NewRouter does NOT bind it, which is why no tests.ApiScenario in this
+// repository has ever seen a preflight: the middleware that answers one is only
+// ever installed on the path scenarios do not take. A harness that wants to see
+// what a browser sees has to put it back.
+func cors() testsupport.ServeBinder {
+	return binder(func(se *core.ServeEvent) {
+		se.Router.Bind(apis.CORS(apis.CORSConfig{
+			AllowOrigins: []string{"*"},
+			AllowMethods: []string{
+				http.MethodGet, http.MethodHead, http.MethodPut,
+				http.MethodPatch, http.MethodPost, http.MethodDelete,
+			},
+		}))
+	})
+}
+
+// pocketBaseAdminPolicy is apis/serve.go:25's `defaultCSP`, verbatim. It is
+// unexported there, so a copy is the only way a test can name it; the
+// end-to-end proof that the real one survives is a request to /_/ against the
+// real binary, and this stands in for it here.
+const pocketBaseAdminPolicy = "default-src 'self'; style-src 'self' 'unsafe-inline'; " +
+	"img-src 'self' http://127.0.0.1:* https://tile.openstreetmap.org data: blob:; " +
+	"connect-src 'self' http://127.0.0.1:* https://nominatim.openstreetmap.org; " +
+	"script-src 'self' http://127.0.0.1:*; frame-ancestors 'none'"
+
+// adminUI registers PocketBase's superuser admin UI the way apis.Serve
+// registers it (apis/serve.go:82-99): the real static handler over the real
+// embedded dist, behind the set-if-empty policy that is the entire reason
+// [Outermost] fills the header in at commit instead of before delegating.
+//
+// apis.NewRouter does not register this route either, so without it the harness
+// answers 404 for /_/ and the one exemption in the header set goes untested.
+func adminUI() testsupport.ServeBinder {
+	return binder(func(se *core.ServeEvent) {
+		se.Router.GET("/_/{path...}", apis.Static(ui.DistDirFS, false)).
+			BindFunc(func(e *core.RequestEvent) error {
+				if e.Response.Header().Get("Content-Security-Policy") == "" {
+					e.Response.Header().Set("Content-Security-Policy", pocketBaseAdminPolicy)
+				}
+
+				return e.Next()
+			}).
+			Bind(apis.Gzip())
+	})
+}
+
+// served builds the http.Handler an instance of MediKube actually serves, with
+// the whole production edge on it: the middleware order pb.BindServe installs,
+// the lockdown, PocketBase's CORS where apis.Serve puts it, MediKube's security
+// headers, and [Outermost] wrapped around the built mux.
+//
+// It exists because tests.ApiScenario structurally cannot reach two kinds of
+// response — see testsupport.NewEdgeHandler — and both of them were, until
+// this harness, answered with no security headers at all.
+func served(t *testing.T, log zerolog.Logger, routes ...testsupport.ServeBinder) http.Handler {
+	t.Helper()
+
+	app := testsupport.NewApp(t)
+
+	pb.BindServe(app, pb.ServeOptions{
+		Middlewares: []*hook.Handler[*core.RequestEvent]{
+			obs.RequestLogger(log),
+			Errors(nil),
+		},
+		Routes:    append(serveBinders{cors(), adminUI(), SecurityBinder{}}, routes...),
+		Outermost: Outermost(log),
+	})
+
+	return testsupport.NewEdgeHandler(t, app)
+}
+
+// call drives one request through a handler and returns the response.
+func call(t *testing.T, handler http.Handler, method, target string, headers ...string) *http.Response {
+	t.Helper()
+
+	request := httptest.NewRequestWithContext(t.Context(), method, target, nil)
+	for i := 0; i+1 < len(headers); i += 2 {
+		request.Header.Set(headers[i], headers[i+1])
+	}
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+
+	return recorder.Result()
 }
 
 // serveBinder adapts a plain function to the interface both

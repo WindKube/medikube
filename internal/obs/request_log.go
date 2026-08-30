@@ -48,7 +48,18 @@ func RequestLogger(base zerolog.Logger) *hook.Handler[*core.RequestEvent] {
 		Func: func(e *core.RequestEvent) error {
 			start := time.Now()
 
-			id := correlationID(e.Request.Header.Get(CorrelationHeader))
+			// The outermost wrapper has already minted an id for requests that
+			// reach the process through the served handler, and taking it back
+			// rather than minting a second is what makes one request one id.
+			// There is no ledger under tests.ApiScenario, which drives the mux
+			// directly, so the empty answer is the ordinary one in tests.
+			edge := EdgeFrom(e.Request.Context())
+
+			id := edge.CorrelationID()
+			if id == "" {
+				id = correlationID(e.Request.Header.Get(CorrelationHeader))
+			}
+
 			e.Response.Header().Set(CorrelationHeader, id)
 
 			log := logging.ForRequest(base, id)
@@ -75,6 +86,13 @@ func RequestLogger(base zerolog.Logger) *hook.Handler[*core.RequestEvent] {
 			}
 
 			record(log, e, reported, time.Since(start))
+
+			// Claimed only once the line is out. The outermost wrapper writes
+			// the line for requests that never got here — a preflight answered
+			// ahead of this handler cannot happen (this is bound outside CORS)
+			// but a ServeMux redirect never enters the router at all — and an
+			// unclaimed ledger is what tells it to.
+			edge.MarkLogged()
 
 			return err
 		},

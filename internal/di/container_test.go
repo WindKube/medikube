@@ -192,6 +192,12 @@ func TestTheContainersOwnLinesGoToTheInjectedLogger(t *testing.T) {
 // of them changes, New's guarantee — a wiring mistake is a boot failure and a
 // test failure, never a first-request failure — is no longer true, and this
 // says so in its own failure message rather than leaving New quietly weaker.
+//
+// Every subtest below builds its own do.New(). None of them touches
+// MediKube's container and none of them would notice a cycle in it: a real
+// Hub <-> Registry cycle in providers.go leaves all three green. The test
+// that guards MediKube's own graph is
+// TestMediKubesOwnServiceGraphHasNoCycleInIt.
 func TestTheWiringMistakesSamberDoReportsAtResolutionTime(t *testing.T) {
 	t.Parallel()
 
@@ -230,7 +236,7 @@ func TestTheWiringMistakesSamberDoReportsAtResolutionTime(t *testing.T) {
 		require.ErrorIs(t, err, do.ErrServiceNotFound)
 	})
 
-	t.Run("a cycle reports at resolution and names the path", func(t *testing.T) {
+	t.Run("a cycle in a graph built here reports at resolution and names the path", func(t *testing.T) {
 		t.Parallel()
 
 		injector := do.New()
@@ -250,6 +256,35 @@ func TestTheWiringMistakesSamberDoReportsAtResolutionTime(t *testing.T) {
 		assert.Contains(t, err.Error(), "left")
 		assert.Contains(t, err.Error(), "right")
 	})
+}
+
+// The assertion the subtest above only looks like it makes: MediKube's OWN
+// service graph is acyclic.
+//
+// The protection is New's eager resolution — samber/do reports a cycle when
+// something resolves it, and nothing in production resolves anything until a
+// request arrives, so a graph nobody resolved at boot is a graph whose cycle
+// is discovered by whoever makes the first request at whatever hour that is.
+// New resolving every root is what turns that into a boot failure, and this is
+// what says so about MediKube's graph rather than about a pair of types
+// invented for the occasion.
+//
+// It bites: introduce a real cycle between provideHub and provideRecordRegistry
+// in providers.go and this fails naming both.
+func TestMediKubesOwnServiceGraphHasNoCycleInIt(t *testing.T) {
+	t.Parallel()
+
+	deps, _ := testDeps(t)
+
+	container, err := di.New(deps)
+
+	// Ahead of the NoError, so that a cycle is reported as a cycle rather than
+	// as whatever wrapped message the failure happens to carry.
+	assert.NotErrorIs(t, err, do.ErrCircularDependency,
+		"MediKube's own service graph has a cycle in it; samber/do names the path in the error")
+	require.NoError(t, err)
+
+	t.Cleanup(func() { assert.NoError(t, container.Shutdown()) })
 }
 
 // A container is built once, at boot, by the composition root. Nothing else in

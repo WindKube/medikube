@@ -3,6 +3,7 @@ package pb_test
 import (
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"sort"
 	"testing"
 	"time"
@@ -322,5 +323,117 @@ func TestServeRefusesToStartIfALockedRouteHasDisappeared(t *testing.T) {
 			"POST /api/files/token",
 			"GET /api/files/{collection}/{recordId}/{filename}",
 		}, patterns)
+	})
+}
+
+// triggerServeBuildingMux is triggerServe with apis.Serve's real terminal
+// function (apis/serve.go:217-223): the one that builds the mux and assigns it
+// to the server. It is what makes ServeEvent.Server.Handler exist, and
+// therefore the only shape in which the Outermost seam is reachable.
+func triggerServeBuildingMux(t *testing.T, app *tests.TestApp, server *http.Server) (*core.ServeEvent, error) {
+	t.Helper()
+
+	r, err := apis.NewRouter(app)
+	require.NoError(t, err)
+
+	se := new(core.ServeEvent)
+	se.App = app
+	se.Router = r
+	se.Server = server
+	se.InstallerFunc = apis.DefaultInstallerFunc
+
+	return se, app.OnServe().Trigger(se, func(e *core.ServeEvent) error {
+		handler, buildErr := e.Router.BuildMux()
+		if buildErr != nil {
+			return buildErr
+		}
+
+		e.Server.Handler = handler
+
+		return nil
+	})
+}
+
+// The seam the two responses that never reach a router middleware are closed
+// through: a CORS preflight, which apis.CORS answers at -1041 without
+// continuing the chain, and a ServeMux path-normalising redirect, which
+// net/http answers before it looks for a registered handler at all.
+//
+// Everything asserted here is about *when* the wrapper runs. It has to be after
+// se.Next(), because PocketBase's terminal handler is what builds the mux and
+// assigns it — before that there is nothing to wrap — and it has to wrap the
+// built handler rather than bind to se.Router, because a router middleware is
+// precisely the thing neither of those responses reaches.
+func TestServeWrapsTheBuiltHandlerFromOutsideTheRouter(t *testing.T) {
+	t.Parallel()
+
+	t.Run("the wrapper is handed the built mux and its result is what gets served", func(t *testing.T) {
+		t.Parallel()
+
+		app := serveApp(t)
+
+		var wrapped http.Handler
+
+		sentinel := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("X-Outermost", "yes")
+			w.WriteHeader(http.StatusTeapot)
+		})
+
+		pb.BindServe(app, pb.ServeOptions{
+			Outermost: func(next http.Handler) http.Handler {
+				wrapped = next
+
+				return sentinel
+			},
+		})
+
+		se, err := triggerServeBuildingMux(t, app, pocketBaseServer())
+		require.NoError(t, err)
+
+		require.NotNil(t, wrapped,
+			"the wrapper never ran, or ran before se.Next() when there was nothing built to hand it")
+		recorder := httptest.NewRecorder()
+		se.Server.Handler.ServeHTTP(recorder, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/health", nil))
+
+		assert.Equal(t, http.StatusTeapot, recorder.Code, "the served handler is not the wrapped one")
+		assert.Equal(t, "yes", recorder.Header().Get("X-Outermost"))
+
+		// And what it was handed is the real mux, not an empty stand-in.
+		inner := httptest.NewRecorder()
+		wrapped.ServeHTTP(inner, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/health", nil))
+		assert.Equal(t, http.StatusOK, inner.Code, "the wrapper was handed something other than the built mux")
+	})
+
+	t.Run("no server means no wrapping, which is every tests.ApiScenario", func(t *testing.T) {
+		t.Parallel()
+
+		app := serveApp(t)
+
+		called := false
+
+		pb.BindServe(app, pb.ServeOptions{
+			Outermost: func(next http.Handler) http.Handler {
+				called = true
+
+				return next
+			},
+		})
+
+		_, err := triggerServe(t, app, nil)
+		require.NoError(t, err)
+
+		assert.False(t, called,
+			"the wrapper ran against an event with no server, which is a nil dereference waiting for a scenario")
+	})
+
+	t.Run("a nil wrapper is a valid build", func(t *testing.T) {
+		t.Parallel()
+
+		app := serveApp(t)
+		pb.BindServe(app, pb.ServeOptions{})
+
+		se, err := triggerServeBuildingMux(t, app, pocketBaseServer())
+		require.NoError(t, err)
+		assert.NotNil(t, se.Server.Handler)
 	})
 }
