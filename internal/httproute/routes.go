@@ -1,0 +1,475 @@
+package httproute
+
+import (
+	"errors"
+	"fmt"
+	"net/http"
+	"slices"
+
+	"medikube/internal/domain/kind"
+	"medikube/internal/testsupport/seed"
+)
+
+// THE declarative table.
+//
+// PocketBase's router keeps its routes in an unexported field and Go 1.27's
+// http.ServeMux still has no pattern-enumeration API, so the inventory cannot
+// be recovered from the running process after the fact. This file is the only
+// place it exists: api/openapi.json, `medikube routes` and the Playwright
+// target list all read it, and none of them has a second source to drift
+// against (reconciliation C15, research D-09).
+//
+// The five verbs, the /api/v1 base and the no-trailing-slash rule are
+// contracts/README.md's; the nine pages, their landmarks and their smoke URLs
+// are contracts/pages.md's. Both are transcribed here without interpretation —
+// a landmark string is a Playwright selector, so changing one is a breaking
+// change to the gate and belongs in the contract first.
+
+// The MediKube API base. Every operation of this phase hangs off it.
+const apiBase = "/api/v1"
+
+// The PocketBase auth collection whose native routes stay reachable. Spelled
+// here rather than imported, following the house pattern of one unexported
+// const per package that names it.
+const usersCollection = "users"
+
+// The two token pages cannot smoke a real token: a reset token lives thirty
+// minutes and a confirmation token twenty-four hours, so any committed fixture
+// is expired before CI runs, and minting one for the gate would be test-only
+// code in a security path. Both pages answer this token with 200 and the
+// "this link is no longer usable" state, which is what FR-074 requires anyway
+// and is the most likely real-world visit (contracts/pages.md).
+const expiredTokenForSmoke = "expired-token-for-smoke"
+
+// notFoundSmokeURL produces the 404 error view. It is asserted against the
+// table in smoketargets_test.go, so a later phase that registers a route here
+// breaks the gate loudly instead of quietly re-pointing it at a real page.
+const notFoundSmokeURL = "/not-found-for-smoke"
+
+const settingsPath = "/settings"
+
+// New returns the registry for this build: every row of the table paired with
+// the handler that serves it.
+//
+// It reports both halves of a mismatch — a row nothing serves and a handler
+// naming no row — because either one means the inventory and the application
+// have parted company, and that is the single failure this package exists to
+// prevent. cmd/medikube treats the error as a boot failure.
+func New(handlers Handlers) (*Registry, error) {
+	registry := Empty()
+
+	var problems []error
+	served := make(map[string]struct{}, len(handlers))
+
+	for _, route := range table() {
+		if route.Kind == KindExternal {
+			registry.Document(route)
+
+			continue
+		}
+
+		handler, wired := handlers[route.OpID]
+		if !wired {
+			problems = append(problems, fmt.Errorf("%s (%s) has no handler", route.OpID, route.Pattern()))
+
+			continue
+		}
+
+		served[route.OpID] = struct{}{}
+		registry.Handle(route, handler)
+	}
+
+	// Sorted, because ranging a map is not: an error message that reorders
+	// itself between runs is one nobody can diff.
+	var stray []string
+	for opID := range handlers {
+		if _, matched := served[opID]; !matched {
+			stray = append(stray, opID)
+		}
+	}
+
+	slices.Sort(stray)
+
+	for _, opID := range stray {
+		problems = append(problems, fmt.Errorf("a handler is wired under %q, which is not a route MediKube serves", opID))
+	}
+
+	for _, view := range errorViews() {
+		registry.DescribeErrorView(view)
+	}
+
+	if len(problems) > 0 {
+		return nil, fmt.Errorf("wire the MediKube route table: %w", errors.Join(problems...))
+	}
+
+	return registry, nil
+}
+
+// Inventory returns the table described and nothing served. It is what
+// `medikube routes`, the OpenAPI generator and the browser gate's target list
+// read: all three want the inventory and none of them answers a request. The
+// registry it returns cannot Bind, which is exactly what Bind refuses.
+func Inventory() *Registry {
+	registry := Empty()
+
+	for _, route := range table() {
+		registry.describe(route)
+	}
+
+	for _, view := range errorViews() {
+		registry.DescribeErrorView(view)
+	}
+
+	return registry
+}
+
+// table is the inventory itself: contracts/README.md's twenty-two operations,
+// contracts/pages.md's nine pages, and the PocketBase-native paths that stay
+// reachable.
+func table() []Route {
+	routes := make([]Route, 0, 42)
+	routes = append(routes, authRoutes()...)
+	routes = append(routes, accountRoutes()...)
+	routes = append(routes, recordRoutes()...)
+	routes = append(routes, healthRoutes()...)
+	routes = append(routes, pageRoutes()...)
+	routes = append(routes, externalRoutes()...)
+
+	return routes
+}
+
+// contracts/auth.md. Nine operations, five of them public because a person who
+// cannot sign in is the only person who needs them.
+func authRoutes() []Route {
+	base := apiBase + "/auth"
+
+	return []Route{
+		{
+			OpID: "getAuthConfig", Method: http.MethodGet, Path: base + "/config",
+			Kind: KindAPI, Auth: AuthPublic,
+			Summary: "What this instance allows: whether registration is open and whether it can send mail.",
+		},
+		{
+			OpID: "register", Method: http.MethodPost, Path: base + "/register",
+			Kind: KindAPI, Auth: AuthPublic,
+			Summary: "Create an account. 403 registration_closed when registration is disabled, which is the default.",
+		},
+		{
+			OpID: "login", Method: http.MethodPost, Path: base + "/login",
+			Kind: KindAPI, Auth: AuthPublic,
+			Summary: "Exchange an address and a password for a session.",
+		},
+		{
+			OpID: "refreshSession", Method: http.MethodPost, Path: base + "/refresh",
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Extend the current session.",
+		},
+		{
+			OpID: "logout", Method: http.MethodPost, Path: base + "/logout",
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "End the current session.",
+		},
+		{
+			OpID: "requestPasswordReset", Method: http.MethodPost, Path: base + "/password-reset",
+			Kind: KindAPI, Auth: AuthPublic,
+			Summary: "Send a recovery link. Answers identically whether or not the address has an account (FR-073).",
+		},
+		{
+			OpID: "confirmPasswordReset", Method: http.MethodPost, Path: base + "/password-reset/confirm",
+			Kind: KindAPI, Auth: AuthPublic,
+			Summary: "Set a new password from a recovery token.",
+		},
+		{
+			// Public would let a caller enumerate addresses; this one resends
+			// to the signed-in account's own address and takes none from the
+			// caller (contracts/README.md).
+			OpID: "requestEmailVerification", Method: http.MethodPost, Path: base + "/verify-email",
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Resend the confirmation to the signed-in account's own address.",
+		},
+		{
+			OpID: "confirmEmailVerification", Method: http.MethodPost, Path: base + "/verify-email/confirm",
+			Kind: KindAPI, Auth: AuthPublic,
+			Summary: "Confirm an address from a confirmation token.",
+		},
+	}
+}
+
+// contracts/account.md. Nesting is at most one level deep, which is why the
+// password lives at /me/password and not somewhere deeper.
+func accountRoutes() []Route {
+	base := apiBase + "/me"
+
+	return []Route{
+		{
+			OpID: "getMe", Method: http.MethodGet, Path: base,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "The signed-in account: address, display name and preferences.",
+		},
+		{
+			OpID: "updateMe", Method: http.MethodPatch, Path: base,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Change the display name or the preferences.",
+		},
+		{
+			OpID: "deleteMe", Method: http.MethodDelete, Path: base,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Delete the account and everything it owns, in one transaction. There is no soft delete.",
+		},
+		{
+			OpID: "changePassword", Method: http.MethodPut, Path: base + "/password",
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Replace the password and rotate the token key, which ends every other session.",
+		},
+	}
+}
+
+// contracts/records.md. Six operations serve every clinical kind, now and in
+// every later phase: phase 003 registers thirteen more kinds and adds zero
+// routes. {kind} is the path parameter, never a kind's own spelling — the
+// generic handler resolves it through kind.FromSegment and answers 404 for
+// anything undeclared.
+func recordRoutes() []Route {
+	collection := apiBase + "/records"
+	ofKind := collection + "/{kind}"
+	one := ofKind + "/{id}"
+
+	return []Route{
+		{
+			OpID: "listRecords", Method: http.MethodGet, Path: collection,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Every record the signed-in account owns, across kinds, cursor-paginated.",
+		},
+		{
+			OpID: "listRecordsOfKind", Method: http.MethodGet, Path: ofKind,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "One kind's records for the signed-in account, cursor-paginated.",
+		},
+		{
+			OpID: "createRecord", Method: http.MethodPost, Path: ofKind,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Create a record. The owner comes from the session, never from the body.",
+		},
+		{
+			OpID: "getRecord", Method: http.MethodGet, Path: one,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "One record. Another account's id answers 404, byte-identical to an id that never existed.",
+		},
+		{
+			OpID: "updateRecord", Method: http.MethodPatch, Path: one,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Partial update. If-Match is required; a mismatch is 412 carrying the current representation.",
+		},
+		{
+			OpID: "deleteRecord", Method: http.MethodDelete, Path: one,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Delete a record. If-Match is required.",
+		},
+		{
+			// Documented in api/openapi.json as a text/event-stream response:
+			// FR-064 covers every operation in the public interface and an SSE
+			// endpoint is one (contracts/README.md, contracts/streams.md).
+			OpID: "streamRecords", Method: http.MethodGet, Path: apiBase + "/streams/records",
+			Kind: KindStream, Auth: AuthUser,
+			Summary: "The Datastar element stream. Re-authorised per event; publishes ids, never bodies.",
+		},
+	}
+}
+
+// contracts/health.md. Both public and both deliberately incurious: an operator
+// learns whether the instance is healthy and nothing about the data.
+func healthRoutes() []Route {
+	return []Route{
+		{
+			OpID: "healthz", Method: http.MethodGet, Path: apiBase + "/healthz",
+			Kind: KindAPI, Auth: AuthPublic,
+			Summary: "Liveness. Answers as long as the process is running.",
+		},
+		{
+			OpID: "readyz", Method: http.MethodGet, Path: apiBase + "/readyz",
+			Kind: KindAPI, Auth: AuthPublic,
+			Summary: "Readiness, including the database. What `medikube healthcheck` dials.",
+		},
+	}
+}
+
+// contracts/pages.md. The Landmark and SmokeURL columns are why Handle panics:
+// a page missing either cannot be registered, so the binary cannot boot, so an
+// unsmokeable page cannot ship (FR-067).
+func pageRoutes() []Route {
+	// The plural is declared once, in internal/domain/kind, and read back
+	// here. The page path, the collection and the {kind} segment of the API
+	// cannot drift apart because none of them is spelled twice (research
+	// D-05).
+	list := "/" + kind.Medication.Segment()
+	detail := list + "/{id}"
+
+	return []Route{
+		{
+			OpID: "loginPage", Method: http.MethodGet, Path: "/login",
+			Kind: KindPage, Auth: AuthPublic,
+			Summary:  "Sign in.",
+			Landmark: `form[name="Sign in"]`, SmokeURL: "/login",
+		},
+		{
+			// Registered unconditionally and rendering 404 when registration
+			// is closed. A page that disappears under some configurations is a
+			// page the inventory gate cannot check (contracts/pages.md).
+			OpID: "registerPage", Method: http.MethodGet, Path: "/register",
+			Kind: KindPage, Auth: AuthPublic,
+			Summary:  "Create an account. Renders the closed-registration explanation when registration is disabled.",
+			Landmark: `form[name="Create account"]`, SmokeURL: "/register",
+		},
+		{
+			OpID: "overviewPage", Method: http.MethodGet, Path: "/",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "The application root.",
+			Landmark: `region[name="Overview"]`, SmokeURL: "/",
+		},
+		{
+			OpID: "medicationListPage", Method: http.MethodGet, Path: list,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "The record list, with its empty state inside the landmark rather than instead of it.",
+			Landmark: `region[name="Medications"]`, SmokeURL: list,
+		},
+		{
+			// The smoke URL is the seeded partial-data row: a name, a state
+			// and every optional field empty. It reads the seeder's own
+			// constant so the gate cannot be pointed at a row the seed stopped
+			// writing (data-model §6).
+			OpID: "medicationDetailPage", Method: http.MethodGet, Path: detail,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "One record, every value it holds and the time it last changed.",
+			Landmark: `article[name="Medication"]`, SmokeURL: list + "/" + seed.NameOnlyID,
+		},
+		{
+			OpID: "settingsPage", Method: http.MethodGet, Path: settingsPath,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "Display name, preferences, address confirmation and the danger zone.",
+			Landmark: `region[name="Settings"]`, SmokeURL: settingsPath,
+		},
+		{
+			OpID: "forgotPasswordPage", Method: http.MethodGet, Path: "/forgot-password",
+			Kind: KindPage, Auth: AuthPublic,
+			Summary:  "Ask for a recovery link.",
+			Landmark: `form[name="Reset password"]`, SmokeURL: "/forgot-password",
+		},
+		{
+			OpID: "resetPasswordPage", Method: http.MethodGet, Path: "/reset-password/{token}",
+			Kind: KindPage, Auth: AuthPublic,
+			Summary:  "Choose a new password from a recovery link. An expired link answers 200 with the ask-again state.",
+			Landmark: `form[name="Choose a new password"]`, SmokeURL: "/reset-password/" + expiredTokenForSmoke,
+		},
+		{
+			OpID: "verifyEmailPage", Method: http.MethodGet, Path: "/verify-email/{token}",
+			Kind: KindPage, Auth: AuthPublic,
+			Summary:  "Confirm an address from a confirmation link. An expired link answers 200 with the ask-again state.",
+			Landmark: `region[name="Email confirmation"]`, SmokeURL: "/verify-email/" + expiredTokenForSmoke,
+		},
+	}
+}
+
+// contracts/README.md, "Documented PocketBase-native paths that stay public".
+//
+// PocketBase serves every one of these, so Bind skips them. They are recorded
+// because the lockdown is scoped to the record subtree precisely so they
+// survive, and a reachable path nobody wrote down is a path somebody discovers
+// by accident.
+func externalRoutes() []Route {
+	native := "/api/collections/"
+	users := native + usersCollection
+	superusers := native + "_superusers"
+
+	return []Route{
+		{
+			OpID: "nativeAdminUI", Method: http.MethodGet, Path: "/_/{path...}",
+			Kind: KindExternal, Auth: AuthAdmin,
+			Summary: "The PocketBase superuser admin UI. It ships in production, hardened: mandatory MFA, mandatory IP allowlist, every session audited (constitution VII).",
+		},
+		{
+			OpID: "nativeSuperuserAuthWithPassword", Method: http.MethodPost, Path: superusers + "/auth-with-password",
+			Kind: KindExternal, Auth: AuthAdmin,
+			Summary: "The admin UI's own authentication.",
+		},
+		{
+			OpID: "nativeSuperuserAuthRefresh", Method: http.MethodPost, Path: superusers + "/auth-refresh",
+			Kind: KindExternal, Auth: AuthAdmin,
+			Summary: "The admin UI's own session refresh.",
+		},
+		{
+			OpID: "nativeSuperuserAuthMethods", Method: http.MethodGet, Path: superusers + "/auth-methods",
+			Kind: KindExternal, Auth: AuthAdmin,
+			Summary: "The admin UI's own auth-method discovery.",
+		},
+		{
+			OpID: "nativeUserAuthWithPassword", Method: http.MethodPost, Path: users + "/auth-with-password",
+			Kind: KindExternal, Auth: AuthPublic,
+			Summary: "PocketBase-native sign-in. MediKube's /api/v1/auth/login is the supported path; both are audited, because the row is written from OnRecordAuthRequest rather than from a handler (research D-14).",
+		},
+		{
+			OpID: "nativeUserAuthRefresh", Method: http.MethodPost, Path: users + "/auth-refresh",
+			Kind: KindExternal, Auth: AuthUser,
+			Summary: "PocketBase-native session refresh.",
+		},
+		{
+			OpID: "nativeUserAuthMethods", Method: http.MethodGet, Path: users + "/auth-methods",
+			Kind: KindExternal, Auth: AuthPublic,
+			Summary: "PocketBase-native auth-method discovery.",
+		},
+		{
+			OpID: "nativeUserRequestPasswordReset", Method: http.MethodPost, Path: users + "/request-password-reset",
+			Kind: KindExternal, Auth: AuthPublic,
+			Summary: "PocketBase-native recovery request. Same token rules as MediKube's, because it is the same code MediKube's handler calls.",
+		},
+		{
+			OpID: "nativeUserConfirmPasswordReset", Method: http.MethodPost, Path: users + "/confirm-password-reset",
+			Kind: KindExternal, Auth: AuthPublic,
+			Summary: "PocketBase-native recovery confirmation.",
+		},
+		{
+			OpID: "nativeUserRequestVerification", Method: http.MethodPost, Path: users + "/request-verification",
+			Kind: KindExternal, Auth: AuthPublic,
+			Summary: "PocketBase-native confirmation request.",
+		},
+		{
+			OpID: "nativeUserConfirmVerification", Method: http.MethodPost, Path: users + "/confirm-verification",
+			Kind: KindExternal, Auth: AuthPublic,
+			Summary: "PocketBase-native confirmation.",
+		},
+	}
+}
+
+// contracts/pages.md, "The three error views". All three render inside the full
+// shell, so a person who hits an error still has navigation, and none of them
+// carries anything but the request id.
+func errorViews() []ErrorView {
+	return []ErrorView{
+		{
+			// The privacy view. FR-033 requires a request for another
+			// account's record to be byte-identical to a request for one that
+			// never existed, so this is what both produce.
+			Name: "notFound", Status: http.StatusNotFound,
+			Landmark: `region[name="Not found"]`,
+			Auth:     AuthPublic,
+			SmokeURL: notFoundSmokeURL,
+		},
+		{
+			// Reached by opening a session-required page with no session,
+			// which is why its Auth is public: the gate visits it signed out.
+			// It renders the sign-in prompt rather than a 404, because the
+			// existence of /settings is not information about anybody.
+			Name: "signInRequired", Status: http.StatusForbidden,
+			Landmark: `region[name="Sign in required"]`,
+			Auth:     AuthPublic,
+			SmokeURL: settingsPath,
+		},
+		{
+			Name: "serverError", Status: http.StatusInternalServerError,
+			Landmark: `region[name="Something went wrong"]`,
+			Auth:     AuthPublic,
+			Unreachable: "no URL in a shipped build produces a 500 on purpose, and a route that deliberately fails is a worse " +
+				"defect than an unsmoked error page. It belongs to contracts/pages.md's negative-control family, alongside " +
+				"the removed-landmark and console-error builds, and is covered by internal/web/page/errors_test.go (T230).",
+		},
+	}
+}

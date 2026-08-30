@@ -66,7 +66,15 @@ func RequestLogger(base zerolog.Logger) *hook.Handler[*core.RequestEvent] {
 
 			err := e.Next()
 
-			record(log, e, err, time.Since(start))
+			// The error middleware answers the client and returns nil, so the
+			// occurrence it recorded is what this line reports. One occurrence,
+			// one report (FR-057).
+			reported := err
+			if reported == nil {
+				reported = Fault(e)
+			}
+
+			record(log, e, reported, time.Since(start))
 
 			return err
 		},
@@ -91,7 +99,10 @@ func CorrelationID(ctx context.Context) string {
 func record(log zerolog.Logger, e *core.RequestEvent, err error, took time.Duration) {
 	event := log.Info()
 	if err != nil {
-		event = log.Error().Err(err)
+		// Cause, not err: PocketBase's ApiError renders as the vague public
+		// message a client is shown, and the fact worth recording — the panic,
+		// the driver failure — is behind it.
+		event = log.Error().Err(Cause(err))
 	}
 
 	if e.Auth != nil {

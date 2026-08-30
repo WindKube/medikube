@@ -323,105 +323,105 @@ exists.
 
 ### The route registry, OpenAPI and the record family
 
-- [ ] T093 [P] TEST `internal/httproute/registry_test.go` — `Handle(spec, handler)` registers and
+- [x] T093 [P] TEST `internal/httproute/registry_test.go` — `Handle(spec, handler)` registers and
   describes in one call; `Routes()` and `SmokeTargets()` agree; and registering a **page** with no
   `Landmark` or no `SmokeURL` **panics at registration time**, so the failure is a boot failure and
   not a silent hole in the render gate (FR-067).
-- [ ] T094 Implement `internal/httproute/registry.go`.
-- [ ] T095 [P] TEST `internal/httproute/duplicate_test.go` — registering the same method and path
+- [x] T094 Implement `internal/httproute/registry.go`.
+- [x] T095 [P] TEST `internal/httproute/duplicate_test.go` — registering the same method and path
   twice panics at registration rather than letting one handler silently win.
-- [ ] T096 [P] TEST `internal/httproute/smoketargets_test.go` — `SmokeTargets()` returns exactly
+- [x] T096 [P] TEST `internal/httproute/smoketargets_test.go` — `SmokeTargets()` returns exactly
   the registered pages and error views and nothing else, so the Playwright list cannot quietly
   shrink.
-- [ ] T097 Implement `internal/httproute/routes.go` — THE declarative table: 22 API operations, 1
+- [x] T097 Implement `internal/httproute/routes.go` — THE declarative table: 22 API operations, 1
   stream, 9 pages. **PocketBase's router is a private field with no introspection API**, so this
   table is the only inventory that exists and the OpenAPI document, the `routes` command and the
   Playwright list all read it (reconciliation C15).
-- [ ] T098 [P] TEST `internal/openapi/gate_test.go` — every registered route appears in the
+- [x] T098 [P] TEST `internal/openapi/gate_test.go` — every registered route appears in the
   generated document and every documented operation is registered. Both directions; either
   asymmetry fails (FR-065, SC-011).
-- [ ] T099 [P] TEST `internal/openapi/oneof_test.go` — with **two** kinds registered (the real one
+- [x] T099 [P] TEST `internal/openapi/oneof_test.go` — with **two** kinds registered (the real one
   plus the synthetic fixture), the generated document validates after a **marshal-then-load**
   round trip through `openapi3.NewLoader()`, and every kind appears in `Discriminator.Mapping`.
   `Mapping` is `map[string]openapi3.MappingRef` — a struct, not a string — and an in-memory
   `Validate()` alone accepts documents that do not round-trip (VERIFIED FACT 9, risk R1).
-- [ ] T100 Implement `internal/openapi/schema.go` — DTO reflection and the discriminated `oneOf`.
-- [ ] T101 Implement `internal/openapi/generate.go`.
-- [ ] T102 [P] TEST `internal/openapi/document_test.go` — the document declares OpenAPI **3.1**,
+- [x] T100 Implement `internal/openapi/schema.go` — DTO reflection and the discriminated `oneOf`.
+- [x] T101 Implement `internal/openapi/generate.go`.
+- [x] T102 [P] TEST `internal/openapi/document_test.go` — the document declares OpenAPI **3.1**,
   every `operationId` is unique and matches the inventory in contracts/README.md, and every
   operation carries its authorization rule in the description.
-- [ ] T103 [P] TEST `internal/openapi/envelope_test.go` — every documented error response
+- [x] T103 [P] TEST `internal/openapi/envelope_test.go` — every documented error response
   references the one shared error-envelope schema rather than an inline copy, so the published
   contract cannot disagree with `internal/web/errors.go`.
-- [ ] T104 [P] TEST `internal/records/registry_test.go` — registering a kind wires all seven
+- [x] T104 [P] TEST `internal/records/registry_test.go` — registering a kind wires all seven
   consumers (routes, OpenAPI schema, page views, stream filter, audit target, authorizer, CLI
   inventory) and a kind missing any one of them fails registration.
-- [ ] T105 [P] TEST `internal/records/duplicate_kind_test.go` — registering the same kind twice
+- [x] T105 [P] TEST `internal/records/duplicate_kind_test.go` — registering the same kind twice
   fails loudly at registration rather than leaving whichever service won.
-- [ ] T106 Implement `internal/records/registry.go` and `service.go` — the five-method
+- [x] T106 Implement `internal/records/registry.go` and `service.go` — the five-method
   kind-agnostic `Service` interface.
-- [ ] T107 Implement `internal/records/handler.go` — the ONE generic record handler and its dispatch
+- [x] T107 Implement `internal/records/handler.go` — the ONE generic record handler and its dispatch
   table. Every later phase adds a kind, **never a route**.
-- [ ] T108 [P] TEST `internal/records/handler_test.go` — an unregistered `{kind}` segment yields
+- [x] T108 [P] TEST `internal/records/handler_test.go` — an unregistered `{kind}` segment yields
   **404** and not 400, a differently-cased segment does not match, and the dispatch table covers
   every registered kind.
-- [ ] T109 Implement `internal/records/recordstest/fake.go` — `FakeKindService`, a second registered
+- [x] T109 Implement `internal/records/recordstest/fake.go` — `FakeKindService`, a second registered
   synthetic kind. It is what lets the `oneOf` gate be meaningful with one real kind, and it is
   Principle I's second implementation for **CT-2**.
 
 ### The HTTP edge
 
-- [ ] T110 [P] TEST `internal/web/errors_test.go` — the error taxonomy: every domain sentinel maps
+- [x] T110 [P] TEST `internal/web/errors_test.go` — the error taxonomy: every domain sentinel maps
   to exactly one status and one machine code, and **`ErrForbidden` on owner-scoped data maps to
   404**, not 403 (contracts/README.md, FR-033).
-- [ ] T111 Implement `internal/web/errors.go` — the ONE error→status mapper and the response
+- [x] T111 Implement `internal/web/errors.go` — the ONE error→status mapper and the response
   envelope.
-- [ ] T112 [P] TEST `internal/web/dto_test.go` — decoding rejects unknown fields; absent versus
+- [x] T112 [P] TEST `internal/web/dto_test.go` — decoding rejects unknown fields; absent versus
   explicit `null` are distinguishable (`**string`) so a PATCH can clear a field without clearing
   every omitted one.
-- [ ] T113 Implement `internal/web/dto.go`.
-- [ ] T114 [P] TEST `internal/web/json_semantics_test.go` — `encoding/json/v2`'s stricter
+- [x] T113 Implement `internal/web/dto.go`.
+- [x] T114 [P] TEST `internal/web/json_semantics_test.go` — `encoding/json/v2`'s stricter
   behaviour is what the DTO layer relies on: duplicate keys are rejected and a case-insensitive
   field match no longer silently succeeds (research D-28).
-- [ ] T115 [P] TEST `internal/web/etag_test.go` — the ETag derives from `updated`; PATCH and DELETE
+- [x] T115 [P] TEST `internal/web/etag_test.go` — the ETag derives from `updated`; PATCH and DELETE
   **require** `If-Match`; a stale `If-Match` yields **412 carrying the current representation**;
   a missing one yields 428 (FR-026, risk R12).
-- [ ] T116 Implement `internal/web/etag.go`.
-- [ ] T117 [P] TEST `internal/web/cursor_test.go` — cursor encode/decode at the HTTP edge and the
+- [x] T116 Implement `internal/web/etag.go`.
+- [x] T117 [P] TEST `internal/web/cursor_test.go` — cursor encode/decode at the HTTP edge and the
   refusal of a malformed one.
-- [ ] T118 Implement `internal/web/cursor.go`.
-- [ ] T119 [P] TEST `internal/web/actor_test.go` — `e.Auth` becomes an `access.Actor` in the request
+- [x] T118 Implement `internal/web/cursor.go`.
+- [x] T119 [P] TEST `internal/web/actor_test.go` — `e.Auth` becomes an `access.Actor` in the request
   context, and a handler that never sees an actor cannot be reached.
-- [ ] T120 Implement `internal/web/actor.go`.
-- [ ] T121 [P] TEST `internal/web/security_test.go` — the CSP is exactly as designed:
+- [x] T120 Implement `internal/web/actor.go`.
+- [x] T121 [P] TEST `internal/web/security_test.go` — the CSP is exactly as designed:
   `default-src 'none'`, `script-src 'self' 'unsafe-eval'` (the **only** relaxed directive, accepted
   permanently for Datastar's expression evaluator), `object-src 'none'`,
   `frame-ancestors 'none'`, `base-uri 'self'`, `form-action 'self'`, plus HSTS, nosniff and
   referrer policy (FR-042, reconciliation C10).
-- [ ] T122 Implement `internal/web/security.go`.
-- [ ] T123 [P] TEST `internal/web/security_errors_test.go` — the security headers and the CSP are
+- [x] T122 Implement `internal/web/security.go`.
+- [x] T123 [P] TEST `internal/web/security_errors_test.go` — the security headers and the CSP are
   present on **error** responses and on the SSE stream too, not only on 200s.
-- [ ] T124 Implement `internal/web/render.go` — templ → `RequestEvent`, the **non-SSE** element-patch
+- [x] T124 Implement `internal/web/render.go` — templ → `RequestEvent`, the **non-SSE** element-patch
   path Datastar honours for a plain `text/html` response.
-- [ ] T125 [P] TEST `internal/obs/middleware_test.go` — request id generated or honoured, the
+- [x] T125 [P] TEST `internal/obs/middleware_test.go` — request id generated or honoured, the
   request logger emits one line per request with that id, the panic recovery returns the 500 view
   and logs once, and **a single occurrence is never reported twice** across log, Sentry and trace
   (FR-057).
-- [ ] T126 Implement `internal/obs/middleware.go`.
-- [ ] T127 [P] Implement `internal/realtime/hub.go` — a channel and a map. `Event{Kind, RecordID,
+- [x] T126 Implement `internal/obs/middleware.go`.
+- [x] T127 [P] Implement `internal/realtime/hub.go` — a channel and a map. `Event{Kind, RecordID,
   OwnerID}`. **IDs, never bodies.** No broker interface, no abstraction: the instance is single by
   construction and pretending otherwise is the complexity Principle I forbids.
-- [ ] T128 [P] TEST `internal/realtime/hub_test.go` — publish/subscribe/unsubscribe, a slow
+- [x] T128 [P] TEST `internal/realtime/hub_test.go` — publish/subscribe/unsubscribe, a slow
   subscriber does not block the publisher, and the hub carries no record body.
-- [ ] T129 [P] TEST `internal/realtime/hub_shutdown_test.go` — cancelling a subscriber's context
+- [x] T129 [P] TEST `internal/realtime/hub_shutdown_test.go` — cancelling a subscriber's context
   unsubscribes it and leaks no goroutine, asserted with a goroutine count.
-- [ ] T130 [P] TEST `internal/di/container_test.go` — every provider resolves and the container
+- [x] T130 [P] TEST `internal/di/container_test.go` — every provider resolves and the container
   builds with no cycle, so a wiring mistake fails a test rather than the first request.
-- [ ] T131 Implement `internal/di/container.go` and `providers.go` — samber/do v2, wired **only** in
+- [x] T131 Implement `internal/di/container.go` and `providers.go` — samber/do v2, wired **only** in
   the composition root.
-- [ ] T132 Implement `cmd/medikube/main.go` — the composition root and the **only** place in the
+- [x] T132 Implement `cmd/medikube/main.go` — the composition root and the **only** place in the
   program permitted to panic.
-- [ ] T133 TEST `cmd/medikube/main_test.go` — the composition root builds end to end against a test
+- [x] T133 TEST `cmd/medikube/main_test.go` — the composition root builds end to end against a test
   app and reaches a serving state against an empty data directory (FR-063).
 
 **Checkpoint**: `task test` passes, the instance boots against an empty data directory, the
