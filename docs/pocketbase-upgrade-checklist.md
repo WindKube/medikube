@@ -6,6 +6,10 @@ MediKube **silently** — which is why every entry below records the symptom rat
 mechanism. Work this list before bumping the pinned version, and read the symptom column first:
 it is what you will actually see.
 
+Section 5 is a different kind of entry and is here for the same reason: three PocketBase
+*behaviours* that MediKube's account layer depends on rather than reimplements. Nothing reaches
+past an API for them, and they would still break silently.
+
 Pinned at **PocketBase v0.40.1** (`go.mod`). Risk R8, cross-artifact CT-1.
 
 ## 1. The `pb.App` decorator — the log bridge, request path
@@ -85,3 +89,47 @@ quietly not set. It surfaces much later as lock contention or as a constraint th
 **Check on upgrade.** Diff PocketBase's current `DefaultDBConnect` pragma string against the
 copy in `internal/platform/pb/app.go`. The drift-check test is what should catch this; make sure
 it is still comparing against the real thing.
+
+## 5. Three account behaviours MediKube depends on rather than reimplements
+
+**What.** `internal/store/identity` deliberately does not carry its own copy of any of these.
+
+1. **`tokenKey` rotates by itself on a password change.** `core/record_model.go`'s
+   `onRecordSaveExecute` re-randomises the key when the saved record's password changed and its
+   key did not. `Authenticator.SetPassword` therefore calls `Record.SetPassword` and `Save` and
+   performs **no rotation of its own** — one write cannot half-happen, and a second rotation on
+   MediKube's side would make a PocketBase regression invisible by passing on MediKube's own
+   line. A sign-out has no password change, so `EndSessions` calls `RefreshTokenKey` explicitly;
+   that half is MediKube's.
+
+2. **`PasswordField.Cost` is what a real credential costs.** It is `0` on `users`, which means
+   `bcrypt.DefaultCost` — 10. `identity.DummyPasswordHash` is a fixed cost-10 hash, and the
+   anti-enumeration equalisation of research D-17 only holds while the two agree.
+
+3. **`core.PasswordFieldValue.Validate` is the comparison.** MediKube holds the value directly
+   rather than through a record, because `Record.SetRaw("password", "<a hash>")` followed by
+   `Record.ValidatePassword` compares **nothing**: `SetRaw` stores a plain string,
+   `ValidatePassword` type-asserts for `*PasswordFieldValue`, and the assertion fails silently to
+   `false` with no bcrypt run at all (measured against v0.40.1, and the opposite of what the
+   `PasswordField` doc comment implies).
+
+**Symptom if an upgrade breaks it.** (1) A password change stops ending other sessions: every
+stolen token stays live for the rest of its seven days, and every ordinary test still passes
+because the new password works. (2) The unknown-address sign-in path becomes cheaper than the
+wrong-password one and the account-existence oracle is back behind two byte-identical `401`
+bodies. (3) The dummy comparison stops running bcrypt at all, with the same result and no error
+anywhere.
+
+**Check on upgrade.** All three have tests, and they are the check:
+`internal/web/stream/session_rotation_test.go` drives the real adapter into the real production
+`Session` for (1), and `internal/store/identity`'s `TestTheDummyHashCostsWhatEveryRealHashCosts`
+and `auth_internal_test.go` cover (2) and (3). Run
+`go test ./internal/store/identity/... ./internal/web/stream/...` before believing the bump.
+
+**Also worth knowing, because it is a trap rather than a dependency.**
+`app.FindAuthRecordByEmail` is **case-sensitive** here. It searches case-insensitively only when
+the single-column unique index on `email` carries `COLLATE NOCASE`, and PocketBase's stock index
+does not; MediKube's `idx_users_email_lower` is on `LOWER(email)`, which `dbutils` does not
+recognise as an index on `email` at all. Measured: it answers "no rows" for `AMARA@…` against an
+account stored as `amara@…`. Every address lookup goes through `store.SameAddress` instead
+(FR-003).

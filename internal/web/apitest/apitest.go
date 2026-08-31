@@ -60,6 +60,11 @@ type Instance struct {
 	// stream handler subscribes to. A test that held its own would be
 	// asserting against a fan-out nothing writes to.
 	Hub *realtime.Hub
+
+	// Accounts is the assembled identity stack: the service the auth and
+	// account handlers call, and the authenticator whose comparison counter is
+	// how T202 asserts the anti-enumeration mechanism rather than timing it.
+	Accounts *api.Accounts
 }
 
 // Option adjusts one instance. The zero set is production's wiring; the
@@ -71,6 +76,23 @@ type Option func(*settings)
 type settings struct {
 	heartbeat time.Duration
 	now       func() time.Time
+
+	registrationOpen bool
+}
+
+// SessionTTL is MEDIKUBE_AUTH_SESSION_TTL's default, which is also what the
+// users collection carries in the committed fixture. The two have to agree or
+// the cookie and the token inside it would expire on different days.
+const SessionTTL = 168 * time.Hour
+
+// PublicURL is deliberately not a loopback address, so the session cookie is
+// minted with Secure exactly as it is in a deployment.
+const PublicURL = "https://medikube.example.test"
+
+// WithRegistrationOpen opens self-registration, which is FR-002's operator
+// switch. The zero value is closed, as MEDIKUBE_AUTH_REGISTRATION_OPEN is.
+func WithRegistrationOpen(open bool) Option {
+	return func(s *settings) { s.registrationOpen = open }
 }
 
 // WithStreamHeartbeat shortens the interval between $stream_beat frames.
@@ -211,7 +233,17 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 
 	resolve := api.Resolve(func() (*records.Handler, error) { return handler, nil })
 
-	table, err := handlerTable(resolve, hub, chosen)
+	accounts, err := api.NewAccounts(app, api.AccountsConfig{
+		RegistrationOpen: chosen.registrationOpen,
+		SessionTTL:       SessionTTL,
+		PublicURL:        PublicURL,
+		Resolve:          resolve,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	table, err := handlerTable(resolve, hub, chosen, accounts)
 	if err != nil {
 		return nil, err
 	}
@@ -229,19 +261,29 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 			// bodies that both carried an empty one.
 			obs.RequestLogger(zerolog.Nop()),
 			web.Errors(nil),
+			// -1021: before PocketBase's loadAuthToken, which is the whole of
+			// how a browser's cookie becomes a bearer token. Without it every
+			// cookie-authenticated test in the repository would be asserting
+			// against an anonymous request.
+			web.Sessions(),
 			web.Actors(),
 		},
 		Routes: binders{web.SecurityBinder{}, routes},
 	})
 
-	return &Instance{App: app, Records: handler, Routes: routes, Hub: hub}, nil
+	return &Instance{App: app, Records: handler, Routes: routes, Hub: hub, Accounts: accounts}, nil
 }
 
 // handlerTable is cmd/medikube's operations(): a 501 under every registered
 // operation id, then the real handlers on top. Without the stubs
 // httproute.New refuses the table, because a route nothing serves is a route
 // that would panic on its first request.
-func handlerTable(resolve api.Resolve, hub *realtime.Hub, chosen settings) (httproute.Handlers, error) {
+func handlerTable(
+	resolve api.Resolve,
+	hub *realtime.Hub,
+	chosen settings,
+	accounts *api.Accounts,
+) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
 	for _, route := range httproute.Inventory().Routes() {
@@ -272,7 +314,22 @@ func handlerTable(resolve api.Resolve, hub *realtime.Hub, chosen settings) (http
 		return nil, err
 	}
 
-	for _, group := range []httproute.Handlers{recordOps, pageOps, streamOps} {
+	accountOps, err := accounts.Handlers()
+	if err != nil {
+		return nil, err
+	}
+
+	accountPages, err := page.AccountPages(page.AccountDeps{
+		Accounts: accounts.Service,
+		Counts:   accounts.Deps.Counts,
+		Mail:     accounts.Deps.Mail,
+		Links:    accounts.Authenticator,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, group := range []httproute.Handlers{recordOps, pageOps, streamOps, accountOps, accountPages} {
 		for opID, handler := range group {
 			table[opID] = handler
 		}
@@ -352,6 +409,17 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, error) {
 		Trail:   auditor,
 		Kinds:   registry.Kinds(),
 		Actor:   web.ActorFrom,
+		Request: obs.CorrelationID,
+	}); err != nil {
+		return nil, err
+	}
+
+	// FR-036's sign-in rows, from OnRecordAuthRequest and never from a handler
+	// (research D-14): PocketBase's native auth route stays reachable, so a
+	// handler-side audit would leave one of the two paths to a session
+	// unrecorded.
+	if err := pb.BindAuthAudit(app, pb.AuthAudit{
+		Trail:   auditor,
 		Request: obs.CorrelationID,
 	}); err != nil {
 		return nil, err

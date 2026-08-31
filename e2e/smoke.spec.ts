@@ -4,8 +4,8 @@
 // Every case here runs twice — once per project in playwright.config.ts — so
 // "it renders" and "it renders on a phone" are two results and not one.
 //
-// Phases 002 and 004 add their pages' cases to this file (T223, T223p) and
-// reuse gate.ts's seven assertions rather than restating them.
+// Phase 004 adds the recovery pages' cases to this file (T223p) and reuses
+// gate.ts's seven assertions rather than restating them.
 import { fixtures } from './fixtures';
 import { open, watch } from './gate';
 import { expect, test } from './auth';
@@ -22,6 +22,199 @@ const confirmLandmark = { role: 'region', name: 'Confirm delete' } as const;
 function rowsOf(landmark: Locator): Locator {
   return landmark.locator('tbody tr');
 }
+
+// --- P1, P2 and P6: the account surface (T223) ----------------------------
+//
+// The three pages a person meets before and after everything else. Each case
+// runs gate.ts's seven assertions through open() and then asserts the one thing
+// about the page that only a browser can see: what is actually rendered, in
+// which order, and which of two states the account is in.
+
+test.describe('P1 — sign in', () => {
+  test.use({ signedInAs: 'anonymous' });
+
+  test('asks for an address and a password and offers the way on to both other doors', async ({ page }) => {
+    const form = await open(page, {
+      path: fixtures.pages.login.path,
+      title: fixtures.title(fixtures.titles.login),
+      landmark: fixtures.pages.login.landmark,
+    });
+
+    // FR-005 is two controls. Anything else on a sign-in form is either a
+    // third credential or something the caller should not be choosing.
+    await expect(form.locator('input')).toHaveCount(2);
+    await expect(form.locator('input[type="email"]')).toHaveCount(1);
+    await expect(form.locator('input[type="password"]')).toHaveCount(1);
+
+    // FR-027: a password is never rendered back into the page, not even the
+    // one just typed. The form arrives with nothing in it either way.
+    await expect(form.locator('input[type="password"]')).toHaveValue('');
+
+    await expect(form.locator(`a[href="${fixtures.pages.register.path}"]`)).toBeVisible();
+    await expect(form.getByRole('button', { name: fixtures.titles.login })).toBeVisible();
+  });
+
+  test('says a session ran out only when one did (FR-008)', async ({ page }) => {
+    const plain = await open(page, {
+      path: fixtures.pages.login.path,
+      title: fixtures.title(fixtures.titles.login),
+      landmark: fixtures.pages.login.landmark,
+    });
+
+    // The explanation is not a decoration: telling somebody who simply
+    // navigated here that their session expired is telling them something
+    // untrue about their account.
+    await expect(plain.locator(`#${fixtures.ids.sessionExpired}`)).toHaveCount(0);
+
+    const expired = await open(page, {
+      path: fixtures.pages.login.path + fixtures.expiredQuery,
+      title: fixtures.title(fixtures.titles.login),
+      landmark: fixtures.pages.login.landmark,
+    });
+
+    const explanation = expired.locator(`#${fixtures.ids.sessionExpired}`);
+    await expect(explanation).toBeVisible();
+    expect((await explanation.innerText()).trim()).not.toBe('');
+  });
+});
+
+test.describe('P2 — create account', () => {
+  test.use({ signedInAs: 'anonymous' });
+
+  // The instance the gate drives has registration open (e2e/instance.mjs). The
+  // closed configuration renders its explanation in the same landmark and is
+  // asserted in internal/web/page/accounts_test.go, because covering it here
+  // would mean a second instance for one branch.
+  test('publishes the password rules before a password is chosen (FR-004)', async ({ page }) => {
+    const form = await open(page, {
+      path: fixtures.pages.register.path,
+      title: fixtures.title(fixtures.titles.register),
+      landmark: fixtures.pages.register.landmark,
+    });
+
+    const rules = form.locator(`#${fixtures.ids.registrationRules}`);
+    await expect(rules, 'the rules a password is judged by are not on the page that asks for one').toBeVisible();
+    expect((await rules.innerText()).trim()).not.toBe('');
+
+    // Published means the control points at them, not merely that they are
+    // somewhere on the page: a screen reader announces what aria-describedby
+    // names and nothing else (FR-048).
+    const password = form.locator('input[type="password"]');
+    await expect(password).toHaveCount(1);
+    expect(
+      (await password.getAttribute('aria-describedby'))?.split(/\s+/) ?? [],
+      'the password control does not point at the published rules',
+    ).toContain(fixtures.ids.registrationRules);
+
+    // FR-012: role, confirmation and the disabled flag are not the caller's to
+    // choose, and the form that cannot ask for them is the enforcement.
+    for (const forbidden of ['role', 'verified', 'disabled_at']) {
+      await expect(form.locator(`[name="${forbidden}"]`), `the sign-up form offers ${forbidden}`).toHaveCount(0);
+    }
+  });
+});
+
+test.describe('P6 — settings', () => {
+  test('renders this account, its preferences and what deleting it would destroy', async ({ page }) => {
+    const settings = await open(page, {
+      path: fixtures.pages.settings.path,
+      title: fixtures.title(fixtures.titles.settings),
+      landmark: fixtures.pages.settings.landmark,
+    });
+
+    // FR-011, FR-005 and FR-013 are three forms and a region, and every one of
+    // them is inside the page's own landmark rather than beside it.
+    for (const name of [fixtures.settingsLandmarks.profile, fixtures.settingsLandmarks.password]) {
+      await expect(settings.getByRole('form', { name }), `no form[name="${name}"] on the settings page`).toBeVisible();
+    }
+    await expect(settings.getByRole('region', { name: fixtures.settingsLandmarks.dangerZone })).toBeVisible();
+
+    // The address is shown and cannot be edited here: this version has no
+    // address-change flow, and a control that looks like one is a promise the
+    // application does not keep.
+    expect(await settings.innerText()).toContain(fixtures.accounts.populated);
+    await expect(
+      settings.locator('input[type="email"]'),
+      'the settings page offers a control for an address it cannot change',
+    ).toHaveCount(0);
+
+    expect(fixtures.confirmed.populated, 'the seeded account stopped being the confirmed one').toBe(true);
+    await expect(settings.locator(`#${fixtures.ids.emailConfirmed}`)).toBeVisible();
+    await expect(settings.locator(`#${fixtures.ids.emailUnconfirmed}`)).toHaveCount(0);
+
+    const holdings = settings.locator(`#${fixtures.ids.holdings}`);
+    await expect(holdings).toBeVisible();
+    expect(
+      await holdings.innerText(),
+      'the danger zone does not say how much this account would lose',
+    ).toContain(String(fixtures.counts.populated));
+
+    // FR-013: what will be destroyed is stated BEFORE the form that destroys
+    // it. A consequence printed underneath the button is a consequence read
+    // after the decision.
+    const stated = await settings
+      .getByRole('region', { name: fixtures.settingsLandmarks.dangerZone })
+      .evaluate((zone, id) => {
+        const consequence = zone.querySelector(`#${id}`);
+        const form = zone.querySelector('form');
+        if (!consequence || !form) return false;
+
+        return (consequence.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+      }, fixtures.ids.holdings);
+    expect(stated, 'the deletion form comes before the consequence it carries out').toBe(true);
+
+    // FR-013 again: the phrase is exact, and the page has to say which one.
+    const deletion = settings.getByRole('form', { name: fixtures.settingsLandmarks.deleteAccount });
+    await expect(deletion).toBeVisible();
+    expect(await deletion.innerText()).toContain(fixtures.deleteConfirmationPhrase);
+    await expect(deletion.locator('input[type="password"]'), 'deletion asks for no password').toHaveCount(1);
+  });
+
+  test.describe('as the account whose address is not confirmed', () => {
+    test.use({ signedInAs: 'empty' });
+
+    test('says so and offers to send the confirmation again (FR-075)', async ({ page }) => {
+      expect(
+        fixtures.confirmed.empty,
+        'every seeded address is confirmed, so this case is asserting the other branch',
+      ).toBe(false);
+
+      const settings = await open(page, {
+        path: fixtures.pages.settings.path,
+        title: fixtures.title(fixtures.titles.settings),
+        landmark: fixtures.pages.settings.landmark,
+      });
+
+      const unconfirmed = settings.locator(`#${fixtures.ids.emailUnconfirmed}`);
+      await expect(unconfirmed).toBeVisible();
+      await expect(
+        unconfirmed.getByRole('button'),
+        'the page says the address is unconfirmed and offers no way to fix it',
+      ).toBeVisible();
+
+      await expect(settings.locator(`#${fixtures.ids.emailConfirmed}`)).toHaveCount(0);
+
+      // The same page for an account that holds nothing: the danger zone still
+      // states the consequence rather than rendering an empty list.
+      const holdings = settings.locator(`#${fixtures.ids.holdings}`);
+      await expect(holdings).toBeVisible();
+      expect(await holdings.innerText()).toContain(String(fixtures.counts.empty));
+    });
+  });
+
+  test.describe('with no session at all', () => {
+    test.use({ signedInAs: 'anonymous' });
+
+    test('is refused rather than served (E2)', async ({ page }) => {
+      const response = await page.goto(fixtures.pages.settings.path);
+
+      // 403 and not 404, for the same reason as the record list: whether this
+      // instance has a settings page is not information about anybody, and a
+      // 404 would make "no session" and "no such page" the same answer.
+      expect(response?.status()).toBe(403);
+    });
+  });
+});
 
 test.describe('P4 — the record list', () => {
   test('lists what the account owns and nothing else', async ({ page }) => {

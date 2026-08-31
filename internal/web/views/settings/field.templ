@@ -1,0 +1,56 @@
+package settings
+
+import "medikube/internal/web/views/components"
+
+// field is the one control the three forms are built from.
+//
+// The refusal is the control's NEXT SIBLING and the control names it through
+// aria-describedby (FR-048); the hint renders BEFORE the control so that it
+// cannot come between the two.
+templ field(props fieldProps) {
+	<div class="flex flex-col">
+		<label
+			for={ props.ID }
+			class="text-sm font-medium text-slate-900 dark:text-slate-100"
+		>{ props.Label }</label>
+		if props.Hint != "" {
+			<p id={ props.HintID } class="mt-1 text-sm text-slate-600 dark:text-slate-400">{ props.Hint }</p>
+		}
+		if len(props.Options) > 0 {
+			<select
+				id={ props.ID }
+				name={ props.Name }
+				data-bind={ props.Name }
+				if props.Invalid {
+					aria-invalid="true"
+				}
+				if props.DescribedBy != "" {
+					aria-describedby={ props.DescribedBy }
+				}
+				class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+			>
+				for _, option := range props.Options {
+					<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+				}
+			</select>
+		} else {
+			<input
+				id={ props.ID }
+				name={ props.Name }
+				type={ props.Type }
+				value={ props.Value }
+				data-bind={ props.Name }
+				autocomplete={ props.Autocomplete }
+				required?={ props.Required }
+				if props.Invalid {
+					aria-invalid="true"
+				}
+				if props.DescribedBy != "" {
+					aria-describedby={ props.DescribedBy }
+				}
+				class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+			/>
+		}
+		@components.FieldError(props.ErrorID, props.Messages)
+	</div>
+}

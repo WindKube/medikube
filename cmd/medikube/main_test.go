@@ -359,8 +359,17 @@ func TestTheCompositionRootWiresEveryRouteMediKubeServes(t *testing.T) {
 
 	// The resolver is never called: which operations have handlers is decided
 	// by which groups have landed, not by whether an instance could resolve a
-	// kind registry.
-	table, err := operations(func() (*records.Handler, error) { return nil, nil }, realtime.New())
+	// kind registry. The application is real but unbootstrapped, because the
+	// account surface binds a hook on it and holds it for later — it reads
+	// nothing here.
+	cfg := testConfig(t, filepath.Join(t.TempDir(), "pb_data"))
+
+	table, err := operations(
+		pb.New(cfg, pb.Options{}),
+		cfg,
+		func() (*records.Handler, error) { return nil, nil },
+		realtime.New(),
+	)
 	require.NoError(t, err)
 
 	for _, route := range httproute.Inventory().Routes() {
@@ -392,17 +401,10 @@ func TestTheOperationsStillAnsweringNotImplementedAreExactlyThese(t *testing.T) 
 	t.Parallel()
 
 	pending := []string{
-		// internal/web/api/auth.go — US2, T215-T220.
-		"getAuthConfig", "register", "login", "refreshSession", "logout",
-		"requestPasswordReset", "confirmPasswordReset",
-		"requestEmailVerification", "confirmEmailVerification",
-		// internal/web/api/me.go — US2, T215.
-		"getMe", "updateMe", "deleteMe", "changePassword",
 		// internal/web/api/health.go — US5, T285.
 		"healthz", "readyz",
-		// internal/web/page/*.go — US1 and US2.
-		"loginPage", "registerPage", "overviewPage", "settingsPage",
-		"forgotPasswordPage", "resetPasswordPage", "verifyEmailPage",
+		// internal/web/page/overview.go — US4, T264.
+		"overviewPage",
 	}
 
 	assert.ElementsMatch(t, pending, unimplemented(),

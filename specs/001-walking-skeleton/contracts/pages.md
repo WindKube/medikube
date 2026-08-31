@@ -65,9 +65,13 @@ what is conditional on a session, not the landmark around it (ANALYSIS).
 selectors, which is what makes them assertable by Playwright's `getByRole` without test-only
 attributes in production markup.
 
-**`/register` is registered unconditionally and renders `404` when open registration is disabled**
-(the default). It does not disappear from the route table — a page that exists only under some
-configurations is a page the route-inventory gate cannot check.
+**`/register` is registered unconditionally and renders an explanation inside the normal
+application frame when open registration is disabled** (the default), per FR-002. It does not
+disappear from the route table — a page that exists only under some configurations is a page the
+route-inventory gate cannot check. It does not answer `404` either: a `404` is what this codebase
+answers for owner-scoped data so a stranger cannot learn a record exists, whereas whether an
+operator has opened self-registration is instance-wide configuration, identical for every caller
+and evident from the page itself (see `docs/spec-defects.md` D15).
 
 **P8 and P9 carry a deliberately invalid token in their `SmokeURL`**:
 `/reset-password/expired-token-for-smoke` and `/verify-email/expired-token-for-smoke`. A seeded

@@ -1,40 +1,17 @@
 // The signed-in browser context.
 //
-// This phase has no sign-in page and no session cookie: `loginPage` and the
-// `login` operation both answer 501 (cmd/medikube/main_test.go's stub list), and
-// PocketBase's loadAuthToken reads the Authorization header and nothing else
-// (apis/middlewares.go). So the gate mints a token through
-// `nativeUserAuthWithPassword` — a route the registry declares and documents —
-// and hands it to the browser as a request header, which Playwright applies to
-// document navigations as well as to fetches.
+// A spec asks for an account by the role it plays — `test.use({ signedInAs:
+// 'counterparty' })` — and gets a context carrying that account's session
+// cookie, or, for 'anonymous', a context carrying nothing at all.
 //
-// T223 replaces this with `e2e/auth.setup.ts` signing in through MediKube's own
-// /api/v1/auth/login and storing the session. When it does, every spec below
-// keeps working unchanged: they ask for an account by role, not for a token.
-import { test as base, type APIRequestContext } from '@playwright/test';
+// The sessions themselves are made in auth.setup.ts, once per run, and stored;
+// this file only chooses which one a case runs under. Signing in here instead
+// would be one sign-in per test against a route deliberately limited to ten
+// guest attempts a minute (FR-006), and the failure that produces is a 429 in
+// the middle of an unrelated assertion.
+import { test as base } from '@playwright/test';
 
-import { fixtures, type AccountKey } from './fixtures';
-
-const nativeSignIn = '/api/collections/users/auth-with-password';
-
-async function tokenFor(request: APIRequestContext, email: string): Promise<string> {
-  const response = await request.post(nativeSignIn, {
-    data: { identity: email, password: fixtures.password },
-  });
-
-  if (!response.ok()) {
-    throw new Error(
-      `e2e: ${email} could not sign in (${response.status()}). Is the instance running against the committed fixture?`,
-    );
-  }
-
-  const body = (await response.json()) as { token?: string };
-  if (!body.token) {
-    throw new Error(`e2e: ${nativeSignIn} answered without a token for ${email}`);
-  }
-
-  return body.token;
-}
+import { statePath, type AccountKey } from './fixtures';
 
 // signedInAs is the option a describe block sets. Its default is the populated
 // account because that is the case most pages are about; 'anonymous' is a
@@ -42,18 +19,11 @@ async function tokenFor(request: APIRequestContext, email: string): Promise<stri
 export const test = base.extend<{ signedInAs: AccountKey }>({
   signedInAs: ['populated', { option: true }],
 
-  extraHTTPHeaders: async ({ playwright, baseURL, signedInAs }, use) => {
-    if (signedInAs === 'anonymous') {
-      await use({});
-      return;
-    }
-
-    const request = await playwright.request.newContext({ baseURL });
-    try {
-      await use({ Authorization: await tokenFor(request, fixtures.accounts[signedInAs]) });
-    } finally {
-      await request.dispose();
-    }
+  storageState: async ({ signedInAs }, use) => {
+    // Empty rather than undefined: undefined would inherit whatever the
+    // project's own storageState is, and an "anonymous" case that silently
+    // carried a session is a refusal test that can no longer fail.
+    await use(signedInAs === 'anonymous' ? { cookies: [], origins: [] } : statePath(signedInAs));
   },
 });
 

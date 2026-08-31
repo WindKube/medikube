@@ -6,6 +6,7 @@ import (
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/clinical"
+	"medikube/internal/web/views/components"
 )
 
 // The names the domain attaches its refusals to (internal/domain/clinical
@@ -366,40 +367,15 @@ func (m MedicationView) Entries() []DetailEntry {
 	return entries
 }
 
-// FieldErrors is a *domain.ValidationError as a form reads it: every refusal
-// for a field at once, because aria-describedby names one element and a second
-// message rendered outside it is a message nobody hears.
-type FieldErrors struct {
-	byField map[string][]string
-	fields  []string
-}
+// FieldErrors and NewFieldErrors are internal/web/views/components' — one type
+// for every form in the application, aliased here so this package's callers and
+// the two form packages beside it cannot end up with two answers to "which
+// refusals does this control carry".
+type FieldErrors = components.FieldErrors
 
-// NewFieldErrors takes nil, which is the clean form. The zero value works for
-// the same reason.
 func NewFieldErrors(invalid *domain.ValidationError) FieldErrors {
-	if invalid == nil || invalid.Empty() {
-		return FieldErrors{}
-	}
-
-	errs := FieldErrors{byField: make(map[string][]string, len(invalid.Fields))}
-
-	for _, refusal := range invalid.Fields {
-		if _, seen := errs.byField[refusal.Field]; !seen {
-			errs.fields = append(errs.fields, refusal.Field)
-		}
-		errs.byField[refusal.Field] = append(errs.byField[refusal.Field], refusal.Message)
-	}
-
-	return errs
+	return components.NewFieldErrors(invalid)
 }
-
-func (f FieldErrors) Has(field string) bool { return len(f.byField[field]) > 0 }
-
-func (f FieldErrors) Messages(field string) []string { return f.byField[field] }
-
-// Fields are the refused fields in the order the rules found them, which is the
-// order the form renders and therefore the order the person reads.
-func (f FieldErrors) Fields() []string { return append([]string(nil), f.fields...) }
 
 // MedicationListProps is one page of the list. The ids are the component's, not
 // the caller's: the element the stream patches and the selector it patches with

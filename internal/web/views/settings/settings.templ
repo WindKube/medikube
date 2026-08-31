@@ -1,0 +1,29 @@
+package settings
+
+// Settings is contracts/pages.md's P6: region[name="Settings"], which is the
+// landmark the browser gate resolves, with everything the account surface
+// offers INSIDE it rather than beside it.
+//
+// The three parts are separate components because they are three separate
+// operations with three separate refusals — a change to a preference must not
+// clear a half-typed password — and one component because the landmark is one.
+templ Settings(props SettingsProps) {
+	<section aria-label={ SettingsLandmark } class="flex flex-col gap-8">
+		<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ SettingsLandmark }</h1>
+		@Profile(props.Profile)
+		@Password(props.Password)
+		<div class="flex max-w-xl flex-col items-start gap-2">
+			<h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Sessions</h2>
+			<p class="max-w-prose text-sm text-slate-600 dark:text-slate-400">
+				Signing out ends every session this account has open, here and anywhere else — another browser,
+				another device. That is deliberate: it is what makes a sign-out on a lost phone worth doing.
+			</p>
+			<button
+				type="button"
+				data-on:click={ props.SignOutOn }
+				class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+			>Sign out</button>
+		</div>
+		@DangerZone(props.Danger)
+	</section>
+}

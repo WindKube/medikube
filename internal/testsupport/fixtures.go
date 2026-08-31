@@ -63,6 +63,20 @@ const (
 	FutureStartMedicationID = "mkmedamara00006"
 )
 
+// Whether each seeded account's address is confirmed (FR-075).
+//
+// Account C's false is load-bearing, exactly as its zero medication count is:
+// the settings page's "not confirmed, send it again" state is a state the smoke
+// run walks through rather than a branch somebody asserted once, and the
+// confirmation flow has an account to exercise. fixtures_test.go asserts these
+// against the seeded records, so a seed that started confirming everybody would
+// take the branch's only coverage with it.
+const (
+	AccountAConfirmed = true
+	AccountBConfirmed = true
+	AccountCConfirmed = false
+)
+
 // The counts data-model §6 fixes. Account C's zero is load-bearing: it is what
 // the empty-state smoke case navigates to, so the empty branch is exercised on
 // every run rather than asserted once (research D-39).

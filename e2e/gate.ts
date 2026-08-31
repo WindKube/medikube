@@ -43,6 +43,16 @@ type Problems = {
 // case red for something the application never asked for.
 const browserInitiated = /\/favicon\.ico$/;
 
+// Where a page's CSP violations are currently being collected.
+//
+// A page may be watched more than once — a case that opens two addresses to
+// compare them does exactly that — and both halves of the reporting are
+// once-per-page: exposeFunction refuses a name it has already bound, and a
+// second addInitScript would report every violation twice. So the binding is
+// installed once and this is what it writes through, which is always the most
+// recent watch's collection.
+const reporters = new WeakMap<Page, (detail: string) => void>();
+
 export async function watch(page: Page): Promise<Problems> {
   const problems: Problems = { console: [], crashes: [], csp: [], network: [] };
 
@@ -73,18 +83,23 @@ export async function watch(page: Page): Promise<Problems> {
   // CSP violations do not surface as console messages Playwright can classify,
   // so the page reports them itself. Registered as an init script so it is in
   // place before the document's own markup is parsed.
-  await page.exposeFunction('__medikubeCspViolation', (detail: string) => {
-    problems.csp.push(detail);
-  });
+  const installed = reporters.has(page);
+  reporters.set(page, (detail: string) => problems.csp.push(detail));
 
-  await page.addInitScript(() => {
-    document.addEventListener('securitypolicyviolation', (event) => {
-      const report = window as unknown as { __medikubeCspViolation?: (detail: string) => void };
-      report.__medikubeCspViolation?.(
-        `${event.violatedDirective} blocked ${event.blockedURI || '(inline)'}`,
-      );
+  if (!installed) {
+    await page.exposeFunction('__medikubeCspViolation', (detail: string) => {
+      reporters.get(page)?.(detail);
     });
-  });
+
+    await page.addInitScript(() => {
+      document.addEventListener('securitypolicyviolation', (event) => {
+        const report = window as unknown as { __medikubeCspViolation?: (detail: string) => void };
+        report.__medikubeCspViolation?.(
+          `${event.violatedDirective} blocked ${event.blockedURI || '(inline)'}`,
+        );
+      });
+    });
+  }
 
   return problems;
 }

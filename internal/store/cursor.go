@@ -52,6 +52,16 @@ var ErrInvalidCursor = errors.New("store: the cursor is not one this instance is
 // kind.Kind, because an account is not a clinical record.
 const authCollection = "users"
 
+// AccountCollection is that name, published, for the account repository in
+// internal/store/identity.
+//
+// It is exported for the same reason AuditCollection is: an account is not a
+// record kind, so there is no kind.Collection() to read the name from, and the
+// repository would otherwise spell it for itself — which is the drift the kind
+// table exists to prevent, one collection to the left of where that table can
+// reach.
+const AccountCollection = authCollection
+
 // Cursor is one keyset boundary: the last row of a page, expressed as the
 // values it sorted by and its id.
 //

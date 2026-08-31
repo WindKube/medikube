@@ -1,0 +1,42 @@
+package auth
+
+// linkDead is FR-074's refusal, rendered INSIDE the landmark of the page the
+// link opened.
+//
+// It is not an error view. A person whose recovery link expired is on exactly
+// the right page and needs one thing from it — another link — so the page keeps
+// its landmark, answers 200 and says what happened. Expired, already used and
+// altered are one sentence here for the same reason they are one refusal at the
+// API: telling them apart tells somebody which links once existed.
+templ linkDead(offer deadLinkOffer) {
+	<div id={ LinkDeadID } class="flex flex-col items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
+		<p class="max-w-prose">
+			This link cannot be used any more. A link like this one works once and only for a while, and one
+			that has been altered on the way is refused too.
+		</p>
+		if offer.Mailable {
+			<a
+				href={ offer.Href }
+				class="font-medium underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:hover:text-slate-100"
+			>{ offer.Label }</a>
+		} else {
+			@mailUnconfigured()
+		}
+	</div>
+}
+
+// mailUnconfigured is FR-076 as the person meets it: an instance with no
+// outgoing mail says so plainly instead of offering something it cannot do.
+//
+// It renders in place of a control rather than beside one. A form that
+// collected an address on an instance that can send nothing would be accepting
+// a request as though it had succeeded, which is the thing FR-076 forbids.
+templ mailUnconfigured() {
+	<div id={ MailUnconfiguredID } class="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+		<p>This MediKube instance cannot send mail, so it cannot send you a link.</p>
+		<p class="max-w-prose">
+			Ask whoever runs it. An operator can set a new password for an account directly, and can turn
+			outgoing mail on so that this page starts working.
+		</p>
+	</div>
+}

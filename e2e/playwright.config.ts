@@ -42,13 +42,28 @@ export default defineConfig({
   // once under each, because "it renders" and "it renders on a phone" are two
   // different claims and only one of them is usually checked.
   projects: [
+    // T223. One sign-in per account for the whole run, through MediKube's own
+    // route, stored and reused. It is a project rather than a fixture because
+    // both viewports depend on it: signing in per test would be forty sign-ins
+    // against a route limited to ten guest attempts a minute (FR-006).
+    {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+    },
+    // The specs, and only the specs: without this the setup file is also an
+    // ordinary test in both viewport projects, re-signing in halfway through
+    // the run and rewriting the state the other cases are using.
     {
       name: 'desktop-1440x900',
+      testMatch: /.*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+      dependencies: ['setup'],
     },
     {
       name: 'mobile-390x844',
+      testMatch: /.*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 } },
+      dependencies: ['setup'],
     },
   ],
 

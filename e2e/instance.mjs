@@ -53,8 +53,11 @@ const server = spawn(binary, ['serve'], {
     MEDIKUBE_DATA_DIR: dataDir,
     MEDIKUBE_HTTP_ADDR: address,
     MEDIKUBE_PUBLIC_URL: `http://${address}`,
-    // Open, because /register is one of the pages the gate visits and a closed
-    // instance renders 404 there by design (contracts/pages.md).
+    // Open, because the sign-up form is what the gate asserts FR-004's
+    // published rules against. /register is served either way — a closed
+    // instance renders the explanation in the same landmark rather than
+    // disappearing (research D-15) — and that branch is covered in
+    // internal/web/page/accounts_test.go, where it costs no second instance.
     MEDIKUBE_AUTH_REGISTRATION_OPEN: 'true',
     MEDIKUBE_LOG_LEVEL: 'warn',
   },

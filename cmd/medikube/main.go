@@ -161,7 +161,7 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 	// open stream's watcher goroutine parked until the process exits.
 	resolve := recordFamily(app, records.NewRegistry(), container.Hub())
 
-	table, err := operations(resolve, container.Hub())
+	table, err := operations(app, cfg, resolve, container.Hub())
 	if err != nil {
 		return nil, nil, shutdownAfter(container, fmt.Errorf("wire the MediKube handlers: %w", err))
 	}
@@ -186,6 +186,10 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 			// is nil until internal/web/page exists; an API-only build is a
 			// build.
 			web.Errors(nil),
+			// -1021: one step BEFORE PocketBase's loadAuthToken, which reads
+			// the Authorization header and nothing else. This is what makes a
+			// plain navigation from a browser carry a credential at all.
+			web.Sessions(),
 			// -1019: immediately after PocketBase's loadAuthToken, which is
 			// what populates e.Auth.
 			web.Actors(),

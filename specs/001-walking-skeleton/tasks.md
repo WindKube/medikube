@@ -613,124 +613,131 @@ under it is gone from stored data.
 - [x] T188 [P] [US2] TEST `internal/domain/identity/validate_test.go` — display-name limits, email
   shape, and that `role` and `status` are **not settable** from any user-supplied structure
   (FR-012).
-- [ ] T189 [P] [US2] TEST `internal/service/identity/identitytest/contract.go` — the contract suite
+- [x] T189 [P] [US2] TEST `internal/service/identity/identitytest/contract.go` — the contract suite
   for `Repository` and `Authenticator`.
-- [ ] T190 [P] [US2] TEST `internal/service/identity/service_test.go` against the fakes —
+- [x] T190 [P] [US2] TEST `internal/service/identity/service_test.go` against the fakes —
   Register, ChangePassword, UpdateProfile, DeleteAccount, each with its audit write asserted.
-- [ ] T191 [P] [US2] TEST `internal/store/identity/repo_integration_test.go` — the PocketBase
+- [x] T191 [P] [US2] TEST `internal/store/identity/repo_integration_test.go` — the PocketBase
   implementation passes the same contract suite, plus `idx_users_email_lower` makes
   `Amara@…` and `amara@…` the same account (FR-003).
-- [ ] T192 [P] [US2] TEST `internal/web/api/auth_test.go` — `ApiScenario` cases for
+- [x] T192 [P] [US2] TEST `internal/web/api/auth_test.go` — `ApiScenario` cases for
   `getAuthConfig`, `register`, `login`, `refreshSession`, `logout` per contracts/auth.md —
   an account created from email, display name and password on an open instance (FR-001), and a sign-in
   answering an unknown address and a wrong password identically (FR-005) —
-  including: registration refused with 404 when closed (FR-002), a duplicate email answered
-  **exactly** as a successful-looking outcome that reveals nothing (FR-003), and the session
+  including: registration refused with **403** `registration_closed` when closed (FR-002, defect D15), a
+  duplicate email answered **409** `conflict` with a message that does not confirm registration
+  (FR-003, defect D16), and the session
   response carrying **no token in the body** — the token is an `HttpOnly` cookie.
-- [ ] T193 [P] [US2] TEST `internal/web/api/me_test.go` — `getMe`, `updateMe`, `changePassword`,
+- [x] T193 [P] [US2] TEST `internal/web/api/me_test.go` — `getMe`, `updateMe`, `changePassword`,
   `deleteMe` per contracts/account.md, including display name and the four preferences read back and
   changed (FR-011), the re-entered current password on deletion, and the exact confirmation phrase
   `DELETE MY ACCOUNT` and the refusal of anything else (FR-013).
-- [ ] T194 [P] [US2] TEST `internal/web/api/me_privilege_test.go` — `updateMe` cannot set `role`
+- [x] T194 [P] [US2] TEST `internal/web/api/me_privilege_test.go` — `updateMe` cannot set `role`
   or `status` by any spelling, including an unknown field, a null and a nested object (FR-012).
-- [ ] T195 [P] [US2] TEST `internal/web/api/me_counts_test.go` — `MeCounts` reports the account's
+- [x] T195 [P] [US2] TEST `internal/web/api/me_counts_test.go` — `MeCounts` reports the account's
   own medication count and nobody else's.
-- [ ] T196 [P] [US2] TEST `internal/web/api/session_expiry_test.go` — a session older than the
+- [x] T196 [P] [US2] TEST `internal/web/api/session_expiry_test.go` — a session older than the
   configured TTL is refused and the person is asked to sign in again (FR-008), and `logout`
   invalidates the session immediately (FR-007).
-- [ ] T197 [P] [US2] TEST `internal/web/api/change_password_test.go` — a password change without
+- [x] T197 [P] [US2] TEST `internal/web/api/change_password_test.go` — a password change without
   the current password is refused, and the refusal does not confirm whether the supplied current
   password was the wrong one or the new one invalid (FR-009).
-- [ ] T198 [US2] TEST `internal/web/api/me_delete_integration_test.go` — after `deleteMe`,
-  `SELECT COUNT(*) FROM medications WHERE owner = '<id>'` is **0** and
-  `SELECT COUNT(*) FROM audit_events WHERE actor = '<id>'` is **greater than 0**. The medications
-  cascade; the audit rows deliberately do not, and their `actor` becomes a dangling id (FR-014,
-  SC-012, research D-22).
-- [ ] T199 [P] [US2] TEST `internal/web/session_test.go` — the cookie is `HttpOnly`, `SameSite=Lax`,
+- [x] T198 [US2] TEST `internal/web/api/me_delete_integration_test.go` — after `deleteMe`,
+  `SELECT COUNT(*) FROM medications WHERE owner = '<id>'` is **0**,
+  `SELECT COUNT(*) FROM audit_events WHERE target_id = '<id>' AND action = 'account_delete'` is
+  **greater than 0**, and that surviving row's `actor` is **`''`**. The medications cascade; the
+  audit rows deliberately do not, and because `actor` is `CascadeDelete: false` *and*
+  `Required: false`, PocketBase **unsets** it rather than leaving a dangling id — so a query on
+  `actor` finds nothing and `actor_kind` is the only surviving evidence a person did it. Keying on
+  the row count alone would pass on a row about somebody else (FR-014, SC-012, research D-22, defect D17).
+- [x] T199 [P] [US2] TEST `internal/web/session_test.go` — the cookie is `HttpOnly`, `SameSite=Lax`,
   `Secure` outside dev, and the cookie→`Authorization` middleware is bound at priority **-1021**,
   before `loadAuthToken` at -1020. Bound after it, every authenticated request is anonymous.
-- [ ] T200 [US2] TEST `internal/service/identity/revocation_test.go` — after a password change,
+- [x] T200 [US2] TEST `internal/service/identity/revocation_test.go` — after a password change,
   **every** session issued before it stops working, driven by rotating `RefreshTokenKey`
   (FR-010, research D-16).
-- [ ] T201 [P] [US2] TEST `internal/web/api/auth_ratelimit_test.go` — repeated failed sign-ins are
+- [x] T201 [P] [US2] TEST `internal/web/api/auth_ratelimit_test.go` — repeated failed sign-ins are
   slowed or blocked, and the response to a rate-limited attempt is the same shape as a wrong
   password (FR-006).
-- [ ] T202 [P] [US2] TEST `internal/web/api/auth_timing_test.go` — a sign-in attempt for an unknown
+- [x] T202 [P] [US2] TEST `internal/web/api/auth_timing_test.go` — a sign-in attempt for an unknown
   email and one for a known email with a wrong password produce the **same body**, and the
   unknown-email path **performs the bcrypt comparison against the fixed dummy hash** (asserted
   through a counting seam on the hash comparer, not through a clock). A faster "no such account" is
   an account-existence oracle; the dummy comparison is what removes it, so this test asserts the
   mechanism rather than the latency. Deterministic — it blocks merge (FR-005, research D-17).
-- [ ] T202a [P] [US2] BENCH `internal/web/api/timing_bench_test.go` — benchmarks the two sign-in
+- [x] T202a [P] [US2] BENCH `internal/web/api/timing_bench_test.go` — benchmarks the two sign-in
   refusal paths and the two not-found paths (T226) side by side and reports the ratio of medians
   over `-benchtime` samples. **Not on the merge gate**: it is a `Benchmark*` function, so
   `go test ./...` does not run it, and CI runs it on merge to `main` for the trend only.
   A regression shows as a ratio drifting away from 1, investigated by a human against T202's
   mechanism assertion — never auto-failed on a threshold nobody can defend. Constitution VIII
   (no flaky gate assertion); replaces the undefined "agreed tolerance" (ANALYSIS N13).
-- [ ] T203 [P] [US2] TEST `internal/web/views/auth/{login,register}_test.go` — render to buffer,
+- [x] T203 [P] [US2] TEST `internal/web/views/auth/{login,register}_test.go` — render to buffer,
   landmarks `form[name="Sign in"]` and `form[name="Create account"]`, errors adjacent to fields.
-- [ ] T204 [P] [US2] TEST `internal/web/views/settings/*_test.go` — profile, password and the danger
+- [x] T204 [P] [US2] TEST `internal/web/views/settings/*_test.go` — profile, password and the danger
   zone, each rendering inside `region[name="Settings"]`.
-- [ ] T205 [P] [US2] TEST `internal/platform/pb/hooks_auth_test.go` — `OnRecordAuthRequest` writes
+- [x] T205 [P] [US2] TEST `internal/platform/pb/hooks_auth_test.go` — `OnRecordAuthRequest` writes
   the `login` audit row for **both** MediKube's own login route and PocketBase's native one. This
   is the one `OnRecord*Request` binding the phase permits and the reason for the forbidigo
   carve-out (research D-14).
-- [ ] T206 [P] [US2] TEST `internal/web/api/register_closed_test.go` — with registration closed,
-  both `POST /api/v1/auth/register` and the `/register` page return **404**, and the route is
-  still present in the inventory (contracts/pages.md).
-- [ ] T207 [P] [US2] TEST `internal/service/identity/audit_coverage_test.go` — each of the six
+- [x] T206 [P] [US2] TEST `internal/web/api/register_closed_test.go` — with registration closed,
+  `POST /api/v1/auth/register` returns **403** `registration_closed` and the `/register` page
+  **renders an explanation inside the normal application frame**, and the route is still present
+  in the inventory. FR-002 is normative and says render an explanation; a 404 is what this
+  codebase answers for owner-scoped data, and whether registration is open is instance-wide
+  configuration, identical for every caller (contracts/auth.md, defect D15).
+- [x] T207 [P] [US2] TEST `internal/service/identity/audit_coverage_test.go` — each of the six
   identity actions writes its audit row, driven from the enum so a new action cannot be added
   without a test.
 
 ### Implementation for User Story 2
 
 - [x] T208 [P] [US2] Implement `internal/domain/identity/{user.go,enums.go,password.go,validate.go}`.
-- [ ] T209 [US2] Implement `internal/service/identity/ports.go` — `Repository`, `Authenticator`,
+- [x] T209 [US2] Implement `internal/service/identity/ports.go` — `Repository`, `Authenticator`,
   `Auditor`, `Clock`.
-- [ ] T210 [US2] Implement `internal/service/identity/service.go` and `session.go`.
-- [ ] T211 [P] [US2] Implement `internal/service/identity/identitytest/fake.go`.
-- [ ] T212 [US2] Implement `internal/store/identity/repo.go`.
-- [ ] T213 [P] [US2] Implement `internal/web/api/dto_auth.go` and `dto_me.go` — `AuthConfig`,
+- [x] T210 [US2] Implement `internal/service/identity/service.go` and `session.go`.
+- [x] T211 [P] [US2] Implement `internal/service/identity/identitytest/fake.go`.
+- [x] T212 [US2] Implement `internal/store/identity/repo.go`.
+- [x] T213 [P] [US2] Implement `internal/web/api/dto_auth.go` and `dto_me.go` — `AuthConfig`,
   `PwRules`, `RegisterRequest`, `LoginRequest`, `Session`, `Me`, `MeCounts`, `MePatch`,
   `ChangePasswordRequest`, `DeleteAccountRequest`.
-- [ ] T214 [US2] Implement `internal/web/api/auth.go` — the five auth operations `getAuthConfig`,
+- [x] T214 [US2] Implement `internal/web/api/auth.go` — the five auth operations `getAuthConfig`,
   `register`, `login`, `refreshSession`, `logout`, registered under those `operationId`s
   (FR-001, FR-005).
-- [ ] T215 [US2] Implement `internal/web/api/me.go` — the four account operations `getMe`, `updateMe`,
+- [x] T215 [US2] Implement `internal/web/api/me.go` — the four account operations `getMe`, `updateMe`,
   `changePassword`, `deleteMe`, registered under those `operationId`s (FR-011, FR-013).
-- [ ] T216 [US2] Implement `internal/web/session.go` — the `HttpOnly` cookie and the cookie→header
+- [x] T216 [US2] Implement `internal/web/session.go` — the `HttpOnly` cookie and the cookie→header
   middleware at priority -1021.
-- [ ] T217 [US2] Implement the `RefreshTokenKey` rotation on password change and account changes.
-- [ ] T218 [P] [US2] Implement `internal/web/views/auth/{login.templ,register.templ}`.
-- [ ] T219 [P] [US2] Implement
+- [x] T217 [US2] Implement the `RefreshTokenKey` rotation on password change and account changes.
+- [x] T218 [P] [US2] Implement `internal/web/views/auth/{login.templ,register.templ}`.
+- [x] T219 [P] [US2] Implement
   `internal/web/views/settings/{profile.templ,password.templ,danger_zone.templ}` — the display name and
   the four preference controls (FR-011), and a danger zone that states plainly beforehand that deletion
   cannot be undone and asks for the password and the typed confirmation (FR-013).
-- [ ] T220 [US2] Implement `internal/web/page/{login.go,register.go,settings.go}`, registered with
-  their landmarks and smoke URLs. **`/register` is registered unconditionally and renders 404 when
-  registration is closed** — a route that disappears under configuration is a route the inventory
-  gate cannot check.
-- [ ] T221 [US2] Implement the auth audit hooks in `internal/platform/pb/hooks.go`, writing the
+- [x] T220 [US2] Implement `internal/web/page/{login.go,register.go,settings.go}`, registered with
+  their landmarks and smoke URLs. **`/register` is registered unconditionally and renders an
+  explanation inside the normal application frame when registration is closed** (FR-002, defect D15) — a
+  route that disappears under configuration is a route the inventory gate cannot check.
+- [x] T221 [US2] Implement the auth audit hooks in `internal/platform/pb/hooks.go`, writing the
   declared vocabulary of data-model §3 and nothing else — `create`, `login`, `login_failed`,
   `logout`, `password_change`, `account_delete`, each with `target_kind = user` (FR-036). A
   password replaced through a recovery link writes the same `password_change` row, and a
   confirmed address writes `update` / `user`: **no new action value is introduced**, so the
   vocabulary counts every later phase asserts are unchanged (data-model §3).
-- [ ] T221a [P] [US2] TEST `internal/platform/pb/hooks_admin_session_test.go` — a superuser
+- [x] T221a [P] [US2] TEST `internal/platform/pb/hooks_admin_session_test.go` — a superuser
   authenticating against the `_superusers` collection writes exactly one `admin_session` audit row
   with `actor_kind = superuser` and `target_kind = user`, and an ordinary sign-in writes none. This
   is the tenth of the ten action values data-model §3 declares this phase writes, and the third
   clause of FR-040 — the credential separation and the boot warning are T055–T059 and T064/T065
   (FR-040, data-model §3).
-- [ ] T221b [US2] Implement the `admin_session` audit hook in `internal/platform/pb/hooks.go` —
+- [x] T221b [US2] Implement the `admin_session` audit hook in `internal/platform/pb/hooks.go` —
   `OnRecordAuthRequest` bound on `_superusers` alongside T221's binding on `users`. It writes an
   already-declared action value, so the vocabulary is still unchanged (FR-040, data-model §3).
-- [ ] T222 [US2] Add the seeded accounts A, B and C to `internal/cli/seed.go` with deterministic ids
+- [x] T222 [US2] Add the seeded accounts A, B and C to `internal/cli/seed.go` with deterministic ids
   (data-model §6, FR-060). **Account C is seeded with an unconfirmed address**, so the settings
   page's "not confirmed, send it again" state is a seeded smoke case rather than an untested
   branch (FR-075).
-- [ ] T223 [P] [US2] TEST `e2e/smoke.spec.ts` cases for `/login`, `/register` and `/settings`, and
+- [x] T223 [P] [US2] TEST `e2e/smoke.spec.ts` cases for `/login`, `/register` and `/settings`, and
   `e2e/auth.setup.ts` signing in as the seeded account and storing the state.
 
 ### Recovery and confirmation for User Story 2 (FR-073 … FR-077) ⚠️ tests first
@@ -741,35 +748,35 @@ of them wires a PocketBase mechanism rather than building one: `mails.SendRecord
 core.TokenTypeVerification)`, and `SetPassword` + `Save` — which rotates `tokenKey` and therefore
 ends every prior session through the same mechanism T200 already asserts.
 
-- [ ] T223a [P] [US2] TEST `internal/domain/identity/recovery_test.go` — the rules that hold with
+- [x] T223a [P] [US2] TEST `internal/domain/identity/recovery_test.go` — the rules that hold with
   no token in sight: a password chosen through recovery is validated by **the same** published
   rules as one chosen at registration (FR-004, FR-074), and the response to a recovery request is
   a value that cannot vary with whether an account exists (FR-073).
-- [ ] T223b [P] [US2] TEST `internal/service/identity/recovery_test.go` against the fakes —
+- [x] T223b [P] [US2] TEST `internal/service/identity/recovery_test.go` against the fakes —
   `RequestPasswordReset`, `ConfirmPasswordReset`, `RequestVerification`, `ConfirmVerification`,
   each asserting its audit write and its call to the consumer-declared `Mailer` port. The service
   never touches `mails.*` directly; that is the adapter's job (Principle II).
-- [ ] T223c [P] [US2] TEST `internal/web/api/password_reset_test.go` — `ApiScenario` cases per
+- [x] T223c [P] [US2] TEST `internal/web/api/password_reset_test.go` — `ApiScenario` cases per
   contracts/auth.md: a known address and an unknown address produce **byte-identical** `202`
   bodies; a valid token sets the password and returns `204`; an expired, already-used or tampered
   token is `400 invalid_token` with one message for all three; repeated requests are `429`
   (FR-073, FR-074, FR-077).
-- [ ] T223d [P] [US2] TEST `internal/web/api/verify_email_test.go` — `requestEmailVerification`
+- [x] T223d [P] [US2] TEST `internal/web/api/verify_email_test.go` — `requestEmailVerification`
   requires a session and is refused `401` without one; `confirmEmailVerification` is public,
   accepts the token once, sets the address confirmed, and answers a second use exactly as it
   answers an expired one (FR-075).
-- [ ] T223e [P] [US2] TEST `internal/web/api/mail_unconfigured_test.go` — with
+- [x] T223e [P] [US2] TEST `internal/web/api/mail_unconfigured_test.go` — with
   `Settings().SMTP.Enabled` false, **neither** request pretends to have sent anything: the answer
   is `503 mail_unconfigured` with a message naming no address, the failure is logged **once per
   burst rather than once per attempt**, and no audit row claims a message was sent (FR-076).
-- [ ] T223f [P] [US2] TEST `internal/platform/pb/adminwarn_test.go` — the boot warning covers
+- [x] T223f [P] [US2] TEST `internal/platform/pb/adminwarn_test.go` — the boot warning covers
   **three** conditions, not two: superuser MFA unconfigured, the superuser IP allowlist
   unconfigured (FACT 10) and outgoing mail unconfigured (FR-076). Table-driven, each condition
   asserted independently and in combination.
-- [ ] T223g [P] [US2] TEST `internal/service/identity/reset_revocation_test.go` — a password set
+- [x] T223g [P] [US2] TEST `internal/service/identity/reset_revocation_test.go` — a password set
   through a recovery link ends **every** session issued before it, asserted the same way T200
   asserts it for a deliberate password change (FR-074).
-- [ ] T223h [P] [US2] TEST
+- [x] T223h [P] [US2] TEST
   `internal/web/views/auth/{forgot_password_test.go,reset_password_test.go,verify_email_test.go}` —
   render to buffer: landmarks `form[name="Reset password"]`, `form[name="Choose a new password"]`
   and `region[name="Email confirmation"]`; the **expired-link state renders inside the landmark**
@@ -780,25 +787,25 @@ ends every prior session through the same mechanism T200 already asserts.
   on the no-account branch (`contracts/auth.md`, `requestPasswordReset`). Asserted structurally,
   not with a clock: no wall-clock assertion here either, and the latency is reported by the
   non-gating benchmark T202a (FR-073, research D-17; ANALYSIS N13).
-- [ ] T223j [US2] Implement the `Mailer` port in `internal/service/identity/ports.go` — two
+- [x] T223j [US2] Implement the `Mailer` port in `internal/service/identity/ports.go` — two
   methods, `SendPasswordReset(ctx, userID)` and `SendVerification(ctx, userID)`, declared by the
   consumer — and its adapter `internal/platform/pb/mail.go` over `mails.SendRecordPasswordReset`
   and `mails.SendRecordVerification`, plus a fake in `identitytest`.
-- [ ] T223k [US2] Implement `internal/service/identity/recovery.go` — the four service methods,
+- [x] T223k [US2] Implement `internal/service/identity/recovery.go` — the four service methods,
   each writing its audit row and each returning the same result shape whether or not the account
   exists.
-- [ ] T223l [US2] Implement the four operations in `internal/web/api/auth.go` and their DTOs in
+- [x] T223l [US2] Implement the four operations in `internal/web/api/auth.go` and their DTOs in
   `dto_auth.go`, and register them in `internal/httproute/routes.go` as `requestPasswordReset`,
   `confirmPasswordReset`, `requestEmailVerification` and `confirmEmailVerification`
   (contracts/auth.md, contracts/README.md operations 19–22).
-- [ ] T223m [P] [US2] Implement
+- [x] T223m [P] [US2] Implement
   `internal/web/views/auth/{forgot_password.templ,reset_password.templ,verify_email.templ}`,
   including the expired/used-link state and the "this instance cannot send mail" state.
-- [ ] T223n [US2] Implement `internal/web/page/{forgot_password.go,reset_password.go,verify_email.go}`
+- [x] T223n [US2] Implement `internal/web/page/{forgot_password.go,reset_password.go,verify_email.go}`
   registered with their landmarks and with the **deterministic invalid-token** smoke URLs
   `/reset-password/expired-token-for-smoke` and `/verify-email/expired-token-for-smoke`, both of
   which answer `200` with the expired-link state (contracts/pages.md).
-- [ ] T223o [US2] Implement the mail-unconfigured refusal and the third boot warning in
+- [x] T223o [US2] Implement the mail-unconfigured refusal and the third boot warning in
   `internal/platform/pb/adminwarn.go` and the auth handlers, and confirm the two token durations
   MediKube inherits are the documented ones — reset **30 minutes**, confirmation **24 hours** —
   writing them into `contracts/auth.md` if PocketBase's defaults differ from what is documented

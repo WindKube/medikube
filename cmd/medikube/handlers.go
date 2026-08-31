@@ -9,6 +9,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"medikube/internal/config"
 	"medikube/internal/httproute"
 	"medikube/internal/obs"
 	"medikube/internal/platform/pb"
@@ -35,7 +36,12 @@ import (
 // still refused by httproute.New. What is *not* derived is the inventory of
 // what is still missing: that lives in cmd/medikube/main_test.go, where a
 // finished handler left behind a stub is a failing test and a one-line diff.
-func operations(resolve api.Resolve, hub *realtime.Hub) (httproute.Handlers, error) {
+func operations(
+	app core.App,
+	cfg config.Config,
+	resolve api.Resolve,
+	hub *realtime.Hub,
+) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
 	for _, route := range httproute.Inventory().Routes() {
@@ -56,12 +62,55 @@ func operations(resolve api.Resolve, hub *realtime.Hub) (httproute.Handlers, err
 
 	maps.Copy(table, served)
 
+	// The account surface is assembled separately because it is the one group
+	// that needs the application itself: PocketBase owns the credential, the
+	// token and the mailer, so the identity stack cannot be built out of the
+	// kind registry alone. api.AccountOperations is what lets unimplemented()
+	// below know what this line serves without building it.
+	accounts, err := api.NewAccounts(app, api.AccountsConfig{
+		RegistrationOpen: cfg.Auth.RegistrationOpen,
+		SessionTTL:       cfg.Auth.SessionTTL,
+		PublicURL:        cfg.PublicURL,
+		Resolve:          resolve,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	accountOps, err := accounts.Handlers()
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, accountOps)
+
+	// The six pages of the same surface, which need the same stack: the
+	// settings page renders the signed-in account, the sign-up page renders the
+	// operator's switch, and the two token pages resolve the link they were
+	// opened with — none of which can be built out of the kind registry.
+	//
+	// Links is the authenticator the identity service redeems through, and not
+	// a second one: the answer this page renders has to be the answer the
+	// submission will get (FR-074).
+	accountPages, err := page.AccountPages(page.AccountDeps{
+		Accounts: accounts.Service,
+		Counts:   accounts.Deps.Counts,
+		Mail:     accounts.Deps.Mail,
+		Links:    accounts.Authenticator,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, accountPages)
+
 	return table, nil
 }
 
-// wired is where each group's handlers arrive as they land. The record family,
-// the two record pages and the Datastar stream are in; internal/web/api's auth
-// and account halves are US2's.
+// wired is where each group's handlers arrive as they land — every group that
+// can be assembled from the kind registry alone. The record family, the two
+// record pages and the Datastar stream are in; the account surface needs the
+// application and is assembled by operations above.
 func wired(resolve api.Resolve, hub *realtime.Hub) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
@@ -175,6 +224,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		return err
 	}
 
+	// FR-036's sign-in rows, from OnRecordAuthRequest and never from a handler
+	// (research D-14): PocketBase's native auth route stays reachable, so a
+	// handler-side audit would leave one of the two paths to a session
+	// unrecorded.
+	if err := pb.BindAuthAudit(app, pb.AuthAudit{
+		Trail:   auditor,
+		Request: obs.CorrelationID,
+	}); err != nil {
+		return err
+	}
+
 	// contracts/streams.md's publisher, bound to the same three post-commit
 	// hooks and to the same kinds: a live view of a kind this build does not
 	// serve is a live view of nothing.
@@ -193,6 +253,14 @@ func unimplemented() []string {
 	}
 
 	var pending []string
+
+	for _, opID := range api.AccountOperations() {
+		implemented[opID] = nil
+	}
+
+	for _, opID := range page.AccountPageOperations() {
+		implemented[opID] = nil
+	}
 
 	for _, route := range httproute.Inventory().Routes() {
 		if route.Kind == httproute.KindExternal {

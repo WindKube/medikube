@@ -52,10 +52,11 @@ func TestEveryExportedFixtureIdentifierNamesASeededRecord(t *testing.T) {
 	accounts := []struct {
 		id, email, name string
 		medications     int
+		confirmed       bool
 	}{
-		{AccountAID, AccountAEmail, AccountAName, AccountAMedicationCount},
-		{AccountBID, AccountBEmail, AccountBName, AccountBMedicationCount},
-		{AccountCID, AccountCEmail, AccountCName, AccountCMedicationCount},
+		{AccountAID, AccountAEmail, AccountAName, AccountAMedicationCount, AccountAConfirmed},
+		{AccountBID, AccountBEmail, AccountBName, AccountBMedicationCount, AccountBConfirmed},
+		{AccountCID, AccountCEmail, AccountCName, AccountCMedicationCount, AccountCConfirmed},
 	}
 
 	for _, account := range accounts {
@@ -70,6 +71,9 @@ func TestEveryExportedFixtureIdentifierNamesASeededRecord(t *testing.T) {
 			assert.True(t, record.ValidatePassword(Password),
 				"%s cannot sign in with the published password", account.email)
 
+			assert.Equal(t, account.confirmed, record.Verified(),
+				"%s is in the other confirmation state (FR-075, T222)", account.email)
+
 			owned, err := app.CountRecords(kind.Medication.Collection(),
 				dbx.HashExp{"owner": account.id})
 			require.NoError(t, err)
@@ -77,6 +81,40 @@ func TestEveryExportedFixtureIdentifierNamesASeededRecord(t *testing.T) {
 				"%s holds a different number of records than the constants say", account.email)
 		})
 	}
+}
+
+// T222 and FR-075. One seeded account has an unconfirmed address and at least
+// one has a confirmed one, so BOTH states of the settings page are reachable
+// from the fixture and neither is a branch nothing ever renders.
+//
+// It is asserted as a shape rather than by naming account C, because what the
+// smoke run needs is one of each: a seed that moved the unconfirmed address to
+// another account would still be a fixture that covers both branches, and one
+// that confirmed everybody would not.
+func TestTheFixtureHoldsBothConfirmationStates(t *testing.T) {
+	t.Parallel()
+
+	app := NewApp(t)
+
+	var confirmed, unconfirmed int
+
+	for _, account := range seed.Accounts() {
+		record, err := app.FindRecordById(usersCollection, account.ID)
+		require.NoError(t, err)
+
+		if record.Verified() {
+			confirmed++
+
+			continue
+		}
+
+		unconfirmed++
+	}
+
+	assert.Positive(t, confirmed, "no seeded address is confirmed, so the settled state renders nowhere")
+	assert.Positive(t, unconfirmed,
+		"every seeded address is confirmed, so the settings page's \"not confirmed, send it again\" state "+
+			"is a branch the browser gate never reaches (FR-075, research D-39)")
 }
 
 func TestTheSeededSuperuserIsTheAdminCredentialQuickstartPublishes(t *testing.T) {

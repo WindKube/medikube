@@ -331,6 +331,50 @@ func MedicationSchema() Schema {
 	)
 }
 
+// AccountSchema is the account collection's query surface, and it publishes
+// exactly one narrowable column: the address.
+//
+// Not the display name, not the role, not the disabled instant. There is no
+// account list in MediKube and no phase in this spec adds one — every account
+// operation reaches the caller's own account and no other (FR-032) — so a
+// schema that admitted a second column would be a query surface for a listing
+// nobody asked for, over a table of people who have medical records here.
+//
+// The address is FilterOnly, which keeps it out of every ordering and therefore
+// out of every keyset boundary. A boundary travels in a query string, through
+// the browser's history, the Referer header and every reverse proxy's access
+// log; an email address is the last value that should make that journey
+// (research D-29).
+//
+// Its expression is LOWER(email) and not the bare column, because that is what
+// idx_users_email_lower is built on: comparing anything else both misses the
+// index and answers a different question from the one the unique constraint
+// asks (FR-003).
+func AccountSchema() Schema {
+	return NewSchema(authCollection,
+		Column{
+			Name:       userFieldEmail,
+			Expr:       "LOWER(" + quoteColumn(userFieldEmail) + ")",
+			FilterOnly: true,
+			Value: func(record *core.Record) string {
+				return asciiLower(record.GetString(userFieldEmail))
+			},
+		},
+	)
+}
+
+// SameAddress is FR-003's comparison: two addresses differing only in letter
+// case are one address.
+//
+// The fold is here rather than at the call site because it is the other half of
+// the column's LOWER() expression, and the two have to agree byte for byte or
+// the query silently stops matching the index it was written for. SQLite's
+// LOWER() folds ASCII and nothing else; strings.ToLower folds the whole of
+// Unicode, so the obvious Go twin is the wrong one.
+func SameAddress(email string) Condition {
+	return Equal(userFieldEmail, asciiLower(email))
+}
+
 // The medication columns a repository names when it builds a Query.
 //
 // Exported because internal/store/medication assembles the query and this

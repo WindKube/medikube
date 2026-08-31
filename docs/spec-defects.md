@@ -1,5 +1,13 @@
 # Spec defects
 
+> **Numbering.** Entries here are **defects** and are cited as `defect D15`, never as a
+> bare `D15`. `specs/001-walking-skeleton/research.md` separately numbers **decisions**
+> `D-01`…`D-39`, cited as `research D-22`. The two namespaces already collide — defect
+> D18 (the phileak gate) and research D-18 (registration closed by default) are both
+> live, and `internal/config/config_test.go` cites the latter. Always write the word
+> `defect` or `research` before the number; a bare `D18` is ambiguous.
+
+
 Contradictions and stale figures found while implementing, recorded rather than
 silently resolved. Each entry names the authority that was followed and why.
 
@@ -341,3 +349,468 @@ Three notes on scope, since two of them were considered and declined:
    authentication, which is what an ended session should look like from every
    direction. A re-check that could not be *made* also ends the stream, and that
    one **is** reported.
+
+## D15 — `/register` when registration is closed: a three-way contradiction
+
+*Found by:* US2 recon, before a line of T206 or T220 was written.
+
+Five documents disagreed about what a closed instance answers, and one of them
+had already been built:
+
+| Source | `POST /api/v1/auth/register` | the `/register` page |
+|---|---|---|
+| `spec.md` FR-002 (normative) | "every attempt … MUST be refused" | "MUST render an explanation inside the normal application frame" |
+| `contracts/auth.md` | `403 registration_closed` | renders normally |
+| `research.md` D-18 | `403 registration_closed` | renders normally |
+| `contracts/pages.md` | — | `404` |
+| `tasks.md` T192, T206, T220 | `404` | `404` |
+| `internal/web/errors.go` (built) | `403` | — |
+
+*Resolved:* **`403 registration_closed` for the API; the page renders an
+explanation inside the normal frame.** FR-002 is the only normative source and
+it says *render an explanation*, in as many words. `contracts/auth.md`,
+`research.md` and the code already agree with it; `tasks.md` and
+`contracts/pages.md` are the outliers and are amended.
+
+`contracts/auth.md`'s stated reason for the page rendering — "a bare 404 would
+fail the smoke gate's landmark assertion" — is *also* wrong, though its
+conclusion is right: `e2e/instance.mjs` sets `MEDIKUBE_AUTH_REGISTRATION_OPEN:
+'true'` and `data-model.md` says the smoke environment opens registration, so
+the gate never reaches the closed branch. The reason is replaced; the answer
+stands.
+
+There is no privacy argument for the 404 here. A 404 is what this codebase
+answers for **owner-scoped data**, so that a stranger cannot learn a record
+exists. Whether an operator has opened self-registration is an instance-wide
+configuration fact, identical for every caller and discoverable from the sign-up
+page itself. Hiding it buys nothing and costs the person an explanation.
+
+T220's actual concern — that `/register` is registered **unconditionally**, so a
+route cannot vanish under configuration where the inventory gate cannot check
+it — is untouched and still holds.
+
+## D16 — A duplicate email is a `409`, and that is deliberate
+
+*Found by:* US2 recon.
+
+`contracts/auth.md` answers a duplicate address `409 conflict`, "that address
+cannot be used". `tasks.md` T192 required "a duplicate email answered **exactly**
+as a successful-looking outcome that reveals nothing". These are opposites.
+
+*Resolved:* **`409`, per the contract.** FR-003 says the system "MUST refuse to
+create a second account for an email address that already has one". It says
+refuse. It does not say answer indistinguishably — and the spec is explicit
+where it does want that: FR-005 requires it for sign-in ("so that neither can be
+probed") and FR-073 for password recovery. Registration is deliberately not on
+that list. T192's clause is an addition to the normative requirement, not a
+reading of it, and is amended.
+
+*The residual exposure, recorded so it stays a decision rather than an
+accident:* registration is therefore an account-existence oracle. Anyone may
+probe whether an address is registered by attempting to register it. Three
+things bound it and none of them removes it: the response is rate-limited
+(`429`), the message is deliberately vague — "that address cannot be used" does
+not say *already registered*, and an address may be unusable for other reasons —
+and on a closed instance the endpoint refuses everyone identically. If a later
+phase wants this closed properly, the mechanism is the standard one: answer every
+registration identically and move the truth into the email that follows, which
+costs a working mail configuration (see FR-076, and T223e for what this instance
+does when it has none).
+
+## D17 — T198's SQL asserts something that is never true (measured, not argued)
+
+*Found by:* US2 recon, empirically, against a real instance.
+
+`tasks.md` T198 required that after `deleteMe`,
+`SELECT COUNT(*) FROM audit_events WHERE actor = '<id>'` is **greater than 0**,
+describing the actor as becoming "a dangling id". Measured result: **0**.
+
+```
+medications before delete: 12
+medications after delete:   0
+audit_events WHERE actor = '<id>':  0
+audit_events total rows after delete: 1
+surviving row: actor="" target_id="mkacctamara0001" action="account_delete"
+account B's medications after A's delete: 3
+```
+
+*Mechanism:* `core/record_model.go` `deleteRefRecords`. `audit_events.actor` is
+`CascadeDelete: false` **and** `Required: false`, which is neither the cascade
+branch nor the hard-error branch — so PocketBase **unsets the field and
+`SaveNoValidate`s the row**. The actor becomes the empty string. It does not
+dangle.
+
+*Resolved:* `data-model.md` is right — it says "unset rather than cascaded … so
+the `account_delete` row survives", which is exactly what happens.
+`contracts/account.md` is right. `tasks.md` T198 misread "unset" as "dangling"
+and is amended to assert what the design actually produces:
+
+- `SELECT COUNT(*) FROM medications WHERE owner = '<id>'` is `0`
+- `SELECT COUNT(*) FROM audit_events WHERE target_id = '<id>' AND action = 'account_delete'` is `> 0`
+- and that surviving row's `actor` is `''`
+
+The third clause matters. Asserting the row count alone would pass on a row that
+was about somebody else entirely, and `actor_kind` is the only surviving evidence
+that a person rather than the system did it.
+
+*Also measured, and now load-bearing:* deleting an account fires
+`OnRecordAfterDeleteSuccess` **13 times** — once per cascaded medication, once
+for the user. `internal/platform/pb/hooks.go`'s record stream filters by
+collection name, so the `users` event is dropped and twelve delete events are
+published. That is correct as written, but it is now a property something
+depends on rather than an incidental one.
+
+## D18 — `task test:phileak` asserts nothing and exits 0
+
+*Found by:* US3 recon, while surveying what T235 has to build on.
+
+`Taskfile.yaml` runs the PHI-leak suite as `go test -tags=phileak …` and its own
+comment says it is "Build-tagged and therefore invisible to `task test`".
+`CLAUDE.md` repeats the claim: "`task test:phileak` is build-tagged and therefore
+invisible to `task test`: it boots an instance and drives every endpoint against
+sentinel data."
+
+Neither is true today. The repository contains exactly **one** build tag:
+
+```
+$ grep -rn '//go:build' --include=*.go .
+internal/web/stream/timeout_test.go:1://go:build sselive
+```
+
+There is no `phileak` tag on any file. `internal/testsupport/phileak/` holds
+`capture.go`, `capture_test.go`, `doc.go` and `sole_test.go` — no `exercise.go`
+and no `phileak_test.go`. So `-tags=phileak` selects nothing extra, and
+`task test:phileak` re-runs the same untagged tests `task test` already ran, in
+about 0.09s, and exits 0.
+
+This is not merely "T235 is unbuilt", which would be fine and expected — T235 is
+a Phase 5 task. The defect is that the gate **reports success while asserting
+nothing**. Anyone reading a green `task test:phileak` — a person, CI, or an
+agent writing an integration report — concludes the PHI-leak property holds. It
+has never been checked. A gate that cannot fail is worse than an absent one,
+because an absent one is visible.
+
+*Resolution:* T235 builds `exercise.go` and `phileak_test.go` **behind a real
+`//go:build phileak` tag**, which is what makes `-tags=phileak` mean something.
+Until then the Taskfile comment and `CLAUDE.md`'s description are aspirational
+and are marked as such rather than read as fact. Whoever closes T235 must
+verify the tag actually selects the new files — by confirming `task test`
+does **not** run them and `task test:phileak` does — rather than trusting an
+exit code that was already 0 before the suite existed.
+
+*Related, same shape:* T229, T236 and T237 assert that tracing, Sentry and
+metrics are inactive when unconfigured. No production code imports otel,
+sentry-go or prometheus at all — the only importer is the phileak capture. Those
+three properties are currently true **by absence**, which is a different fact
+from true by design, and a test written today would pass without exercising
+anything. Each needs the corresponding subsystem to exist before its "inactive
+when unconfigured" test carries meaning.
+
+## D19 — Nothing serves the browser assets, and no task closes the gap
+
+*Found by:* Phases 6–9 recon.
+
+MediKube builds two browser assets and delivers neither. Four facts, each
+measured:
+
+1. **They exist.** `internal/web/static/` holds `app.css` (20.8 KB, generated by
+   the Tailwind step) and `datastar.js` (34 KB, the vendored v1.0.2 runtime).
+2. **Only one is embedded.** The single `//go:embed` directive in the entire
+   repository is `internal/web/static/embed.go`'s `//go:embed datastar.js`.
+   `app.css` is embedded by nothing, because it is gitignored and absent from a
+   clean checkout, so it cannot be named in a pattern that must compile before
+   `task gen` runs.
+3. **Neither is served.** `httproute.KindAsset` is declared
+   (`internal/httproute/registry.go:37`) and **no route of that kind is
+   registered anywhere**. The only other mention is a `switch` arm in
+   `internal/openapi/generate.go:56`.
+4. **The shell therefore links neither, deliberately.**
+   `internal/web/views/shell/document.templ:20-25`: "No stylesheet and no script
+   tag yet, deliberately. Nothing in this build serves internal/web/static — no
+   route table row declares an asset route and no contract fixes the URL — so a
+   link here would be a failed network request on every page … **T261 adds both
+   alongside the asset route they need.**"
+
+That deferral is sound reasoning and it is correctly documented. The defect is
+where it points. T261 reads, in full: "Implement
+`internal/web/views/layout.templ` — the shell: skip link, banner, nav, main,
+`#error-banner`, `#toast`, footer." It does not mention a stylesheet, a script
+tag, or an asset route. `grep -in 'KindAsset|asset route|serve.*static'` over
+`tasks.md` returns **nothing**. No task in the plan registers the asset route.
+
+So the deferral has no owner, and the current state is not a stub anyone will
+trip over: every test passes, the smoke gate passes, and the application serves
+**unstyled HTML with no client runtime**. The `class` attributes in every
+`.templ` resolve to nothing in a browser. This is the single largest gap between
+"the suite is green" and "the application works" in the repository.
+
+*Resolution:* T261 is amended to name the three pieces of work — register the
+`KindAsset` route, extend the embed to cover `app.css` once `task gen` has
+produced it, and add the `<link>` and `<script>` to the shell — or a new task is
+added for the route and the embed. Whoever does it must also confirm the CSP in
+`internal/web/security.go` admits both, and re-check
+`contracts/pages.md` smoke assertion 7, which
+`document.templ` cites as the reason the links are absent today.
+
+*Related, and it compounds this:* `assets/input.css`'s `@source` glob is
+currently redundant. Tailwind v4 auto-detects sources from the stylesheet's
+location upward unless told otherwise, and `@source` is additive rather than
+restrictive, so the bundle is built from the whole checkout. Measured evidence:
+`app.css` contains utilities named `[install:tailwind]`, `[tailwind:install]`,
+`[templ:install]` and `[test:cover]` — strings that appear in `Taskfile.yaml`
+and in `specs/**/*.md` and **in no `.templ` file**. Three consequences: the
+failure mode `CLAUDE.md` and `assets/input.css` both warn about ("a glob that
+matches nothing produces an empty stylesheet and exits 0") **cannot occur**, so
+anyone who "fixes" the glob on the strength of that comment gets no signal
+either way; a mistyped class name in a `.templ` still reaches the bundle if the
+same string appears anywhere in the repo, including in prose, which defeats the
+"does this class actually compile" assertion `.github/workflows/go.yaml:47-52`
+says it is deferring; and the shipped artefact carries documentation-derived
+noise. The fix is `@import "tailwindcss" source(none);` alongside the explicit
+`@source`. This belongs with T265, the only task naming `assets/input.css`, and
+T265 does not mention it.
+
+## D20 — T197 and `contracts/account.md` disagree about a password-change refusal
+
+`tasks.md` T197 requires that a refused password change "does not confirm whether the
+supplied current password was the wrong one or the new one invalid" — one message for
+both halves.
+
+`contracts/account.md`'s own table gives them **two different answers**:
+
+| Case | Status | Body |
+|---|---|---|
+| `current_password` absent or wrong | `422` | field `current_password`, code `incorrect` |
+| new password violates a published rule | `422` | field `new_password` |
+
+Those are opposites. A response naming `current_password` with code `incorrect` *is* a
+confirmation of which half failed.
+
+*Followed:* T197. `identity.Service.ChangePassword` builds one `*domain.ValidationError`
+in one constructor — `refusedPasswordChange` — reported on **both** fields with **one**
+message, whichever half actually failed. `TestAPasswordChangeRefusalDoesNotSayWhichHalfFailed`
+compares the five refusal cases as marshalled bytes, so a message, a field name, a code or
+an ordering that differed between them fails.
+
+*And a dissent, recorded because implementing it is not the same as agreeing with it.*
+T197 buys very little and costs real usability. The caller is **already authenticated** and
+is changing **their own** password, so there is no account-existence oracle to close. An
+attacker with a live session who wants to distinguish the two need only send a new password
+they know is valid — any refusal then means the current password was wrong, and the merged
+message has told them exactly what the split message would have. Meanwhile a person who
+mistyped a 7-character new password is now told their current password might be wrong.
+`contracts/account.md`'s split is the better design and the requirement it fails is one
+nobody can state a threat model for. If T197 is ever revisited, the fix is to adopt the
+contract's two field codes and delete `refusedPasswordChange`.
+
+*Fix, whichever way it goes:* make T197 and `contracts/account.md` say the same thing.
+
+## D21 — T202's "fixed dummy hash" is not what PocketBase does
+
+`tasks.md` T202 and `research.md` D-17 both say the unknown-address sign-in path compares
+against "the **fixed** dummy hash". PocketBase's own anti-enumeration check does something
+else — `apis/record_auth_with_password.go:125-136`:
+
+```go
+record := &core.Record{}
+err := app.RecordQuery(collection).Limit(1).One(record)   // ANY existing record
+if err != nil { return }                                  // EARLY RETURN, no bcrypt at all
+_ = record.ValidatePassword("")
+```
+
+It samples a row, and on an **empty table it performs no comparison whatsoever**, which
+restores the whole oracle on a fresh instance. It is also unexported, so MediKube cannot
+call it.
+
+*Followed:* the spec, over PocketBase. MediKube supplies its **own fixed dummy**, which has
+no "no rows" branch and costs one extra round trip less. `identitytest`'s authenticator
+holds `dummyCredential` and counts every comparison through one seam, so
+`TestEverySignInRefusalCostsOneComparison` asserts the **mechanism** — one comparison for a
+wrong password, one comparison *and* one dummy comparison for an address with no account —
+rather than a clock (Constitution VIII; the latency is T202a's, which does not gate).
+
+*Consequence for `internal/store/identity`:* the PocketBase adapter must do the same, and
+must expose the same counting seam. A `Compare` that fell back to `dummyPasswordCheck`'s
+sampled row would pass the service tests and reopen the oracle on an empty `users` table.
+The dummy's bcrypt cost must equal the collection's `PasswordField.Cost` (0 → `bcrypt.DefaultCost`
+= 10 today) or the equalisation drifts the day an operator raises it; assert it rather than
+assume it.
+
+## D22 — T200's file cannot hold the half of T200 that matters
+
+`tasks.md` T200 names `internal/service/identity/revocation_test.go` and asks it to prove that
+"after a password change, **every** session issued before it stops working". A test in
+`internal/service/**` cannot prove that. depguard forbids PocketBase there (Principle II), so
+nothing in that package can mint a token, present one, or watch one be refused: the strongest
+statement available is that the service reached `Authenticator.SetPassword`, against a fake whose
+"session" is an integer generation.
+
+That statement is worth having and it is already made — `service_test.go`'s
+`TestAPasswordChangeEndsEverySessionIssuedBeforeIt` and `TestSignOutEndsEverySessionAndRecordsIt`,
+plus `identitytest.RunRepositoryContract`'s `TestSetPasswordSpendsEveryLinkMintedBeforeIt`, which
+holds **both** implementations to it. A second file in the same package asserting the same thing
+against the same fake would be duplication wearing coverage's clothes.
+
+*Followed:* the requirement, over the path. FR-010 is asserted at every layer that can observe it,
+each with a guard that fails when only that layer breaks:
+
+| Layer | File | What it would miss alone |
+|---|---|---|
+| service, against fakes | `internal/service/identity/service_test.go` | an adapter that never rotates |
+| both adapters, one suite | `internal/service/identity/identitytest/contract.go` | a transport that does not re-check |
+| ordinary requests, real token, **both transports** | `internal/web/api/session_revocation_test.go` | an open stream that outlives the session |
+| an already-open stream | `internal/web/stream/revocation_test.go` | — |
+
+Verified by deletion: with the password changed by a raw `UPDATE` that bypasses
+`onRecordSaveExecute` — the exact defect `internal/store/identity`'s `SetPassword` doc warns about
+— `internal/web/api` goes red on all four transport rows while the service suite stays green.
+
+*Fix:* point T200 at `internal/web/api/session_revocation_test.go`, or split it into T200 (service,
+already satisfied) and T200a (real instance). Nothing needs to be built either way.
+
+## D23 — `contracts/auth.md`'s per-call refusal messages contradict the envelope
+
+`contracts/auth.md` prescribes the *wording* of the duplicate-address refusal:
+`409 conflict` with the message "that address cannot be used". `contracts/README.md`'s error
+envelope prescribes something incompatible with that: **one message per code**, so that the
+message is a property of the code and never of the call site — which is what lets a client
+localise the code and lets a reader of the log stream know that two `conflict` lines mean the
+same thing. `internal/web/errors.go`'s `Message` is that table, and it has one entry for
+`CodeConflict`: "that conflicts with something already recorded".
+
+Only one of the two can hold. Both cannot: the moment `register` answers `conflict` with its own
+sentence, `conflict` has two messages and the envelope's invariant is gone — and it is gone for
+every future operation too, because the precedent is the whole of the rule.
+
+*Followed:* the envelope, over the sentence. The **security** properties `contracts/auth.md`
+attaches to that message are the reason it names one at all, and both of them survive intact and
+are asserted (`internal/web/api/auth_test.go`,
+`TestRegisteringAnAddressThatAlreadyHasAnAccountIsRefused`, over three letter-cases):
+
+- the body does not contain the submitted address, in any case; and
+- the body does not say "registered" or "exists" — it does not confirm to an anonymous caller
+  that a specific person has an account on this instance (D16).
+
+What is lost is only the exact phrasing, which no requirement depends on. Verified by deletion:
+rewriting `Message(CodeConflict)` to "that address is already registered" turns all three
+sub-tests red.
+
+*Fix:* either drop the prescribed sentence from `contracts/auth.md` and let it say what the
+refusal must **not** contain (which is the part that matters), or add a `conflict`-family code
+whose one message is "that address cannot be used" — at the cost of a published code that exists
+to carry a sentence. The first is the smaller change and the honest one.
+
+## D24 — `contracts/account.md`'s `MeCounts` cannot be written in Go
+
+`contracts/account.md` gives `MeCounts` as a struct with a member per kind:
+
+```go
+type MeCounts struct {
+    Medications int `json:"medications"`
+}
+```
+
+That file cannot exist in this repository. `internal/architecture/kind_literals_test.go` (T046,
+research D-05, cross-artifact finding H1) fails any Go file outside `internal/domain/kind/kind.go`
+whose source contains a kind's path segment or collection as a string literal — and a struct tag
+**is** a string literal. `medications` is medication's segment *and* its collection, so the tag is
+two offences in one, and there is no accessor call available inside a tag: `json:"…"` is fixed at
+compile time and `kind.Medication.Segment()` is not.
+
+It is not a spurious catch either. The tag is precisely finding H1's failure mode — a second place
+that spells the plural, which drifts silently the day a kind's segment is not the mechanical plural
+of its name (`insurance`, `family-history`). Phases 002 through 006 add five more kinds, each of
+which would be another member and another literal here.
+
+*Followed:* the wire shape, over the Go shape. `MeCounts` is
+`map[string]int`, keyed by `kind.Kind.Segment()`, populated from
+`records.Handler.Segments()` — every kind the build actually serves. The published JSON is
+byte-identical to what the contract describes (`"counts": {"medications": 12}`), the key comes from
+the kind table rather than from a tag, and the object gains a key on the day a kind is registered
+rather than on the day somebody remembers to add a member.
+
+The map costs one property the struct had for free — a missing key and a zero count are the same
+value to a reader — so `internal/web/api/me_counts_test.go`'s
+`TestTheCountsObjectNamesEveryKindThisBuildServes` asserts the key set against
+`Records.Segments()`, which is what a struct would have given by compiling.
+
+*Fix:* replace the struct in `contracts/account.md` with the wire shape and a sentence saying the
+keys are kind segments. Nothing needs to be built.
+
+## D25 — T205's file cannot hold the half of T205 that matters
+
+T205 asks for `internal/platform/pb/hooks_auth_test.go` to assert that `OnRecordAuthRequest`
+writes the `login` row **for both paths to a session** — MediKube's `/api/v1/auth/login` and
+PocketBase's native `/api/collections/users/auth-with-password`. Driving MediKube's own route
+needs MediKube's router, which is `internal/web/apitest`; that package's harness reaches
+`internal/testsupport`, and `internal/testsupport/app.go` blank-imports
+`internal/store/migrations`.
+
+`core.AppMigrations` is a **package-level registry**. An import anywhere in a test binary applies
+MediKube's migrations to every `tests.NewTestApp` in it, including the ones that are supposed to
+meet PocketBase's stock schema. `internal/platform/pb/hooks_records_test.go`'s `stockSchema` exists
+as the tripwire for exactly this, and it fired: adding the import turned
+`TestRecordRequestHooksDoFireForASuperuser` into a 400 with six "Cannot be blank" refusals from
+columns that collection is not supposed to have.
+
+*Followed:* the tripwire. The split is by what each layer can see:
+
+- `internal/platform/pb/hooks_auth_test.go` and `hooks_admin_session_test.go` — the hook's
+  mechanics against PocketBase's own fixture and a fake trail: the row's shape, the renewal that
+  writes nothing, the refusal that names an account and never an address, the priority that puts
+  the row ahead of the response, the superuser's empty `actor`.
+- `internal/web/api/auth_audit_test.go` and `auth_audit_trail_test.go` — the both-paths proof,
+  where the router already is: one `login` row per path, one `login_failed` per refused path, none
+  for a renewal on either, and a sign-in that could not be recorded handing over no session.
+
+*Fix:* reword T205 to name both files, or note that the second half belongs to the HTTP tier. The
+assertion T205 asks for exists; it is one directory away from where the task put it.
+
+## D26 — `OnRecordAuthRequest` fires before the second factor, so the `login` row can outrun the sign-in
+
+Measured, not argued. PocketBase raises `OnRecordAuthRequest` from `apis.RecordAuthResponse`
+(`apis/record_helpers.go:71`), and on the password route that call is reached once the **first**
+factor is accepted — `checkMFA` runs earlier in the same handler and, when a second factor is
+required, answers `401 {"mfaId": …}` through a path that has already raised the hook. On a
+collection with MFA enabled, the audit trail therefore gains a `login` row for a sign-in that never
+completed, and `login_failed` alongside it from the wrapper on the refusal.
+
+This is not live: `internal/store/migrations/1756100100_users_profile.go:165` sets
+`users.MFA.Enabled = false`, and `data-model.md` gives the account collection one factor. It was
+found because PocketBase's own test fixture ships MFA **on**, which is what the pb-tier tests boot
+against — they configure it the way MediKube's migration does, in `harness.withoutMFA`.
+
+The assumption is now load-bearing rather than incidental:
+`internal/platform/pb/hooks_auth_test.go`'s
+`TestTheAccountCollectionHasNoSecondFactorForTheLoginRowToOutrun` pins
+`users.MFA.Enabled == false` and says why.
+
+*Fix:* whichever phase introduces a second factor must move the `login` row off
+`OnRecordAuthRequest` and onto whatever fires after `checkMFA` succeeds. FR-036's row would
+otherwise say a person signed in when they demonstrably did not — the worst possible failure for an
+audit trail, because it is wrong in the direction of claiming access happened.
+
+## D27 — Two composition roots, and the suite only ever exercised one
+
+Every hook MediKube binds into PocketBase is bound **twice**: in `cmd/medikube/handlers.go`, which
+is what the binary runs, and in `internal/web/apitest/apitest.go`, which is what every HTTP test
+drives. No test drove the first.
+
+Measured: deleting `pb.BindRecordAudit` from `cmd/medikube/handlers.go` — the whole call, in the
+real composition root — leaves `go test ./...` **green**. So does deleting `pb.BindAuthAudit`. A
+deployment would stop writing FR-036's rows entirely while the suite went on proving that it wrote
+them, because the suite was proving it about the other wiring.
+
+This is the failure mode the phase's own rule names: a control defended in two layers needs a guard
+that fails when **only that layer** breaks, and "both layers broken" is the wrong sensitivity.
+
+*Followed:* held the two roots together.
+`internal/architecture/TestTheBinaryAndTheHTTPHarnessBindTheSamePlatformHooks` parses both packages
+and compares the set of `pb.Bind…` calls. Delete a binding from one root and it fails; delete it
+from both and the HTTP suite fails, because the harness no longer binds what its assertions are
+about. Neither guard is sufficient alone, which is why the new one is a separate file rather than
+one more assertion inside an existing test.
+
+*Fix:* the durable version is one wiring function both roots call, which would make the guard
+unnecessary. That is a refactor of two composition roots and belongs to whichever task owns them;
+until then the equality is what stands between the binary and a silent loss of the audit trail.

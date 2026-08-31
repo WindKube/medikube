@@ -38,6 +38,26 @@ const (
 	roleError   = "error"
 )
 
+// The forms that belong to no kind: the five on the signed-out surface and the
+// three on the settings page. They are constants rather than composed because
+// there is exactly one of each in the application, and because ids.Field and
+// ids.FieldError take a form id — so a form whose id was spelled at the call
+// site would name its controls one thing and its refusals another.
+//
+// ConfirmAddressForm names no <form>: contracts/pages.md's P9 is a region with
+// one control in it. It is here anyway because that control still needs an id
+// that cannot collide, and Field is the one thing that mints those.
+const (
+	SignInForm         = "sign-in"
+	CreateAccountForm  = "create-account"
+	ForgotPasswordForm = "forgot-password"
+	NewPasswordForm    = "new-password"
+	ConfirmAddressForm = "confirm-address"
+	ProfileForm        = "profile"
+	PasswordForm       = "password-change"
+	DeleteAccountForm  = "delete-account"
+)
+
 // The prefix for a kind the table does not declare. An id has to begin with a
 // letter to be a legal CSS id selector, and "-row-abc" is not one: the element
 // would render, the patch would match nothing, and the only symptom would be a

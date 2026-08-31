@@ -362,6 +362,15 @@ func setDate(record *core.Record, field string, date domain.Date) {
 // recordInstant reads a stored instant in UTC. Instants are RFC3339 UTC
 // everywhere above this line (research D-27), and the conversion belongs here
 // rather than at each of the dozen places that would otherwise do it.
+//
+// It is truncated to the precision the column actually holds. PocketBase's
+// date layout is "2006-01-02 15:04:05.000Z" — milliseconds — but a record that
+// has just been saved still carries the full-precision time.Time it was
+// stamped with in memory. Without the truncation the entity returned by a
+// create carries a `created` the database does not have, and re-reading the
+// same row a moment later answers with a different instant: the same value
+// written and read back would compare unequal, which is a difference nothing
+// downstream would explain.
 func recordInstant(record *core.Record, field string) time.Time {
-	return record.GetDateTime(field).Time().UTC()
+	return record.GetDateTime(field).Time().UTC().Truncate(time.Millisecond)
 }
