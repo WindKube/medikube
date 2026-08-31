@@ -654,3 +654,62 @@ func TestACancelledContextStopsEveryOperation(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, read.Dosage, "a write on a cancelled context reached the database")
 }
+
+// The second of MediKube's two independent refusals, tested with the first one
+// absent from the path entirely.
+//
+// The service authorizes above this and the checkpoint is not wired into this
+// file at all, so every call below is what a repository sees when the
+// checkpoint has granted unconditionally — which is exactly the state the tree
+// was in while internal/service/access had no tests: a stranger's read was
+// stopped here and only here, and nothing said so.
+//
+// The contract suite asserts the same scoping against both implementations.
+// This is the same property named as a layer rather than as a contract clause,
+// so that "the store predicate is gone" fails a test that is about the store
+// predicate, and it addresses one row through all four operations so the
+// predicate cannot be dropped from one of them alone.
+func TestTheRepositoryRefusesAStrangerWithNoCheckpointInThePath(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	ctx := t.Context()
+
+	theirs := h.create(t, ctx, h.draft(h.owner, "Amoxicillin"))
+
+	t.Run("get", func(t *testing.T) {
+		_, err := h.repo.Get(ctx, h.stranger, theirs.ID)
+
+		assert.ErrorIs(t, err, domain.ErrNotFound, "a stranger read a row that is not theirs")
+	})
+
+	t.Run("update", func(t *testing.T) {
+		hijacked := theirs
+		hijacked.OwnerID = h.stranger
+		hijacked.Dosage = "500 mg"
+
+		_, err := h.repo.Update(ctx, hijacked, theirs.Version)
+
+		assert.ErrorIs(t, err, domain.ErrNotFound, "a stranger changed a row that is not theirs")
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		err := h.repo.Delete(ctx, h.stranger, theirs.ID, theirs.Version)
+
+		assert.ErrorIs(t, err, domain.ErrNotFound, "a stranger deleted a row that is not theirs")
+	})
+
+	t.Run("list", func(t *testing.T) {
+		page, err := h.repo.List(ctx, h.stranger, medication.Query{})
+
+		require.NoError(t, err)
+		assert.Empty(t, pageIDs(page), "a stranger's list carried another account's rows")
+	})
+
+	// The control. Two of the refusals above destroy the subject when they do
+	// not refuse, so a green that proves nothing looks identical to a green
+	// that proves everything without this.
+	read, err := h.repo.Get(ctx, h.owner, theirs.ID)
+	require.NoError(t, err, "the owner cannot reach their own row, so the refusals above were not about ownership")
+	assert.Empty(t, read.Dosage, "the stranger's update reached the row")
+}

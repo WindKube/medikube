@@ -3,6 +3,7 @@ package stream
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -63,6 +64,7 @@ type rig struct {
 	frames chan frame
 
 	authorizer *countingAuthorizer
+	sessions   *fakeSessions
 	services   map[kind.Kind]*recordstest.FakeKindService
 
 	response *http.Response
@@ -76,6 +78,7 @@ type rigOptions struct {
 	kinds     []kind.Kind
 	heartbeat time.Duration
 	now       func() time.Time
+	openErr   error
 }
 
 type rigOption func(*rigOptions)
@@ -84,6 +87,9 @@ func withQuery(query string) rigOption        { return func(o *rigOptions) { o.q
 func withStreamFilterDenying() rigOption      { return func(o *rigOptions) { o.deny = true } }
 func withKinds(kinds ...kind.Kind) rigOption  { return func(o *rigOptions) { o.kinds = kinds } }
 func withHeartbeat(d time.Duration) rigOption { return func(o *rigOptions) { o.heartbeat = d } }
+
+// withNoSession is a stream whose identity cannot be re-checked at all.
+func withNoSession() rigOption { return func(o *rigOptions) { o.openErr = ErrNoSession } }
 
 // actorOf is the seeded fake's owner as an authenticated actor.
 func actorOf(userID string) access.Actor {
@@ -108,6 +114,7 @@ func newRig(t *testing.T, options ...rigOption) *rig {
 		events:     make(chan realtime.Event, realtime.SubscriberBuffer),
 		frames:     make(chan frame, 64),
 		authorizer: &countingAuthorizer{inner: recordstest.Authorizer{Owner: chosen.actor.UserID}},
+		sessions:   &fakeSessions{openErr: chosen.openErr},
 		services:   make(map[kind.Kind]*recordstest.FakeKindService),
 	}
 
@@ -146,6 +153,7 @@ func newRig(t *testing.T, options ...rigOption) *rig {
 		Hub:       fakeHub{events: r.events},
 		Heartbeat: chosen.heartbeat,
 		Now:       chosen.now,
+		Sessions:  r.sessions,
 	}}
 
 	if streams.deps.Now == nil {
@@ -397,4 +405,54 @@ func (a *countingAuthorizer) consultations() []authCall {
 	defer a.mu.Unlock()
 
 	return append([]authCall(nil), a.calls...)
+}
+
+// fakeSessions is a revocable identity, so the in-package rig can end a session
+// while a stream is open without a database, a token or a password change.
+// internal/web/stream's external suite does it the real way.
+type fakeSessions struct {
+	openErr error
+
+	mu    sync.Mutex
+	err   error
+	calls int
+}
+
+func (s *fakeSessions) Open(*core.RequestEvent) (Session, error) {
+	if s.openErr != nil {
+		return nil, s.openErr
+	}
+
+	return s, nil
+}
+
+func (s *fakeSessions) Live(context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.calls++
+
+	return s.err
+}
+
+// end revokes the session the stream is running on. The error is what the
+// production implementation returns for a token that no longer authenticates.
+func (s *fakeSessions) end() {
+	s.failWith(fmt.Errorf("%w: the token no longer authenticates", ErrSessionEnded))
+}
+
+// failWith is the other half: a re-check that could not be MADE, which must
+// also end the stream and, unlike an ended session, must be reported.
+func (s *fakeSessions) failWith(err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.err = err
+}
+
+func (s *fakeSessions) checks() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.calls
 }

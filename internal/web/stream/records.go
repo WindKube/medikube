@@ -63,6 +63,11 @@ type Deps struct {
 
 	// Now is the clock the heartbeat reads. Zero means time.Now.
 	Now func() time.Time
+
+	// Sessions re-checks the identity a stream was opened with. Nil means the
+	// production one, which re-validates the request's own token against the
+	// instance; the in-package harness supplies a revocable fake.
+	Sessions Sessions
 }
 
 // Handlers is the stream's contribution to the route table: one operation, every
@@ -82,6 +87,10 @@ func Handlers(deps Deps) (httproute.Handlers, error) {
 
 	if deps.Now == nil {
 		deps.Now = time.Now
+	}
+
+	if deps.Sessions == nil {
+		deps.Sessions = tokenSessions{}
 	}
 
 	return httproute.Handlers{
@@ -125,6 +134,13 @@ func (s *streams) records(e *core.RequestEvent, actor access.Actor) error {
 			&web.Coded{Status: http.StatusUnauthorized, Code: web.CodeUnauthenticated})
 	}
 
+	// Captured before anything is subscribed to, because a stream that cannot
+	// re-check its identity must not open at all.
+	session, err := s.deps.Sessions.Open(e)
+	if err != nil {
+		return err
+	}
+
 	ctx := e.Request.Context()
 
 	// Subscribed before the stream opens, so a change committed between the
@@ -136,14 +152,25 @@ func (s *streams) records(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	return s.pump(ctx, sse, actor, entries, selected, events)
+	return s.pump(ctx, sse, subscriber{actor: actor, session: session}, entries, selected, events)
+}
+
+// subscriber is who a stream is running as: the actor every record is
+// authorized against, and the session that authority expires with.
+//
+// The two travel together because they are two halves of one question that the
+// loop has to keep asking. Re-authorising the record while never re-checking
+// the identity is what let a revoked session keep receiving rows.
+type subscriber struct {
+	actor   access.Actor
+	session Session
 }
 
 // pump is the subscriber loop: heartbeat, event, shutdown.
 func (s *streams) pump(
 	ctx context.Context,
 	sse *datastar.ServerSentEventGenerator,
-	actor access.Actor,
+	who subscriber,
 	entries map[kind.Kind]records.Entry,
 	selected map[kind.Kind]struct{},
 	events <-chan realtime.Event,
@@ -168,6 +195,13 @@ func (s *streams) pump(
 			return nil
 
 		case <-ticker.C:
+			// Before the beat, not after it: a beat is what tells the page its
+			// live view is healthy, and one sent on a session that has ended
+			// is that page being told so wrongly.
+			if err := who.session.Live(ctx); err != nil {
+				return s.revoked(ctx, err)
+			}
+
 			if err := s.beat(sse); err != nil {
 				return s.ended(ctx, err)
 			}
@@ -181,11 +215,35 @@ func (s *streams) pump(
 				return nil
 			}
 
-			if err := s.patch(ctx, sse, actor, entries, selected, event); err != nil {
+			// FR-032: authorized against the signed-in person at the moment
+			// of access. The checkpoint below answers for the record; this
+			// answers for the person, and without it the record check runs
+			// against an identity that stopped existing an hour ago.
+			if err := who.session.Live(ctx); err != nil {
+				return s.revoked(ctx, err)
+			}
+
+			if err := s.patch(ctx, sse, who.actor, entries, selected, event); err != nil {
 				return s.ended(ctx, err)
 			}
 		}
 	}
+}
+
+// revoked ends the stream and decides whether the ending is worth reporting.
+//
+// Every failed identity re-check ends it. A session that ended is not a failure
+// though — it is a person signing out, changing their password, or a token
+// reaching its expiry — so it closes the connection and says nothing, and the
+// browser's reconnect is refused by the route's own authentication. A check
+// that could not be MADE is reported: a stream carrying somebody's records must
+// stop when nothing can say whose they still are, and that one is not routine.
+func (s *streams) revoked(ctx context.Context, err error) error {
+	if errors.Is(err, ErrSessionEnded) {
+		return nil
+	}
+
+	return s.ended(ctx, err)
 }
 
 // patch is contracts/streams.md's four steps, in order, for one event.

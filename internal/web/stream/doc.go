@@ -13,5 +13,12 @@
 // re-authorisation and the heartbeat a long-lived connection needs to survive
 // an intermediary.
 //
+// Two things are re-checked on every beat and every event, and they are
+// different questions. The record checkpoint answers "may this actor see this
+// record"; session.go answers "is this actor still signed in". Only the first
+// was ever asked, and an actor is built once at subscribe — so a revoked
+// session went on receiving rendered rows on the connection it already had,
+// which is the "usable again from anywhere it was still open" FR-007 forbids.
+//
 // It sits on the PocketBase side of the import boundary.
 package stream

@@ -225,3 +225,119 @@ to move the assertions rather than to move them twice.
 *Not done unilaterally:* tasks.md mandates both files by name, so collapsing
 them is a tasks amendment and not an implementation detail. Neither
 implementation has been deleted.
+
+## D12 — The one authorization checkpoint had no test of its own
+
+`internal/service/access` shipped with **no test file at all**, and the whole
+suite stayed green with its central decision deleted: replacing the owner
+comparison in `authorizer.go` with `_ = owner`, so that it grants
+unconditionally, left `go test -race ./...` at exit 0 across all 32 packages —
+the ownership matrix (T147) included.
+
+It behaved correctly anyway because `internal/store/medication`'s `owned()`
+predicate is a second, independent refusal. That is good defence in depth and it
+is exactly why the hole was invisible. The mirror holds too: deleting the store's
+owner predicate leaves `internal/web/api` entirely green, and only the repository
+contract catches it. T147 bites only when **both** layers are broken, which is
+the one state neither layer being present was supposed to allow.
+
+*Followed:* constitution Principle V — the checkpoint is the thing that must be
+tested where it decides, not where its effects happen to be visible.
+
+- `internal/service/access/authorizer_test.go` is the checkpoint alone: hand-written
+  `Owners` fake, no database, no HTTP, no repository. Owner, stranger, guest,
+  superuser, undeclared kind, a miss, and a lookup that could not answer.
+- `internal/store/owner_integration_test.go` composes the real checkpoint over the
+  real owner lookup against a real instance, which is the wiring
+  `cmd/medikube/handlers.go` builds and the one no test exercised.
+- `internal/store/medication/repo_integration_test.go` names the second layer's
+  guard explicitly, with no checkpoint anywhere in the path, over all four
+  operations.
+
+Each was proved to bite by breaking only its own layer: neutering the owner
+comparison reds the first two and nothing else; neutering the store predicate
+reds the third and nothing else.
+
+*Worth keeping:* two independent refusals mean a single-layer defect is
+undetectable from the outside by construction. Every layer needs a guard that
+can see it alone, or defence in depth degrades silently into one layer.
+
+## D13 — The checkpoint failed open on any database error
+
+`internal/store/owner.go` collapsed **every** error from the owner lookup into
+`domain.ErrNotFound`. `internal/service/access/authorizer.go` turns `ErrNotFound`
+into a **full grant** — research D-20's deliberate "grant for a record that is
+not there", which is correct on its own. Composed, a failed read was a grant:
+
+```
+a cancelled owner lookup returns: store: reading the owner of a medication: not found
+the checkpoint answered {Level:own} for account B on account A's record
+```
+
+The second consequence was quieter. The authorizer's own defensive branch — the
+one whose comment reads "what stops a database outage reading as *that record is
+not yours*" — was **unreachable dead code**, because the only production `Owners`
+implementation could never produce anything but `ErrNotFound`. So
+`internal/web/stream`'s `TestACheckpointThatFailsEndsTheStreamRatherThanPatchingAnyway`
+passed against an injected fake while asserting a behaviour the shipped binary
+did not have.
+
+*Followed:* the API that exists. `dbx` returns `sql.ErrNoRows` and nothing else
+for an empty result set (`dbx/rows.go:244`), and PocketBase's `execLockRetry`
+deliberately leaves that one sentinel unwrapped while wrapping every other error
+with `%w` (`core/db_retry.go:34`). Only `sql.ErrNoRows` is now a miss; everything
+else propagates as itself, and the checkpoint's defensive branch is reachable
+and covered.
+
+## D14 — A live stream outlived the session that opened it
+
+Authorization was re-run per event **for the record** and never **for the
+identity**. `access.Actor` is built once by `web.WithActor` at subscribe and was
+then frozen for the life of the connection. Revoking the session — a password
+change re-randomises the record's token key (`core/record_model.go:1449`) and
+kills every token signed for that account — stopped every ordinary request with
+a 401 and did nothing whatever to an open stream. Measured on a real socket, a
+row written *after* the revocation arrived on the revoked connection in full and
+rendered.
+
+spec.md:49 / FR-007: "the ended session MUST NOT be usable again from anywhere it
+was still open." An open SSE connection is exactly that. FR-032 — "authorized
+against the signed-in person **at the moment of access**" — says the same thing
+from the other side.
+
+Three individually-correct decisions removed every upper bound on the
+consequence: `WriteTimeout: 0` in `cmd/medikube/main.go`, `clearWriteDeadline`
+removing the per-request deadline (D-34, and necessary), and
+`internal/httproute/routes.go` unbinding the rate limiter from this route. A
+token stolen for ten seconds bought an indefinite live feed, and the victim's
+standard remedy did not close it.
+
+*Followed:* FR-007 and FR-032. `internal/web/stream/session.go` re-checks the
+identity on every event **and** every heartbeat tick, and the check it applies is
+deliberately the identical one PocketBase's `loadAuthToken` applies to every
+ordinary request (`apis/middlewares.go:199`): would a request bearing this token
+still be authenticated? Signature, expiry, the record's token key and the
+collection's auth secret are all inside that one call, so revocation, sign-out
+and expiry are one check rather than three, and the stream cannot end up with a
+more generous notion of "signed in" than the rest of the application has.
+
+Three notes on scope, since two of them were considered and declined:
+
+1. **Maximum stream lifetime: covered, and by an existing authority.** Token
+   expiry is part of the check above, so a stream cannot outlive the configured
+   session TTL (`internal/platform/pb`'s `applySessionTTL`,
+   `MEDIKUBE_AUTH_SESSION_TTL`) by more than one heartbeat. A second, invented
+   number would be a way for the two to disagree.
+2. **Concurrent-stream cap: deliberately not added here.** It is a resource
+   control and not an authorization one — it bounds how many connections one
+   account may hold, which is a different failure from a connection outliving
+   its authority, and it needs a shared counter, a limit in `internal/config`
+   and a documented refusal status. Nothing in this phase's spec fixes that
+   number, and picking one here would be an amendment made in a bug fix.
+   Recorded as open.
+3. **A revoked stream ends silently.** A session ending is routine — a sign-out,
+   a password change, an expiry — so the connection closes and nothing is
+   reported; the browser's reconnect is refused by the route's own
+   authentication, which is what an ended session should look like from every
+   direction. A re-check that could not be *made* also ends the stream, and that
+   one **is** reported.
