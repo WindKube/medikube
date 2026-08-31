@@ -7,7 +7,6 @@
 > live, and `internal/config/config_test.go` cites the latter. Always write the word
 > `defect` or `research` before the number; a bare `D18` is ambiguous.
 
-
 Contradictions and stale figures found while implementing, recorded rather than
 silently resolved. Each entry names the authority that was followed and why.
 
