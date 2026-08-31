@@ -74,3 +74,5 @@ pb_data/
 # Playwright's install and its run output.
 e2e/node_modules
 e2e/test-results
+e2e/playwright-report
+e2e/blob-report

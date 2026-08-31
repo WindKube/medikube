@@ -9,6 +9,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/hook"
 )
 
 // RouteKind classifies a route by who serves it and which gate checks it. The
@@ -91,6 +92,43 @@ type Route struct {
 	// deliberately invalid token here: a seeded one would be expired by the
 	// time CI ran, and the expired-link state is what FR-074 requires anyway.
 	SmokeURL string
+
+	// Middlewares are bound to this route alone, at the moment it is
+	// registered.
+	//
+	// It exists because a middleware cannot be bound by the handler it wraps:
+	// by the time a handler runs, the chain that would have contained it has
+	// already been assembled. contracts/streams.md requires the SSE stream to
+	// be registered with apis.SkipSuccessActivityLog(), which is a
+	// *hook.Handler and therefore has exactly one place it can go — here.
+	//
+	// Every entry must carry an Id. PocketBase appends an anonymous handler
+	// and never replaces it (tools/hook/hook.go), so an unnamed middleware
+	// cannot be removed, cannot be replaced and cannot be asserted — which
+	// would make this column a thing the inventory records and nothing checks.
+	Middlewares []*hook.Handler[*core.RequestEvent]
+
+	// Unbind names middlewares bound further out that must not run on this
+	// route.
+	//
+	// PocketBase's rate limiter has no per-rule exclusion — internal/platform/pb's
+	// RateLimitRules says so in as many words — so the stream's exemption from
+	// it is an Unbind on the route. router.Route.Unbind also adds the id to an
+	// exclude list, which is what makes it reach a middleware bound on the
+	// parent group rather than on the route itself.
+	Unbind []string
+}
+
+// MiddlewareIDs is what this route binds, in order. It is what a test asserts
+// against: the alternative is reading them back off PocketBase's router, whose
+// RouterGroup keeps its children in an unexported field.
+func (r Route) MiddlewareIDs() []string {
+	ids := make([]string, 0, len(r.Middlewares))
+	for _, middleware := range r.Middlewares {
+		ids = append(ids, middleware.Id)
+	}
+
+	return ids
 }
 
 // Pattern is the method and path as Go's ServeMux spells them, which is also
@@ -321,6 +359,18 @@ func (r *Registry) Bind(se *core.ServeEvent) error {
 		if route.Kind != KindPage && route.Auth != AuthPublic {
 			bound.Bind(apis.RequireAuth())
 		}
+
+		// Bind before Unbind, never the other way round: router.Route.Bind
+		// clears an id from the exclude list, so an Unbind followed by a Bind
+		// of the same id would silently re-admit the middleware the table said
+		// to keep off this route.
+		if len(route.Middlewares) > 0 {
+			bound.Bind(route.Middlewares...)
+		}
+
+		if len(route.Unbind) > 0 {
+			bound.Unbind(route.Unbind...)
+		}
 	}
 
 	return nil
@@ -368,6 +418,8 @@ func (r *Registry) describe(route Route) {
 		panic(fmt.Sprintf("httproute: %s and %s both claim %s", owner, route.OpID, route.Pattern()))
 	}
 
+	describeMiddlewares(route)
+
 	if route.Kind == KindPage {
 		r.describePage(route)
 	} else {
@@ -383,6 +435,30 @@ func (r *Registry) describe(route Route) {
 	r.opIDs[route.OpID] = struct{}{}
 	r.patterns[route.Pattern()] = route.OpID
 	r.routes = append(r.routes, route)
+}
+
+// describeMiddlewares refuses a per-route middleware that cannot be named.
+//
+// An anonymous handler is appended rather than replaced, cannot be unbound and
+// cannot be read back, so a route carrying one records an intention nothing
+// verifies. An empty Unbind id is the same defect from the other side:
+// router.Route.Unbind skips it silently.
+func describeMiddlewares(route Route) {
+	for index, middleware := range route.Middlewares {
+		if middleware == nil {
+			panic(fmt.Sprintf("httproute: %s declares a nil middleware at position %d", identify(route), index))
+		}
+
+		if middleware.Id == "" {
+			panic(fmt.Sprintf("httproute: %s binds an anonymous middleware at position %d; PocketBase appends rather than replaces one, and nothing can unbind or assert it", identify(route), index))
+		}
+	}
+
+	for index, id := range route.Unbind {
+		if id == "" {
+			panic(fmt.Sprintf("httproute: %s unbinds an empty middleware id at position %d, which router.Route.Unbind skips in silence", identify(route), index))
+		}
+	}
 }
 
 // describePage is FR-067 made mechanical. plan.md calls this panic

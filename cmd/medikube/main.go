@@ -26,7 +26,9 @@ import (
 	"medikube/internal/logging"
 	"medikube/internal/obs"
 	"medikube/internal/platform/pb"
+	"medikube/internal/records"
 	"medikube/internal/web"
+	"medikube/internal/web/api"
 
 	// MediKube's migrations register themselves from their own init, and
 	// core.AppMigrations is what apis.Serve runs. Without this import the list
@@ -151,7 +153,20 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 	logging.BridgeApp(app, log)
 	logging.BridgeLogs(app, log)
 
-	registry, err := httproute.New(operations())
+	// The kind registry, resolved on first use rather than here: see
+	// recordFamily. The boot gate forces it before the instance serves.
+	//
+	// The hub comes from the container so that its Shutdown runs with
+	// everything else the container holds: a hub nobody closes leaves every
+	// open stream's watcher goroutine parked until the process exits.
+	resolve := recordFamily(app, records.NewRegistry(), container.Hub())
+
+	table, err := operations(resolve, container.Hub())
+	if err != nil {
+		return nil, nil, shutdownAfter(container, fmt.Errorf("wire the MediKube handlers: %w", err))
+	}
+
+	registry, err := httproute.New(table)
 	if err != nil {
 		return nil, nil, shutdownAfter(container, fmt.Errorf("wire the MediKube routes: %w", err))
 	}
@@ -186,7 +201,7 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 		Outermost: web.Outermost(log),
 	})
 
-	bindBootGate(app, cfg, log)
+	bindBootGate(app, cfg, log, resolve)
 
 	return app, container, nil
 }
@@ -218,7 +233,7 @@ func (b binders) Bind(se *core.ServeEvent) error {
 // after the write would let an instance whose batch endpoint somebody enabled
 // in the admin UI be silently repaired on every boot instead of refusing —
 // and the refusal is the point.
-func bindBootGate(app core.App, cfg config.Config, log zerolog.Logger) {
+func bindBootGate(app core.App, cfg config.Config, log zerolog.Logger, resolve api.Resolve) {
 	app.OnServe().Bind(&hook.Handler[*core.ServeEvent]{
 		Id:       bootGateHookID,
 		Priority: bootGatePriority,
@@ -229,6 +244,15 @@ func bindBootGate(app core.App, cfg config.Config, log zerolog.Logger) {
 
 			if err := pb.ApplySettings(se.App, cfg); err != nil {
 				return fmt.Errorf("MediKube refuses to serve: %w", err)
+			}
+
+			// The kinds, here and not at wiring time: a repository needs the
+			// cursor codec, and the codec is keyed from a secret the
+			// migrations have only just created. Forcing it here is what
+			// turns a registration that cannot be built into a refusal to
+			// serve rather than a 500 on somebody's first request.
+			if _, err := resolve(); err != nil {
+				return fmt.Errorf("MediKube refuses to serve: register the record kinds: %w", err)
 			}
 
 			superusers, err := se.App.FindCachedCollectionByNameOrId(core.CollectionNameSuperusers)

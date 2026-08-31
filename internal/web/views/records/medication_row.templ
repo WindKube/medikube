@@ -1,0 +1,50 @@
+package records
+
+import (
+	"medikube/internal/domain/kind"
+	"medikube/internal/web/views/ids"
+)
+
+// MedicationRow is the element contracts/streams.md patches by id. Everything
+// it shows is FR-021's "enough to identify it without opening it", and the
+// labels are rendered for a narrow viewport where the columns stack — which is
+// why each optional one is inside the same branch as its value: a label with
+// nothing beside it is FR-024's empty placeholder in the list.
+templ MedicationRow(medication MedicationView) {
+	<tr
+		id={ ids.RecordRow(kind.Medication, medication.ID) }
+		data-status={ medication.StatusValue }
+		class="border-b border-slate-200 last:border-b-0 dark:border-slate-800"
+	>
+		<th scope="row" class="py-3 pr-4 text-left align-top font-medium">
+			<a
+				href={ medication.Links.Detail }
+				class="text-teal-800 underline underline-offset-2 hover:text-teal-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-teal-300 dark:hover:text-teal-200"
+			>{ medication.Name }</a>
+		</th>
+		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
+			if medication.Dosage != "" {
+				<span class="sr-only">{ FieldLabel(FieldDosage) }</span>
+				{ medication.Dosage }
+			}
+		</td>
+		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
+			if medication.Frequency != "" {
+				<span class="sr-only">{ FieldLabel(FieldFrequency) }</span>
+				{ medication.Frequency }
+			}
+		</td>
+		<td class="py-3 pr-4 align-top">
+			<span class="sr-only">{ FieldLabel(FieldStatus) }</span>
+			<span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+				{ medication.Status }
+			</span>
+		</td>
+		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
+			if medication.StartedOn != "" {
+				<span class="sr-only">{ FieldLabel(FieldStartedOn) }</span>
+				<time datetime={ medication.StartedOn }>{ medication.StartedOn }</time>
+			}
+		</td>
+	</tr>
+}

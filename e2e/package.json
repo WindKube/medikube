@@ -1,0 +1,17 @@
+{
+  "name": "medikube-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MediKube's browser gate. Constitution Principle VIII: the UI must prove it renders.",
+  "scripts": {
+    "test": "playwright test",
+    "smoke": "playwright test smoke.spec.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/node": "24.9.2",
+    "typescript": "5.9.3"
+  }
+}

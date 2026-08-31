@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 
@@ -66,6 +67,13 @@ type OwnershipCase struct {
 	Body        string
 	ContentType string
 
+	// Headers are sent on every leg. A write whose precondition is missing is
+	// refused with 422 for everybody, which satisfies "the stranger did not
+	// succeed" while asserting nothing about ownership — so a case for PATCH
+	// or DELETE puts the owner's own If-Match here and makes the refusal be
+	// about who is asking.
+	Headers map[string]string
+
 	// The three expected outcomes. Zero means the default: 200, 404, 401.
 	OwnerStatus    int
 	StrangerStatus int
@@ -75,12 +83,21 @@ type OwnershipCase struct {
 	// set, the matrix asserts the stranger's whole response is byte-identical
 	// to the owner's response for this path — which is what "do not confirm the
 	// identifier exists" actually means, as opposed to merely returning the
-	// same status code.
+	// same status code. The HEADER SET is compared too: this repository has
+	// already shipped two responses that were distinguishable by headers
+	// alone, which no body comparison would have caught.
 	//
-	// Leave it empty when the body carries a correlation id or a timestamp:
-	// those differ per request and the comparison would fail on them rather
-	// than on a disclosure.
+	// A body that carries a correlation id or a timestamp needs
+	// OwnershipMatrix.Normalise; without one the comparison fails on the
+	// per-request member rather than on a disclosure.
 	MissingPath string
+
+	// StrangerIsolated marks an operation that addresses no record of anybody's
+	// — a list, a create. A stranger is not refused one: they get their own
+	// answer, and what "refused" means for them is that nothing of the owner's
+	// is in it. The Secrets check is then the whole of the assertion, which is
+	// why a case that sets this and names nothing is refused twice over.
+	StrangerIsolated bool
 
 	// Secrets must appear in neither the stranger's nor the guest's response.
 	// The record's own identifier belongs here, and so does anything of the
@@ -99,6 +116,25 @@ type OwnershipMatrix struct {
 
 	Owner    Identity
 	Stranger Identity
+
+	// Normalise removes the parts of a response that differ between two
+	// requests by construction — the correlation id above all, which
+	// contracts/records.md and FR-033 name as the ONE permitted difference
+	// between a refusal and a genuine miss.
+	//
+	// It is a function rather than a list of member names because the shape is
+	// the caller's: an envelope, a page, an HTML error view. Nil is the
+	// identity, which is what a body with nothing volatile in it wants.
+	//
+	// It applies to bodies AND to header values, so a header carrying the same
+	// id is normalised the same way rather than needing a second hook.
+	Normalise func(string) string
+
+	// VolatileHeaders are dropped before the header sets are compared. A
+	// header whose value cannot match between two requests goes here by name;
+	// one whose value merely contains a correlation id is handled by
+	// Normalise.
+	VolatileHeaders []string
 
 	Cases []OwnershipCase
 }
@@ -133,46 +169,62 @@ func runOwnershipCase(t *testing.T, matrix OwnershipMatrix, one OwnershipCase) {
 	require.NotEmpty(t, one.Secrets,
 		"%s: the case names nothing that must not leak, so its refusal legs assert only a status code", one.Name)
 
-	t.Run("the owner succeeds", func(t *testing.T) {
-		status, _ := send(t, matrix.Handler, one, one.Path, matrix.Owner)
-
-		assert.Equal(t, orStatus(one.OwnerStatus, defaultOwnerStatus), status,
-			"the owner cannot reach their own record, so nothing below this proves anything")
-	})
-
 	t.Run("a stranger is refused", func(t *testing.T) {
-		status, body := send(t, matrix.Handler, one, one.Path, matrix.Stranger)
+		status, body, headers := send(t, matrix.Handler, one, one.Path, matrix.Stranger)
 
 		assert.NotEqual(t, http.StatusForbidden, status,
 			"403 tells a stranger the identifier exists, which turns guessing into enumeration; the answer is 404")
-		assert.GreaterOrEqual(t, status, http.StatusBadRequest,
-			"a stranger reached someone else's record")
-		assert.Equal(t, orStatus(one.StrangerStatus, defaultStrangerStatus), status)
+
+		if one.StrangerIsolated {
+			assert.Less(t, status, http.StatusBadRequest,
+				"the operation addresses no record, so a stranger is answered rather than refused")
+			assert.Equal(t, orStatus(one.StrangerStatus, defaultOwnerStatus), status)
+		} else {
+			assert.GreaterOrEqual(t, status, http.StatusBadRequest,
+				"a stranger reached someone else's record")
+			assert.Equal(t, orStatus(one.StrangerStatus, defaultStrangerStatus), status)
+		}
 
 		assertNoSecrets(t, "the stranger's response", body, one.Secrets)
 
 		if one.MissingPath != "" {
-			missingStatus, missingBody := send(t, matrix.Handler, one, one.MissingPath, matrix.Owner)
+			missingStatus, missingBody, missingHeaders := send(t, matrix.Handler, one, one.MissingPath, matrix.Owner)
 
 			assert.Equal(t, missingStatus, status,
 				"a record that exists and one that never did answer differently")
-			assert.Equal(t, missingBody, body,
+			assert.Equal(t, normalise(matrix, missingBody), normalise(matrix, body),
 				"the refusal is distinguishable from a genuine miss, so the identifier is confirmed by the body")
+			assert.Equal(t,
+				comparableHeaders(matrix, missingHeaders), comparableHeaders(matrix, headers),
+				"the refusal is distinguishable from a genuine miss by its headers alone")
 		}
 	})
 
 	t.Run("a guest is refused", func(t *testing.T) {
-		status, body := send(t, matrix.Handler, one, one.Path, nil)
+		status, body, _ := send(t, matrix.Handler, one, one.Path, nil)
 
 		assert.Equal(t, orStatus(one.GuestStatus, defaultGuestStatus), status)
 		assertNoSecrets(t, "the guest's response", body, one.Secrets)
+	})
+
+	// LAST, and that ordering is load-bearing rather than tidy. The owner leg
+	// of a delete destroys the subject, so run first it would leave the
+	// stranger refused because the record was gone — a green that proves
+	// nothing and cannot be told from a green that proves everything. Run
+	// last, it is the control: the record was still reachable by its owner
+	// after two refusals, so the refusals were about who was asking.
+	t.Run("the owner succeeds", func(t *testing.T) {
+		status, _, _ := send(t, matrix.Handler, one, one.Path, matrix.Owner)
+
+		assert.Equal(t, orStatus(one.OwnerStatus, defaultOwnerStatus), status,
+			"the owner cannot reach their own record, so the refusals above were not about ownership")
 	})
 }
 
 // send drives one request through the handler in memory. No socket is opened,
 // which is what makes a table of these cheap enough that every endpoint gets
 // one.
-func send(t *testing.T, handler http.Handler, one OwnershipCase, path string, who Identity) (int, string) {
+func send(t *testing.T, handler http.Handler, one OwnershipCase, path string, who Identity) (int, string, http.Header) {
 	t.Helper()
 
 	var body io.Reader
@@ -188,6 +240,10 @@ func send(t *testing.T, handler http.Handler, one OwnershipCase, path string, wh
 		request.Header.Set("Content-Type", orString(one.ContentType, "application/json"))
 	}
 
+	for name, value := range one.Headers {
+		request.Header.Set(name, value)
+	}
+
 	if who != nil {
 		who(request)
 	}
@@ -195,7 +251,40 @@ func send(t *testing.T, handler http.Handler, one OwnershipCase, path string, wh
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, request)
 
-	return recorder.Code, recorder.Body.String()
+	return recorder.Code, recorder.Body.String(), recorder.Header().Clone()
+}
+
+// normalise applies the matrix's own normalisation, or none.
+func normalise(matrix OwnershipMatrix, value string) string {
+	if matrix.Normalise == nil {
+		return value
+	}
+
+	return matrix.Normalise(value)
+}
+
+// comparableHeaders is one response's headers with the volatile ones dropped
+// and the rest normalised, so the comparison is of what the two responses SAY
+// rather than of when they were sent.
+func comparableHeaders(matrix OwnershipMatrix, headers http.Header) map[string][]string {
+	comparable := make(map[string][]string, len(headers))
+
+	for name, values := range headers {
+		if slices.ContainsFunc(matrix.VolatileHeaders, func(volatile string) bool {
+			return http.CanonicalHeaderKey(volatile) == name
+		}) {
+			continue
+		}
+
+		normalised := make([]string, 0, len(values))
+		for _, value := range values {
+			normalised = append(normalised, normalise(matrix, value))
+		}
+
+		comparable[name] = normalised
+	}
+
+	return comparable
 }
 
 // assertNoSecrets names the secret and the response it appeared in. The secret

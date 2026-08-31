@@ -1,0 +1,17 @@
+package components
+
+templ EmptyState(props EmptyStateProps) {
+	<div
+		id={ props.ID }
+		class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-slate-300 px-6 py-12 text-center dark:border-slate-700"
+	>
+		<p class="text-base font-medium text-slate-900 dark:text-slate-100">{ props.Title }</p>
+		<p class="max-w-prose text-sm text-slate-600 dark:text-slate-400">{ props.Body }</p>
+		if props.ActionHref != "" {
+			<a
+				href={ props.ActionHref }
+				class="mt-2 inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ props.ActionLabel }</a>
+		}
+	</div>
+}

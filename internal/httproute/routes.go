@@ -6,6 +6,10 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/pocketbase/pocketbase/apis"
+	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/hook"
+
 	"medikube/internal/domain/kind"
 	"medikube/internal/testsupport/seed"
 )
@@ -47,6 +51,13 @@ const expiredTokenForSmoke = "expired-token-for-smoke"
 const notFoundSmokeURL = "/not-found-for-smoke"
 
 const settingsPath = "/settings"
+
+// streamMiddlewares is built once rather than per call to table(), because two
+// calls returning two equal-but-distinct handler pointers would make the
+// inventory and the registry differ by identity while agreeing on everything
+// anybody reads. routes_test.go compares the two tables by value and is what
+// found that.
+var streamMiddlewares = []*hook.Handler[*core.RequestEvent]{apis.SkipSuccessActivityLog()}
 
 // New returns the registry for this build: every row of the table paired with
 // the handler that serves it.
@@ -272,6 +283,22 @@ func recordRoutes() []Route {
 			OpID: "streamRecords", Method: http.MethodGet, Path: apiBase + "/streams/records",
 			Kind: KindStream, Auth: AuthUser,
 			Summary: "The Datastar element stream. Re-authorised per event; publishes ids, never bodies.",
+			// contracts/streams.md: registered with the activity-log skip and
+			// exempt from the rate limiter. Both are decisions only the
+			// registration can make — a handler cannot bind a middleware that
+			// wraps it, and PocketBase's limiter has no per-rule exclusion, so
+			// the exemption is an Unbind of the limiter on this route.
+			//
+			// The skip is bound even though internal/platform/pb unbinds
+			// PocketBase's activity logger wholesale, and deliberately: it is
+			// what the contract specifies, it costs one struct, and the day the
+			// logger is bound back this route does not start writing request
+			// URIs into a second store.
+			Middlewares: streamMiddlewares,
+			// A stream is one request that lasts an hour. Counting it against
+			// a 300-per-10-seconds budget is meaningless; being cut off by it
+			// on a reconnect storm is not.
+			Unbind: []string{apis.DefaultRateLimitMiddlewareId},
 		},
 	}
 }

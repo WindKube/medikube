@@ -287,7 +287,8 @@ func TestAQueryTheBuilderCannotHonourIsRefused(t *testing.T) {
 		{"a limit above the published maximum", Query{Limit: MaxLimit + 1}},
 		{"a negative limit", Query{Limit: -1}},
 		{"one of nothing", Query{Conditions: []Condition{OneOf(medicationFieldStatus)}}},
-		{"an operator that is not one", Query{Conditions: []Condition{{Column: medicationFieldStatus, Op: "regex", Values: []string{"x"}}}}},
+		{"an operator that is not one", Query{Conditions: []Condition{{Columns: []string{medicationFieldStatus}, Op: "regex", Values: []string{"x"}}}}},
+		{"a condition that names no column", Query{Conditions: []Condition{{Op: OpEqual, Values: []string{"x"}}}}},
 		{
 			name: "a boundary whose ordering is not the one being paged",
 			query: Query{
@@ -566,6 +567,9 @@ func TestTheQueryableColumnsAreExactlyTheOnesTheRequirementsName(t *testing.T) {
 		fieldID,
 		medicationFieldOwner,
 		medicationFieldName,
+		// contracts/records.md defines `?q=` as a substring over the name and
+		// the alternative name, so the second column is one FR-022 names.
+		medicationFieldAlternativeName,
 		medicationFieldType,
 		medicationFieldRoute,
 		medicationFieldStatus,
@@ -651,6 +655,7 @@ func TestNoFilterDSLStringAppearsOutsideThisPackage(t *testing.T) {
 	var (
 		offences []string
 		scanned  int
+		authored int
 	)
 
 	walkGoFiles(t, root, func(rel string) {
@@ -664,10 +669,17 @@ func TestNoFilterDSLStringAppearsOutsideThisPackage(t *testing.T) {
 
 		scanned++
 
-		offences = append(offences, filterDSLOffences(t, fileSet, filepath.Join(root, rel))...)
+		literals := !filterDSLGenerated(rel)
+		if literals {
+			authored++
+		}
+
+		offences = append(offences, filterDSLOffences(t, fileSet, filepath.Join(root, rel), literals)...)
 	})
 
 	require.Greater(t, scanned, 20, "the walk found almost nothing; it is not looking where it thinks it is")
+	require.Greater(t, authored, 20,
+		"almost nothing is being read for literals: filterDSLGenerated has widened into an off switch for half the gate")
 
 	sort.Strings(offences)
 	assert.Empty(t, offences)
@@ -694,11 +706,22 @@ func filterDSLWalkSkips(rel string) bool {
 		strings.HasPrefix(dir, filterDSLMigrations+"/")
 }
 
-// filterDSLOffences is one file's findings, factored out of the walk so the
-// detector can be run over a source that does not exist in the repository —
-// which is the only way to prove a repository package that has not been written
-// yet would be caught.
-func filterDSLOffences(t *testing.T, fileSet *token.FileSet, absolute string) []string {
+// filterDSLGenerated is templ's output, which nobody writes and everybody
+// commits nothing of: *_templ.go is gitignored and rebuilt by `task gen`.
+//
+// It is not exempt — the call-site ban still applies to it, because a .templ
+// source can hold an arbitrary Go expression and would compile into one of
+// these files. Only the *literal* heuristic is switched off, and only here: the
+// heuristic reads `field OP 'value'`, which is the shape of a written-out
+// filter and also the shape of every HTML attribute templ compiles into a
+// string constant — ` class="…"` is an identifier, an equals sign and a quote.
+func filterDSLGenerated(rel string) bool {
+	return strings.HasSuffix(path.Base(rel), "_templ.go")
+}
+
+// filterDSLOffences is one file's findings, and literals reports whether a
+// string constant in it is something a person wrote. See filterDSLGenerated.
+func filterDSLOffences(t *testing.T, fileSet *token.FileSet, absolute string, literals bool) []string {
 	t.Helper()
 
 	file, err := parser.ParseFile(fileSet, absolute, nil, parser.SkipObjectResolution)
@@ -724,7 +747,7 @@ func filterDSLOffences(t *testing.T, fileSet *token.FileSet, absolute string) []
 					" — build a store.Query instead (research D-26, plan.md internal/store)")
 			}
 		case *ast.BasicLit:
-			if typed.Kind != token.STRING {
+			if !literals || typed.Kind != token.STRING {
 				return true
 			}
 
@@ -884,7 +907,7 @@ func List(app core.App, owner string, provider *search.Provider, raw string) err
 	require.False(t, filterDSLWalkSkips("internal/store/medication/repo.go"),
 		"the walk has to open the file before the detector can say anything about it")
 
-	offences := filterDSLOffences(t, token.NewFileSet(), absolute)
+	offences := filterDSLOffences(t, token.NewFileSet(), absolute, true)
 
 	var reported []string
 
@@ -1123,4 +1146,239 @@ func TestTheBuiltQueryRunsAndNarrowsTheWayItSaysItDoes(t *testing.T) {
 			assert.Equal(t, testCase.want, run(t, testCase.query))
 		})
 	}
+}
+
+// FR-022's text match spans the name a person recorded and the alternative name
+// they recorded beside it — the case the alternative name exists for is
+// somebody who wrote down the brand and searched for the generic.
+//
+// It is one term across two columns, so it is a disjunction inside the term and
+// still a conjunction with every other term. The value is bound once and the
+// same placeholder is used twice: two bindings of one string are two chances
+// for them to stop being the same string.
+func TestASearchTermSpansTheColumnsItNamesAndIsStillOneTerm(t *testing.T) {
+	t.Parallel()
+
+	built, err := MedicationSchema().Build(Query{Conditions: []Condition{
+		Equal(medicationFieldOwner, "owner123"),
+		ContainsAny("salbuta", medicationFieldName, medicationFieldAlternativeName),
+	}})
+	require.NoError(t, err)
+
+	params := dbx.Params{}
+	require.NotNil(t, built.Where)
+
+	assert.Equal(t,
+		`([[owner]] = {:mk0}) AND (LOWER([[name]]) LIKE {:mk1} ESCAPE '\' OR LOWER([[alternative_name]]) LIKE {:mk1} ESCAPE '\')`,
+		built.Where.Build(nil, params))
+	assert.Equal(t, dbx.Params{"mk0": "owner123", "mk1": "%salbuta%"}, params)
+}
+
+// The gate on the disjunction, and the reason it exists.
+//
+// Every condition is ANDed, and the owner scope is one of them: that is what
+// keeps one account's medications away from another's. A term that is itself an
+// OR is the one shape that can swallow the owner predicate — widen the group by
+// one column and the scope becomes optional, with nothing else in the system
+// objecting. So a term may only span columns the resource declared searchable,
+// and the owner is not one of them.
+func TestATermMaySpanOnlyTheColumnsDeclaredSearchable(t *testing.T) {
+	t.Parallel()
+
+	schema := MedicationSchema()
+
+	cases := []struct {
+		name      string
+		condition Condition
+	}{
+		{
+			name:      "the owner column, which is the scope and never a search",
+			condition: ContainsAny("x", medicationFieldName, medicationFieldOwner),
+		},
+		{
+			name:      "a column that is declared and is not free text",
+			condition: ContainsAny("x", medicationFieldName, medicationFieldStatus),
+		},
+		{
+			name:      "a term spanning no column at all, which narrows nothing",
+			condition: Condition{Op: OpContains, Values: []string{"x"}},
+		},
+		{
+			name:      "an equality widened into a disjunction",
+			condition: Condition{Columns: []string{medicationFieldName, medicationFieldOwner}, Op: OpEqual, Values: []string{"x"}},
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := schema.Build(Query{Conditions: []Condition{testCase.condition}})
+			require.Error(t, err)
+			assert.ErrorIs(t, err, ErrInvalidQuery)
+		})
+	}
+}
+
+// alternative_name is narrowable and not orderable, and that is structural
+// rather than conventional.
+//
+// A sort column becomes a keyset boundary value, and a boundary travels in a
+// query string — through the browser's history, the Referer header and every
+// reverse proxy's access log. The cursor is authenticated encryption precisely
+// so that a drug name cannot make that journey (research D-29), and a second
+// column carrying one would put it there by another route.
+func TestAColumnDeclaredFilterOnlyIsNoOrderingAndNoBoundary(t *testing.T) {
+	t.Parallel()
+
+	schema := MedicationSchema()
+
+	column, declared := schema.Column(medicationFieldAlternativeName)
+	require.True(t, declared, "the search narrows by it, so the schema has to declare it")
+	require.True(t, column.FilterOnly)
+
+	ordering := []domain.SortKey{{Field: medicationFieldAlternativeName}}
+
+	_, err := schema.Build(Query{Sort: ordering})
+	assert.ErrorIs(t, err, ErrUnknownColumn,
+		"a column that may not be ordered by is answered as one this resource does not publish")
+
+	app := newTestApp(t)
+	owner := seedUser(t, app, "filteronly@example.test")
+	record := seedMedication(t, app, sampleMedication(t, owner.Id))
+
+	_, err = schema.Boundary(record, ordering)
+	assert.ErrorIs(t, err, ErrUnknownColumn, "a boundary was minted on a column nothing may order by")
+}
+
+// contracts/records.md fixes where the absent start date goes: last, under both
+// directions. It is stated there rather than left to SQLite because SQLite's
+// answer differs between the two — the absent date is the empty string, which
+// sorts before every real one ascending and after every real one descending.
+//
+// Descending therefore needs nothing and keeps the bare column, which is what
+// idx_medications_owner_start is built on. Ascending is the direction that has
+// to be made to say what the contract says.
+func TestTheAbsentStartDateOrdersLastUnderBothDirections(t *testing.T) {
+	t.Parallel()
+
+	schema := MedicationSchema()
+
+	const flagged = `(CASE WHEN [[started_on]] = '' THEN '1' ELSE '0' END) || [[started_on]]`
+
+	descending, err := schema.Build(Query{Sort: []domain.SortKey{{Field: medicationFieldStartedOn, Desc: true}}})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"[[started_on]] DESC", "[[id]] DESC"}, descending.OrderBy,
+		"the empty string already sorts last descending, so the ordering is the bare column and the index still serves it")
+
+	ascending, err := schema.Build(Query{Sort: []domain.SortKey{{Field: medicationFieldStartedOn}}})
+	require.NoError(t, err)
+	assert.Equal(t, []string{flagged + " ASC", "[[id]] DESC"}, ascending.OrderBy)
+
+	// And the keyset predicate compares the same expression the ordering sorted
+	// by, or the boundary lands somewhere else in the sequence entirely.
+	paged, err := schema.Build(Query{
+		Sort: []domain.SortKey{{Field: medicationFieldStartedOn}},
+		After: Cursor{
+			Sort:   []domain.SortKey{{Field: medicationFieldStartedOn}},
+			Values: []string{"02026-03-01 00:00:00.000Z"},
+			ID:     "row000000000001",
+		},
+	})
+	require.NoError(t, err)
+
+	params := dbx.Params{}
+	require.NotNil(t, paged.Where)
+
+	assert.Equal(t,
+		"("+flagged+" > {:mk0} OR ("+flagged+" = {:mk0} AND [[id]] < {:mk1}))",
+		paged.Where.Build(nil, params))
+	assert.Equal(t, dbx.Params{"mk0": "02026-03-01 00:00:00.000Z", "mk1": "row000000000001"}, params)
+}
+
+// The boundary value is read through the same expression the ordering sorted
+// by, direction included. A boundary minted from the bare column and compared
+// against the flagged expression is a boundary in the wrong sequence.
+func TestTheBoundaryValueIsReadThroughTheOrderingItBelongsTo(t *testing.T) {
+	t.Parallel()
+
+	app := newTestApp(t)
+	owner := seedUser(t, app, "boundary@example.test")
+
+	dated := seedMedication(t, app, sampleMedication(t, owner.Id))
+
+	absent := sampleMedication(t, owner.Id)
+	absent.Name = "Undated"
+	absent.StartedOn = domain.Date{}
+	absent.EndedOn = domain.Date{}
+	undated := seedMedication(t, app, absent)
+
+	schema := MedicationSchema()
+
+	cases := []struct {
+		name   string
+		record *core.Record
+		desc   bool
+		want   string
+	}{
+		{"a dated row ascending is flagged present", dated, false, "0" + dated.GetString(medicationFieldStartedOn)},
+		{"an undated row ascending is flagged absent", undated, false, "1"},
+		{"a dated row descending is the bare column", dated, true, dated.GetString(medicationFieldStartedOn)},
+		{"an undated row descending is the empty string", undated, true, ""},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			cursor, err := schema.Boundary(testCase.record,
+				[]domain.SortKey{{Field: medicationFieldStartedOn, Desc: testCase.desc}})
+			require.NoError(t, err)
+
+			require.Len(t, cursor.Values, 1)
+			assert.Equal(t, testCase.want, cursor.Values[0])
+		})
+	}
+}
+
+// The literal heuristic is switched off for templ's output and the call-site
+// ban is not, which is the only distinction that keeps both halves honest.
+//
+// templ compiles every HTML attribute into a Go string constant, and
+// ` class="…"` is an identifier, an equals sign and a quote — the exact shape
+// filterComparison looks for. Left on, the gate reports three findings per form
+// and gets turned off. Switched off wholesale, a .templ file becomes the one
+// place in the repository where `app.FindRecordsByFilter` is invisible: templ
+// bodies hold arbitrary Go expressions, so that file is reachable.
+func TestGeneratedTemplOutputKeepsTheCallBanAndLosesOnlyTheLiteralHeuristic(t *testing.T) {
+	t.Parallel()
+
+	require.True(t, filterDSLGenerated("internal/web/views/records/medication_row_templ.go"))
+	require.False(t, filterDSLGenerated("internal/web/views/records/medication.go"),
+		"a hand-written file beside the generated ones is not generated")
+	require.False(t, filterDSLWalkSkips("internal/web/views/records/medication_row_templ.go"),
+		"the walk has to open the file before either half can say anything about it")
+
+	source := `package records
+
+import "github.com/pocketbase/pocketbase/core"
+
+var _ = " class=\"mt-1 rounded-md border\""
+
+func Rows(app core.App) error {
+	_, err := app.FindRecordsByFilter("` + kind.Medication.Collection() + `", "owner = 'x'", "-created", 25, 0)
+
+	return err
+}
+`
+
+	absolute := filepath.Join(t.TempDir(), "medication_row_templ.go")
+	require.NoError(t, os.WriteFile(absolute, []byte(source), 0o600))
+
+	authored := filterDSLOffences(t, token.NewFileSet(), absolute, true)
+	assert.Len(t, authored, 3, "written by a person, all three findings stand: the call and both literals")
+
+	generated := filterDSLOffences(t, token.NewFileSet(), absolute, false)
+	require.Len(t, generated, 1, "the call site is the half a generated file can still commit")
+	assert.Contains(t, generated[0], "names FindRecordsByFilter")
 }

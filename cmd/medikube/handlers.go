@@ -5,11 +5,25 @@ import (
 	"maps"
 	"net/http"
 	"slices"
+	"sync"
 
 	"github.com/pocketbase/pocketbase/core"
 
 	"medikube/internal/httproute"
+	"medikube/internal/obs"
+	"medikube/internal/platform/pb"
+	"medikube/internal/realtime"
+	"medikube/internal/records"
+	accessservice "medikube/internal/service/access"
+	auditservice "medikube/internal/service/audit"
+	"medikube/internal/service/medication"
+	"medikube/internal/store"
+	auditstore "medikube/internal/store/audit"
+	medicationstore "medikube/internal/store/medication"
 	"medikube/internal/web"
+	"medikube/internal/web/api"
+	"medikube/internal/web/page"
+	"medikube/internal/web/stream"
 )
 
 // operations is MediKube's handler table: the handlers this build has, and a
@@ -21,7 +35,7 @@ import (
 // still refused by httproute.New. What is *not* derived is the inventory of
 // what is still missing: that lives in cmd/medikube/main_test.go, where a
 // finished handler left behind a stub is a failing test and a one-line diff.
-func operations() httproute.Handlers {
+func operations(resolve api.Resolve, hub *realtime.Hub) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
 	for _, route := range httproute.Inventory().Routes() {
@@ -35,28 +49,148 @@ func operations() httproute.Handlers {
 	}
 
 	// The real ones win. This is the only line each later group touches.
-	maps.Copy(table, wired())
+	served, err := wired(resolve, hub)
+	if err != nil {
+		return nil, err
+	}
 
-	return table
+	maps.Copy(table, served)
+
+	return table, nil
 }
 
-// wired is where each group's handlers arrive as they land:
+// wired is where each group's handlers arrive as they land. The record family,
+// the two record pages and the Datastar stream are in; internal/web/api's auth
+// and account halves are US2's.
+func wired(resolve api.Resolve, hub *realtime.Hub) (httproute.Handlers, error) {
+	table := make(httproute.Handlers)
+
+	records, err := api.Handlers(resolve)
+	if err != nil {
+		return nil, err
+	}
+
+	pages, err := page.Handlers(resolve)
+	if err != nil {
+		return nil, err
+	}
+
+	streams, err := stream.Handlers(stream.Deps{Resolve: resolve, Hub: hub})
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, records)
+	maps.Copy(table, pages)
+	maps.Copy(table, streams)
+
+	return table, nil
+}
+
+// recordFamily resolves the kind registry, once, on first use.
 //
-//	maps.Copy(table, api.Handlers(deps))
-//	maps.Copy(table, page.Handlers(deps))
-//	maps.Copy(table, stream.Handlers(deps))
+// It cannot be resolved when the route table is wired, and that is a property
+// of the instance rather than an inconvenience: a kind's repository needs the
+// cursor codec, the codec is keyed from the auth collection's persisted secret
+// (store.CursorSecret), and that collection does not exist until the
+// migrations have run — which apis.Serve does inside OnServe, after this table
+// has been built and bound.
 //
-// It is empty in this phase because internal/web/api, internal/web/page and
-// internal/web/stream are US1 and US2. An empty table is an honest state and a
-// boot that refused to start because of it would be a phase that cannot be
-// checkpointed.
-func wired() httproute.Handlers {
-	return httproute.Handlers{}
+// The boot gate calls it before the instance serves anything, so a
+// registration that cannot be built is a boot failure and not a 500 on
+// somebody's first request.
+func recordFamily(app core.App, registry *records.Registry, hub *realtime.Hub) api.Resolve {
+	return sync.OnceValues(func() (*records.Handler, error) {
+		if err := registerKinds(app, registry, hub); err != nil {
+			return nil, err
+		}
+
+		return records.NewHandler(registry), nil
+	})
+}
+
+// registerKinds is the extension point phases 002 through 006 add a kind to.
+// One call per kind, seven consumers wired by it, and no route.
+func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) error {
+	secret, err := store.CursorSecret(app, "")
+	if err != nil {
+		return err
+	}
+
+	cursors, err := store.NewCursorCodec(secret)
+	if err != nil {
+		return err
+	}
+
+	owners, err := store.NewOwners(app)
+	if err != nil {
+		return err
+	}
+
+	authorizer, err := accessservice.New(owners)
+	if err != nil {
+		return err
+	}
+
+	trail, err := auditstore.New(app)
+	if err != nil {
+		return err
+	}
+
+	auditor, err := auditservice.New(trail)
+	if err != nil {
+		return err
+	}
+
+	views, err := page.NewMedicationViews()
+	if err != nil {
+		return err
+	}
+
+	repository, err := medicationstore.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	if err := medication.Register(registry, medication.Wiring{
+		Repository: repository,
+		Authorizer: authorizer,
+		Auditor:    auditor,
+		Codec:      api.MedicationCodec{},
+		Schema:     api.MedicationSchema(),
+		Views:      views,
+	}); err != nil {
+		return err
+	}
+
+	// FR-036's three rows, written by the post-commit hooks and by no handler
+	// (research D-21). Bound after the kinds are registered, so it audits
+	// exactly what this build serves and nothing else.
+	if err := pb.BindRecordAudit(app, pb.RecordAudit{
+		Trail:   auditor,
+		Kinds:   registry.Kinds(),
+		Actor:   web.ActorFrom,
+		Request: obs.CorrelationID,
+	}); err != nil {
+		return err
+	}
+
+	// contracts/streams.md's publisher, bound to the same three post-commit
+	// hooks and to the same kinds: a live view of a kind this build does not
+	// serve is a live view of nothing.
+	return pb.BindRecordStream(app, pb.RecordStream{Hub: hub, Kinds: registry.Kinds()})
 }
 
 // unimplemented lists, sorted, the operations still answered by the stub.
+//
+// It resolves nothing: the handler table's shape is decided by which groups
+// have landed, not by whether an instance could build one, so the resolver
+// handed in here is one that is never called.
 func unimplemented() []string {
-	implemented := wired()
+	implemented, err := wired(func() (*records.Handler, error) { return nil, nil }, realtime.New())
+	if err != nil {
+		panic("medikube: the handler groups cannot be assembled: " + err.Error())
+	}
 
 	var pending []string
 

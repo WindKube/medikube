@@ -231,20 +231,54 @@ tasks:
     cmds:
       - go test -tags=phileak -count=1 ./internal/testsupport/phileak/...
 
-  test:e2e:
-    desc: The whole Playwright suite, both viewports
-    deps: [build]
+  test:sselive:
+    desc: The >5-minute SSE liveness gate (SC-007, risk R7)
+    # Build-tagged and therefore invisible to `task test`: it holds one stream
+    # open past PocketBase's hardcoded five-minute WriteTimeout, which is five
+    # and a half minutes of wall clock. EVERY TEST SHORTER THAN FIVE MINUTES
+    # PASSES WITH THE BUG PRESENT, which is why it ships anyway and why it has
+    # a CI job of its own rather than a place in the suite.
+    deps: [gen]
+    cmds:
+      # -timeout is raised from go test's ten-minute default: the hold alone is
+      # 5m50s and the instance has to boot first.
+      - >-
+        go test -tags=sselive -count=1 -timeout=20m
+        -run TestAStreamSurvivesTheFiveMinuteWriteTimeout ./internal/web/stream/...
+
+  e2e:install:
+    desc: Install the browser gate's packages and the browser it drives
     dir: e2e
     cmds:
       - npm ci
+      # --with-deps because a bare Chromium download will not start: it needs a
+      # dozen shared libraries no minimal image has, and the failure it produces
+      # is a launch timeout that reads like a hung test.
+      - npx playwright install --with-deps chromium
+
+  e2e:typecheck:
+    desc: Type-check the browser gate
+    # Playwright transpiles TypeScript and does not type-check it, so without
+    # this the only thing that ever reads the types is an editor.
+    deps: [e2e:install]
+    dir: e2e
+    cmds:
+      - npm run typecheck
+
+  test:e2e:
+    desc: The whole Playwright suite, both viewports
+    # Deliberately not part of `task test`: it builds a binary, boots an
+    # instance and drives a browser. CI runs it as its own job.
+    deps: [build, e2e:install]
+    dir: e2e
+    cmds:
       - npx playwright test
 
   smoke:
     desc: The smoke and console-error gate alone
-    deps: [build]
+    deps: [build, e2e:install]
     dir: e2e
     cmds:
-      - npm ci
       - npx playwright test smoke.spec.ts
 
   test:specs:

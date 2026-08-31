@@ -48,21 +48,26 @@ const (
 // rather than by hand — the shape of Values depends on the operator, and the
 // constructors are what make that unrepresentable at the call site.
 type Condition struct {
-	Column string
-	Op     Operator
-	Values []string
+	// Columns is the column the term compares, or — for a search that spans
+	// more than one — the columns it holds against ANY of. Several columns are
+	// a disjunction inside the term and still a conjunction with every other
+	// term, which is the only shape FR-022's `?q=` needs: one value, two
+	// columns, and nothing that lets a caller nest anything.
+	Columns []string
+	Op      Operator
+	Values  []string
 }
 
 func Equal(column, value string) Condition {
-	return Condition{Column: column, Op: OpEqual, Values: []string{value}}
+	return Condition{Columns: []string{column}, Op: OpEqual, Values: []string{value}}
 }
 
 func NotEqual(column, value string) Condition {
-	return Condition{Column: column, Op: OpNotEqual, Values: []string{value}}
+	return Condition{Columns: []string{column}, Op: OpNotEqual, Values: []string{value}}
 }
 
 func OneOf(column string, values ...string) Condition {
-	return Condition{Column: column, Op: OpOneOf, Values: values}
+	return Condition{Columns: []string{column}, Op: OpOneOf, Values: values}
 }
 
 // Contains is FR-022's "text match against the name".
@@ -72,7 +77,18 @@ func OneOf(column string, values ...string) Condition {
 // property of the database, not a decision made here, and it is why the name
 // column sorts by LOWER() but matches by LIKE.
 func Contains(column, value string) Condition {
-	return Condition{Column: column, Op: OpContains, Values: []string{value}}
+	return Condition{Columns: []string{column}, Op: OpContains, Values: []string{value}}
+}
+
+// ContainsAny is the same match against several columns at once, which is what
+// contracts/records.md's `?q=` is: one substring, over the name and the
+// alternative name.
+//
+// It is one term rather than two because two terms are ANDed, and a search that
+// required the word to appear in both columns would answer almost nothing —
+// silently, and looking exactly like a list that has no matches.
+func ContainsAny(value string, columns ...string) Condition {
+	return Condition{Columns: columns, Op: OpContains, Values: []string{value}}
 }
 
 // Query is a list request, expressed in columns rather than in a filter string.
@@ -127,6 +143,89 @@ type Column struct {
 	// Go twin of LOWER(name) is the wrong one. filter_test.go asserts the two
 	// agree, column by column, against a real database.
 	Value func(record *core.Record) string
+
+	// FilterOnly keeps the column out of every ordering and out of every
+	// keyset boundary, while leaving it narrowable.
+	//
+	// The distinction is not tidiness. A sort column's value *is* the boundary
+	// the next page is asked for, and a boundary travels in a query string —
+	// through the browser's history, the Referer header and every reverse
+	// proxy's access log. The cursor is authenticated encryption rather than a
+	// signature precisely so a drug name cannot make that journey (research
+	// D-29), and a column that may be ordered by is a second route to the same
+	// disclosure. So the answer to "may this be ordered by" is declared here
+	// rather than left to whoever writes the next resource's allowlist.
+	FilterOnly bool
+
+	// Searchable admits the column into a term that spans several columns at
+	// once — the disjunction ContainsAny builds, and nothing else.
+	//
+	// This is the gate on the one shape in this package that is not a
+	// conjunction. Every term is ANDed, and the owner scope is one of those
+	// terms: that is what keeps one account's medications away from another's.
+	// A term that is itself an OR is the only thing that can swallow that
+	// predicate — widen the group by one column and the scope becomes
+	// optional, with nothing else in the system objecting. An account
+	// reference is not free text and is not searchable, so widening the group
+	// that way is refused rather than reviewed.
+	Searchable bool
+
+	// AbsentLast orders a row that has no value for this column after every
+	// row that has one, under both directions.
+	//
+	// contracts/records.md states it rather than leaving it to the database
+	// precisely because SQLite's answer differs between the two directions: an
+	// unset date column holds the empty string, which sorts before every real
+	// date ascending and after every real one descending. A person whose
+	// medication has no recorded start date should not find it at the top of
+	// "earliest started" any more than at the top of "most recently started".
+	AbsentLast bool
+}
+
+// absentFlag is the ordering prefix an AbsentLast column carries ascending: a
+// present value sorts under "0" and an absent one under "1", so the absent rows
+// land after every present one and the present ones keep their own order behind
+// the shared prefix. It is a lexicographic composition of two ordering terms
+// into one, which is what lets the keyset predicate stay one comparison per sort
+// key rather than growing a hidden second term the cursor would have to carry.
+const (
+	absentFlagPresent = "0"
+	absentFlagAbsent  = "1"
+)
+
+// sortExpr is the SQL this column is ordered and keyset-compared by in one
+// direction.
+//
+// Descending is the bare expression, and that is not an oversight: the empty
+// string is already smaller than every real value, so descending puts it last
+// on its own — and the bare column is what idx_medications_owner_start is built
+// on, so the default ordering still reads straight off the index. Only the
+// ascending half needs the prefix, and only for a column that declared one.
+func (c Column) sortExpr(desc bool) string {
+	if !c.AbsentLast || desc {
+		return c.Expr
+	}
+
+	return "(CASE WHEN " + c.Expr + " = '' THEN '" + absentFlagAbsent +
+		"' ELSE '" + absentFlagPresent + "' END) || " + c.Expr
+}
+
+// sortValue is the Go twin of sortExpr, and it is the value a keyset boundary
+// on this column carries. The two are computed from the same branch on purpose:
+// a boundary read one way and compared another lands in the wrong place in the
+// sequence and says nothing about it.
+func (c Column) sortValue(record *core.Record, desc bool) string {
+	value := c.Value(record)
+
+	if !c.AbsentLast || desc {
+		return value
+	}
+
+	if value == "" {
+		return absentFlagAbsent
+	}
+
+	return absentFlagPresent + value
 }
 
 // Schema is a resource's published query surface: the columns a request may
@@ -192,29 +291,67 @@ func (s Schema) Column(name string) (Column, bool) {
 // holds, and splitting them puts the LOWER(name) pair in two files that have to
 // be changed together.
 //
-// The absentees are the decision. alternative_name, dosage, frequency,
-// indication, side_effects and notes are free text a person wrote about their
-// own health; nothing in FR-022 narrows or orders by them, and an allowlist
-// that lists every column is not one.
+// The absentees are the decision. dosage, frequency, indication, side_effects
+// and notes are free text a person wrote about their own health; nothing in
+// FR-022 narrows or orders by them, and an allowlist that lists every column is
+// not one. alternative_name is here and they are not because contracts/records.md
+// defines `?q=` as a substring over the name *and* the alternative name: a
+// person who recorded the brand name and searched for the generic one is the
+// case that column exists for.
 func MedicationSchema() Schema {
 	return NewSchema(kind.Medication.Collection(),
 		Column{Name: medicationFieldOwner},
 		Column{
-			Name: medicationFieldName,
-			Expr: "LOWER(" + quoteColumn(medicationFieldName) + ")",
+			Name:       medicationFieldName,
+			Expr:       "LOWER(" + quoteColumn(medicationFieldName) + ")",
+			Searchable: true,
 			Value: func(record *core.Record) string {
 				return asciiLower(record.GetString(medicationFieldName))
+			},
+		},
+		// Narrowable and never orderable. FR-022 searches it; nothing orders
+		// by it, and FilterOnly is what stops the next person from adding it to
+		// an ordering allowlist and putting a drug's other name into a cursor.
+		Column{
+			Name:       medicationFieldAlternativeName,
+			Expr:       "LOWER(" + quoteColumn(medicationFieldAlternativeName) + ")",
+			Searchable: true,
+			FilterOnly: true,
+			Value: func(record *core.Record) string {
+				return asciiLower(record.GetString(medicationFieldAlternativeName))
 			},
 		},
 		Column{Name: medicationFieldType},
 		Column{Name: medicationFieldRoute},
 		Column{Name: medicationFieldStatus},
-		Column{Name: medicationFieldStartedOn},
+		Column{Name: medicationFieldStartedOn, AbsentLast: true},
 		Column{Name: medicationFieldEndedOn},
 		Column{Name: fieldCreated},
 		Column{Name: fieldUpdated},
 	)
 }
+
+// The medication columns a repository names when it builds a Query.
+//
+// Exported because internal/store/medication assembles the query and this
+// package answers it, and a repository that spelled a column by hand would drift
+// from the schema with nothing to notice: AssertMappedFields checks this
+// package's names against the database, not a caller's, and a misspelled column
+// in a Query is refused per request at runtime rather than at boot.
+//
+// The three the service already publishes as its sort vocabulary —
+// medication.FieldName, FieldStartedOn, FieldUpdated — are deliberately not
+// re-exported here. A sort field arrives from the service already spelled and is
+// resolved against this schema; a second spelling of the same word is the drift
+// this constant list exists to prevent.
+const (
+	ColumnID = fieldID
+
+	MedicationOwner           = medicationFieldOwner
+	MedicationName            = medicationFieldName
+	MedicationAlternativeName = medicationFieldAlternativeName
+	MedicationStatus          = medicationFieldStatus
+)
 
 // Build turns the query into SQL.
 func (s Schema) Build(query Query) (Built, error) {
@@ -228,12 +365,12 @@ func (s Schema) Build(query Query) (Built, error) {
 	fragments := make([]string, 0, len(query.Conditions)+1)
 
 	for _, condition := range query.Conditions {
-		column, declared := s.columns[condition.Column]
-		if !declared {
-			return Built{}, fmt.Errorf("%w: %s.%s", ErrUnknownColumn, s.collection, condition.Column)
+		columns, resolveErr := s.resolveColumns(condition.Columns)
+		if resolveErr != nil {
+			return Built{}, resolveErr
 		}
 
-		fragment, conditionErr := renderCondition(column, condition, binder)
+		fragment, conditionErr := renderCondition(columns, condition, binder)
 		if conditionErr != nil {
 			return Built{}, conditionErr
 		}
@@ -287,23 +424,51 @@ func (s Schema) Boundary(record *core.Record, sortKeys []domain.SortKey) (Cursor
 	}
 
 	for _, key := range sortKeys {
-		column, declared := s.columns[key.Field]
-		if !declared {
+		column, ok := s.orderable(key.Field)
+		if !ok {
 			return Cursor{}, fmt.Errorf("%w: %s.%s", ErrUnknownColumn, s.collection, key.Field)
 		}
 
-		cursor.Values = append(cursor.Values, column.Value(record))
+		cursor.Values = append(cursor.Values, column.sortValue(record, key.Desc))
 	}
 
 	return cursor, nil
 }
 
+// resolveColumns is one condition's columns, in the order it named them. An
+// undeclared column is refused before anything is bound, and a condition that
+// names none at all is refused outright: it would render as no fragment, which
+// is a narrowing term that narrows nothing and a list that quietly holds
+// somebody else's rows.
+func (s Schema) resolveColumns(names []string) ([]Column, error) {
+	if len(names) == 0 {
+		return nil, fmt.Errorf("%w: a condition that names no column narrows nothing", ErrInvalidQuery)
+	}
+
+	columns := make([]Column, 0, len(names))
+
+	for _, name := range names {
+		column, declared := s.columns[name]
+		if !declared {
+			return nil, fmt.Errorf("%w: %s.%s", ErrUnknownColumn, s.collection, name)
+		}
+
+		columns = append(columns, column)
+	}
+
+	return columns, nil
+}
+
+// resolveSort is the ordering, and a column declared FilterOnly is answered
+// exactly as one the schema never had. The refusal is deliberately the same
+// error: a distinct one would tell a caller that the column exists and only the
+// ordering is closed, which is a map of the surface they were not given.
 func (s Schema) resolveSort(sortKeys []domain.SortKey) ([]Column, error) {
 	columns := make([]Column, 0, len(sortKeys))
 
 	for _, key := range sortKeys {
-		column, declared := s.columns[key.Field]
-		if !declared {
+		column, ok := s.orderable(key.Field)
+		if !ok {
 			return nil, fmt.Errorf("%w: %s.%s", ErrUnknownColumn, s.collection, key.Field)
 		}
 
@@ -311,6 +476,18 @@ func (s Schema) resolveSort(sortKeys []domain.SortKey) ([]Column, error) {
 	}
 
 	return columns, nil
+}
+
+// orderable is the one lookup an ordering and a boundary both go through, so a
+// column that may not be ordered by cannot be reached by minting a cursor on it
+// either.
+func (s Schema) orderable(name string) (Column, bool) {
+	column, declared := s.columns[name]
+	if !declared || column.FilterOnly {
+		return Column{}, false
+	}
+
+	return column, true
 }
 
 // renderKeyset is the lexicographic row comparison FR-023 needs:
@@ -331,7 +508,7 @@ func (s Schema) renderKeyset(sortColumns []Column, after Cursor, binder *paramBi
 	comparisons := make([]string, 0, len(sortColumns)+1)
 
 	for i, column := range sortColumns {
-		exprs = append(exprs, column.Expr)
+		exprs = append(exprs, column.sortExpr(after.Sort[i].Desc))
 		values = append(values, binder.bind(after.Values[i]))
 		comparisons = append(comparisons, comparisonFor(after.Sort[i].Desc))
 	}
@@ -366,13 +543,16 @@ func orderTerms(sortColumns []Column, sortKeys []domain.SortKey) []string {
 	terms := make([]string, 0, len(sortColumns)+1)
 
 	for i, column := range sortColumns {
-		terms = append(terms, column.Expr+" "+directionFor(sortKeys[i].Desc))
+		terms = append(terms, column.sortExpr(sortKeys[i].Desc)+" "+directionFor(sortKeys[i].Desc))
 	}
 
 	return append(terms, quoteColumn(fieldID)+" DESC")
 }
 
-func renderCondition(column Column, condition Condition, binder *paramBinder) (string, error) {
+// renderCondition is one term. The values are bound once and the placeholders
+// are reused across the columns, so a search over two columns binds one
+// parameter rather than the same string twice.
+func renderCondition(columns []Column, condition Condition, binder *paramBinder) (string, error) {
 	switch condition.Op {
 	case OpEqual, OpNotEqual, OpContains:
 		if len(condition.Values) != 1 {
@@ -388,22 +568,58 @@ func renderCondition(column Column, condition Condition, binder *paramBinder) (s
 		return "", fmt.Errorf("%w: %q is not one of this package's operators", ErrInvalidQuery, condition.Op)
 	}
 
-	switch condition.Op {
-	case OpEqual:
-		return column.Expr + " = " + binder.bind(condition.Values[0]), nil
-	case OpNotEqual:
-		return column.Expr + " != " + binder.bind(condition.Values[0]), nil
-	case OpContains:
-		return column.Expr + " LIKE " + binder.bind("%"+escapeLike(condition.Values[0])+"%") + ` ESCAPE '\'`, nil
-	case OpOneOf:
-		placeholders := make([]string, 0, len(condition.Values))
+	// The disjunction is admitted only over columns the resource declared
+	// searchable. A single-column term is a conjunct like every other and needs
+	// no permission; several columns is the one shape that can make another
+	// term optional, and the owner scope is a term.
+	if len(columns) > 1 {
+		for _, column := range columns {
+			if !column.Searchable {
+				return "", fmt.Errorf(
+					"%w: %s may not be one of several columns in a single term — a term that spans more than one is a disjunction, and the owner scope is a term",
+					ErrInvalidQuery, column.Name)
+			}
+		}
+	}
+
+	placeholders := make([]string, 0, len(condition.Values))
+
+	if condition.Op == OpContains {
+		placeholders = append(placeholders, binder.bind("%"+escapeLike(condition.Values[0])+"%"))
+	} else {
 		for _, value := range condition.Values {
 			placeholders = append(placeholders, binder.bind(value))
 		}
+	}
 
+	fragments := make([]string, 0, len(columns))
+
+	for _, column := range columns {
+		fragment, err := renderComparison(column, condition.Op, placeholders)
+		if err != nil {
+			return "", err
+		}
+
+		fragments = append(fragments, fragment)
+	}
+
+	// No parentheses of its own: Build wraps every term in one, so adding a
+	// second pair here would only be noise in the assertions that read the SQL.
+	return strings.Join(fragments, " OR "), nil
+}
+
+func renderComparison(column Column, op Operator, placeholders []string) (string, error) {
+	switch op {
+	case OpEqual:
+		return column.Expr + " = " + placeholders[0], nil
+	case OpNotEqual:
+		return column.Expr + " != " + placeholders[0], nil
+	case OpContains:
+		return column.Expr + " LIKE " + placeholders[0] + ` ESCAPE '\'`, nil
+	case OpOneOf:
 		return column.Expr + " IN (" + strings.Join(placeholders, ", ") + ")", nil
 	default:
-		return "", fmt.Errorf("%w: %q is not one of this package's operators", ErrInvalidQuery, condition.Op)
+		return "", fmt.Errorf("%w: %q is not one of this package's operators", ErrInvalidQuery, op)
 	}
 }
 

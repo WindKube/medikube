@@ -1,0 +1,88 @@
+package shell
+
+import "medikube/internal/web/views/ids"
+
+// Document is the shell of contracts/pages.md: four landmarks, always present,
+// always in this order, plus the two empty patch containers.
+//
+// It is the minimum the browser gate asserts and deliberately not more. T261
+// replaces it with the full layout — the theme class read from the account's
+// preference, the patient switcher, the version stamp and the staleness banner
+// — and every page below keeps rendering unchanged when it does, because a page
+// hands in its own landmark and reads nothing back.
+templ Document(props DocumentProps) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ Title(props.Title) }</title>
+			// No stylesheet and no script tag yet, deliberately. Nothing in
+			// this build serves internal/web/static — no route table row
+			// declares an asset route and no contract fixes the URL — so a
+			// link here would be a failed network request on every page,
+			// which is contracts/pages.md's smoke assertion 7. T261 adds both
+			// alongside the asset route they need.
+		</head>
+		<body
+			class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
+			data-signals={ StreamSignals(props.streamSeed()) }
+			data-on-interval__duration.10s={ StaleExpression() }
+		>
+			<a href={ templ.SafeURL("#" + ids.Main) } class="sr-only focus:not-sr-only">Skip to content</a>
+			<header role="banner" class="border-b border-slate-200 dark:border-slate-800">
+				<span class="font-semibold">{ ProductName }</span>
+			</header>
+			<nav role="navigation" aria-label="Primary">
+				<ul class="flex gap-4">
+					for _, link := range props.Nav {
+						<li>
+							if link.Current {
+								<a href={ templ.SafeURL(link.Href) } aria-current="page">{ link.Label }</a>
+							} else {
+								<a href={ templ.SafeURL(link.Href) }>{ link.Label }</a>
+							}
+						</li>
+					}
+				</ul>
+			</nav>
+			<main id={ ids.Main } role="main">
+				<noscript>
+					<p>MediKube needs JavaScript switched on to record and change anything. Reading what is already here works without it.</p>
+				</noscript>
+				@props.Main
+			</main>
+			<footer role="contentinfo">
+				<p class="text-xs text-slate-500">{ ProductName }</p>
+			</footer>
+			<div id={ ids.ErrorBanner } role="alert" aria-live="assertive"></div>
+			// FR-031. The person is told plainly when the live view can no
+			// longer be kept current, rather than being left reading data that
+			// has quietly stopped changing.
+			//
+			// Hidden by the `hidden` attribute and not by `style="display:none"`
+			// with `data-show`, which is what this was and which did not work:
+			// internal/web/security.go serves `style-src 'self'` with no
+			// 'unsafe-inline', so the browser refused the inline style, logged
+			// a CSP violation on every page, and left the "this view has
+			// stopped updating" alert permanently on screen for everyone. The
+			// content attribute needs no stylesheet and no policy exception,
+			// and Datastar's data-attr removes it on a falsy value and sets it
+			// on a truthy one (datastar.js's attr plugin), so the reveal still
+			// works when the runtime lands. CSP does not police the CSSOM, only
+			// markup — which is why data-show looked fine and was not.
+			<div
+				id={ ids.StreamStale }
+				role="alert"
+				aria-live="assertive"
+				hidden
+				data-attr={ "{hidden: !$" + SignalStreamStale + "}" }
+				class="border border-amber-500 bg-amber-50 p-2 text-sm text-amber-900"
+			>
+				<p>This view has stopped updating on its own. Reload to see the latest.</p>
+				<button type="button" data-on:click="window.location.reload()" class="underline">Reload</button>
+			</div>
+			<div id={ ids.Toast } role="status" aria-live="polite"></div>
+		</body>
+	</html>
+}

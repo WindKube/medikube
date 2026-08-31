@@ -21,6 +21,13 @@ import (
 // is not a record kind.
 const auditCollection = "audit_events"
 
+// AuditCollection is that name, published. The audit trail is not a record kind
+// and therefore has no kind.Collection() to read it from, so the writer that
+// appends to it and the reader that inspects it would otherwise each spell it
+// for themselves — which is the drift the kind table exists to prevent, one
+// collection to the left of where the table can reach.
+const AuditCollection = auditCollection
+
 // The columns on every collection. PocketBase supplies id; created and updated
 // are AutodateFields the migrations add explicitly, because NewBaseCollection
 // does not.

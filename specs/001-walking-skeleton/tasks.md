@@ -450,81 +450,81 @@ confirm the row is gone from stored data. All nine of US1's acceptance scenarios
   **all** violations come back in one `*ValidationError` (FR-027).
 - [x] T136 [P] [US1] TEST `internal/domain/clinical/medication_test.go` — `MarshalZerologObject`
   emits the id and **never** the name, dose, reason or notes (FR-038, SC-005).
-- [ ] T137 [P] [US1] TEST `internal/service/medication/service_test.go` against the fake repository —
+- [x] T137 [P] [US1] TEST `internal/service/medication/service_test.go` against the fake repository —
   **authorization is called before every read and every write**, and a service method that skips
   it fails the test.
-- [ ] T138 [P] [US1] TEST `internal/service/medication/medicationtest/contract.go` — the
+- [x] T138 [P] [US1] TEST `internal/service/medication/medicationtest/contract.go` — the
   `testify/suite` contract every `Repository` implementation must pass (Principle II): create,
   get, list with cursor, update with version check, delete, and owner scoping.
-- [ ] T139 [P] [US1] TEST `internal/service/medication/fake_contract_test.go` — the in-memory fake
+- [x] T139 [P] [US1] TEST `internal/service/medication/fake_contract_test.go` — the in-memory fake
   passes the contract suite.
-- [ ] T140 [P] [US1] TEST `internal/store/medication/repo_integration_test.go` — the PocketBase
+- [x] T140 [P] [US1] TEST `internal/store/medication/repo_integration_test.go` — the PocketBase
   repository passes the **same** contract suite against a real `tests.NewTestApp`, plus: keyset
   paging over 1,000 rows shows no entry twice and skips none **while a row is inserted mid-page**
   (FR-023), and every sort order is stable because every index ends in `id`.
-- [ ] T141 [P] [US1] TEST `internal/web/api/records_test.go` — `ApiScenario` cases for all six
+- [x] T141 [P] [US1] TEST `internal/web/api/records_test.go` — `ApiScenario` cases for all six
   operations: status codes, response shapes, the error envelope, unknown-field rejection, and the
   query-parameter table in contracts/records.md — `listRecords`, `listRecordsOfKind`, `createRecord`,
   `getRecord`, `updateRecord`, `deleteRecord` (FR-025). **A fresh `tests.TestApp` per case** — a shared
   one recurses infinitely (reconciliation C14).
-- [ ] T142 [P] [US1] TEST `internal/web/api/records_list_test.go` — all three sort orders return
+- [x] T142 [P] [US1] TEST `internal/web/api/records_list_test.go` — all three sort orders return
   the documented sequence, the status filter narrows correctly, and paging forwards then backwards
   returns the same set (FR-021, FR-022).
-- [ ] T143 [P] [US1] TEST `internal/web/api/records_create_test.go` — a create returns **201** with
+- [x] T143 [P] [US1] TEST `internal/web/api/records_create_test.go` — a create returns **201** with
   the `Location` header and an `ETag`, and the created representation matches the stored one, name
   required and every other field optional (FR-015).
-- [ ] T144 [P] [US1] TEST `internal/web/api/records_validation_test.go` — a request violating four
+- [x] T144 [P] [US1] TEST `internal/web/api/records_validation_test.go` — a request violating four
   rules at once comes back with **all four** field errors in one envelope, each with its field
   path and machine code (FR-027).
-- [ ] T145 [P] [US1] TEST `internal/web/api/records_delete_test.go` — a delete removes the row
+- [x] T145 [P] [US1] TEST `internal/web/api/records_delete_test.go` — a delete removes the row
   from stored data outright: no `deleted_at`, no tombstone, no filtered-out survivor. Soft delete
   in MediKube is **files only**, and a record collection carrying a deletion column would be a
   schema-level contradiction of that (data-model §2).
-- [ ] T146 [P] [US1] TEST `internal/web/api/records_etag_test.go` — PATCH and DELETE without
+- [x] T146 [P] [US1] TEST `internal/web/api/records_etag_test.go` — PATCH and DELETE without
   `If-Match` are refused; with a stale one the response is **412 carrying the current
   representation** so the client can show the person what changed (FR-026).
-- [ ] T147 [P] [US1] TEST `internal/web/api/records_authz_test.go` — `RunOwnershipMatrix` over all
+- [x] T147 [P] [US1] TEST `internal/web/api/records_authz_test.go` — `RunOwnershipMatrix` over all
   six operations: the owner succeeds, a stranger is refused, and **the refusal body is
   byte-identical to a genuine not-found apart from `request_id`** (FR-032, FR-033, FR-069).
-- [ ] T148 [P] [US1] TEST `internal/web/views/records/medication_row_test.go` — render to buffer:
+- [x] T148 [P] [US1] TEST `internal/web/views/records/medication_row_test.go` — render to buffer:
   the row carries the deterministic id from `ids.RecordRow`, shows name, dose and status, and
   omits absent optional fields rather than rendering empty labels (FR-024).
-- [ ] T149 [P] [US1] TEST `internal/web/views/records/medication_list_test.go` — render to buffer:
+- [x] T149 [P] [US1] TEST `internal/web/views/records/medication_list_test.go` — render to buffer:
   the list is inside `region[name="Medications"]`, and **an account with no medications still
   renders that region**, containing the empty state and a create action (FR-029).
-- [ ] T150 [P] [US1] TEST `internal/web/views/records/medication_form_test.go` — render to buffer:
+- [x] T150 [P] [US1] TEST `internal/web/views/records/medication_form_test.go` — render to buffer:
   every field error is adjacent to its field and linked by `aria-describedby`, and the enum fields
   offer exactly the published values.
-- [ ] T151 [P] [US1] TEST `internal/web/views/records/medication_detail_test.go` — render to
+- [x] T151 [P] [US1] TEST `internal/web/views/records/medication_detail_test.go` — render to
   buffer: every recorded value present, absent optional values omitted entirely rather than shown
   as blank labels, the last-changed time shown (FR-020), and the landmark `article[name="Medication"]` (FR-024).
-- [ ] T152 [P] [US1] TEST `internal/web/api/records_audit_test.go` — a create, an update and a
+- [x] T152 [P] [US1] TEST `internal/web/api/records_audit_test.go` — a create, an update and a
   delete each write exactly one audit row with the right action, target kind and target id, and
   **no** clinical content (FR-036).
-- [ ] T153 [P] [US1] TEST `internal/web/views/components/confirm_test.go` — the delete confirmation
+- [x] T153 [P] [US1] TEST `internal/web/views/components/confirm_test.go` — the delete confirmation
   is a **rendered element** carrying `region[name="Confirm delete"]` and the medication's name.
   Not a `window.confirm`, which the render gate cannot see (FR-028).
-- [ ] T154 [P] [US1] TEST `internal/web/stream/records_test.go` — for **every** event the handler
+- [x] T154 [P] [US1] TEST `internal/web/stream/records_test.go` — for **every** event the handler
   re-runs `access.Authorizer.Record(...)` for that subscriber; two sessions on two accounts stream
   simultaneously and a write on one produces **zero** frames on the other (FR-030, FR-032).
-- [ ] T155 [P] [US1] TEST `internal/web/stream/kindfilter_test.go` — the `kind` query parameter
+- [x] T155 [P] [US1] TEST `internal/web/stream/kindfilter_test.go` — the `kind` query parameter
   filters the stream, an unregistered kind is refused, and an absent parameter subscribes to every
   registered kind (contracts/streams.md).
-- [ ] T156 [US1] TEST `internal/web/stream/endtoend_test.go` — a write through the API reaches a
+- [x] T156 [US1] TEST `internal/web/stream/endtoend_test.go` — a write through the API reaches a
   second open subscriber's stream **within five seconds**, measured, which is SC-007's actual
   claim and the only test that exercises hook → hub → re-authorise → render → patch as one path.
-- [ ] T157 [P] [US1] TEST `internal/web/stream/stream_test.go` — `newStream()` sets the write
+- [x] T157 [P] [US1] TEST `internal/web/stream/stream_test.go` — `newStream()` sets the write
   deadline to zero via `http.NewResponseController`, sets `X-Accel-Buffering: no` and
   `Cache-Control: no-store`, binds `apis.SkipSuccessActivityLog()`, and emits **only** the two
   Datastar v1 event names.
-- [ ] T158 [US1] TEST `internal/web/stream/timeout_test.go` — a stream held open for **longer than
+- [x] T158 [US1] TEST `internal/web/stream/timeout_test.go` — a stream held open for **longer than
   five minutes** still receives heartbeats. Tagged so it runs in the dedicated CI job and not in
   `task test`. **Every test shorter than five minutes passes with the bug present**, which is why
   this one exists (SC-007, risk R7).
-- [ ] T159 [P] [US1] TEST `internal/web/stream/heartbeat_test.go` — a `datastar-patch-signals` frame
+- [x] T159 [P] [US1] TEST `internal/web/stream/heartbeat_test.go` — a `datastar-patch-signals` frame
   carrying `stream_beat` arrives every 25 s, and the staleness threshold the page compares against
   is 60 s (FR-031).
-- [ ] T160 [P] [US1] TEST `internal/platform/pb/hooks_records_test.go` — the realtime publisher is
+- [x] T160 [P] [US1] TEST `internal/platform/pb/hooks_records_test.go` — the realtime publisher is
   bound to the **After…Success** hooks, so a rolled-back transaction publishes nothing. A
   pre-commit binding is a live view showing a change that did not happen.
 
@@ -536,57 +536,57 @@ confirm the row is gone from stored data. All nine of US1's acceptance scenarios
   redacting `MarshalZerologObject`.
 - [x] T163 [US1] Implement `internal/domain/clinical/validate.go` — every field checked, every
   violation collected, one error returned.
-- [ ] T164 [US1] Implement `internal/service/medication/ports.go` — `Repository`, `Authorizer`,
+- [x] T164 [US1] Implement `internal/service/medication/ports.go` — `Repository`, `Authorizer`,
   `Auditor`. Interfaces at the seam, defined by the consumer (Principle II).
-- [ ] T165 [US1] Implement `internal/service/medication/service.go` — List, Get, Create, Update,
+- [x] T165 [US1] Implement `internal/service/medication/service.go` — List, Get, Create, Update,
   Delete. **Authorization first, always**, then validation, then the store, then the audit write.
-- [ ] T166 [P] [US1] Implement `internal/service/medication/medicationtest/fake.go`.
-- [ ] T167 [US1] Implement `internal/store/medication/repo.go` — the PocketBase-backed repository,
+- [x] T166 [P] [US1] Implement `internal/service/medication/medicationtest/fake.go`.
+- [x] T167 [US1] Implement `internal/store/medication/repo.go` — the PocketBase-backed repository,
   keyset paging, the three sort orders (FR-022), and the version check.
-- [ ] T168 [US1] Implement `internal/service/medication/adapter.go` — roughly forty lines
+- [x] T168 [US1] Implement `internal/service/medication/adapter.go` — roughly forty lines
   implementing `records.Service` for this kind, and register it. **This file is the template every
   later kind copies.**
-- [ ] T169 [P] [US1] Implement `internal/web/api/dto_medication.go` — `MedicationSummary`,
+- [x] T169 [P] [US1] Implement `internal/web/api/dto_medication.go` — `MedicationSummary`,
   `Medication`, `MedicationCreate`, `MedicationPatch` — the full recorded field set of FR-015 plus the
   created and last-changed times of FR-020 — with `**string` where absent must be
   distinguishable from explicit null.
-- [ ] T170 [US1] Implement `internal/web/api/records.go` — the six operations `listRecords`,
+- [x] T170 [US1] Implement `internal/web/api/records.go` — the six operations `listRecords`,
   `listRecordsOfKind`, `createRecord`, `getRecord`, `updateRecord`, `deleteRecord` bound through the ONE
   generic handler, registered in `internal/httproute/routes.go` under those `operationId`s so the
   Principle IX gate finds the same six names in the registry and in `api/openapi.json` (FR-015, FR-025).
-- [ ] T171 [P] [US1] Implement `internal/web/views/ids/ids.go` — deterministic DOM ids used by both
+- [x] T171 [P] [US1] Implement `internal/web/views/ids/ids.go` — deterministic DOM ids used by both
   templ and Go, so a patch selector can never drift from the element it targets.
-- [ ] T172 [P] [US1] Implement `internal/web/views/records/medication_row.templ`.
-- [ ] T173 [P] [US1] Implement `internal/web/views/records/medication_list.templ` — including the
+- [x] T172 [P] [US1] Implement `internal/web/views/records/medication_row.templ`.
+- [x] T173 [P] [US1] Implement `internal/web/views/records/medication_list.templ` — including the
   empty state **inside** the region.
-- [ ] T174 [P] [US1] Implement `internal/web/views/records/medication_detail.templ` — every recorded
+- [x] T174 [P] [US1] Implement `internal/web/views/records/medication_detail.templ` — every recorded
   value plus the last-changed time (FR-020), omitting what was not recorded (FR-024).
-- [ ] T175 [P] [US1] Implement `internal/web/views/records/medication_form.templ` — create and edit,
+- [x] T175 [P] [US1] Implement `internal/web/views/records/medication_form.templ` — create and edit,
   every recorded field editable (FR-015, FR-025), field-adjacent errors.
-- [ ] T176 [P] [US1] Implement `internal/web/views/components/{empty_state,field_error,confirm,pagination}.templ`.
-- [ ] T177 [US1] Implement `internal/web/page/medications.go` — the list page and the detail page,
+- [x] T176 [P] [US1] Implement `internal/web/views/components/{empty_state,field_error,confirm,pagination}.templ`.
+- [x] T177 [US1] Implement `internal/web/page/medications.go` — the list page and the detail page,
   registered with their `Landmark` and `SmokeURL` (contracts/pages.md P4, P5).
-- [ ] T178 [US1] Implement `internal/web/stream/stream.go` — **the mandatory `newStream()` helper**:
+- [x] T178 [US1] Implement `internal/web/stream/stream.go` — **the mandatory `newStream()` helper**:
   the write-deadline clear, the two headers, the activity-log skip. Add a lint rule forbidding
   `datastar.NewSSE` anywhere else. There is no second path.
-- [ ] T179 [US1] Implement `internal/web/stream/records.go` — `streamRecords`, the per-subscriber handler:
+- [x] T179 [US1] Implement `internal/web/stream/records.go` — `streamRecords`, the per-subscriber handler:
   filter by kind, **re-authorise per event**, re-fetch, render, patch by id, plus the 25-second
   heartbeat and the `e.Request.Context().Done()` shutdown path.
-- [ ] T180 [US1] Implement the realtime publisher in `internal/platform/pb/hooks.go` — bound to
+- [x] T180 [US1] Implement the realtime publisher in `internal/platform/pb/hooks.go` — bound to
   `OnRecordAfterCreateSuccess`, `OnRecordAfterUpdateSuccess`, `OnRecordAfterDeleteSuccess`.
   Publishes `{Kind, RecordID, OwnerID}` only.
-- [ ] T181 [P] [US1] Add the staleness detector to `internal/web/views/layout.templ` —
+- [x] T181 [P] [US1] Add the staleness detector to `internal/web/views/layout.templ` —
   `data-on-interval__duration.10s` comparing `$stream_beat`, revealing a `role="alert"` banner.
   **Free Datastar attributes only**: `data-persist`, `data-match-media` and `data-on-raf` are Pro.
-- [ ] T182 [US1] Add the medication cases to `internal/cli/seed.go` — account A spanning all three
+- [x] T182 [US1] Add the medication cases to `internal/cli/seed.go` — account A spanning all three
   statuses including one row with every optional field empty, account B with exactly one, account
   C with none (data-model §6, research D-39).
 - [ ] T183 [P] [US1] TEST `e2e/smoke.spec.ts` cases for `/medications` and `/medications/{id}` at
   both viewports, and a keyboard-only pass covering record → edit → delete (SC-014).
-- [ ] T184 [P] [US1] TEST `internal/web/api/records_bench_test.go` — a 1,000-medication list renders
+- [x] T184 [P] [US1] TEST `internal/web/api/records_bench_test.go` — a 1,000-medication list renders
   within the SC-002 budget, with the 5,000-row case from the spec's Edge Cases exercised for
   correctness rather than latency.
-- [ ] T185 [P] [US1] TEST `internal/cli/seed_medications_test.go` — the seeded medication set is
+- [x] T185 [P] [US1] TEST `internal/cli/seed_medications_test.go` — the seeded medication set is
   exactly the mixed set data-model §6 describes: all three statuses, one row with every optional
   field empty, one account with a single row and one with none.
 

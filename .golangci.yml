@@ -10,6 +10,13 @@ version: "2"
 run:
   timeout: 5m
   tests: true
+  # internal/web/stream/timeout_test.go is behind this tag so that `task test`
+  # does not spend five and a half minutes on it. Without naming the tag here
+  # golangci-lint never type-checks the file at all, and neither do go build,
+  # go vet or go test — so the one gate holding the write-deadline fix in place
+  # would be free to rot until its own CI job ran.
+  build-tags:
+    - sselive
 
 linters:
   default: none
@@ -163,6 +170,22 @@ linters:
           msg: >-
             Constitution Principle VI. Use the injected zerolog logger; stdout
             writes that are not JSON break the one-stream promise.
+        # There is one SSE entry point in MediKube and this is what makes that
+        # true. datastar.NewSSE does not touch the write deadline PocketBase
+        # hardcodes at five minutes, and it sets Cache-Control and Content-Type
+        # and flushes the header block — so a second call site is a stream that
+        # dies at exactly 5:00 and ships `no-cache` and no X-Accel-Buffering,
+        # and every test shorter than five minutes passes with it
+        # (contracts/streams.md, research D-34). internal/web/stream/stream.go's
+        # newStream is the only caller and the exclusion below is the only
+        # exception.
+        - pattern: ^datastar\.NewSSE$
+          pkg: ^github\.com/starfederation/datastar-go/datastar$
+          msg: >-
+            contracts/streams.md. Every SSE stream goes through
+            internal/web/stream's newStream, which clears the per-request write
+            deadline and commits the header block before the SDK overwrites it.
+            There is no second path.
         # `Records?` and not `Record`: the list hook is spelled
         # OnRecordsListRequest, with the plural on Record, so a pattern anchored
         # on the singular silently exempts exactly one member of the family.
@@ -228,6 +251,14 @@ linters:
         linters:
           - forbidigo
         text: record-CRUD request hooks
+
+      # The one file allowed to open an SSE stream. Narrowed by text as well as
+      # by path, so a stray fmt.Print or app.Logger() in stream.go is still a
+      # finding — the carve-out is for one call, not for one file.
+      - path: internal/web/stream/stream\.go
+        linters:
+          - forbidigo
+        text: newStream
 
 issues:
   max-issues-per-linter: 0

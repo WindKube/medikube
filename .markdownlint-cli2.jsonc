@@ -62,6 +62,10 @@
   // ours to fix.
   "ignores": [
     ".specify/**",
-    ".claude/**"
+    ".claude/**",
+    // The browser gate's installed packages. `npm ci` unpacks other people's
+    // READMEs there, they are gitignored, and one badly indented list in a
+    // vendor's SECURITY.md is enough to fail the prose gate.
+    "e2e/node_modules/**"
   ]
 }

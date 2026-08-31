@@ -1,0 +1,19 @@
+package components
+
+// FieldError renders the refusals for one field, or nothing at all.
+//
+// Nothing at all is the important branch: an empty element still carries the id
+// aria-describedby names, so a screen reader announces the control as described
+// by silence. The control only points here when there is something to point at.
+templ FieldError(id string, messages []string) {
+	if len(messages) > 0 {
+		<p id={ id } role="alert" class="mt-1 text-sm text-rose-700 dark:text-rose-400">
+			for index, message := range messages {
+				if index > 0 {
+					{ " " }
+				}
+				{ message }
+			}
+		</p>
+	}
+}

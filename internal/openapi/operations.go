@@ -355,7 +355,17 @@ func operationDocs() map[string]operationDoc {
 				"`datastar-patch-elements` for a record that was created, changed or removed, and " +
 				"`datastar-patch-signals` for the heartbeat.",
 			successType: "text/event-stream",
-			errors:      []int{http.StatusUnauthorized, http.StatusInternalServerError},
+			// 422 is here because the `kind` parameter is refused rather than
+			// ignored: a stream that silently narrowed to nothing is a live
+			// view that never updates and never says why. It is the same
+			// asymmetry the cross-kind list draws — an unregistered value in a
+			// query parameter names itself, because a caller who reached the
+			// parameter already knows the path exists.
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
 			query: []param{
 				listParam("kind", "Restrict to these registered path segments. Absent means every kind."),
 			},

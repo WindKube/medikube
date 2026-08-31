@@ -25,6 +25,8 @@ import (
 	"medikube/internal/logging"
 	"medikube/internal/obs"
 	"medikube/internal/platform/pb"
+	"medikube/internal/realtime"
+	"medikube/internal/records"
 	"medikube/internal/web"
 )
 
@@ -355,7 +357,11 @@ func TestOneRequestProducesOneCorrelatedLogLine(t *testing.T) {
 func TestTheCompositionRootWiresEveryRouteMediKubeServes(t *testing.T) {
 	t.Parallel()
 
-	table := operations()
+	// The resolver is never called: which operations have handlers is decided
+	// by which groups have landed, not by whether an instance could resolve a
+	// kind registry.
+	table, err := operations(func() (*records.Handler, error) { return nil, nil }, realtime.New())
+	require.NoError(t, err)
 
 	for _, route := range httproute.Inventory().Routes() {
 		if route.Kind == httproute.KindExternal {
@@ -370,7 +376,7 @@ func TestTheCompositionRootWiresEveryRouteMediKubeServes(t *testing.T) {
 
 	// httproute.New refuses both halves of the mismatch. Reaching it means the
 	// composition root satisfies the check rather than merely declaring it.
-	_, err := httproute.New(table)
+	_, err = httproute.New(table)
 	require.NoError(t, err)
 }
 
@@ -392,16 +398,10 @@ func TestTheOperationsStillAnsweringNotImplementedAreExactlyThese(t *testing.T) 
 		"requestEmailVerification", "confirmEmailVerification",
 		// internal/web/api/me.go — US2, T215.
 		"getMe", "updateMe", "deleteMe", "changePassword",
-		// internal/web/api/records.go — US1, T170.
-		"listRecords", "listRecordsOfKind", "createRecord",
-		"getRecord", "updateRecord", "deleteRecord",
 		// internal/web/api/health.go — US5, T285.
 		"healthz", "readyz",
-		// internal/web/stream/records.go — US1, T178.
-		"streamRecords",
 		// internal/web/page/*.go — US1 and US2.
-		"loginPage", "registerPage", "overviewPage",
-		"medicationListPage", "medicationDetailPage", "settingsPage",
+		"loginPage", "registerPage", "overviewPage", "settingsPage",
 		"forgotPasswordPage", "resetPasswordPage", "verifyEmailPage",
 	}
 

@@ -1,0 +1,24 @@
+package components
+
+templ Pagination(props PaginationProps) {
+	<nav
+		id={ props.ID }
+		aria-label="Pagination"
+		class="mt-4 flex items-center justify-between gap-3 text-sm"
+	>
+		if props.PreviousHref != "" {
+			<a
+				href={ props.PreviousHref }
+				rel="prev"
+				class="rounded-md border border-slate-300 px-3 py-2 font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+			>Previous</a>
+		}
+		if props.NextHref != "" {
+			<a
+				href={ props.NextHref }
+				rel="next"
+				class="ml-auto rounded-md border border-slate-300 px-3 py-2 font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+			>Next</a>
+		}
+	</nav>
+}
