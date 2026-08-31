@@ -234,11 +234,21 @@ export const fixtures = {
   signInPath: goRoutePath('login'),
   sessionCookieName: goString(session, sessionGo, 'SessionCookieName'),
 
-  // The three account pages, each with the landmark its route promises.
+  // The three operations the recovery flow drives (T223p). Read out of the
+  // route table for the reason the sign-in is: an address composed here is an
+  // address nothing serves.
+  registerPath: goRoutePath('register'),
+  recoveryPath: goRoutePath('requestPasswordReset'),
+  recoveryConfirmPath: goRoutePath('confirmPasswordReset'),
+
+  // The six account pages, each with the landmark its route promises.
   pages: {
     login: goPageTarget('loginPage'),
     register: goPageTarget('registerPage'),
     settings: goPageTarget('settingsPage'),
+    forgotPassword: goPageTarget('forgotPasswordPage'),
+    resetPassword: goPageTarget('resetPasswordPage'),
+    verifyEmail: goPageTarget('verifyEmailPage'),
   },
 
   // The titles those pages set, read from the package that sets them rather
@@ -248,6 +258,13 @@ export const fixtures = {
     login: goString(accountPages, accountPageGo, 'loginTitle'),
     register: goString(accountPages, accountPageGo, 'registerTitle'),
     settings: goString(accountPages, accountPageGo, 'settingsTitle'),
+    forgotPassword: goString(accountPages, accountPageGo, 'forgotPasswordTitle'),
+    resetPassword: goString(accountPages, accountPageGo, 'resetPasswordTitle'),
+    // contracts/pages.md gives P9 a tab that does not repeat its landmark: the
+    // region is named "Email confirmation" and the title says "Confirm your
+    // address", so reading both from the source is the only way this gate
+    // asserts the pair rather than one of them twice.
+    verifyEmail: goString(accountPages, accountPageGo, 'verifyEmailTitle'),
   },
 
   // FR-008's query. A person whose session ran out is told so; everybody else
@@ -258,6 +275,11 @@ export const fixtures = {
   ids: {
     sessionExpired: goString(authView, authViewGo, 'SessionExpiredID'),
     registrationRules: goString(authView, authViewGo, 'PasswordRulesID'),
+    newPasswordRules: goString(authView, authViewGo, 'NewPasswordRulesID'),
+    // FR-074's two states, both rendered INSIDE their page's landmark rather
+    // than as an error view, and neither carrying a role of its own.
+    linkDead: goString(authView, authViewGo, 'LinkDeadID'),
+    mailUnconfigured: goString(authView, authViewGo, 'MailUnconfiguredID'),
     emailConfirmed: goString(settingsView, settingsViewGo, 'EmailConfirmedID'),
     emailUnconfirmed: goString(settingsView, settingsViewGo, 'EmailUnconfirmedID'),
     passwordRules: goString(settingsView, settingsViewGo, 'PasswordRulesID'),
@@ -279,6 +301,15 @@ export const fixtures = {
 
   listPath: `/${segment}`,
   detailPath: (id: string) => `/${segment}/${id}`,
+
+  // P8's address for a link that actually works, as opposed to
+  // pages.resetPassword.path, which is the route's deliberately dead smoke
+  // token. The pattern and the name of its placeholder are both read back —
+  // internal/web/page/accounts.go declares PathToken precisely because a
+  // handler reading a differently spelled parameter answers the dead-link
+  // state to everybody, which looks exactly like a page that works.
+  resetPasswordPath: (token: string) =>
+    goRoutePath('resetPasswordPage').replace(`{${goString(accountPages, accountPageGo, 'PathToken')}}`, token),
 
   // contracts/pages.md's title column is "{page} — MediKube", and
   // internal/web/views/shell declares both halves as constants saying in so

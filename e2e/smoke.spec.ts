@@ -4,8 +4,8 @@
 // Every case here runs twice — once per project in playwright.config.ts — so
 // "it renders" and "it renders on a phone" are two results and not one.
 //
-// Phase 004 adds the recovery pages' cases to this file (T223p) and reuses
-// gate.ts's seven assertions rather than restating them.
+// T223p added P7, P8 and P9 below. Every case here reuses gate.ts's seven
+// assertions through open() rather than restating them.
 import { fixtures } from './fixtures';
 import { open, watch } from './gate';
 import { expect, test } from './auth';
@@ -111,6 +111,94 @@ test.describe('P2 — create account', () => {
     for (const forbidden of ['role', 'verified', 'disabled_at']) {
       await expect(form.locator(`[name="${forbidden}"]`), `the sign-up form offers ${forbidden}`).toHaveCount(0);
     }
+  });
+});
+
+// --- P7, P8 and P9: the recovery pages (T223p) -----------------------------
+//
+// The two token pages are opened with the route table's own deliberately dead
+// token, which is the state they are most often met in: a real link lives
+// thirty minutes and any committed one is expired before CI reaches it. Both
+// answer 200 with the explanation INSIDE their landmark rather than an error
+// view, which is what FR-074 asks for and what makes them smokeable at all.
+// e2e/recovery.spec.ts is where the live state is driven, with a token read out
+// of a real message.
+//
+// The instance this gate drives can send mail: e2e/instance.mjs points its SMTP
+// settings at the sink before the run starts. So these cases assert FR-076's
+// mailable branch; the other one — the landmark carrying "this instance cannot
+// send mail" in place of the control — is asserted in
+// internal/web/views/auth/forgot_password_test.go, where it costs no second
+// instance.
+
+test.describe('P7 — forgot password', () => {
+  test.use({ signedInAs: 'anonymous' });
+
+  test('asks for one address, promises nothing about it, and offers the way back to sign in', async ({ page }) => {
+    const form = await open(page, {
+      path: fixtures.pages.forgotPassword.path,
+      title: fixtures.title(fixtures.titles.forgotPassword),
+      landmark: fixtures.pages.forgotPassword.landmark,
+    });
+
+    // FR-073 is one control. A second one — a password, a name, anything that
+    // could be compared against the account — would make this form capable of
+    // telling one address from another.
+    await expect(form.locator('input')).toHaveCount(1);
+    await expect(form.locator('input[type="email"]')).toHaveCount(1);
+
+    await expect(
+      form.locator(`#${fixtures.ids.mailUnconfigured}`),
+      'the instance the gate drives has mail configured, so this is the wrong branch',
+    ).toHaveCount(0);
+
+    await expect(form.locator(`a[href="${fixtures.pages.login.path}"]`)).toBeVisible();
+  });
+});
+
+test.describe('P8 — choose a new password', () => {
+  test.use({ signedInAs: 'anonymous' });
+
+  test('answers a dead link with 200, the explanation and the offer of another (FR-074)', async ({ page }) => {
+    const form = await open(page, {
+      path: fixtures.pages.resetPassword.path,
+      title: fixtures.title(fixtures.titles.resetPassword),
+      landmark: fixtures.pages.resetPassword.landmark,
+    });
+
+    const dead = form.locator(`#${fixtures.ids.linkDead}`);
+    await expect(dead, 'a dead link renders no explanation inside the landmark').toBeVisible();
+    expect((await dead.innerText()).trim()).not.toBe('');
+    await expect(
+      dead.locator(`a[href="${fixtures.pages.forgotPassword.path}"]`),
+      'the dead-link state offers no way to ask for another',
+    ).toBeVisible();
+
+    // No form at all on a link that cannot be used. Collecting a password
+    // against a dead token refuses it after the person has chosen one.
+    await expect(form.locator('input[type="password"]')).toHaveCount(0);
+    await expect(form.locator(`#${fixtures.ids.newPasswordRules}`)).toHaveCount(0);
+  });
+});
+
+test.describe('P9 — confirm your address', () => {
+  test.use({ signedInAs: 'anonymous' });
+
+  test('answers a dead link with 200 and confirms nothing by being opened (FR-075)', async ({ page }) => {
+    const region = await open(page, {
+      path: fixtures.pages.verifyEmail.path,
+      title: fixtures.title(fixtures.titles.verifyEmail),
+      landmark: fixtures.pages.verifyEmail.landmark,
+    });
+
+    const dead = region.locator(`#${fixtures.ids.linkDead}`);
+    await expect(dead).toBeVisible();
+    await expect(dead.locator(`a[href="${fixtures.pages.login.path}"]`)).toBeVisible();
+
+    // The confirmation is a control somebody presses, and there is none here:
+    // a page that confirmed on GET would be spent by the first link scanner
+    // that walked the message.
+    await expect(region.getByRole('button')).toHaveCount(0);
   });
 });
 

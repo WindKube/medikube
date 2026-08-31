@@ -781,7 +781,7 @@ ends every prior session through the same mechanism T200 already asserts.
   render to buffer: landmarks `form[name="Reset password"]`, `form[name="Choose a new password"]`
   and `region[name="Email confirmation"]`; the **expired-link state renders inside the landmark**
   with the offer to request another (FR-074); errors adjacent to their field.
-- [ ] T223i [P] [US2] TEST `internal/web/api/auth_enumeration_test.go` — the recovery response for
+- [x] T223i [P] [US2] TEST `internal/web/api/auth_enumeration_test.go` — the recovery response for
   an address with an account and for one without are identical apart from `request_id`, **and the
   handler performs the same work on both branches** — same response constructor, no early return
   on the no-account branch (`contracts/auth.md`, `requestPasswordReset`). Asserted structurally,
@@ -810,7 +810,7 @@ ends every prior session through the same mechanism T200 already asserts.
   MediKube inherits are the documented ones — reset **30 minutes**, confirmation **24 hours** —
   writing them into `contracts/auth.md` if PocketBase's defaults differ from what is documented
   there.
-- [ ] T223p [P] [US2] `e2e/smoke.spec.ts` cases for `/forgot-password`, `/reset-password/{token}`
+- [x] T223p [P] [US2] `e2e/smoke.spec.ts` cases for `/forgot-password`, `/reset-password/{token}`
   and `/verify-email/{token}` at both viewports, plus `e2e/recovery.spec.ts` driving the whole
   recovery flow against a mail sink: request → read the link out of the sink → set a new password
   → the old session is dead → sign in with the new password (SC-016, Phase Exit Criterion 8).

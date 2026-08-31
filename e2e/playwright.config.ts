@@ -10,6 +10,11 @@ const address = process.env.MEDIKUBE_E2E_ADDR ?? '127.0.0.1:8091';
 
 export const baseURL = process.env.MEDIKUBE_E2E_BASE_URL ?? `http://${address}`;
 
+// The mail sink's loopback endpoint (T223p). The default is mailsink.mjs's, in
+// the shape the instance's own address is written above — two files declaring
+// one default is what this file and instance.mjs already do for MEDIKUBE_E2E_ADDR.
+export const mailSinkURL = `http://${process.env.MEDIKUBE_E2E_MAIL_ADDR ?? '127.0.0.1:8026'}`;
+
 export default defineConfig({
   testDir: '.',
   fullyParallel: true,
@@ -69,10 +74,14 @@ export default defineConfig({
 
   webServer: {
     command: 'node ./instance.mjs',
-    // A route that answers 200 without a session and without touching a
-    // record: readiness here means "the router is up and the migrations ran",
-    // and asking a page would make the wait depend on the thing being tested.
-    url: `${baseURL}/api/collections/users/auth-methods`,
+    // The mail sink's endpoint, which instance.mjs opens LAST — after the
+    // router answers, after the migrations, and after the instance's SMTP
+    // settings have been pointed at the sink. Readiness therefore means the
+    // whole environment is assembled, not merely that the router is up: a
+    // recovery case that started a moment early would find mail unconfigured
+    // and read the refusal as a broken page. Asking a page instead would make
+    // the wait depend on the thing being tested.
+    url: `${mailSinkURL}/messages`,
     timeout: 60_000,
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',
