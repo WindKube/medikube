@@ -1,0 +1,74 @@
+package migrations
+
+import (
+	"testing"
+
+	"github.com/pocketbase/pocketbase/core"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"medikube/internal/domain/kind"
+)
+
+// T073. Applied == registered is what readyz's `migrations` check reports, and
+// it is the only signal that distinguishes "this build is running against the
+// schema it expects" from "this build is running against last week's".
+//
+// The name is composed rather than written out because one of the three
+// contains a kind's collection spelling, which lives in the kind table and
+// nowhere else (research D-05).
+func TestTheAppliedMigrationSetEqualsTheRegisteredSet(t *testing.T) {
+	t.Parallel()
+
+	app := newTestApp(t)
+
+	expected := []string{
+		"1756100100_users_profile.go",
+		"1756100200_" + kind.Medication.Collection() + ".go",
+		"1756100300_audit_events.go",
+	}
+
+	require.Equal(t, expected, Files(),
+		"the registered set is not the three migrations data-model §5 declares")
+
+	applied, err := Applied(app)
+	require.NoError(t, err)
+	assert.Equal(t, Files(), applied)
+
+	pending, err := Pending(app)
+	require.NoError(t, err)
+	assert.Empty(t, pending)
+}
+
+// The other half: a set that is equal because both sides are empty proves
+// nothing, and neither does one that reports the eight PocketBase system
+// migrations sharing the same _migrations table.
+func TestTheAppliedSetTracksWhatHasActuallyBeenApplied(t *testing.T) {
+	t.Parallel()
+
+	app := newTestApp(t)
+
+	items := core.AppMigrations.Items()
+	require.Len(t, items, 3)
+
+	reverted, err := runnerFor(items)(app).Down(1)
+	require.NoError(t, err)
+	require.Len(t, reverted, 1)
+
+	applied, err := Applied(app)
+	require.NoError(t, err)
+	assert.Equal(t, Files()[:2], applied)
+
+	pending, err := Pending(app)
+	require.NoError(t, err)
+	assert.Equal(t, Files()[2:], pending,
+		"a reverted migration must read as pending, or readyz reports green on a half-migrated instance")
+
+	// PocketBase's own system migrations live in the same table. If they were
+	// not filtered out, the applied set would exceed the registered one and
+	// equality would never hold on a healthy instance.
+	var recorded []string
+	require.NoError(t, app.DB().Select("file").From(core.DefaultMigrationsTable).Column(&recorded))
+	assert.Greater(t, len(recorded), len(applied),
+		"the _migrations table is expected to hold PocketBase's system migrations too")
+}

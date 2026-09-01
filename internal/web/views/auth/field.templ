@@ -1,0 +1,34 @@
+package auth
+
+import "medikube/internal/web/views/components"
+
+// field is the one control both forms are built from.
+//
+// The refusal is the control's NEXT SIBLING and the control names it through
+// aria-describedby (FR-048). A message rendered in a block at the top of a form
+// passes a substring check and is never announced beside the thing it concerns.
+templ field(props fieldProps) {
+	<div class="flex flex-col">
+		<label
+			for={ props.ID }
+			class="text-sm font-medium text-slate-900 dark:text-slate-100"
+		>{ props.Label }</label>
+		<input
+			id={ props.ID }
+			name={ props.Name }
+			type={ props.Type }
+			value={ props.Value }
+			data-bind={ props.Name }
+			autocomplete={ props.Autocomplete }
+			required?={ props.Required }
+			if props.Invalid {
+				aria-invalid="true"
+			}
+			if props.DescribedBy != "" {
+				aria-describedby={ props.DescribedBy }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		/>
+		@components.FieldError(props.ErrorID, props.Messages)
+	</div>
+}

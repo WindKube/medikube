@@ -1,0 +1,54 @@
+package auth
+
+// Register is contracts/pages.md's P2: form[name="Create account"], present in
+// BOTH configurations.
+//
+// FR-002 and defect D15. When the operator has closed self-registration the
+// landmark renders an explanation instead of the controls — it does not
+// disappear and the page is not a 404. A route that vanishes under a
+// configuration is a route the inventory gate cannot check, and a 404 is what
+// this codebase answers for owner-scoped data, where the existence of the thing
+// is itself the disclosure. Whether an operator opened self-registration is
+// instance-wide configuration, identical for every caller and evident from the
+// page itself.
+templ Register(props RegisterProps) {
+	<form
+		id={ props.FormID }
+		aria-label={ CreateAccountLandmark }
+		if props.Open {
+			data-on:submit__prevent={ props.OnSubmit }
+		}
+		class="mx-auto flex w-full max-w-sm flex-col gap-5"
+	>
+		<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ CreateAccountLandmark }</h1>
+		if props.Open {
+			@field(props.field(FieldEmail, "Email address", "email", "username", props.Email))
+			@field(props.field(FieldName, "Display name", "text", "name", props.Name))
+			@field(props.field(FieldPassword, "Password", "password", "new-password", ""))
+			<ul id={ PasswordRulesID } class="-mt-3 list-disc pl-5 text-sm text-slate-600 dark:text-slate-400">
+				for _, rule := range props.RuleSentences() {
+					<li>{ rule }</li>
+				}
+			</ul>
+			<button
+				type="submit"
+				class="inline-flex items-center justify-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ CreateAccountLandmark }</button>
+		} else {
+			<div id={ RegistrationClosedID } class="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+				<p>This MediKube instance is not open for sign-ups.</p>
+				<p class="max-w-prose">
+					Accounts here are created by whoever runs it. If you should have one, ask them; if you already
+					have one, sign in below.
+				</p>
+			</div>
+		}
+		<p class="text-sm text-slate-600 dark:text-slate-400">
+			{ "Already have an account? " }
+			<a
+				href={ props.LoginHref }
+				class="font-medium underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:hover:text-slate-100"
+			>{ SignInLandmark }</a>
+		</p>
+	</form>
+}

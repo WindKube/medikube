@@ -2,6 +2,13 @@
 # `on:` is a YAML 1.1 boolean, and workflow expressions do not wrap.
 extends: default
 
+# The browser gate's installed packages. `npm ci` puts several thousand YAML
+# files under e2e/node_modules, none of them this repository's, and one of them
+# is enough to fail --strict. They are gitignored; this is the same exclusion,
+# stated where yamllint can read it.
+ignore: |
+  e2e/node_modules/
+
 rules:
   truthy:
     allowed-values: ["true", "false"]

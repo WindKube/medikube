@@ -45,7 +45,7 @@ task run
 `task run` needs the environment. The minimum for a local instance:
 
 ```bash
-export MEDIKUBE_ENV=dev
+export MEDIKUBE_ENV=development
 export MEDIKUBE_DEV=true
 export MEDIKUBE_DATA_DIR=./pb_data
 export MEDIKUBE_HTTP_ADDR=127.0.0.1:8090
@@ -53,12 +53,53 @@ export MEDIKUBE_PUBLIC_URL=http://127.0.0.1:8090
 export MEDIKUBE_LOG_LEVEL=debug
 export MEDIKUBE_LOG_PRETTY=true
 export MEDIKUBE_AUTH_REGISTRATION_OPEN=true    # closed by default; open it to exercise sign-up
-export MEDIKUBE_SESSION_TTL=168h               # 7 days
+export MEDIKUBE_AUTH_SESSION_TTL=168h          # 7 days
 ```
 
 `MEDIKUBE_DATA_DIR` is **required**. Leaving it unset makes PocketBase put `pb_data` next to the
 binary, which in the distroless image is a read-only layer; the config validator refuses to start
-rather than let you discover that in production.
+rather than let you discover that in production. `MEDIKUBE_PUBLIC_URL` is the other required one.
+
+### The rest of the settings, and what they default to
+
+Nothing below has to be set to bring a local instance up — each line is what you get if you say
+nothing — but this is the whole list, and it is the whole list by construction:
+`internal/config/documented_test.go` walks the config struct by reflection and fails the build if a
+variable exists that neither this file nor `README.md` names.
+
+```bash
+export MEDIKUBE_DRAIN_DELAY=5s              # keep accepting this long into a shutdown
+export MEDIKUBE_DRAIN_MAX=25s               # the hard deadline; must exceed DRAIN_DELAY
+export MEDIKUBE_ALLOWED_ORIGINS=            # comma-separated CORS origins; empty is same-origin only
+export MEDIKUBE_TRUSTED_PROXIES=            # comma-separated proxies whose forwarding headers count
+export MEDIKUBE_CURSOR_KEY=                 # list-cursor signing key; derived from PocketBase's own secret when empty
+
+export MEDIKUBE_RETENTION_AUDIT_DAYS=730    # how long audit events are kept
+
+export MEDIKUBE_SENTRY_DSN=                 # empty disables Sentry outright
+export MEDIKUBE_SENTRY_ENVIRONMENT=production
+export MEDIKUBE_SENTRY_SAMPLE_RATE=1.0
+export MEDIKUBE_SENTRY_DEBUG=false
+
+export MEDIKUBE_METRICS_ENABLED=true
+export MEDIKUBE_METRICS_ADDR=127.0.0.1:9090 # loopback by default; exposing metrics is deliberate
+export MEDIKUBE_METRICS_TOKEN=              # required in production once ADDR leaves loopback
+
+export MEDIKUBE_OTEL_ENABLED=false
+export MEDIKUBE_OTEL_ENDPOINT=localhost:4318
+export MEDIKUBE_OTEL_INSECURE=true
+export MEDIKUBE_OTEL_SAMPLE_RATIO=1.0
+export MEDIKUBE_OTEL_HEADERS=               # key:value,key:value on the OTLP export
+export MEDIKUBE_OTEL_ENVIRONMENT=production
+
+export MEDIKUBE_FILES_MAX_UPLOAD_BYTES=33554432   # 32 MiB
+export MEDIKUBE_FILES_ALLOWED_MIME=application/pdf,image/png,image/jpeg,image/heic,text/plain
+```
+
+`MEDIKUBE_SENTRY_DSN`, `MEDIKUBE_METRICS_TOKEN`, `MEDIKUBE_CURSOR_KEY` and
+`MEDIKUBE_OTEL_HEADERS` may each be given as a path to a file instead — the mounted-secret shape —
+and the first three are removed from the process environment once read, so `docker inspect` and a
+crash dump cannot repeat them.
 
 ### Three things you should see at boot, and two you should not
 
@@ -86,8 +127,9 @@ Sign in as the seeded account:
 amara@example.test / medikube-dev-password
 ```
 
-Account B is `bo@example.test` (one medication), account C is `chen@example.test` (none — the
-empty state).
+Account B is `boris@example.test` (three medications — the isolation counterparty every
+stranger-refused check below is run as), and account C is `chidi@example.test` (none: the empty
+state, and the one account seeded unverified so the "not confirmed" settings state is real).
 
 ---
 
@@ -107,7 +149,7 @@ The whole point of the phase: one record kind proving every layer.
 5. Delete it, via the **rendered** confirmation (`region[name="Confirm delete"]`) — not a browser
    dialog. It is **hard deleted**: no `deleted_at`, no tombstone, no way to get it back. Confirm
    with `sqlite3 pb_data/data.db 'select count(*) from medications where id = "..."'`.
-6. Sign in as `chen@example.test`: `region[name="Medications"]` is present and contains the empty
+6. Sign in as `chidi@example.test`: `region[name="Medications"]` is present and contains the empty
    state — the region is there, not replaced.
 
 ### US2 — Accounts (P2)
@@ -170,11 +212,11 @@ saying the link is no longer usable, at `200`, not an error view: that page *is*
 This is the story the whole architecture exists for, so verify it directly.
 
 ```bash
-# as bo, request one of amara's medications and something that never existed
+# as boris, request one of amara's medications and something that never existed
 curl -s -o /tmp/a.json -w '%{http_code} %{time_total}\n' \
-  -b bo.cookies http://127.0.0.1:8090/api/v1/records/medications/<amara-med-id>
+  -b boris.cookies http://127.0.0.1:8090/api/v1/records/medications/<amara-med-id>
 curl -s -o /tmp/b.json -w '%{http_code} %{time_total}\n' \
-  -b bo.cookies http://127.0.0.1:8090/api/v1/records/medications/zzzzzzzzzzzzzzz
+  -b boris.cookies http://127.0.0.1:8090/api/v1/records/medications/zzzzzzzzzzzzzzz
 
 diff /tmp/a.json /tmp/b.json && echo "IDENTICAL"
 ```
@@ -295,7 +337,7 @@ test shorter than that.** CI runs a job longer than five minutes for this reason
 
 ### One subscriber never sees another's records
 
-Two terminals, two accounts, both streaming. Create a medication as amara. Bo's stream must
+Two terminals, two accounts, both streaming. Create a medication as amara. Boris's stream must
 receive **zero** frames. This is the test that catches an authorization check hoisted out of the
 per-event loop.
 
@@ -319,7 +361,7 @@ because phase 002 adds one.)
 ```bash
 task docker:build
 docker run --rm -p 8090:8090 \
-  -e MEDIKUBE_DATA_DIR=/data -e MEDIKUBE_ENV=dev -v medikube-data:/data medikube:dev
+  -e MEDIKUBE_DATA_DIR=/data -e MEDIKUBE_ENV=development -v medikube-data:/data medikube:dev
 ```
 
 Checks worth doing once:

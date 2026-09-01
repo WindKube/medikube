@@ -1,0 +1,54 @@
+package settings
+
+// Profile is FR-011's five changeable things, and the address, which is shown
+// and cannot be changed here.
+//
+// contracts/account.md is explicit about the address: FR-011 enumerates what a
+// person may change about themselves and the sign-in address is not among them,
+// MePatch has no member for it, and changing it is a two-step flow of its own
+// that no requirement of this phase asks for. So the page shows it, says
+// whether it is confirmed (FR-075), offers to send the confirmation again, and
+// says plainly that the address itself stays put.
+templ Profile(props ProfileProps) {
+	<form
+		id={ props.FormID }
+		aria-label={ ProfileLandmark }
+		data-on:submit__prevent={ props.OnSubmit }
+		class="flex max-w-xl flex-col gap-5"
+	>
+		<h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{ ProfileLandmark }</h2>
+		<div class="flex flex-col gap-1 rounded-md border border-slate-200 p-3 dark:border-slate-800">
+			<p class="text-sm font-medium text-slate-900 dark:text-slate-100">Email address</p>
+			<p class="text-sm text-slate-700 dark:text-slate-300">{ props.Email }</p>
+			if props.EmailConfirmed {
+				<p id={ EmailConfirmedID } class="text-sm text-slate-600 dark:text-slate-400">
+					This address is confirmed.
+				</p>
+			} else {
+				<div id={ EmailUnconfirmedID } class="flex flex-col items-start gap-2">
+					<p class="text-sm text-amber-800 dark:text-amber-300">
+						This address has not been confirmed yet. Until it is, we cannot be sure a recovery message
+						would reach you.
+					</p>
+					<button
+						type="button"
+						data-on:click={ props.ResendOn }
+						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+					>Send the confirmation again</button>
+				</div>
+			}
+			<p class="text-sm text-slate-600 dark:text-slate-400">
+				The address cannot be changed in this version.
+			</p>
+		</div>
+		for _, control := range props.Controls() {
+			@field(control)
+		}
+		<div>
+			<button
+				type="submit"
+				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>Save changes</button>
+		</div>
+	</form>
+}

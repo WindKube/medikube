@@ -110,7 +110,9 @@ while IFS=$'\t' read -r source target; do
 	fi
 done < <(
 	# shellcheck disable=SC2016 # $0 below is awk's record, not a shell parameter
-	find . -path ./.git -prune -o -name '*.md' -print0 |
+	# node_modules is other people's prose, unpacked by `npm ci` for the browser
+	# gate and gitignored. Their broken relative links are not this corpus's.
+	find . \( -path ./.git -o -path ./e2e/node_modules \) -prune -o -name '*.md' -print0 |
 		xargs -0 -r awk '
 			FNR == 1 { fenced = 0 }
 			# Fenced blocks hold Go and SQL that trips the link pattern.

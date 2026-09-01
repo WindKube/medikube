@@ -1,0 +1,458 @@
+package page
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/pocketbase/pocketbase/core"
+
+	"medikube/internal/domain"
+	"medikube/internal/domain/access"
+	"medikube/internal/domain/clinical"
+	"medikube/internal/domain/kind"
+	"medikube/internal/httproute"
+	recordfamily "medikube/internal/records"
+	"medikube/internal/web"
+	"medikube/internal/web/api"
+	"medikube/internal/web/views/ids"
+	views "medikube/internal/web/views/records"
+	"medikube/internal/web/views/shell"
+)
+
+// The operation ids of contracts/pages.md's P4 and P5, spelled as
+// internal/httproute declares them.
+const (
+	OpMedicationListPage   = "medicationListPage"
+	OpMedicationDetailPage = "medicationDetailPage"
+)
+
+// The two page titles of contracts/pages.md, without the product suffix, which
+// shell.Title adds. P5's is the record's own name.
+const medicationListTitle = "Medications"
+
+// Handlers is the record pages' contribution to the route table.
+//
+// A page that reached the router without a Landmark or a SmokeURL cannot be
+// registered at all — httproute.Handle panics on either — so wiring these two
+// is also what takes them off the 501 stub list.
+func Handlers(resolve api.Resolve) (httproute.Handlers, error) {
+	links, err := newMedicationLinks()
+	if err != nil {
+		return nil, err
+	}
+
+	if resolve == nil {
+		return nil, api.ErrNoRecords
+	}
+
+	pages := &medicationPages{resolve: resolve, links: links, views: MedicationViews{links: links}}
+
+	return httproute.Handlers{
+		OpMedicationListPage:   web.WithActor(pages.list),
+		OpMedicationDetailPage: web.WithActor(pages.detail),
+	}, nil
+}
+
+// MedicationViews is the kind's rendering, as internal/records consumes it.
+//
+// It lives in the page layer and not beside the components because it is the
+// one place that knows both halves: the wire DTO internal/web/api minted, and
+// the URLs of the routes this build serves. A component may spell neither — a
+// view that built a path would be the fourth spelling of a kind's segment and
+// the one nothing checks (research D-05).
+type MedicationViews struct {
+	links medicationLinks
+}
+
+var _ recordfamily.Views = MedicationViews{}
+
+// NewMedicationViews reads its three address templates out of the route
+// inventory, so the link on a row is by construction the route the router
+// serves.
+func NewMedicationViews() (MedicationViews, error) {
+	links, err := newMedicationLinks()
+	if err != nil {
+		return MedicationViews{}, err
+	}
+
+	return MedicationViews{links: links}, nil
+}
+
+// List renders one page of rows inside contracts/pages.md P4's landmark, with
+// the empty state inside that landmark rather than instead of it (FR-029).
+//
+// It renders no paging link because records.Views is handed a page of records
+// and not the request that asked for it. The page handler, which has both,
+// calls ListOfPage.
+func (v MedicationViews) List(page domain.Page[recordfamily.Record]) recordfamily.Renderer {
+	return v.ListOfPage(page, "")
+}
+
+// ListOfPage is List plus the address of the next page. A pager that is never
+// handed a link renders as an empty landmark on every list, and a list of more
+// than one page silently stops at its first (FR-023).
+func (v MedicationViews) ListOfPage(page domain.Page[recordfamily.Record], nextHref string) recordfamily.Renderer {
+	return views.MedicationList(views.MedicationListProps{
+		Medications: v.rows(page.Items),
+		CreateHref:  "#" + ids.RecordForm(kind.Medication, ""),
+		NextHref:    nextHref,
+	})
+}
+
+// Row is the element contracts/streams.md patches by id.
+func (v MedicationViews) Row(record recordfamily.Record) recordfamily.Renderer {
+	return views.MedicationRow(v.view(record))
+}
+
+// Detail is contracts/pages.md P5's landmark, with the delete confirmation
+// rendered inside it (FR-028).
+func (v MedicationViews) Detail(record recordfamily.Record) recordfamily.Renderer {
+	return views.MedicationDetail(views.MedicationDetailProps{Medication: v.view(record)})
+}
+
+// Form is the create form and the edit form, re-rendered from the submitted
+// values plus the field errors and never cleared (FR-027).
+func (v MedicationViews) Form(record recordfamily.Record, invalid *domain.ValidationError) recordfamily.Renderer {
+	medication := v.view(record)
+	fresh := medication.ID == ""
+
+	return views.MedicationForm(views.MedicationFormProps{
+		FormID:     ids.RecordForm(kind.Medication, medication.ID),
+		New:        fresh,
+		OnSubmit:   v.links.submitExpression(medication),
+		CancelHref: v.cancelHref(medication),
+		Medication: medication,
+		Errors:     views.NewFieldErrors(invalid),
+	})
+}
+
+func (v MedicationViews) rows(items []recordfamily.Record) []views.MedicationView {
+	rendered := make([]views.MedicationView, 0, len(items))
+	for _, item := range items {
+		rendered = append(rendered, v.view(item))
+	}
+
+	return rendered
+}
+
+// view is the DTO-to-page mapping. It reads the wire shape rather than the
+// entity because that is what the generic handler carries: the kind's service
+// answered in its own published shape and nothing between here and there is
+// allowed to know which type it is.
+func (v MedicationViews) view(record recordfamily.Record) views.MedicationView {
+	medication := clinical.Medication{ID: record.ID, Version: record.Version}
+
+	switch body := record.Body.(type) {
+	case *api.Medication:
+		medication = detailEntity(record, *body)
+	case *api.MedicationSummary:
+		medication = summaryEntity(record, *body)
+	}
+
+	return views.NewMedicationView(medication, v.links.of(medication.ID))
+}
+
+func summaryEntity(record recordfamily.Record, summary api.MedicationSummary) clinical.Medication {
+	return clinical.Medication{
+		ID:        record.ID,
+		Version:   record.Version,
+		Name:      summary.Name,
+		Dosage:    summary.Dosage,
+		Frequency: summary.Frequency,
+		Status:    clinical.TherapyStatus(summary.Status),
+		StartedOn: readDate(summary.StartedOn),
+		UpdatedAt: readInstant(summary.UpdatedAt),
+	}
+}
+
+func detailEntity(record recordfamily.Record, detail api.Medication) clinical.Medication {
+	medication := summaryEntity(record, detail.MedicationSummary)
+
+	medication.AlternativeName = detail.AlternativeName
+	medication.Type = clinical.MedicationType(detail.Type)
+	medication.Route = clinical.MedicationRoute(detail.Route)
+	medication.Indication = detail.Indication
+	medication.EndedOn = readDate(detail.EndedOn)
+	medication.SideEffects = detail.SideEffects
+	medication.Notes = detail.Notes
+	medication.CreatedAt = readInstant(detail.CreatedAt)
+
+	return medication
+}
+
+type medicationPages struct {
+	resolve api.Resolve
+	links   medicationLinks
+	views   MedicationViews
+}
+
+// list renders P4. The rows come through the same generic handler the API
+// serves, so a page and its JSON cannot disagree about what the account owns.
+func (p *medicationPages) list(e *core.RequestEvent, actor access.Actor) error {
+	handler, err := p.session(actor)
+	if err != nil {
+		return err
+	}
+
+	entry, err := handler.Dispatch(kind.Medication.Segment())
+	if err != nil {
+		return err
+	}
+
+	query, err := api.KindQuery(e, entry)
+	if err != nil {
+		return err
+	}
+
+	listing, err := handler.ListOfKind(e.Request.Context(), actor, kind.Medication.Segment(), query)
+	if err != nil {
+		return web.OwnerScoped(err)
+	}
+
+	blank := recordfamily.Record{Kind: kind.Medication}
+
+	return p.render(e, medicationListTitle, sequence{
+		p.views.ListOfPage(listing, nextPageHref(e, listing)),
+		entry.Views.Form(blank, nil),
+	})
+}
+
+// nextPageHref is this same list one page further on: the address that was
+// asked for, carrying the cursor the store just minted.
+//
+// There is no companion previous link, and inventing one would be a lie. The
+// cursor is a keyset boundary and the store mints exactly one direction of it
+// (contracts/records.md), so a page reached by following Next has no recorded
+// way back; a control labelled Previous that returned to the first page would
+// be wrong on every page after the second.
+func nextPageHref(e *core.RequestEvent, listing domain.Page[recordfamily.Record]) string {
+	if listing.NextCursor == nil {
+		return ""
+	}
+
+	next := *e.Request.URL
+	query := next.Query()
+	query.Set(web.ParamCursor, *listing.NextCursor)
+	next.RawQuery = query.Encode()
+
+	return next.RequestURI()
+}
+
+// detail renders P5. A record belonging to somebody else is a 404 here for the
+// same reason it is one through the API: the existence of an identifier is
+// itself a disclosure (FR-033).
+func (p *medicationPages) detail(e *core.RequestEvent, actor access.Actor) error {
+	handler, err := p.session(actor)
+	if err != nil {
+		return err
+	}
+
+	entry, err := handler.Dispatch(kind.Medication.Segment())
+	if err != nil {
+		return err
+	}
+
+	found, err := handler.Get(e.Request.Context(), actor,
+		kind.Medication.Segment(), e.Request.PathValue(api.PathID))
+	if err != nil {
+		return web.OwnerScoped(err)
+	}
+
+	return p.render(e, p.views.view(found).Name, sequence{
+		entry.Views.Detail(found),
+		entry.Views.Form(found, nil),
+	})
+}
+
+// session refuses a page that needs one to a caller who has none.
+//
+// It is 403 and not 404: contracts/pages.md's E2 renders the sign-in prompt,
+// because the existence of /medications is not information about anybody. The
+// router does not do this for pages — httproute.Bind binds apis.RequireAuth
+// only to the non-page routes — precisely so the decision stays here, where the
+// full shell can be rendered around it.
+func (p *medicationPages) session(actor access.Actor) (*recordfamily.Handler, error) {
+	if !actor.Authenticated() {
+		return nil, fmt.Errorf("page: the page needs a session: %w", domain.ErrForbidden)
+	}
+
+	return p.resolve()
+}
+
+func (p *medicationPages) render(e *core.RequestEvent, title string, main sequence) error {
+	e.Response.Header().Set("Cache-Control", pageCacheControl)
+
+	return web.Render(e, http.StatusOK, shell.Document(shell.DocumentProps{
+		Title:    title,
+		SignedIn: true,
+		Nav:      p.links.nav(e.Request.URL.Path),
+		Main:     main,
+	}))
+}
+
+// pageCacheControl keeps a rendered medication list out of every shared cache
+// and off disk, for the same reason the JSON is served that way.
+const pageCacheControl = "private, no-store"
+
+// sequence renders several components into one. It exists so that a page whose
+// main landmark is a region plus the form that adds to it needs no wrapper
+// component and no second templ file — the page composes, the components do
+// not know about each other.
+type sequence []recordfamily.Renderer
+
+func (s sequence) Render(ctx context.Context, w io.Writer) error {
+	for _, component := range s {
+		if component == nil {
+			continue
+		}
+
+		if err := component.Render(ctx, w); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// medicationLinks holds the four addresses the pages and the components need,
+// each recovered from the route table rather than composed here.
+type medicationLinks struct {
+	listPage   string
+	detailPage string
+	record     string
+	collection string
+}
+
+func newMedicationLinks() (medicationLinks, error) {
+	paths, err := routePaths(map[string]string{
+		OpMedicationListPage:   "",
+		OpMedicationDetailPage: "",
+		api.OpGetRecord:        "",
+		api.OpCreateRecord:     "",
+	})
+	if err != nil {
+		return medicationLinks{}, err
+	}
+
+	segment := kind.Medication.Segment()
+
+	return medicationLinks{
+		listPage:   paths[OpMedicationListPage],
+		detailPage: paths[OpMedicationDetailPage],
+		record:     strings.ReplaceAll(paths[api.OpGetRecord], "{"+api.PathKind+"}", segment),
+		collection: strings.ReplaceAll(paths[api.OpCreateRecord], "{"+api.PathKind+"}", segment),
+	}, nil
+}
+
+// of is one record's three addresses. Edit is the detail page: this phase
+// registers no edit page, and the form the detail renders is where a change is
+// made, so pointing elsewhere would be a link to a route that does not exist.
+func (l medicationLinks) of(recordID string) views.MedicationLinks {
+	if recordID == "" {
+		return views.MedicationLinks{}
+	}
+
+	detail := strings.ReplaceAll(l.detailPage, "{"+api.PathID+"}", recordID)
+
+	return views.MedicationLinks{
+		Detail: detail,
+		Edit:   detail + "#" + ids.RecordForm(kind.Medication, recordID),
+		Record: strings.ReplaceAll(l.record, "{"+api.PathID+"}", recordID),
+	}
+}
+
+// submitExpression is what the form's submission runs. A create posts to the
+// collection; a change patches the record and carries the version the page was
+// rendered from as If-Match, because a version fetched again is a version that
+// can already be stale (FR-026).
+func (l medicationLinks) submitExpression(medication views.MedicationView) string {
+	if medication.ID == "" {
+		return "@post(" + quote(l.collection) + ")"
+	}
+
+	return "@patch(" + quote(medication.Links.Record) + ", {headers: {'If-Match': $etag}})"
+}
+
+func (l medicationLinks) cancelHref(medication views.MedicationView) string {
+	if medication.Links.Detail != "" {
+		return medication.Links.Detail
+	}
+
+	return l.listPage
+}
+
+func (v MedicationViews) cancelHref(medication views.MedicationView) string {
+	return v.links.cancelHref(medication)
+}
+
+// nav is the primary navigation's contents. contracts/pages.md fixes the
+// landmark on every page and leaves what is in it to the page.
+func (l medicationLinks) nav(current string) []shell.NavLink {
+	return []shell.NavLink{
+		{Label: medicationListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+	}
+}
+
+// routePaths recovers several registered paths in one walk and reports every
+// one it could not find, so a rename in the route table names all of its
+// casualties at once.
+func routePaths(wanted map[string]string) (map[string]string, error) {
+	found := make(map[string]string, len(wanted))
+
+	for _, route := range httproute.Inventory().Routes() {
+		if _, needed := wanted[route.OpID]; needed {
+			found[route.OpID] = route.Path
+		}
+	}
+
+	var missing []string
+
+	for opID := range wanted {
+		if found[opID] == "" {
+			missing = append(missing, opID)
+		}
+	}
+
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("page: the route table has no %s, so a page has no address to link to", strings.Join(missing, ", "))
+	}
+
+	return found, nil
+}
+
+func quote(value string) string {
+	return `'` + strings.ReplaceAll(value, `'`, `\'`) + `'`
+}
+
+func readDate(raw *string) domain.Date {
+	if raw == nil {
+		return domain.Date{}
+	}
+
+	// A date this application wrote and cannot read back is a defect, not a
+	// refusal to make to the person reading the page: the absent date renders
+	// as nothing, which is what an unrecorded one does.
+	parsed, err := domain.ParseDate(*raw)
+	if err != nil {
+		return domain.Date{}
+	}
+
+	return parsed
+}
+
+func readInstant(raw string) time.Time {
+	if raw == "" {
+		return time.Time{}
+	}
+
+	parsed, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return time.Time{}
+	}
+
+	return parsed.UTC()
+}

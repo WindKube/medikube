@@ -1,0 +1,20 @@
+package errors
+
+// NotFound is contracts/pages.md's E1, and it is the privacy view.
+//
+// Every refused access to another account's data ends here, and so does every
+// address that matches nothing, and FR-033 requires the two to be one response
+// to the byte. So it names nothing: not the address that was asked for, not
+// what kind of thing was looked for, not whether there was something here. The
+// sentence below is true of a mistyped link and of a stranger's medication in
+// the same words, which is what makes it safe to render for both.
+templ NotFound(props NotFoundProps) {
+	<section aria-label={ NotFoundLandmark } class="mx-auto flex w-full max-w-prose flex-col gap-4">
+		<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ NotFoundLandmark }</h1>
+		<p class="text-sm text-slate-600 dark:text-slate-400">
+			There is nothing here to show. A link may be out of date, or what it pointed at may have been
+			removed since it was written down.
+		</p>
+		@reference(props.RequestID)
+	</section>
+}

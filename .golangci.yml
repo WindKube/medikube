@@ -1,0 +1,284 @@
+# golangci-lint v2 schema. v1 does not understand this file and will refuse it.
+#
+# The profile is the house baseline (arc-ui / appbase) unioned with medikeep-mcp's
+# four tightened settings, because MediKube holds medical records and should be the
+# strictest project in the house. On top of that sit two linters no sibling runs:
+# depguard and forbidigo are what turn constitution Principles II and VI from
+# review vigilance into a build gate, which Principle IX requires.
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  # internal/web/stream/timeout_test.go is behind this tag so that `task test`
+  # does not spend five and a half minutes on it. Without naming the tag here
+  # golangci-lint never type-checks the file at all, and neither do go build,
+  # go vet or go test — so the one gate holding the write-deadline fix in place
+  # would be free to rot until its own CI job ran.
+  build-tags:
+    - sselive
+    # internal/testsupport/phileak's exercise and its assertion are behind this
+    # one, so that `task test` does not boot an instance and walk every route.
+    # Naming it here is not optional: without it golangci-lint reads neither
+    # file, and the suite that decides whether a person's data can leave the
+    # process is the one nothing lints. It is also asserted from inside the
+    # suite — defect D18 was this gate reporting success while no file in the
+    # repository carried the tag at all.
+    - phileak
+
+linters:
+  default: none
+  enable:
+    # House profile (arc-ui / appbase)
+    - bodyclose
+    - contextcheck
+    - errcheck
+    - gocritic
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - prealloc
+    - revive
+    - staticcheck
+    - unconvert
+    - unused
+    # medikeep-mcp's additions
+    - copyloopvar
+    - errorlint
+    - nilerr
+    - noctx
+    - usestdlibvars
+    # New for MediKube: the constitution, made mechanical
+    - depguard
+    - forbidigo
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+    govet:
+      enable:
+        - shadow
+    staticcheck:
+      checks:
+        - all
+    revive:
+      rules:
+        - name: var-naming
+        - name: package-comments
+        - name: unused-parameter
+          disabled: true
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+    misspell:
+      ignore-rules:
+        - medikube
+        - Medikube
+        - MEDIKUBE
+        - MediKube
+
+    depguard:
+      rules:
+        # Constitution Principle II. PocketBase is reached only through repository
+        # interfaces implemented in an adapter package, so that domain and service
+        # logic stays testable without a database and survives a PocketBase upgrade.
+        # The exempt list is exactly the `[PB]`-marked packages of plan.md's Project
+        # Structure — nothing else may name PocketBase, and adding a package here is
+        # a plan amendment, not a lint tweak.
+        pocketbase-stays-in-adapters:
+          list-mode: lax
+          files:
+            - $all
+            - "!**/cmd/medikube/**"
+            - "!**/internal/logging/**"
+            - "!**/internal/obs/**"
+            - "!**/internal/store/**"
+            - "!**/internal/platform/pb/**"
+            - "!**/internal/httproute/**"
+            - "!**/internal/web/**"
+            - "!**/internal/cli/**"
+            - "!**/internal/testsupport/**"
+          deny:
+            - pkg: github.com/pocketbase/pocketbase
+              desc: >-
+                Constitution Principle II. Only the [PB] packages named in
+                plan.md's Project Structure may import PocketBase; everything
+                else reaches it through a repository interface.
+
+        # The other half of the same boundary: a service that knows about HTTP or
+        # about rendering has taken on a second responsibility.
+        domain-and-services-stay-pure:
+          list-mode: lax
+          files:
+            - "**/internal/domain/**"
+            - "**/internal/service/**"
+          deny:
+            - pkg: net/http
+              desc: >-
+                Constitution Principle II. Services decide; handlers speak HTTP.
+            - pkg: github.com/a-h/templ
+              desc: >-
+                Constitution Principle II. Rendering belongs to internal/web.
+
+        # The constitution's Forbidden Dependencies list, enforced everywhere
+        # including inside the [PB] packages — jsvm in particular would be
+        # registered from internal/platform/pb if it were ever registered at all.
+        no-forbidden-frameworks:
+          list-mode: lax
+          files:
+            - $all
+          deny:
+            - pkg: github.com/gin-gonic/gin
+              desc: Forbidden by the constitution. PocketBase's router is the router.
+            - pkg: github.com/danielgtaylor/huma
+              desc: Forbidden by the constitution. No second OpenAPI-serving framework.
+            - pkg: github.com/spf13/viper
+              desc: Forbidden by the constitution. caarlos0/env is the only config mechanism.
+            - pkg: github.com/samber/mo
+              desc: >-
+                Forbidden by the constitution (Principle IV). mo.Result severs the
+                errors.Is / errors.As / %w chain three subsystems depend on.
+            - pkg: github.com/samber/ro
+              desc: >-
+                Forbidden by the constitution (Principle IV). Not a read-only
+                helper — a pre-1.0 reactive library in the path of the realtime layer.
+            - pkg: github.com/samber/slog-zerolog
+              desc: >-
+                Forbidden by the constitution. zerolog ships NewSlogHandler, so the
+                Principle VI bridge needs no adapter.
+            - pkg: github.com/pocketbase/pocketbase/plugins/jsvm
+              desc: Forbidden by the constitution. MediKube ships no scripting runtime.
+
+    forbidigo:
+      # Type information, so a renamed import or a method on an embedded field
+      # cannot walk past these patterns.
+      analyze-types: true
+      forbid:
+        # `pkg` is load-bearing twice over: without it the pattern never fires
+        # (with analyze-types the call renders as a type-qualified name, so the
+        # `()` is not in the text), and with it zerolog's own `.Logger()` builder
+        # is left alone. Both PocketBase packages are named because the call site
+        # holds either a *pocketbase.PocketBase or a core.App / e.App.
+        - pattern: \.Logger$
+          pkg: ^github\.com/pocketbase/pocketbase(/core)?$
+          msg: >-
+            Constitution Principle VI. PocketBase's app.Logger() writes to a
+            handler MediKube cannot replace, so those lines never reach the
+            zerolog stream. Inject the request-scoped zerolog logger instead.
+        - pattern: ^(log/)?slog\.
+          msg: >-
+            Constitution Principle VI. log/slog belongs to the PocketBase bridge in
+            internal/logging and nowhere else; MediKube's own code logs to zerolog.
+        - pattern: ^log\.(Print|Fatal|Panic)
+          msg: >-
+            Constitution Principle VI. The standard log package is not MediKube's
+            logger and writes outside the one stream.
+        - pattern: ^fmt\.Print
+          msg: >-
+            Constitution Principle VI. Use the injected zerolog logger; stdout
+            writes that are not JSON break the one-stream promise.
+        # There is one SSE entry point in MediKube and this is what makes that
+        # true. datastar.NewSSE does not touch the write deadline PocketBase
+        # hardcodes at five minutes, and it sets Cache-Control and Content-Type
+        # and flushes the header block — so a second call site is a stream that
+        # dies at exactly 5:00 and ships `no-cache` and no X-Accel-Buffering,
+        # and every test shorter than five minutes passes with it
+        # (contracts/streams.md, research D-34). internal/web/stream/stream.go's
+        # newStream is the only caller and the exclusion below is the only
+        # exception.
+        - pattern: ^datastar\.NewSSE$
+          pkg: ^github\.com/starfederation/datastar-go/datastar$
+          msg: >-
+            contracts/streams.md. Every SSE stream goes through
+            internal/web/stream's newStream, which clears the per-request write
+            deadline and commits the header block before the SDK overwrites it.
+            There is no second path.
+        # `Records?` and not `Record`: the list hook is spelled
+        # OnRecordsListRequest, with the plural on Record, so a pattern anchored
+        # on the singular silently exempts exactly one member of the family.
+        - pattern: \.OnRecords?(Create|Update|Delete|View|List)Request$
+          msg: >-
+            Constitution Principle V and research D-14. The record-CRUD request
+            hooks are bound inside the built-in CRUD handlers, which the lockdown
+            disables, so anything placed there is silently dead code. Use the
+            post-commit OnRecordAfter*Success hooks. The auth family
+            (OnRecordAuthRequest) is deliberately absent from this list: it is the
+            sign-in audit seam and it does fire.
+
+  exclusions:
+    generated: lax
+    rules:
+      # contextcheck walks into templ's generated components and asks why they do
+      # not take a context. They cannot: a templ component is a constructor
+      # returning templ.Component, and the context arrives later at Render(ctx, w).
+      - path: internal/web/
+        linters:
+          - contextcheck
+
+      # Tests ignore Close errors on responses they are about to discard and build
+      # URLs from a test server's address.
+      - path: _test\.go
+        linters:
+          - bodyclose
+          - errcheck
+          - gosec
+          - noctx
+
+      # templ emits long, deliberately un-idiomatic functions; the fix would be to
+      # edit the generator.
+      - path: _templ\.go
+        linters:
+          - revive
+          - gocritic
+          - unused
+          - ineffassign
+          - prealloc
+          - errcheck
+          - gosec
+          - forbidigo
+
+      # internal/logging IS the bridge: it constructs the zerolog-backed
+      # slog.Handler that Principle VI bans everyone else from reaching for, and it
+      # decorates Logger() to do so. Narrowed by text rather than excluded whole, so
+      # a stray fmt.Print in the logging package is still a finding.
+      - path: internal/logging/
+        linters:
+          - forbidigo
+        text: log/slog|app\.Logger\(\)
+
+      # The only two files allowed to name the record-CRUD hook family, so that
+      # a deliberate exception is visible in one place instead of scattered:
+      # hooks.go, which is where a binding would go if one were ever justified,
+      # and hooks_never_fire_test.go, which is the evidence for the rule. That
+      # test binds the whole family and proves it is never invoked under the
+      # lockdown; without it the ban reads as dogma. The exception is spelled as
+      # those two paths rather than as a blanket _test.go carve-out, because a
+      # blanket one would let the ban be violated in any test in the repository.
+      - path: internal/platform/pb/hooks(_never_fire_test)?\.go
+        linters:
+          - forbidigo
+        text: record-CRUD request hooks
+
+      # The one file allowed to open an SSE stream. Narrowed by text as well as
+      # by path, so a stray fmt.Print or app.Logger() in stream.go is still a
+      # finding — the carve-out is for one call, not for one file.
+      - path: internal/web/stream/stream\.go
+        linters:
+          - forbidigo
+        text: newStream
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - medikube
+  exclusions:
+    generated: lax

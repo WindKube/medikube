@@ -1,0 +1,261 @@
+name: Go
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# The docs tiers live in ci.yaml and spec-tests.yaml; this file is the compiler's.
+# Nothing here writes a comment, a package or a check.
+permissions:
+  contents: read
+
+concurrency:
+  group: go-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# A statically linked binary is the point of the distroless image, so this is the
+# default; the test job raises it because -race needs cgo.
+env:
+  CGO_ENABLED: "0"
+
+jobs:
+  gen:
+    name: Generated output is current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      # go-version-file, and never GOTOOLCHAIN=local. go.mod asks for 1.27 because
+      # PocketBase v0.40.1 imports encoding/json/v2; pinning the toolchain locally
+      # turns that deliberate divergence into a misleading complaint about go.mod.
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      # Both outputs are gitignored, so this cannot diff them against a committed
+      # copy. What it proves is that the generators RUN: a templ source that no
+      # longer compiles fails here rather than reaching a browser.
+      - name: task gen
+        run: task gen
+      # Deliberately NOT a proxy for "the @source glob works". Tailwind v4 emits
+      # preflight and the theme from `@import "tailwindcss"` alone, so app.css is
+      # ~13KB even when the glob matches nothing at all. This only catches a
+      # Tailwind run that produced nothing whatsoever. The real assertion — that a
+      # class used in a .templ actually reaches the bundle — needs a .templ to
+      # exist, and arrives with the first one in Phase 2.
+      - name: The Tailwind step produced a bundle
+        run: |
+          set -eu
+          css=internal/web/static/app.css
+          test -s "$css" || { echo "$css absent or empty: the Tailwind step did not run" >&2; exit 1; }
+          echo "app.css: $(wc -c < "$css") bytes (preflight only until the first .templ lands)"
+
+  vet:
+    name: Vet
+    runs-on: ubuntu-latest
+    needs: gen
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: task vet
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: vet
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      # Deliberately not golangci-lint-action: the released binaries are built with
+      # go1.26 and refuse a module targeting 1.27 outright, and their vendored
+      # staticcheck panics building IR for 1.27 source. `task lint:go` builds the
+      # linter from source with this module's own toolchain, which is the only way
+      # it runs at all here.
+      - run: task lint:go
+
+  test:
+    name: Unit and integration tests
+    runs-on: ubuntu-latest
+    needs: vet
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: go test -race
+        env:
+          CGO_ENABLED: "1" # -race requires cgo
+        run: task test:go
+      - name: Coverage summary
+        if: always()
+        run: |
+          set -eu
+          test -f coverage.out || exit 0
+          go tool cover -func=coverage.out | tail -1 >> "$GITHUB_STEP_SUMMARY"
+
+  image:
+    name: Image build
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          push: false
+          load: true
+          tags: medikube:ci
+          build-args: VERSION=ci-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: The image runs and reports its version
+        run: docker run --rm --entrypoint /medikube medikube:ci
+
+  # The SSE liveness gate. Its own job because it is five and a half minutes of
+  # wall clock and because it is the only thing in the repository that can see
+  # the defect it exists for: PocketBase hardcodes WriteTimeout at five minutes,
+  # so a stream without internal/web/stream's per-request deadline clear dies at
+  # exactly 5:00 — and every test shorter than five minutes passes with the bug
+  # present (SC-007, shared design risk R7).
+  #
+  # needs: vet rather than test, so a broken stream is reported even when
+  # something unrelated is failing in the main suite.
+  stream-liveness:
+    name: SSE stream survives the five-minute write timeout
+    runs-on: ubuntu-latest
+    needs: vet
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: task test:sselive
+
+  # The browser gate. Constitution Principle VIII — "the UI must prove it
+  # renders" — and contracts/pages.md's seven smoke assertions, run against every
+  # page at both viewports: desktop 1440x900 and phone 390x844.
+  #
+  # Its own job because it builds a binary, boots an instance against the
+  # committed fixture and drives a real Chromium, which none of the Go jobs do,
+  # and because its failures are read differently: a red landmark assertion is a
+  # broken page, not a broken test.
+  #
+  # needs: test, because a browser run against a build whose unit tests are
+  # failing tells you nothing you did not already know.
+  e2e:
+    name: Browser gate (Playwright, both viewports)
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - uses: arduino/setup-task@c0bc642852239c2689f73f4ea6459c29405f3c52 # v3.0.0
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      # npm ci and the browser download, before the build, so a dependency
+      # failure is reported as one rather than as a launch timeout.
+      - run: task e2e:install
+      # Playwright transpiles TypeScript without type-checking it, so the gate's
+      # own code is otherwise never checked by anything.
+      - run: task e2e:typecheck
+      - run: task test:e2e
+      - name: The failing run's trace
+        # The trace is the only way to see what the browser saw, and a failure
+        # nobody can reproduce locally is a failure nobody fixes.
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7
+
+  # --- gates that arrive with the code they gate -------------------------------
+  # openapi-diff is required by tasks.md T015 and depends on something Phase 001
+  # has not built yet: the committed api/openapi.json and the `medikube openapi`
+  # command that writes it. stream-liveness and e2e have both landed and are the
+  # jobs above.
+  #
+  # It is declared here so the chain is visible and so turning it on is a
+  # one-line change, but it CHECKS FOR ITS ARTEFACT AND FAILS LOUDLY once that
+  # artefact lands without the gate being finished. A job that passed by doing
+  # nothing would read as coverage on a PR page, which is worse than an absent
+  # job.
+  pending-gates:
+    name: Later-phase gates
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - name: openapi-diff is not implemented yet
+        run: |
+          set -eu
+          pending=0
+          check() {
+            if [ -e "$2" ]; then
+              echo "::error::$1 exists but its gate is still a placeholder — implement it in .github/workflows/go.yaml"
+              pending=1
+            else
+              echo "pending: $1 (arrives in a later phase)"
+            fi
+          }
+          check "api/openapi.json (openapi-diff)" api/openapi.json
+          exit "$pending"
