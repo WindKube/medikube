@@ -217,16 +217,31 @@ func TestTheDetailPageOfSomebodyElsesRecordIsAMiss(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, refused)
 	assert.Equal(t, missing, refused)
 	assert.NotContains(t, refusedBody, partial.Name)
-	assert.Equal(t, requestIDs.ReplaceAllString(missingBody, ""), requestIDs.ReplaceAllString(refusedBody, ""),
+	assert.Equal(t, volatile(missingBody), volatile(refusedBody),
 		"the refusal reads differently from a genuine miss, so the identifier is confirmed by the page")
 }
 
-// requestIDs is the one permitted difference between a refusal and a miss
-// (FR-033). Bodies are compared with it removed. Both shapes are here because
-// obs mints a 32-hex id of its own and honours a client's W3C trace id, and a
-// comparison that only knew one of them would pass for the wrong reason.
+// requestIDs is one of the two permitted differences between a refusal and a
+// miss (FR-033). Bodies are compared with it removed. Both shapes are here
+// because obs mints a 32-hex id of its own and honours a client's W3C trace id,
+// and a comparison that only knew one of them would pass for the wrong reason.
 var requestIDs = regexp.MustCompile(
 	`[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
+
+// streamBeats is the other one, and it is a clock rather than an identifier.
+// The shell stamps the current second into data-signals on every render
+// (shell.StreamSignals), so two pages rendered either side of a tick differ by
+// that second and by nothing else. Comparing without removing it is a test that
+// passes locally and fails roughly once per minute of CI wall-clock, which
+// Constitution VIII forbids.
+var streamBeats = regexp.MustCompile(`stream_beat: &#39;[^&]*&#39;`)
+
+// volatile removes everything a refusal and a genuine miss are ALLOWED to
+// differ by, and nothing else. Anything this does not strip has to match
+// byte for byte, which is the whole of FR-033.
+func volatile(body string) string {
+	return streamBeats.ReplaceAllString(requestIDs.ReplaceAllString(body, ""), "")
+}
 
 func seeded(t *testing.T, id string) clinical.Medication {
 	t.Helper()
