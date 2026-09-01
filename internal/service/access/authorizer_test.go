@@ -3,6 +3,7 @@ package access_test
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -77,6 +78,34 @@ func superuser() domainaccess.Actor {
 	return domainaccess.Actor{UserID: "mksuperadmin001", IsSuperuser: true, RequestID: requestID}
 }
 
+// superuserHoldingTheOwnersAccount is the leg that makes the superuser refusal
+// EXPLICIT rather than accidental (T224).
+//
+// The refusal of a superuser whose id is some other string is indistinguishable
+// from the refusal of any stranger: delete `!actor.IsSuperuser` from reachable
+// and the owner comparison refuses them anyway, and every assertion above still
+// passes. This actor is a superuser session carrying the owner's own account
+// id, so the only thing that can refuse it is the flag itself.
+func superuserHoldingTheOwnersAccount() domainaccess.Actor {
+	return domainaccess.Actor{UserID: ownerID, IsSuperuser: true, RequestID: requestID}
+}
+
+// ladder is access.Permissions(), guarded.
+//
+// Every table below ranges over it, so a ladder that came back empty would run
+// no subtest at all and pass by asserting nothing — true by absence rather than
+// true by design. The floor is the three rungs internal/domain/access publishes;
+// a phase that adds one widens this and a phase that loses one fails here.
+func ladder(t *testing.T) []domainaccess.Permission {
+	t.Helper()
+
+	permissions := domainaccess.Permissions()
+	require.GreaterOrEqualf(t, len(permissions), 3,
+		"access.Permissions() published %d rungs: every table here would range over nothing", len(permissions))
+
+	return permissions
+}
+
 func checkpoint(t *testing.T, resolve access.Owners) *access.Authorizer {
 	t.Helper()
 
@@ -125,6 +154,14 @@ func TestTheCheckpointGrantsTheOwnerAndNobodyElse(t *testing.T) {
 			kind:  kind.Medication,
 		},
 		{
+			// The same refusal made explicit. See
+			// superuserHoldingTheOwnersAccount: the case above is answered by
+			// the owner comparison whether or not the flag is read at all.
+			name:  "a PocketBase superuser is refused on the owner's own account id",
+			actor: superuserHoldingTheOwnersAccount(),
+			kind:  kind.Medication,
+		},
+		{
 			name:  "a kind this build does not declare is refused",
 			actor: actor(ownerID),
 			kind:  undeclared,
@@ -132,20 +169,24 @@ func TestTheCheckpointGrantsTheOwnerAndNobodyElse(t *testing.T) {
 	}
 
 	for _, testCase := range cases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
+		for _, need := range ladder(t) {
+			t.Run(testCase.name+"/"+need.String(), func(t *testing.T) {
+				t.Parallel()
 
-			grant, err := checkpoint(t, owners()).
-				Record(t.Context(), testCase.actor, testCase.kind, recordID, domainaccess.PermView)
+				grant, err := checkpoint(t, owners()).
+					Record(t.Context(), testCase.actor, testCase.kind, recordID, need)
 
-			require.NoError(t, err)
-			assert.Equal(t, testCase.want, grant.Level)
+				require.NoError(t, err)
+				assert.Equal(t, testCase.want, grant.Level)
 
-			if testCase.want == 0 {
-				assert.False(t, grant.Allows(domainaccess.PermView),
-					"a refusal that satisfies the lowest rung of the ladder is not a refusal")
-			}
-		})
+				// Read at every rung and not only at the lowest. A refusal is
+				// a refusal of `view` and of `own` alike, and the owner's
+				// grant has to answer the whole ladder or a delete would be
+				// refused to the person who owns the record.
+				assert.Equalf(t, testCase.want != 0, grant.Allows(need),
+					"the grant answers %s wrongly", need)
+			})
+		}
 	}
 }
 
@@ -177,6 +218,11 @@ func TestTheKindCheckpointAnswersTheCallsThatNameNoRecord(t *testing.T) {
 			kind:  kind.Medication,
 		},
 		{
+			name:  "a PocketBase superuser carrying an account id reaches nothing either",
+			actor: superuserHoldingTheOwnersAccount(),
+			kind:  kind.Medication,
+		},
+		{
 			name:  "an undeclared kind is refused",
 			actor: actor(ownerID),
 			kind:  undeclared,
@@ -184,17 +230,21 @@ func TestTheKindCheckpointAnswersTheCallsThatNameNoRecord(t *testing.T) {
 	}
 
 	for _, testCase := range cases {
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
+		for _, need := range ladder(t) {
+			t.Run(testCase.name+"/"+need.String(), func(t *testing.T) {
+				t.Parallel()
 
-			resolve := owners()
+				resolve := owners()
 
-			grant, err := checkpoint(t, resolve).Kind(t.Context(), testCase.actor, testCase.kind, domainaccess.PermView)
+				grant, err := checkpoint(t, resolve).Kind(t.Context(), testCase.actor, testCase.kind, need)
 
-			require.NoError(t, err)
-			assert.Equal(t, testCase.want, grant.Level)
-			assert.Zero(t, resolve.calls, "the kind checkpoint names no record and must resolve no owner")
-		})
+				require.NoError(t, err)
+				assert.Equal(t, testCase.want, grant.Level)
+				assert.Equalf(t, testCase.want != 0, grant.Allows(need),
+					"the grant answers %s wrongly", need)
+				assert.Zero(t, resolve.calls, "the kind checkpoint names no record and must resolve no owner")
+			})
+		}
 	}
 }
 
@@ -245,4 +295,65 @@ func TestACheckpointWiredWithoutAnOwnerLookupIsRefused(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Nil(t, authorizer)
+}
+
+// T239. The checkpoint has two doors and no third one.
+//
+// "One checkpoint" is not a property of any single decision below — every one
+// of them could be right while a third method decided something on its own
+// terms. This is the claim stated where it can be broken: a new exported method
+// on the Authorizer is a new place authorization happens, and it fails here
+// rather than in review.
+//
+// Kind and Record are the two because a list and a create name no record. The
+// day a third is genuinely needed, this line is where the case for it is made.
+func TestTheCheckpointHasTwoDoorsAndNoThirdOne(t *testing.T) {
+	t.Parallel()
+
+	checkpointType := reflect.TypeOf(checkpoint(t, owners()))
+
+	doors := make([]string, 0, checkpointType.NumMethod())
+	for index := range checkpointType.NumMethod() {
+		doors = append(doors, checkpointType.Method(index).Name)
+	}
+
+	assert.Equal(t, []string{"Kind", "Record"}, doors,
+		"the authorization checkpoint has grown a door: every service reaches these two and nothing else decides")
+}
+
+// T239. In THIS phase the ladder has one rung, and that is deliberate.
+//
+// Both methods ignore the level they were asked for — the parameters are `_` —
+// because the owner is the only actor there is: they hold everything over their
+// own records and nobody else holds anything. So the answer is the same at
+// every rung, and this is the assertion that says so out loud rather than
+// leaving it as an unexplained `_`.
+//
+// It is written to FAIL when phase 005's shares make the rungs differ. That is
+// the point: the rungs starting to matter is a change to what this checkpoint
+// resolves, and it should not be possible to make it quietly.
+func TestThisPhasesLadderHasOneRung(t *testing.T) {
+	t.Parallel()
+
+	answered := map[domainaccess.Permission]domainaccess.Permission{}
+
+	for _, need := range ladder(t) {
+		record, err := checkpoint(t, owners()).Record(t.Context(), actor(ownerID), kind.Medication, recordID, need)
+		require.NoError(t, err)
+
+		reach, err := checkpoint(t, owners()).Kind(t.Context(), actor(ownerID), kind.Medication, need)
+		require.NoError(t, err)
+
+		assert.Equalf(t, record.Level, reach.Level,
+			"the two doors answered %s differently, so which one a caller went through is now an authorization decision", need)
+
+		answered[need] = record.Level
+	}
+
+	require.Len(t, answered, len(ladder(t)), "the ladder has a repeated rung, so this ranged over fewer than it looks")
+
+	for need, level := range answered {
+		assert.Equalf(t, domainaccess.PermOwn, level,
+			"the owner was answered %s for %s: this phase's ladder has one rung and the owner holds it", level, need)
+	}
 }

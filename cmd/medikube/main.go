@@ -10,6 +10,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -29,6 +30,7 @@ import (
 	"medikube/internal/records"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
+	"medikube/internal/web/page"
 
 	// MediKube's migrations register themselves from their own init, and
 	// core.AppMigrations is what apis.Serve runs. Without this import the list
@@ -100,7 +102,7 @@ func run() error {
 
 	log := logging.New(cfg.Log, version)
 
-	app, container, err := build(cfg, log)
+	app, container, _, err := build(cfg, log)
 	if err != nil {
 		log.Error().Err(err).Msg("assemble MediKube")
 
@@ -134,16 +136,35 @@ func run() error {
 // It returns before anything is bootstrapped or served, which is what lets the
 // test drive the same assembly against an empty data directory and a listener
 // of its own.
-func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.Container, error) {
+//
+// The sinks come back so that a test can read the address the measurement
+// listener was actually given: the composition root binds it, and asking the
+// listener where it landed is the only way to scrape a port chosen as :0.
+// run() has no use for them — they are shut down from OnTerminate.
+func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.Container, *sinks, error) {
 	container, err := di.New(di.Deps{Config: cfg, Logger: log})
 	if err != nil {
-		return nil, nil, fmt.Errorf("build the MediKube container: %w", err)
+		return nil, nil, nil, fmt.Errorf("build the MediKube container: %w", err)
+	}
+
+	// The boot's own context. It is not a caller's: assembly is what the
+	// process does before it can honour anything, and nothing above here has a
+	// deadline to lend it. What it bounds is the two destinations that open a
+	// socket or a client while being built.
+	boot := context.Background()
+
+	// Before pb.New, because the connection function is built out of the tracer
+	// provider and PocketBase reads Config.DBConnect during bootstrap.
+	destinations, err := startSinks(boot, cfg, log)
+	if err != nil {
+		return nil, nil, nil, shutdownAfter(container, err)
 	}
 
 	app := pb.New(cfg, pb.Options{
-		// Database instrumentation attaches here and is US3 (T247). Nil is a
-		// valid build rather than a nil dereference at bootstrap.
-		DBConnect: nil,
+		// Nil unless an operator configured tracing, which is what leaves an
+		// untraced deployment opening its database through PocketBase's own
+		// function rather than through MediKube's copy of it (T247).
+		DBConnect: obs.InstrumentedDBConnect(destinations.tracing),
 	})
 
 	// Both halves of the log bridge, and before Bootstrap: the decorator
@@ -163,12 +184,26 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 
 	table, err := operations(app, cfg, resolve, container.Hub())
 	if err != nil {
-		return nil, nil, shutdownAfter(container, fmt.Errorf("wire the MediKube handlers: %w", err))
+		return nil, nil, nil, shutdownAfter(container, fmt.Errorf("wire the MediKube handlers: %w", err))
 	}
 
 	registry, err := httproute.New(table)
 	if err != nil {
-		return nil, nil, shutdownAfter(container, fmt.Errorf("wire the MediKube routes: %w", err))
+		return nil, nil, nil, shutdownAfter(container, fmt.Errorf("wire the MediKube routes: %w", err))
+	}
+
+	// After the routes, because the label allowlist is the registry's own
+	// patterns (FR-055).
+	if err = destinations.startMetrics(boot, cfg.Metrics, registry, log); err != nil {
+		return nil, nil, nil, shutdownAfter(container, err)
+	}
+
+	// The three error views. They are the ErrorView seam internal/web's error
+	// mapper renders a page through; without one, a person who mistypes a URL
+	// is handed the JSON envelope meant for a program (FR-046).
+	errorPages, err := page.NewErrorPages()
+	if err != nil {
+		return nil, nil, nil, shutdownAfter(container, fmt.Errorf("wire the MediKube error views: %w", err))
 	}
 
 	pb.BindServe(app, pb.ServeOptions{
@@ -182,10 +217,11 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 			// the chain does to it.
 			obs.RequestLogger(log),
 			// -1031: outside PocketBase's panic recovery, which is what makes
-			// a recovered panic answer in MediKube's envelope. The error view
-			// is nil until internal/web/page exists; an API-only build is a
-			// build.
-			web.Errors(nil),
+			// a recovered panic answer in MediKube's envelope. The view
+			// answers with a page on the page surface and declines on the API
+			// surface, so a program that asked for JSON is never handed a
+			// document.
+			web.Errors(errorPages.Render),
 			// -1021: one step BEFORE PocketBase's loadAuthToken, which reads
 			// the Authorization header and nothing else. This is what makes a
 			// plain navigation from a browser carry a credential at all.
@@ -205,9 +241,26 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 		Outermost: web.Outermost(log),
 	})
 
+	// FR-037's append-only trail. Bound here rather than inside registerKinds
+	// because registerKinds sits behind a sync.OnceValues that nothing forces
+	// until the boot gate: a guard that only exists once somebody has resolved
+	// the kind registry is a guard with a window in front of it.
+	if err = pb.BindAuditImmutability(app); err != nil {
+		return nil, nil, nil, shutdownAfter(container, fmt.Errorf("guard the audit trail: %w", err))
+	}
+
+	// The nightly purge, and the shutdown that flushes the three destinations.
+	// Both are state on the application rather than on a request, so both are
+	// bound here rather than inside OnServe.
+	if err = bindRetention(app, cfg, log); err != nil {
+		return nil, nil, nil, shutdownAfter(container, err)
+	}
+
+	destinations.bindShutdown(app, log)
+
 	bindBootGate(app, cfg, log, resolve)
 
-	return app, container, nil
+	return app, container, destinations, nil
 }
 
 // binders composes the several things that bind to the serve event into the
@@ -247,6 +300,14 @@ func bindBootGate(app core.App, cfg config.Config, log zerolog.Logger, resolve a
 			}
 
 			if err := pb.ApplySettings(se.App, cfg); err != nil {
+				return fmt.Errorf("MediKube refuses to serve: %w", err)
+			}
+
+			// Asserted rather than assumed: the guard is two hook bindings, and
+			// a binding shadowed by one registered later, or tagged to the
+			// wrong collection, refuses nothing while every count still adds up
+			// (FR-037).
+			if err := pb.AssertAuditImmutabilityBound(se.App); err != nil {
 				return fmt.Errorf("MediKube refuses to serve: %w", err)
 			}
 

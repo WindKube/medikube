@@ -1,0 +1,26 @@
+package errors
+
+// ServerError is contracts/pages.md's E3.
+//
+// It carries the request id and nothing else. Not because a rule says so, but
+// because ServerErrorProps has no other member: the error's own text never
+// reaches this file, so no future edit here can put a driver's message, a query
+// or a stack trace in front of a person (FR-046).
+//
+// It says plainly that the failure is the instance's and not the reader's,
+// which is the difference between a page somebody can act on and one that
+// leaves them retyping a form that was never going to work.
+templ ServerError(props ServerErrorProps) {
+	<section aria-label={ ServerErrorLandmark } class="mx-auto flex w-full max-w-prose flex-col gap-4">
+		<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ ServerErrorLandmark }</h1>
+		<p class="text-sm text-slate-600 dark:text-slate-400">
+			This instance failed while answering. Nothing you sent caused it and nothing you change will
+			fix it, so trying again in a moment is worth doing.
+		</p>
+		<p class="text-sm text-slate-600 dark:text-slate-400">
+			If you need to report it, quote the reference below. It identifies this one request in the
+			operator's log and says nothing about you.
+		</p>
+		@reference(props.RequestID)
+	</section>
+}

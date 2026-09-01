@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/types"
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/audit"
@@ -27,6 +29,43 @@ const auditCollection = "audit_events"
 // for themselves — which is the drift the kind table exists to prevent, one
 // collection to the left of where the table can reach.
 const AuditCollection = auditCollection
+
+// AuditFieldOccurredAt is the column the retention horizon is measured against,
+// published for the same reason AuditCollection is: a test that reads a purged
+// trail back has to name the column, and the alternative is spelling it a
+// second time somewhere AssertMappedFields cannot see it.
+const AuditFieldOccurredAt = auditFieldOccurredAt
+
+// AuditOlderThan is the retention purge's predicate: rows that occurred
+// strictly before cutoff.
+//
+// It lives in this package rather than in internal/store/audit for two reasons
+// that turn out to be the same reason. The column name is here, with every
+// other column name, because AssertMappedFields is what stops one drifting away
+// from the schema. And the predicate carries a `{:param}` placeholder, which is
+// dbx's bound-parameter syntax (dbx/db.go:305-312 rewrites it into a driver
+// placeholder and binds the value) but is spelled identically to PocketBase's
+// filter DSL, where the same token is substituted into the text before parsing.
+// The two are indistinguishable to a reader and to the source gate in
+// filter_test.go, and this package is the one allowed to write either — so the
+// repository packages hold no query-language string at all and the gate over
+// them stays absolute.
+//
+// Strictly before: a row that occurred exactly at the cutoff is exactly the
+// configured age and not older than it, which is a row the retention says to
+// keep.
+func AuditOlderThan(cutoff time.Time) (dbx.Expression, error) {
+	// PocketBase persists a date as a string in its own layout, so the
+	// comparison is lexicographic and the parameter has to be in that layout to
+	// sort against the column at all. Handed a raw time.Time, dbx would bind
+	// Go's own rendering of it.
+	horizon, err := types.ParseDateTime(cutoff.UTC())
+	if err != nil {
+		return nil, fmt.Errorf("store: %s is not a date %s can be compared against: %w", cutoff, auditFieldOccurredAt, err)
+	}
+
+	return dbx.NewExp("[["+auditFieldOccurredAt+"]] < {:horizon}", dbx.Params{"horizon": horizon}), nil
+}
 
 // The columns on every collection. PocketBase supplies id; created and updated
 // are AutodateFields the migrations add explicitly, because NewBaseCollection

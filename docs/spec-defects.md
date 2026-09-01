@@ -813,3 +813,50 @@ one more assertion inside an existing test.
 *Fix:* the durable version is one wiring function both roots call, which would make the guard
 unnecessary. That is a refactor of two composition roots and belongs to whichever task owns them;
 until then the equality is what stands between the binary and a silent loss of the audit trail.
+
+## D20 — The PHI-leak suite works, and it found three leaks on its first real run
+
+*Found by:* T235, the moment it existed. Recorded here rather than fixed,
+because two of the three are in code this story did not touch and the fix for
+one of them is a design decision rather than an edit.
+
+Defect D18 recorded that `task test:phileak` exited 0 while asserting nothing:
+the repository had no `phileak` build tag, so `-tags=phileak` selected nothing
+and the command re-ran the ordinary suite. That is now fixed — the tag exists and
+selects, measured: 16 tests untagged, 24 tagged. The suite then failed, which is
+the first time it has ever been able to.
+
+**1. An email address reaches the log stream.** `internal/obs/request_log.go`'s
+`record()` writes `Err(Cause(err))`, and PocketBase's own native recovery routes
+produce `failed to fetch users record with email`, carrying the address. The
+sink is the zerolog stream, so the address lands in the operational record of
+every deployment. Two possible fixes, and choosing between them is the decision:
+record the *classified public* error rather than the raw cause for statuses
+MediKube answered as a success, or drop the documented native recovery routes
+from the reachable set in `contracts/README.md`.
+
+**2. The same address reaches Sentry.** `internal/obs/sentry.go`'s `scrub()`
+does not touch `event.Exception`. sentry-go serialises the whole `Unwrap` chain,
+so reporting `Cause(err)` is not sufficient — the allowlist has to cover the
+exception values too, or `Report` must be handed an error whose chain has been
+severed.
+
+**3. A medication name reaches an OTel span attribute.** The recorder carried
+`hereditary-angioedema-prophylaxis` in `deployment.environment.name`. This one is
+NOT yet confirmed as a production leak: the sentinel may have been seeded into
+the environment name by the harness itself, in which case it is a test artefact
+rather than a defect. It must be resolved either way before the suite can be put
+on the merge gate, and it is called out here so nobody reads a red phileak run as
+"only the known two".
+
+*Why this is not fixed in this commit:* leaks 1 and 2 are in `internal/obs`,
+written during the edge-hardening work, and both fixes change what an operator
+sees in their logs and their error reporter — that is an operability decision, not
+a tidy-up. Leak 3 needs a measurement before it is even known to be real. What
+this story delivers is the instrument: a suite that can no longer pass by
+asserting nothing, and that names the sink and the sentinel on failure.
+
+*Consequence for CI, stated plainly:* `task test:phileak` is NOT on any workflow,
+so nothing in CI runs it and the PR is green with these three open. That is the
+same shape of hole D18 described, one level up. Putting it on the gate is the
+obvious next step and it cannot happen until all three are resolved.

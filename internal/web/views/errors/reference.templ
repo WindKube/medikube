@@ -1,0 +1,16 @@
+package errors
+
+// reference is the one correlation handle an error page carries, shared by all
+// three views so that a person quoting a reference quotes the same thing
+// whichever failure they met.
+//
+// Rendered only when there is one. A page that printed "Reference:" followed by
+// nothing would be asking somebody to quote the empty string.
+templ reference(requestID string) {
+	if requestID != "" {
+		<p id={ ReferenceID } class="text-xs text-slate-500 dark:text-slate-400">
+			Reference
+			<code class="font-mono">{ requestID }</code>
+		</p>
+	}
+}

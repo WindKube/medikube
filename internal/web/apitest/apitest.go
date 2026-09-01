@@ -89,6 +89,12 @@ const SessionTTL = 168 * time.Hour
 // minted with Secure exactly as it is in a deployment.
 const PublicURL = "https://medikube.example.test"
 
+// AuditRetentionDays is MEDIKUBE_RETENTION_AUDIT_DAYS's default: two years
+// (FR-037). The harness schedules the purge on the same horizon the binary
+// does, because a job bound here on a different one would be a job the suite
+// proves and the deployment does not have.
+const AuditRetentionDays = 730
+
 // WithRegistrationOpen opens self-registration, which is FR-002's operator
 // switch. The zero value is closed, as MEDIKUBE_AUTH_REGISTRATION_OPEN is.
 func WithRegistrationOpen(open bool) Option {
@@ -253,6 +259,15 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 		return nil, fmt.Errorf("apitest: wiring the route table: %w", err)
 	}
 
+	// The same three error views the composition root binds. Wiring nil here
+	// instead would leave every page-surface failure answering with the JSON
+	// envelope, so a test asserting on a 404's shape would be asserting on a
+	// response no browser ever receives (FR-046).
+	errorPages, err := page.NewErrorPages()
+	if err != nil {
+		return nil, fmt.Errorf("apitest: wiring the error views: %w", err)
+	}
+
 	pb.BindServe(app, pb.ServeOptions{
 		Middlewares: []*hook.Handler[*core.RequestEvent]{
 			// The correlation id first, and it is not optional here: it is
@@ -260,7 +275,7 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 			// byte-identical comparison would be trivially satisfied by two
 			// bodies that both carried an empty one.
 			obs.RequestLogger(zerolog.Nop()),
-			web.Errors(nil),
+			web.Errors(errorPages.Render),
 			// -1021: before PocketBase's loadAuthToken, which is the whole of
 			// how a browser's cookie becomes a bearer token. Without it every
 			// cookie-authenticated test in the repository would be asserting
@@ -379,7 +394,11 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, error) {
 		return nil, err
 	}
 
-	auditor, err := auditservice.New(trail)
+	// WithRequestID, as the composition root wires it: without it a row the
+	// hooks write carries a handle minted on the spot instead of the one the
+	// request's own log lines carry, and FR-054's join is broken in exactly the
+	// place no assertion looks (T231).
+	auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
 	if err != nil {
 		return nil, err
 	}
@@ -400,6 +419,25 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, error) {
 		Views:      views,
 	}); err != nil {
 		return nil, err
+	}
+
+	// FR-037's append-only trail, bound where the binary binds it.
+	if guardErr := pb.BindAuditImmutability(app); guardErr != nil {
+		return nil, guardErr
+	}
+
+	// The nightly purge. It is bound and never ticks here — nothing starts the
+	// scheduler under tests.TestApp — and that is exactly the point:
+	// internal/architecture holds the binary and this harness to the same set of
+	// platform bindings, so a hook the deployment has and the suite does not is
+	// a failure rather than an omission nobody notices.
+	retention, retentionErr := auditservice.NewRetention(trail, AuditRetentionDays, auditservice.SystemClock{})
+	if retentionErr != nil {
+		return nil, retentionErr
+	}
+
+	if cronErr := pb.BindCron(app, pb.CronOptions{Retention: retention, Log: zerolog.Nop()}); cronErr != nil {
+		return nil, cronErr
 	}
 
 	// FR-036's three rows, from the post-commit hooks and never from a

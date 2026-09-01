@@ -17,6 +17,14 @@ run:
   # would be free to rot until its own CI job ran.
   build-tags:
     - sselive
+    # internal/testsupport/phileak's exercise and its assertion are behind this
+    # one, so that `task test` does not boot an instance and walk every route.
+    # Naming it here is not optional: without it golangci-lint reads neither
+    # file, and the suite that decides whether a person's data can leave the
+    # process is the one nothing lints. It is also asserted from inside the
+    # suite — defect D18 was this gate reporting success while no file in the
+    # repository carried the tag at all.
+    - phileak
 
 linters:
   default: none

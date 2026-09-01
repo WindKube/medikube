@@ -831,30 +831,30 @@ row; grep the whole captured log stream and find no medication name.
 
 ### Tests for User Story 3 ⚠️ write first, watch them fail
 
-- [ ] T224 [P] [US3] TEST `internal/service/access/authorizer_test.go` — the single checkpoint:
+- [x] T224 [P] [US3] TEST `internal/service/access/authorizer_test.go` — the single checkpoint:
   owner allowed, stranger refused, superuser handled explicitly rather than by accident, and an
   unauthenticated actor refused. Table-driven over every `Permission`.
-- [ ] T225 [US3] TEST `internal/service/access/exhaustive_test.go` — a source-walking test asserting
+- [x] T225 [US3] TEST `internal/service/access/exhaustive_test.go` — a source-walking test asserting
   **every** service method that touches a record calls the authorizer. A new method that forgets
   fails the build rather than the review (FR-032).
-- [ ] T226 [P] [US3] TEST `internal/web/api/notfound_parity_test.go` — for every record operation,
+- [x] T226 [P] [US3] TEST `internal/web/api/notfound_parity_test.go` — for every record operation,
   the stranger response and the genuine-not-found response are compared **byte for byte** after
   masking `request_id`, and both are asserted to be emitted by the **same response constructor**
   — one `notFound` call site, reached by both the refusal and the genuine miss, so the two cannot
   drift apart under a later edit. No wall-clock assertion here: latency is reported by the
   non-gating benchmark T202a, because a tolerance nothing defines is the flaky gate assertion
   Constitution VIII forbids (FR-033, SC-006; ANALYSIS N13).
-- [ ] T227 [P] [US3] TEST `internal/web/api/anonymous_test.go` — every route except the public five
+- [x] T227 [P] [US3] TEST `internal/web/api/anonymous_test.go` — every route except the public five
   refuses an anonymous caller, and the refusal never reveals whether the target exists (FR-034).
-- [ ] T228 [P] [US3] TEST `internal/service/audit/denied_test.go` — a refused access writes an
+- [x] T228 [P] [US3] TEST `internal/service/audit/denied_test.go` — a refused access writes an
   `access_denied` row and a **genuine** not-found writes nothing. That distinction is the whole
   value of introducing the enum value here rather than in phase 003 (research D-20).
-- [ ] T229 [P] [US3] TEST `internal/obs/tracing_test.go` — with no endpoint configured, tracing is
+- [x] T229 [P] [US3] TEST `internal/obs/tracing_test.go` — with no endpoint configured, tracing is
   entirely inactive: no exporter, no spans, no outbound connection (FR-039, FR-056).
-- [ ] T230 [P] [US3] TEST `internal/web/page/errors_test.go` — the three error views render inside
+- [x] T230 [P] [US3] TEST `internal/web/page/errors_test.go` — the three error views render inside
   the full shell, carry their landmarks, and contain no stack trace, driver message or query
   (FR-046).
-- [ ] T231 [P] [US3] TEST `internal/service/audit/writer_test.go` — `Record(ctx, Event)` writes each
+- [x] T231 [P] [US3] TEST `internal/service/audit/writer_test.go` — `Record(ctx, Event)` writes each
   of the ten actions; the `Event` type **has no field capable of carrying clinical content**, so
   a leak would have to be a schema change (FR-038). **Plus the no-request case**: called on a
   context with no HTTP request — a cron, a job, a migration, a backfill — it fills `request_id`
@@ -862,53 +862,53 @@ row; grep the whole captured log stream and find no medication name.
   it on a bare `context.Background()` derived run context and reads the row back. Without this the
   retention purge fails `Required` validation on its first nightly tick, in production, not in
   test (ANALYSIS).
-- [ ] T232 [US3] TEST `internal/platform/pb/audit_immutability_test.go` — update and delete on
+- [x] T232 [US3] TEST `internal/platform/pb/hooks_audit_immutability_test.go` — update and delete on
   `audit_events` are refused **through every path**: the API, the record hooks, and a direct
   service call. Only the retention job may remove a row, and only past the retention horizon
   (FR-037).
-- [ ] T233 [P] [US3] TEST `internal/service/audit/retention_test.go` — rows older than the configured
+- [x] T233 [P] [US3] TEST `internal/service/audit/retention_test.go` — rows older than the configured
   retention (default two years) are removed and nothing younger is.
-- [ ] T234 [P] [US3] TEST `internal/config/retention_default_test.go` — the audit retention default
+- [x] T234 [P] [US3] TEST `internal/config/retention_default_test.go` — the audit retention default
   is two years and is a documented setting rather than a constant buried in the purge job
   (FR-037).
-- [ ] T235 [US3] TEST `internal/testsupport/phileak/{exercise.go,phileak_test.go}` — **the phase's
+- [x] T235 [US3] TEST `internal/testsupport/phileak/{exercise.go,phileak_test.go}` — **the phase's
   most valuable single test**: `exercise.go` drives every endpoint this phase defines against a
   sentinel-seeded instance with distinctive medication names, doses, reasons and notes;
   `phileak_test.go` asserts **zero** occurrences of any of those strings in the four sinks
   `capture.go` (T089) records, naming the sink on failure (FR-038, SC-005). Phases 002–006 extend
   `exercise.go` with their own sentinels and operations, never the assertion, and run it through
   `task test:phileak`.
-- [ ] T236 [P] [US3] TEST `internal/obs/sentry_test.go` — with no DSN configured, nothing is sent
+- [x] T236 [P] [US3] TEST `internal/obs/sentry_test.go` — with no DSN configured, nothing is sent
   anywhere; with one configured, the `BeforeSend` scrubber strips request bodies, cookies and
   query strings (FR-039, FR-056).
-- [ ] T237 [P] [US3] TEST `internal/obs/metrics_test.go` — the metrics listener binds to
+- [x] T237 [P] [US3] TEST `internal/obs/metrics_test.go` — the metrics listener binds to
   **127.0.0.1 only** and is unreachable from the application's own port (FR-055).
-- [ ] T238 [P] [US3] TEST `internal/web/api/bulk_absence_test.go` — no general-purpose browsing or
+- [x] T238 [P] [US3] TEST `internal/web/api/bulk_absence_test.go` — no general-purpose browsing or
   bulk-extraction facility is reachable by an ordinary account: the collections subtree is 404,
   `/api/batch` is 404, and no MediKube route accepts an arbitrary filter expression (FR-035).
 
 ### Implementation for User Story 3
 
-- [ ] T239 [US3] Implement `internal/service/access/authorizer.go` — **THE** authorization
+- [x] T239 [US3] Implement `internal/service/access/authorizer.go` — **THE** authorization
   checkpoint. Every service consults it; nothing else decides.
-- [ ] T240 [US3] Implement `internal/service/audit/writer.go` — `Record(ctx, Event)`, called
+- [x] T240 [US3] Implement `internal/service/audit/writer.go` — `Record(ctx, Event)`, called
   post-commit, resolving `request_id` from the request id when the context carries one and from
   the **run id** otherwise. Both are minted by the same helper as `internal/obs`'s request id, so
   a background run's audit row and its zerolog lines carry the same correlation handle and FR-054
   holds for system rows too (depends on T231).
-- [ ] T241 [P] [US3] Implement `internal/service/audit/retention.go` and the cron binding in
+- [x] T241 [P] [US3] Implement `internal/service/audit/retention.go` and the cron binding in
   `internal/platform/pb/cron.go`.
-- [ ] T242 [US3] Implement the audit-immutability guards in `internal/platform/pb/hooks.go`.
-- [ ] T243 [US3] Implement `internal/store/audit/repo.go`.
-- [ ] T244 [P] [US3] Implement `internal/obs/sentry.go` — off entirely without a DSN, with the
+- [x] T242 [US3] Implement the audit-immutability guards in `internal/platform/pb/hooks_audit_immutability.go` — a separate file from `hooks.go`, which US2's auth audit hooks own, matching the existing `hooks_records.go` split.
+- [x] T243 [US3] Implement `internal/store/audit/repo.go`.
+- [x] T244 [P] [US3] Implement `internal/obs/sentry.go` — off entirely without a DSN, with the
   `BeforeSend` scrubber.
-- [ ] T245 [P] [US3] Implement `internal/obs/metrics.go` — the registry, the collectors and the
+- [x] T245 [P] [US3] Implement `internal/obs/metrics.go` — the registry, the collectors and the
   loopback-only listener.
-- [ ] T246 [P] [US3] Implement `internal/obs/tracing.go` — off entirely without an endpoint.
-- [ ] T247 [US3] Implement `internal/obs/db.go` — `otelsql` through `pocketbase.Config.DBConnect`,
+- [x] T246 [P] [US3] Implement `internal/obs/tracing.go` — off entirely without an endpoint.
+- [x] T247 [US3] Implement `internal/obs/db.go` — `otelsql` through `pocketbase.Config.DBConnect`,
   **copying PocketBase's own pragmas exactly**, plus a drift check that fails the build when
   upstream changes them (risk R8).
-- [ ] T248 [P] [US3] Implement `internal/web/page/errors.go` and
+- [x] T248 [P] [US3] Implement `internal/web/page/errors.go` and
   `internal/web/views/errors/{not_found,forbidden,server_error}.templ` — the three error views,
   inside the full shell, carrying only the request id (FR-046).
 

@@ -86,9 +86,18 @@ there is no way to wrap it and keep the pragmas.
 and a pragma PocketBase started relying on — journal mode, busy timeout, foreign keys — is
 quietly not set. It surfaces much later as lock contention or as a constraint that does not fire.
 
-**Check on upgrade.** Diff PocketBase's current `DefaultDBConnect` pragma string against the
-copy in `internal/platform/pb/app.go`. The drift-check test is what should catch this; make sure
-it is still comparing against the real thing.
+**Check on upgrade.** The copy is `pocketbasePragmas` in `internal/obs/db.go`, and
+`internal/obs/db_test.go` checks it two ways, deliberately: one case reads the literal out of
+PocketBase's own `core/db_connect.go` in the module cache and compares it byte for byte, and one
+opens both connections and compares every pragma SQLite reports plus the `_defensive` flag's
+observable effect. The first catches a reordering and `_defensive`, which no pragma listing
+reports; the second catches a pragma PocketBase has *added*, which a check driven by the copy's
+own contents cannot see. If either fails, PocketBase moved — work this entry before changing the
+copy.
+
+Note that MediKube only uses the copy when tracing is configured: with no OTLP endpoint,
+`InstrumentedDBConnect` returns nil and PocketBase opens the database through its own function.
+An untraced deployment cannot be hurt by this drifting.
 
 ## 5. Three account behaviours MediKube depends on rather than reimplements
 

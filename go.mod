@@ -7,6 +7,7 @@ toolchain go1.27.0
 tool github.com/a-h/templ/cmd/templ
 
 require (
+	github.com/XSAM/otelsql v0.43.0
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/getkin/kin-openapi v0.144.0
 	github.com/getsentry/sentry-go v0.48.0
@@ -17,13 +18,14 @@ require (
 	github.com/samber/do/v2 v2.1.0
 	github.com/starfederation/datastar-go v1.2.2
 	github.com/stretchr/testify v1.12.0
+	go.opentelemetry.io/otel v1.45.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.45.0
 	go.opentelemetry.io/otel/sdk v1.45.0
 	go.opentelemetry.io/otel/trace v1.45.0
 )
 
 require (
 	github.com/CAFxX/httpcompression v0.0.9 // indirect
-	github.com/XSAM/otelsql v0.43.0 // indirect
 	github.com/a-h/parse v0.0.0-20250122154542-74294addb73e // indirect
 	github.com/a-h/templ v0.3.1020 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
@@ -70,9 +72,7 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel v1.45.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.45.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.45.0 // indirect
 	go.opentelemetry.io/otel/metric v1.45.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	golang.org/x/crypto v0.55.0 // indirect

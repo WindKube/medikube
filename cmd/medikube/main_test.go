@@ -2,17 +2,21 @@ package main
 
 import (
 	json "encoding/json/v2"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/hook"
@@ -103,7 +107,7 @@ func serving(t *testing.T, cfg config.Config, logs *syncBuffer) string {
 
 	log := logging.NewTo(logs, cfg.Log, "test")
 
-	app, container, err := build(cfg, log)
+	app, container, _, err := build(cfg, log)
 	require.NoError(t, err)
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -437,7 +441,7 @@ func TestTheServeCommandTakesItsDefaultsFromTheValidatedConfiguration(t *testing
 	cfg.HTTPAddr = "127.0.0.1:9999"
 	cfg.AllowedOrigins = []string{"https://example.test"}
 
-	app, container, err := build(cfg, logging.NewTo(io.Discard, cfg.Log, "test"))
+	app, container, _, err := build(cfg, logging.NewTo(io.Discard, cfg.Log, "test"))
 	require.NoError(t, err)
 
 	t.Cleanup(func() { assert.NoError(t, container.Shutdown()) })
@@ -482,7 +486,7 @@ func TestConfigurationThatDoesNotValidateIsABootFailureRatherThanAServer(t *test
 
 	var logs syncBuffer
 
-	_, _, err := build(cfg, logging.NewTo(&logs, cfg.Log, "test"))
+	_, _, _, err := build(cfg, logging.NewTo(&logs, cfg.Log, "test"))
 	require.Error(t, err, "a container built from an unvalidated configuration is a running instance with no storage")
 }
 
@@ -511,4 +515,182 @@ func requestIDless(t *testing.T, body []byte) string {
 	require.NoError(t, err)
 
 	return string(rendered)
+}
+
+// ---------------------------------------------------------------------------
+// The wiring, held in place.
+//
+// Everything below exists because of one measurement: with the composition
+// root fully assembled, `web.Errors(errorPages.Render)` could be reverted to
+// `web.Errors(nil)`, `DBConnect` to nil, and the observability shutdown deleted
+// outright, and `go test ./...` stayed green on all three. A wiring line that
+// nothing observes is a wiring line the next edit removes.
+// ---------------------------------------------------------------------------
+
+// assembled builds one instance the way run() does, bootstraps it, and hands it
+// back without serving.
+//
+// Without a listener, because what these cases read is a property of the
+// assembled instance rather than of a request: the database it opened, and the
+// hooks it bound. serving() above is for everything that needs a socket.
+func assembled(t *testing.T, cfg config.Config) *pocketbase.PocketBase {
+	t.Helper()
+
+	app, container, _, err := build(cfg, logging.NewTo(io.Discard, cfg.Log, "test"))
+	require.NoError(t, err)
+
+	require.NoError(t, app.Bootstrap())
+
+	t.Cleanup(func() {
+		terminate := new(core.TerminateEvent)
+		terminate.App = app
+
+		assert.NoError(t, app.OnTerminate().Trigger(terminate, func(*core.TerminateEvent) error { return nil }))
+		assert.NoError(t, container.Shutdown())
+	})
+
+	return app
+}
+
+// tracedConfig is testConfig with an OTLP destination that nothing listens on.
+//
+// Nothing needs to: otlptracehttp constructs its exporter without dialling, and
+// what is under test here is which connection function the instance opened its
+// database through — not whether a span arrived.
+func tracedConfig(t *testing.T, dataDir string) config.Config {
+	t.Helper()
+
+	cfg := testConfig(t, dataDir)
+	cfg.OTel = config.OTelConfig{Enabled: true, Endpoint: "127.0.0.1:4318", Insecure: true}
+
+	require.NoError(t, cfg.Validate())
+
+	return cfg
+}
+
+// driverOf is the concrete database/sql driver behind an assembled instance.
+//
+// It is the only observable difference between PocketBase's own connection
+// function and MediKube's instrumented one, and that is the point: the two
+// produce the same pragmas, the same builder and the same queries, so nothing
+// short of the driver tells them apart (T247, research D-30).
+func driverOf(t *testing.T, app *pocketbase.PocketBase) string {
+	t.Helper()
+
+	db, ok := app.ConcurrentDB().(*dbx.DB)
+	require.True(t, ok, "the instance's builder is not a *dbx.DB, so this cannot read the driver at all")
+
+	return fmt.Sprintf("%T", db.DB().Driver())
+}
+
+// T247's wiring, both directions. One case alone proves nothing: asserting the
+// traced build is instrumented would pass on a build that instruments
+// unconditionally, and asserting the untraced build is not would pass on one
+// that never instruments at all.
+func TestTheDatabaseIsInstrumentedWhenTracingIsConfiguredAndNotOtherwise(t *testing.T) {
+	t.Parallel()
+
+	untraced := driverOf(t, assembled(t, testConfig(t, t.TempDir())))
+	traced := driverOf(t, assembled(t, tracedConfig(t, t.TempDir())))
+
+	assert.NotContains(t, untraced, "otelsql",
+		"a deployment that configured no tracing opened its database through MediKube's copy of PocketBase's pragmas for no benefit")
+	assert.Contains(t, traced, "otelsql",
+		"tracing is configured and the database is uninstrumented: pocketbase.Config.DBConnect is not wired (T247)")
+	require.NotEqual(t, untraced, traced)
+}
+
+// FR-046, through the assembled instance rather than through the view.
+//
+// internal/web/page proves the three views render. What no test there can prove
+// is that the composition root passed one to web.Errors: reverted to nil, every
+// view still renders correctly in its own package's suite and every person who
+// mistypes a URL is handed the JSON envelope meant for a program.
+func TestTheAssembledInstanceAnswersAPageSurfaceFailureWithAPage(t *testing.T) {
+	t.Parallel()
+
+	base := serving(t, testConfig(t, t.TempDir()), new(syncBuffer))
+
+	for _, testCase := range []struct {
+		name        string
+		path        string
+		contentType string
+		contains    string
+	}{
+		{
+			name:        "the page surface",
+			path:        "/a-page-that-is-not-served",
+			contentType: "text/html",
+			contains:    "<main",
+		},
+		{
+			name:        "the API surface",
+			path:        "/api/v1/not-an-operation",
+			contentType: "application/json",
+			contains:    `"code"`,
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			res, body := get(t, base+testCase.path)
+
+			require.Equal(t, http.StatusNotFound, res.StatusCode)
+			assert.Contains(t, res.Header.Get("Content-Type"), testCase.contentType,
+				"body was:\n%s", string(body))
+			assert.Contains(t, string(body), testCase.contains)
+		})
+	}
+}
+
+// The measurement listener is bound by the composition root and closed by it.
+//
+// Both halves in one case, because they fail as one: a listener nobody starts
+// and a listener nobody stops are the same wiring line, and asserting only that
+// it answers would pass on a build that leaves the port held after the instance
+// has gone.
+func TestTheMeasurementListenerIsStartedAndThenStopped(t *testing.T) {
+	t.Parallel()
+
+	cfg := testConfig(t, t.TempDir())
+	cfg.Metrics = config.MetricsConfig{Enabled: true, Addr: "127.0.0.1:0"}
+
+	require.NoError(t, cfg.Validate())
+
+	app, container, destinations, err := build(cfg, logging.NewTo(io.Discard, cfg.Log, "test"))
+	require.NoError(t, err)
+
+	defer func() { assert.NoError(t, container.Shutdown()) }()
+
+	addr := destinations.metrics.Addr()
+	require.NotEmpty(t, addr, "no measurement listener was bound, so stopping it proves nothing")
+
+	// One observation first: a CounterVec with no children publishes nothing at
+	// all, so a scrape of MediKube's own registry and a scrape of somebody
+	// else's are the same Go-runtime exposition until something is recorded.
+	// The pattern comes from the route table, which is what the label allowlist
+	// was built from.
+	pattern := httproute.Inventory().Routes()[0].Pattern()
+	destinations.measurements.ObserveRequest(pattern, http.MethodGet, http.StatusOK, time.Millisecond)
+
+	res, body := get(t, "http://"+addr+obs.MetricsPath)
+	require.Equal(t, http.StatusOK, res.StatusCode)
+	require.Contains(t, string(body), "medikube_http_requests_total",
+		"the listener answers but serves somebody else's registry")
+	// strconv.Quote rather than a literal with the quotes in it: the exposition
+	// renders a label as name="value", and a source string of that shape is
+	// indistinguishable from a PocketBase filter expression to the gate in
+	// internal/store/filter_test.go — which is a gate worth keeping absolute.
+	require.Contains(t, string(body), "route="+strconv.Quote(pattern),
+		"the registry the listener serves was built without the route table, so every request would be labelled `other` (FR-055)")
+
+	terminate := new(core.TerminateEvent)
+	terminate.App = app
+
+	require.NoError(t, app.OnTerminate().Trigger(terminate, func(*core.TerminateEvent) error { return nil }))
+
+	//nolint:noctx // a liveness poll against a socket that should be gone
+	_, err = http.Get("http://" + addr + obs.MetricsPath)
+	assert.Error(t, err,
+		"the instance terminated and the measurement listener kept the port: nothing shuts the operational destinations down")
 }

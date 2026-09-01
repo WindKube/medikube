@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/rs/zerolog"
 
 	"medikube/internal/config"
 	"medikube/internal/httproute"
@@ -186,7 +187,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		return err
 	}
 
-	auditor, err := auditservice.New(trail)
+	auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
 	if err != nil {
 		return err
 	}
@@ -298,4 +299,34 @@ func notImplemented(opID string) httproute.Handler {
 	return func(*core.RequestEvent) error {
 		return fmt.Errorf("%s has no handler in this build: %w", opID, errNotImplemented)
 	}
+}
+
+// bindRetention schedules FR-037's nightly purge.
+//
+// The repository is built here rather than taken from registerKinds, and the
+// duplication is deliberate: registerKinds runs behind a sync.OnceValues that
+// is not forced until the boot gate, and a job that reached through it would
+// resolve the whole kind registry on its first tick — at 03:17, on a code path
+// nothing else exercises.
+//
+// MEDIKUBE_RETENTION_AUDIT_DAYS is validated positive at load, so NewRetention
+// is refusing a value this binary cannot be started with. It is checked anyway:
+// the horizon is the one number in MediKube whose wrong value silently destroys
+// medical history, and two guards on it is not one too many.
+func bindRetention(app core.App, cfg config.Config, log zerolog.Logger) error {
+	trail, err := auditstore.New(app)
+	if err != nil {
+		return fmt.Errorf("wire the audit retention purge: %w", err)
+	}
+
+	retention, err := auditservice.NewRetention(trail, cfg.Retention.AuditDays, auditservice.SystemClock{})
+	if err != nil {
+		return fmt.Errorf("wire the audit retention purge: %w", err)
+	}
+
+	if err := pb.BindCron(app, pb.CronOptions{Retention: retention, Log: log}); err != nil {
+		return fmt.Errorf("schedule the audit retention purge: %w", err)
+	}
+
+	return nil
 }
