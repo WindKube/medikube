@@ -1093,7 +1093,7 @@ each break the build for the right reason.
   `internal/logging` makes `task lint` fail, and an `OnRecordCreateRequest` binding outside
   `internal/platform/pb/hooks.go` does too (Principles VI, reconciliation C13).
 - [x] T300 [US6] TEST `internal/architecture/scenarios_test.go` — a coverage test asserting that
-  **all 50** acceptance scenarios in `spec.md` have a named automated test, matched by a scenario
+  **all 54** acceptance scenarios in `spec.md` have a named automated test, matched by a scenario
   identifier in the test name. A scenario without a test fails this test (FR-068, SC-004).
 - [x] T301 [P] [US6] TEST `internal/architecture/scenario_ids_test.go` — every acceptance-scenario
   identifier is unique and every one is claimed by exactly one test, so two tests cannot both
@@ -1125,7 +1125,7 @@ scenarios pass.
 
 - [ ] T308 [P] Run `quickstart.md` start to finish on a clean machine and **time it**; fix the
   document until the ten-minute claim in SC-008 is true rather than aspirational.
-- [ ] T309 [P] Verify every one of the sixteen success criteria has a named test or a recorded
+- [x] T309 [P] Verify every one of the sixteen success criteria has a named test or a recorded
   measurement, and list where each is proven.
 - [x] T310 [P] TEST `internal/web/api/errors_taxonomy_test.go` — every error code in
   contracts/README.md's table is producible and no handler invents one outside it.
@@ -1133,30 +1133,30 @@ scenarios pass.
   fields, asserted by reflection over the DTO set so a new DTO is covered by default.
 - [ ] T312 [P] Add the `medications` empty-state, single-row and full-list cases to the smoke run so
   the widest and the narrowest row are both exercised (research D-39).
-- [ ] T313 [P] Review every log call site for content: ids and codes only, never a name, dose,
+- [x] T313 [P] Review every log call site for content: ids and codes only, never a name, dose,
   reason or note. `internal/testsupport/phileak` enforces it; this is the human pass that finds
   what the fixture strings missed.
 - [ ] T314 [P] Update `docs/pocketbase-upgrade-checklist.md` with the final list of unexported
   internals depended upon and the exact symptom each produces on breakage (risk R8, CT-1).
-- [ ] T315 [P] **Resolved, not open** (cross-artifact finding H1): phase 002's `contracts/` and
+- [x] T315 [P] **Resolved, not open** (cross-artifact finding H1): phase 002's `contracts/` and
   `quickstart.md` were corrected to the **plural** `/api/v1/records/medications` on 2026-08-27,
   matching the constant created here. Confirm only — assert `kind.Kind.Segment()` emits the
   plural and grep the suite for a surviving singular `records/medication`.
-- [ ] T316 [P] **Resolved, not open** (cross-artifact finding H7): password recovery and email
+- [x] T316 [P] **Resolved, not open** (cross-artifact finding H7): password recovery and email
   confirmation are built in this phase (T223a–T223p) and external sign-in is owned by phase 006.
   [`SHARED-DESIGN.md`](../SHARED-DESIGN.md) §2.3 and §3.1 have been amended to match (ops 7, 8, 94 and 95 under phase
   001, op 4 under phase 006, the three pages back in phase 001's inventory; totals **94**
   operations and **58** pages). What remains here is bookkeeping: confirm no document in the suite
   still describes any of the three as belonging to nobody, and that every phase's running totals
   cite the contract's amended figures rather than a re-derived one.
-- [ ] T317 [P] Confirm the exact PocketBase v0.40.1 field name backing the cursor HMAC key
+- [x] T317 [P] Confirm the exact PocketBase v0.40.1 field name backing the cursor HMAC key
   derivation and update `internal/store/cursor.go` and research D-25 if it differs (**CT-3**).
-- [ ] T318 [P] Publish the complete documented environment in `README.md` — every `MEDIKUBE_`
+- [x] T318 [P] Publish the complete documented environment in `README.md` — every `MEDIKUBE_`
   variable, its default and whether it is required — and check `quickstart.md`'s minimum set
   matches it exactly (FR-051, SC-008).
 - [ ] T319 [P] Run `task lint` with `--max-issues-per-linter=0 --max-same-issues=0` and clear
   everything.
-- [ ] T320 [P] Delete every scaffold `doc.go` that never acquired a package.
+- [x] T320 [P] Delete every scaffold `doc.go` that never acquired a package.
 - [ ] T321 [P] Re-run the full suite three times to catch order-dependence, and once with
   `-race`.
 - [x] T322 [P] TEST `internal/architecture/test_isolation_test.go` — no test shares a
@@ -1165,14 +1165,14 @@ scenarios pass.
 - [ ] T323 [P] Verify `internal/testsupport/authz.go` and `internal/records/registry.go` read
   cleanly as the API phases 002–006 will extend — this phase's real deliverable is what comes
   next, and a bad seam here is paid for five times.
-- [ ] T324 Write `specs/001-walking-skeleton/traceability.md` — the mechanical join, generated from
+- [x] T324 Write `specs/001-walking-skeleton/traceability.md` — the mechanical join, generated from
   `spec.md` and `tasks.md` rather than written by hand: one row per functional requirement naming
   the task ids that satisfy it and the named test that proves it, and one row per success criterion
   naming its task or its phase-exit criterion. **A functional requirement with no task, or a success
   criterion that is neither mapped nor marked `[outcome metric]`, fails the phase.** This is the
   same file exit criterion 1 already requires for the 54 acceptance scenarios; the requirement and
   success-criterion joins live beside them (cross-artifact finding M7).
-- [ ] T325 Walk `plan.md`'s eleven Phase Exit Criteria and confirm each, in writing, before declaring
+- [x] T325 Walk `plan.md`'s eleven Phase Exit Criteria and confirm each, in writing, before declaring
   the phase complete.
 
 ---
