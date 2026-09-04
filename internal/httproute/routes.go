@@ -12,6 +12,7 @@ import (
 
 	"medikube/internal/domain/kind"
 	"medikube/internal/testsupport/seed"
+	"medikube/internal/web/views/shell"
 )
 
 // THE declarative table.
@@ -144,9 +145,29 @@ func table() []Route {
 	routes = append(routes, recordRoutes()...)
 	routes = append(routes, healthRoutes()...)
 	routes = append(routes, pageRoutes()...)
+	routes = append(routes, assetRoutes()...)
 	routes = append(routes, externalRoutes()...)
 
 	return routes
+}
+
+// The two embedded assets every page's head links (contracts/pages.md's
+// shell). Neither is a page: an asset has no landmark and no smoke URL, and
+// contracts/pages.md's zero-failed-requests assertion is what actually proves
+// both are reachable, on every page, at every viewport.
+func assetRoutes() []Route {
+	return []Route{
+		{
+			OpID: "assetAppCSS", Method: http.MethodGet, Path: shell.AppCSSHref,
+			Kind: KindAsset, Auth: AuthPublic,
+			Summary: "The compiled Tailwind stylesheet every page links.",
+		},
+		{
+			OpID: "assetDatastarJS", Method: http.MethodGet, Path: shell.DatastarJSHref,
+			Kind: KindAsset, Auth: AuthPublic,
+			Summary: "The vendored Datastar v1.0.2 browser runtime every page loads as a module script.",
+		},
+	}
 }
 
 // contracts/auth.md. Nine operations, five of them public because a person who

@@ -354,7 +354,17 @@ func handlerTable(
 		return nil, err
 	}
 
-	for _, group := range []httproute.Handlers{recordOps, pageOps, streamOps, accountOps, accountPages} {
+	overviewPage, err := page.OverviewPage(page.OverviewDeps{Counts: accounts.Deps.Counts})
+	if err != nil {
+		return nil, err
+	}
+
+	assets := httproute.Handlers{
+		"assetAppCSS":     web.ServeAppCSS,
+		"assetDatastarJS": web.ServeDatastarJS,
+	}
+
+	for _, group := range []httproute.Handlers{recordOps, pageOps, streamOps, accountOps, accountPages, overviewPage, assets} {
 		for opID, handler := range group {
 			table[opID] = handler
 		}

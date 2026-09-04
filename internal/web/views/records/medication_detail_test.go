@@ -150,3 +150,21 @@ func TestTheDetailCarriesTheDeleteConfirmation(t *testing.T) {
 	assert.Contains(t, viewstest.Text(confirm), medication.Name,
 		"FR-028 requires the confirmation to name the medication")
 }
+
+// T254, FR-048. Same mechanism as the list's heading, and for the same reason:
+// a future full-region patch replaces this article wholesale, and focus has
+// to land on its own heading rather than nowhere.
+func TestTheDetailHeadingCarriesTheFocusMechanism(t *testing.T) {
+	t.Parallel()
+
+	medication := view(t, everyFieldFilledIn(t))
+	tree := viewstest.Render(t, records.MedicationDetail(records.MedicationDetailProps{
+		Medication: medication,
+	}), "div")
+
+	heading := tree.One(t, viewstest.WithID(ids.RecordDetailHeading(kind.Medication, medication.ID)))
+
+	require.Equal(t, "h1", heading.Data)
+	assert.Equal(t, "-1", viewstest.Attr(heading, "tabindex"))
+	assert.True(t, viewstest.HasAttr("autofocus")(heading))
+}

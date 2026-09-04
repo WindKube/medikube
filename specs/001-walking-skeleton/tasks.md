@@ -927,33 +927,33 @@ the console open; every page has the shell, nothing overflows, and the console i
 
 ### Tests for User Story 4 ⚠️ write first, watch them fail
 
-- [ ] T249 [P] [US4] TEST `internal/web/views/layout_test.go` — render to buffer: the skip link is
+- [x] T249 [P] [US4] TEST `internal/web/views/layout_test.go` — render to buffer: the skip link is
   the first focusable element, and `banner`, `navigation[name="Primary"]`, `main` and `contentinfo`
   are all present, in order, on every page (FR-043).
-- [ ] T250 [P] [US4] TEST `internal/web/page/shell_test.go` — `#error-banner` and `#toast` are
+- [x] T250 [P] [US4] TEST `internal/web/page/shell_test.go` — `#error-banner` and `#toast` are
   rendered on **every** page even when empty. Datastar patches by id and an element that does not
   exist cannot be patched.
-- [ ] T251 [P] [US4] TEST `internal/web/views/shell/theme_test.go` — the theme class is on `<html>`,
+- [x] T251 [P] [US4] TEST `internal/web/views/shell/theme_test.go` — the theme class is on `<html>`,
   **server-rendered** from the stored preference, and the follow-the-device setting emits no class
   and relies on the Tailwind `dark` variant responding to `prefers-color-scheme`. No inline script:
   the CSP bans it and `data-persist` is Datastar Pro (FR-045, research D-36).
-- [ ] T252 [P] [US4] TEST `internal/web/views/shell/noscript_test.go` — every page carries a
+- [x] T252 [P] [US4] TEST `internal/web/views/shell/noscript_test.go` — every page carries a
   `<noscript>` block **inside `main`** stating plainly that MediKube requires scripting (FR-049).
-- [ ] T253 [P] [US4] TEST `internal/web/page/nav_test.go` — the current location is marked
+- [x] T253 [P] [US4] TEST `internal/web/page/nav_test.go` — the current location is marked
   `aria-current`, and every page offers a route back to the medication list (FR-050).
-- [ ] T254 [P] [US4] TEST `internal/web/render_test.go` — after a full-region patch, focus is moved
+- [x] T254 [P] [US4] TEST `internal/web/render_test.go` — after a full-region patch, focus is moved
   to the patched region's heading (FR-048).
-- [ ] T255 [P] [US4] TEST `internal/web/api/feedback_test.go` — every data-changing operation
+- [x] T255 [P] [US4] TEST `internal/web/api/feedback_test.go` — every data-changing operation
   produces an explicit success or failure message announced through the `role="status"` or
   `role="alert"` region (FR-047).
 - [ ] T256 [P] [US4] TEST `e2e/a11y.spec.ts` — keyboard reachability and a visible focus indicator on
   every interactive element of every page, at both viewports (FR-048, SC-014).
 - [ ] T257 [P] [US4] TEST `e2e/responsive.spec.ts` — at 390 px no page scrolls horizontally and
   every navigation target remains reachable (FR-044).
-- [ ] T258 [P] [US4] TEST `internal/web/views/shell/live_regions_test.go` — `#error-banner` is
+- [x] T258 [P] [US4] TEST `internal/web/views/shell/live_regions_test.go` — `#error-banner` is
   `role="alert" aria-live="assertive"` and `#toast` is `role="status" aria-live="polite"`, on
   every page (FR-047).
-- [ ] T259 [P] [US4] TEST `internal/architecture/templ_coverage_test.go` — every `.templ`
+- [x] T259 [P] [US4] TEST `internal/architecture/templ_coverage_test.go` — every `.templ`
   component has a render-to-buffer test. A component nobody renders in a test is a component the
   gate only catches once it is already on a page (Principle VIII, SC-014).
 - [ ] T260 [P] [US4] TEST `e2e/smoke.spec.ts` — the seven assertions from contracts/pages.md for
@@ -963,16 +963,16 @@ the console open; every page has the shell, nothing overflows, and the console i
 
 ### Implementation for User Story 4
 
-- [ ] T261 [US4] Implement `internal/web/views/layout.templ` — the shell: skip link, banner, nav,
+- [x] T261 [US4] Implement `internal/web/views/layout.templ` — the shell: skip link, banner, nav,
   main, `#error-banner`, `#toast`, footer.
-- [ ] T262 [P] [US4] Implement `internal/web/views/shell/{nav.templ,theme.templ,noscript.templ}`.
-- [ ] T263 [US4] Implement `internal/web/page/shell.go` — `NavState`, the layout wrapper and theme
+- [x] T262 [P] [US4] Implement `internal/web/views/shell/{nav.templ,theme.templ,noscript.templ}`.
+- [x] T263 [US4] Implement `internal/web/page/shell.go` — `NavState`, the layout wrapper and theme
   resolution.
-- [ ] T264 [P] [US4] Implement `internal/web/page/dashboard.go` and the Overview page, registered
+- [x] T264 [P] [US4] Implement `internal/web/page/dashboard.go` and the Overview page, registered
   with `region[name="Overview"]`.
-- [ ] T265 [P] [US4] Implement the responsive rules in `assets/input.css` and the templ markup so
+- [x] T265 [P] [US4] Implement the responsive rules in `assets/input.css` and the templ markup so
   nothing overflows horizontally at 390 px (FR-044).
-- [ ] T266 [P] [US4] Wire the appearance preference through `updateMe` to the rendered class
+- [x] T266 [P] [US4] Wire the appearance preference through `updateMe` to the rendered class
   (FR-045).
 - [ ] T267 [US4] Configure `e2e/playwright.config.ts` with the two projects — desktop 1440×900 and
   mobile 390×844 — and the two flakiness mitigations from reconciliation C16.
