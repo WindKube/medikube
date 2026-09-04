@@ -20,12 +20,6 @@ const (
 // INSIDE it and never instead of it (FR-029): a bare centred paragraph where
 // the region should be passes a presence check and fails the person, and phase
 // 003 depends on this rule holding.
-//
-// The heading carries tabindex="-1" and autofocus (FR-048, ids.RecordListHeading):
-// when this region is replaced wholesale by a future full-region patch, focus
-// lands here rather than nowhere, with no inline script and no signal
-// machinery — see the doc comment on ids.RecordListHeading for why those two
-// attributes are what free Datastar and the CSP leave available.
 templ MedicationList(props MedicationListProps) {
 	<section
 		id={ ids.RecordList(kind.Medication) }
@@ -36,7 +30,6 @@ templ MedicationList(props MedicationListProps) {
 			<h1
 				id={ ids.RecordListHeading(kind.Medication) }
 				tabindex="-1"
-				autofocus
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 			>{ medicationsTitle }</h1>
 			if props.CreateHref != "" {

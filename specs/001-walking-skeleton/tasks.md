@@ -941,7 +941,7 @@ the console open; every page has the shell, nothing overflows, and the console i
   `<noscript>` block **inside `main`** stating plainly that MediKube requires scripting (FR-049).
 - [x] T253 [P] [US4] TEST `internal/web/page/nav_test.go` — the current location is marked
   `aria-current`, and every page offers a route back to the medication list (FR-050).
-- [x] T254 [P] [US4] TEST `internal/web/render_test.go` — after a full-region patch, focus is moved
+- [ ] T254 [P] [US4] TEST `internal/web/render_test.go` — after a full-region patch, focus is moved
   to the patched region's heading (FR-048).
 - [x] T255 [P] [US4] TEST `internal/web/api/feedback_test.go` — every data-changing operation
   produces an explicit success or failure message announced through the `role="status"` or

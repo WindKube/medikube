@@ -91,11 +91,7 @@ func RecordDetail(k kind.Kind, recordID string) string {
 	return join(prefix(k), roleDetail, recordID)
 }
 
-// RecordListHeading and RecordDetailHeading are where focus moves after a
-// full-region patch (FR-048): tabindex="-1" plus autofocus, no script needed —
-// the CSP bans inline scripts and data-persist/data-on-signal-patch are Pro or
-// answer a different question. autofocus fires on any DOM connection, parsed
-// or patched, so the same static attribute covers both.
+// RecordListHeading and RecordDetailHeading are the focus targets of FR-048.
 func RecordListHeading(k kind.Kind) string { return join(prefix(k), roleList, roleHeading) }
 
 func RecordDetailHeading(k kind.Kind, recordID string) string {

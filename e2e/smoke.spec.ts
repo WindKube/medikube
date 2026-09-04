@@ -391,7 +391,10 @@ test.describe('P5 — one record', () => {
       expect(value.trim(), 'an empty value was rendered instead of being left out').not.toBe('');
     }
 
-    await expect(page.getByRole(confirmLandmark.role, { name: confirmLandmark.name })).toBeAttached();
+    // Rendered on every detail page, revealed only once Delete is asked for.
+    const confirm = page.getByRole(confirmLandmark.role, { name: confirmLandmark.name, includeHidden: true });
+    await expect(confirm).toBeAttached();
+    await expect(confirm).toBeHidden();
   });
 
   test('shows a name full of markup characters as text', async ({ page }) => {
@@ -547,6 +550,7 @@ test.describe('SC-014 — the keyboard', () => {
     const article = page.getByRole(detailLandmark.role, { name: detailLandmark.name });
     await expect(article.getByRole('link', { name: 'Edit' })).toBeVisible();
 
+    await article.getByRole('button', { name: 'Delete' }).click();
     const confirm = page.getByRole(confirmLandmark.role, { name: confirmLandmark.name });
     await expect(confirm.getByRole('button')).toHaveCount(2);
 

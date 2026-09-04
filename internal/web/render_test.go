@@ -277,18 +277,3 @@ func TestADatastarRequestIsRecognisedByItsOwnHeaderAndNothingElse(t *testing.T) 
 			"Accept is a preference any client can send; Datastar-Request is what the runtime sets")
 	})
 }
-
-// T254, FR-048: a full-region patch's own heading carries tabindex="-1" and
-// autofocus (ids.RecordListHeading); Patch must forward it byte-for-byte or
-// that mechanism silently breaks.
-func TestAFullRegionPatchCarriesTheFocusMechanismThroughUnaltered(t *testing.T) {
-	t.Parallel()
-
-	region := `<section id="records-list"><h1 id="records-list-heading" tabindex="-1" autofocus>Records</h1></section>`
-
-	e, recorder := event(t, http.MethodGet, "/x")
-	require.NoError(t, Patch(e, fragment(region), ByElementID()))
-
-	assert.Equal(t, region, recorder.Body.String(),
-		"Patch must forward the fragment unaltered, or a heading's focus attributes could be dropped silently")
-}

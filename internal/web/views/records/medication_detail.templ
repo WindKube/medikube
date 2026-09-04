@@ -25,10 +25,6 @@ const (
 // MedicationDetail is contracts/pages.md P5's landmark: every value recorded
 // for one medication, the values never recorded left out entirely rather than
 // shown as empty placeholders (FR-024), and the time it last changed (FR-020).
-//
-// The heading carries tabindex="-1" and autofocus (FR-048, ids.RecordDetailHeading),
-// so focus moves here rather than nowhere the moment a future full-region patch
-// replaces this article — see ids.RecordDetailHeading's doc comment for why.
 templ MedicationDetail(props MedicationDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Medication, props.Medication.ID) }
@@ -41,7 +37,6 @@ templ MedicationDetail(props MedicationDetailProps) {
 			<h1
 				id={ ids.RecordDetailHeading(kind.Medication, props.Medication.ID) }
 				tabindex="-1"
-				autofocus
 				class="break-words text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 			>{ props.Medication.Name }</h1>
 			<div class="flex flex-wrap gap-2">

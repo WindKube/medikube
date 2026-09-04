@@ -151,10 +151,8 @@ func TestTheDetailCarriesTheDeleteConfirmation(t *testing.T) {
 		"FR-028 requires the confirmation to name the medication")
 }
 
-// T254, FR-048. Same mechanism as the list's heading, and for the same reason:
-// a future full-region patch replaces this article wholesale, and focus has
-// to land on its own heading rather than nowhere.
-func TestTheDetailHeadingCarriesTheFocusMechanism(t *testing.T) {
+// FR-048: the heading is programmatically focusable.
+func TestTheDetailHeadingIsFocusable(t *testing.T) {
 	t.Parallel()
 
 	medication := view(t, everyFieldFilledIn(t))
@@ -166,5 +164,4 @@ func TestTheDetailHeadingCarriesTheFocusMechanism(t *testing.T) {
 
 	require.Equal(t, "h1", heading.Data)
 	assert.Equal(t, "-1", viewstest.Attr(heading, "tabindex"))
-	assert.True(t, viewstest.HasAttr("autofocus")(heading))
 }

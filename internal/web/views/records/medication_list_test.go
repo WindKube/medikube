@@ -145,13 +145,8 @@ func TestThePagerIsRenderedEvenWithNoNextPage(t *testing.T) {
 	assert.Len(t, tree.All(viewstest.WithID(ids.RecordPager(kind.Medication))), 1)
 }
 
-// T254, FR-048. A future full-region patch replaces this whole landmark, and
-// the heading is where focus has to land when it does: tabindex="-1" makes it
-// programmatically focusable and autofocus is what the browser's own
-// connected-element algorithm honours, whether the element arrived by parsing
-// or by a later patch — no inline script, which the CSP bans, and no signal
-// machinery the free Datastar bundle does not have.
-func TestTheHeadingCarriesTheFocusMechanism(t *testing.T) {
+// FR-048: the heading is programmatically focusable.
+func TestTheHeadingIsFocusable(t *testing.T) {
 	t.Parallel()
 
 	tree := viewstest.Render(t, records.MedicationList(listProps(t)), "div")
@@ -159,5 +154,4 @@ func TestTheHeadingCarriesTheFocusMechanism(t *testing.T) {
 
 	require.Equal(t, "h1", heading.Data)
 	assert.Equal(t, "-1", viewstest.Attr(heading, "tabindex"))
-	assert.True(t, viewstest.HasAttr("autofocus")(heading))
 }
