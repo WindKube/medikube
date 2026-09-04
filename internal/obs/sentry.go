@@ -35,6 +35,20 @@ func StartSentry(cfg config.SentryConfig, release string, log zerolog.Logger) (*
 	return startSentry(cfg, release, log, nil)
 }
 
+// StartSentryWithTransport is StartSentry with the transport seam exposed.
+//
+// Production never calls it — StartSentry does, with a nil transport, which is
+// what leaves sentry-go to dial the real DSN. A suite that must observe an
+// event without a network has no other way to see one: sentry.Client keeps no
+// public accessor for what it sent, so phileak.SentryTransport, handed in
+// here, is the only place an event a full production-shaped chain produced can
+// be read back (T284).
+func StartSentryWithTransport(
+	cfg config.SentryConfig, release string, log zerolog.Logger, transport sentry.Transport,
+) (*Reporter, error) {
+	return startSentry(cfg, release, log, transport)
+}
+
 // startSentry is the seam the suite uses to observe an event without a network:
 // a Transport is the only way sentry-go lets anything see what it would have
 // sent.

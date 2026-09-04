@@ -998,20 +998,20 @@ it complete.
 
 ### Tests for User Story 5 ⚠️ write first, watch them fail
 
-- [ ] T270 [P] [US5] TEST `internal/web/api/health_test.go` — `healthz` returns 200 with status,
+- [x] T270 [P] [US5] TEST `internal/web/api/health_test.go` — `healthz` returns 200 with status,
   version and start time and **performs no database access**, asserted by running it against an
   app whose database has been made unreadable (FR-052).
-- [ ] T271 [P] [US5] TEST `internal/web/api/readyz_test.go` — the three checks, the 2-second probe
+- [x] T271 [P] [US5] TEST `internal/web/api/readyz_test.go` — the three checks, the 2-second probe
   deadline, 503 when the database is unreachable, and a body containing **only** the closed check
   vocabulary — no path, no DSN, no driver message (FR-052, SC-013).
-- [ ] T272 [P] [US5] TEST `internal/web/api/readyz_migrations_test.go` — with a migration
+- [x] T272 [P] [US5] TEST `internal/web/api/readyz_migrations_test.go` — with a migration
   outstanding, readiness reports not-ready and names `migrations` as the failing check.
-- [ ] T273 [US5] TEST `internal/platform/pb/drain_test.go` — the `OnTerminate` handler at priority
+- [x] T273 [US5] TEST `internal/platform/pb/drain_test.go` — the `OnTerminate` handler at priority
   **-10000** runs before PocketBase's shutdown at -9999: readiness flips to `draining`, the delay
   elapses, in-flight requests complete, and only then does the process exit. PocketBase's
   one-second window is hardcoded and unreachable from config, so without this a request is cut
   mid-response (FR-062, observability §8).
-- [ ] T274 [P] [US5] TEST `internal/web/api/readyz_draining_test.go` — while draining, `readyz`
+- [x] T274 [P] [US5] TEST `internal/web/api/readyz_draining_test.go` — while draining, `readyz`
   returns **503 draining** with an empty check set, and an in-flight request still completes
   successfully.
 - [ ] T275 [P] [US5] TEST `internal/cli/seed_test.go` — the seed is deterministic (same ids twice),
@@ -1019,7 +1019,7 @@ it complete.
   `MEDIKUBE_ENV=production` with no override (FR-060).
 - [x] T276 [P] [US5] TEST `internal/cli/routes_test.go` — `medikube routes --json` lists exactly the
   registry's routes, needs no database and binds no port.
-- [ ] T277 [P] [US5] TEST `internal/web/api/health_exclusions_test.go` — probe traffic appears in
+- [x] T277 [P] [US5] TEST `internal/web/api/health_exclusions_test.go` — probe traffic appears in
   neither the activity log, nor the metrics, nor the traces.
 - [x] T278 [P] [US5] TEST `internal/cli/migrate_test.go` — `migrate down` is refused when
   `MEDIKUBE_ENV=production` without `--force`, because the down of migration 3 drops `audit_events`.
@@ -1035,14 +1035,14 @@ it complete.
   Cobra runs, and swallows an unrecognised global flag silently.
 - [ ] T283 [P] [US5] TEST `internal/logging/correlation_test.go` — one request produces log lines
   that all carry the same correlation id, and that id is the one returned to the client (FR-054).
-- [ ] T284 [US5] TEST `internal/obs/single_report_test.go` — one failure appears **once** across the
+- [x] T284 [US5] TEST `internal/obs/single_report_test.go` — one failure appears **once** across the
   log stream, the error reporter and the trace — not three times (FR-057).
 
 ### Implementation for User Story 5
 
-- [ ] T285 [US5] Implement `internal/web/api/health.go` — `healthz` and `readyz`, excluded from the
+- [x] T285 [US5] Implement `internal/web/api/health.go` — `healthz` and `readyz`, excluded from the
   activity logger, the metrics middleware and the tracing middleware.
-- [ ] T286 [US5] Implement the drain handler in `internal/platform/pb/serve.go` at priority -10000,
+- [x] T286 [US5] Implement the drain handler in `internal/platform/pb/serve.go` at priority -10000,
   with `MEDIKUBE_DRAIN_DELAY` and `MEDIKUBE_DRAIN_MAX`, and handle `TerminateEvent.IsRestart`.
 - [x] T287 [P] [US5] Implement `internal/cli/root.go` — subcommand registration and the removal of
   the PocketBase commands that would bypass the lockdown. T287–T291 and `serve` are together the six

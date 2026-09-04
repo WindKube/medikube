@@ -42,6 +42,7 @@ func operations(
 	cfg config.Config,
 	resolve api.Resolve,
 	hub *realtime.Hub,
+	health api.HealthDeps,
 ) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
@@ -62,6 +63,11 @@ func operations(
 	}
 
 	maps.Copy(table, served)
+
+	// healthz and readyz need neither the kind registry nor the application:
+	// only the build stamp, the start instant and the drain flag, all of which
+	// the composition root already holds by the time it calls this.
+	maps.Copy(table, api.HealthHandlers(health))
 
 	// The account surface is assembled separately because it is the one group
 	// that needs the application itself: PocketBase owns the credential, the
@@ -260,6 +266,10 @@ func unimplemented() []string {
 	}
 
 	for _, opID := range page.AccountPageOperations() {
+		implemented[opID] = nil
+	}
+
+	for _, opID := range api.HealthOperations() {
 		implemented[opID] = nil
 	}
 

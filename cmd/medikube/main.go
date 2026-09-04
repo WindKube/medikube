@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/cmd"
@@ -30,18 +31,10 @@ import (
 	"medikube/internal/obs"
 	"medikube/internal/platform/pb"
 	"medikube/internal/records"
+	"medikube/internal/store/migrations"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
 	"medikube/internal/web/page"
-
-	// MediKube's migrations register themselves from their own init, and
-	// core.AppMigrations is what apis.Serve runs. Without this import the list
-	// is empty and the binary boots against PocketBase's stock schema: no
-	// medications collection, no audit trail, and a users collection still
-	// carrying the owner rules that hand its records to PocketBase's own API.
-	// The boot assertion catches that and refuses to serve — which is how this
-	// import came to be missing exactly once.
-	_ "medikube/internal/store/migrations"
 )
 
 // bootGateHookID names the OnServe handler that refuses to serve a misassembled
@@ -246,7 +239,15 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 	// open stream's watcher goroutine parked until the process exits.
 	resolve := recordFamily(app, records.NewRegistry(), container.Hub())
 
-	table, err := operations(app, cfg, resolve, container.Hub())
+	readiness := obs.NewReadiness()
+	startedAt := time.Now()
+
+	table, err := operations(app, cfg, resolve, container.Hub(), api.HealthDeps{
+		Version:   version,
+		StartedAt: startedAt,
+		Readiness: readiness,
+		Pending:   migrations.Pending,
+	})
 	if err != nil {
 		return nil, nil, nil, shutdownAfter(container, fmt.Errorf("wire the MediKube handlers: %w", err))
 	}
@@ -270,6 +271,9 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 		return nil, nil, nil, shutdownAfter(container, fmt.Errorf("wire the MediKube error views: %w", err))
 	}
 
+	// contracts/health.md's probe traffic, as registered patterns.
+	probes := healthPatterns()
+
 	pb.BindServe(app, pb.ServeOptions{
 		// Left at zero deliberately. Any positive value is a silent cap on
 		// every Server-Sent Events stream, and it fails by killing the
@@ -277,9 +281,13 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 		// (research D-34).
 		WriteTimeout: 0,
 		Middlewares: []*hook.Handler[*core.RequestEvent]{
-			// -1050: outside everything, so one request is one line whatever
-			// the chain does to it.
-			obs.RequestLogger(log),
+			// -1052: outside RequestLogger and Observer, so in-flight covers
+			// everything either of them measures.
+			obs.TrackInFlight(readiness),
+			// -1051: outside Observer.
+			obs.Observer(destinations.measurements, destinations.sentry, probes...),
+			// -1050: ahead of everything PocketBase binds.
+			obs.RequestLogger(log, probes...),
 			// -1031: outside PocketBase's panic recovery, which is what makes
 			// a recovered panic answer in MediKube's envelope. The view
 			// answers with a page on the page surface and declines on the API
@@ -319,6 +327,13 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 	if err = bindRetention(app, cfg, log); err != nil {
 		return nil, nil, nil, shutdownAfter(container, err)
 	}
+
+	pb.BindDrain(app, pb.DrainOptions{
+		Readiness: readiness,
+		Delay:     cfg.DrainDelay,
+		Max:       cfg.DrainMax,
+		Log:       log,
+	})
 
 	destinations.bindShutdown(app, log)
 
@@ -479,6 +494,20 @@ func listenAddr(se *core.ServeEvent) string {
 	}
 
 	return se.Server.Addr
+}
+
+// healthPatterns is the registered ServeMux patterns for healthz and readyz,
+// read off the inventory so the exclusion cannot drift from the routes.
+func healthPatterns() []string {
+	var patterns []string
+
+	for _, route := range httproute.Inventory().Routes() {
+		if route.OpID == api.OpHealthz || route.OpID == api.OpReadyz {
+			patterns = append(patterns, route.Pattern())
+		}
+	}
+
+	return patterns
 }
 
 // shutdownAfter releases the container when assembly fails past the point of
