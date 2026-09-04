@@ -136,7 +136,12 @@ export async function open(page: Page, expected: PageCase): Promise<Locator> {
 
   // 5, 6, 7 — zero console errors or warnings, zero CSP violations, zero
   // failed network requests.
-  expect(problems.console, `console output on ${expected.path}`).toEqual([]);
+  // The browser logs the document's own error status as a console error; on
+  // an error view that entry is the expected status, not a defect.
+  const status = expected.status ?? 200;
+  const ownStatus = `error: Failed to load resource: the server responded with a status of ${status}`;
+  const console = status >= 400 ? problems.console.filter((entry) => !entry.startsWith(ownStatus)) : problems.console;
+  expect(console, `console output on ${expected.path}`).toEqual([]);
   expect(problems.crashes, `uncaught page failures on ${expected.path}`).toEqual([]);
   expect(problems.csp, `CSP violations on ${expected.path}`).toEqual([]);
   expect(problems.network, `failed requests on ${expected.path}`).toEqual([]);

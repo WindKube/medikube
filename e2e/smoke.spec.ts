@@ -459,7 +459,7 @@ async function focusableControls(page: Page, within: string): Promise<string[]> 
       if (!root) return [];
 
       return Array.from(root.querySelectorAll<HTMLElement>(selector))
-        .filter((element) => element.offsetParent !== null || element.tagName === 'A')
+        .filter((element) => element.offsetParent !== null)
         .map((element) => {
           const label = (element.getAttribute('aria-label') ?? element.textContent ?? '').trim().slice(0, 40);
           return `${element.tagName.toLowerCase()}#${element.id}:${label}`;
@@ -550,10 +550,6 @@ test.describe('SC-014 — the keyboard', () => {
     const article = page.getByRole(detailLandmark.role, { name: detailLandmark.name });
     await expect(article.getByRole('link', { name: 'Edit' })).toBeVisible();
 
-    await article.getByRole('button', { name: 'Delete' }).click();
-    const confirm = page.getByRole(confirmLandmark.role, { name: confirmLandmark.name });
-    await expect(confirm.getByRole('button')).toHaveCount(2);
-
     const expected = await focusableControls(page, 'main');
     const walk = await tabThrough(page, expected.length + 8);
 
@@ -562,6 +558,12 @@ test.describe('SC-014 — the keyboard', () => {
     for (const control of walk) {
       expect(control.indicator, `no focus indicator on ${describe(control)}`).toBe(true);
     }
+
+    await article.getByRole('button', { name: 'Delete' }).click();
+    const confirm = page.getByRole(confirmLandmark.role, { name: confirmLandmark.name });
+    await expect(confirm.getByRole('button')).toHaveCount(2);
+    await page.keyboard.press('Tab');
+    await expect(confirm.getByRole('button', { name: 'Delete permanently' })).toBeFocused();
   });
 
   test.fixme(
