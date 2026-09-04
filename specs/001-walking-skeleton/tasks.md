@@ -1017,19 +1017,19 @@ it complete.
 - [ ] T275 [P] [US5] TEST `internal/cli/seed_test.go` — the seed is deterministic (same ids twice),
   **idempotent** (running it twice changes nothing), and **refuses to run** when
   `MEDIKUBE_ENV=production` with no override (FR-060).
-- [ ] T276 [P] [US5] TEST `internal/cli/routes_test.go` — `medikube routes --json` lists exactly the
+- [x] T276 [P] [US5] TEST `internal/cli/routes_test.go` — `medikube routes --json` lists exactly the
   registry's routes, needs no database and binds no port.
 - [ ] T277 [P] [US5] TEST `internal/web/api/health_exclusions_test.go` — probe traffic appears in
   neither the activity log, nor the metrics, nor the traces.
-- [ ] T278 [P] [US5] TEST `internal/cli/migrate_test.go` — `migrate down` is refused when
+- [x] T278 [P] [US5] TEST `internal/cli/migrate_test.go` — `migrate down` is refused when
   `MEDIKUBE_ENV=production` without `--force`, because the down of migration 3 drops `audit_events`.
-- [ ] T279 [P] [US5] TEST `internal/cli/openapi_cmd_test.go` — the command writes a document
+- [x] T279 [P] [US5] TEST `internal/cli/openapi_cmd_test.go` — the command writes a document
   byte-identical to the committed `api/openapi.json`.
 - [ ] T280 [P] [US5] TEST `internal/config/failure_output_test.go` — a configuration failure names
   the offending variable and **never** its value (FR-041).
-- [ ] T281 [P] [US5] TEST `internal/cli/healthcheck_test.go` — exits 0 against a ready instance and
+- [x] T281 [P] [US5] TEST `internal/cli/healthcheck_test.go` — exits 0 against a ready instance and
   non-zero otherwise, printing nothing on success.
-- [ ] T282 [P] [US5] TEST `internal/cli/root_test.go` — MediKube's subcommands are registered on
+- [x] T282 [P] [US5] TEST `internal/cli/root_test.go` — MediKube's subcommands are registered on
   PocketBase's `RootCmd`, and **every MediKube flag is defined on its own subcommand**: PocketBase
   pre-parses `--dir`, `--encryptionEnv` and `--dev` from `os.Args` inside `NewWithConfig`, before
   Cobra runs, and swallows an unrecognised global flag silently.
@@ -1044,13 +1044,13 @@ it complete.
   activity logger, the metrics middleware and the tracing middleware.
 - [ ] T286 [US5] Implement the drain handler in `internal/platform/pb/serve.go` at priority -10000,
   with `MEDIKUBE_DRAIN_DELAY` and `MEDIKUBE_DRAIN_MAX`, and handle `TerminateEvent.IsRestart`.
-- [ ] T287 [P] [US5] Implement `internal/cli/root.go` — subcommand registration and the removal of
+- [x] T287 [P] [US5] Implement `internal/cli/root.go` — subcommand registration and the removal of
   the PocketBase commands that would bypass the lockdown. T287–T291 and `serve` are together the six
   operator commands of FR-058.
-- [ ] T288 [P] [US5] Implement `internal/cli/seed.go` (FR-058, FR-060).
-- [ ] T289 [P] [US5] Implement `internal/cli/routes.go` (FR-058).
-- [ ] T290 [P] [US5] Implement `internal/cli/openapi.go` (FR-058, FR-064).
-- [ ] T291 [P] [US5] Implement `internal/cli/healthcheck.go` (FR-058).
+- [x] T288 [P] [US5] Implement `internal/cli/seed.go` (FR-058, FR-060).
+- [x] T289 [P] [US5] Implement `internal/cli/routes.go` (FR-058).
+- [x] T290 [P] [US5] Implement `internal/cli/openapi.go` (FR-058, FR-064).
+- [x] T291 [P] [US5] Implement `internal/cli/healthcheck.go` (FR-058).
 - [ ] T292 [US5] Implement the boot sequence in `cmd/medikube/main.go` — config, migrations, the two
   boot assertions, settings, the admin warning, and **one** startup line at info (FR-053).
 
@@ -1070,7 +1070,7 @@ each break the build for the right reason.
 
 ### Tests for User Story 6 ⚠️ these ARE the gates
 
-- [ ] T293 [P] [US6] TEST `internal/openapi/staleness_test.go` — regenerating the document produces
+- [x] T293 [P] [US6] TEST `internal/openapi/staleness_test.go` — regenerating the document produces
   **no diff** against the committed `api/openapi.json`; CI runs `task openapi` and
   `git diff --exit-code` (FR-064).
 - [ ] T294 [P] [US6] TEST `internal/httproute/gate_test.go` — the registry, the OpenAPI document and
@@ -1106,7 +1106,7 @@ each break the build for the right reason.
 
 ### Implementation for User Story 6
 
-- [ ] T304 [US6] Complete `.github/workflows/medikube-ci.yml` — `gen`, `vet`, `lint`, `test`,
+- [x] T304 [US6] Complete `.github/workflows/medikube-ci.yml` — `gen`, `vet`, `lint`, `test`,
   `openapi-diff`, `e2e` and the separate **`stream-liveness`** job that runs longer than five
   minutes. Every failure blocks the merge (FR-070).
 - [ ] T305 [US6] Verify the image builds through the shared pipeline from a clean checkout on the
@@ -1114,7 +1114,7 @@ each break the build for the right reason.
   (FR-071, SC-015).
 - [ ] T306 [P] [US6] Write `e2e/README.md` — how each red-gate demonstration was performed, with the
   captured failure output. **This file is the evidence for exit criterion 5.**
-- [ ] T307 [P] [US6] Commit the generated `api/openapi.json`.
+- [x] T307 [P] [US6] Commit the generated `api/openapi.json`.
 
 **Checkpoint**: every gate exists **and has been seen to fail**. All eight of US6's acceptance
 scenarios pass.

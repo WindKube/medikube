@@ -883,3 +883,21 @@ obvious next step and it cannot happen until all three are resolved.
 
 The `knownLeaks` register is empty, `task test:phileak` runs as the `phi-leak`
 job in `.github/workflows/go.yaml`, and a leak now fails the merge.
+
+## D28 — `contracts/cli.md`'s Cobra subcommands contradict `plan.md`'s own transitive-pin rule
+
+`plan.md` pins `github.com/spf13/cobra` as transitive-only, never a direct require, and
+`internal/architecture/transitive_pins_test.go` enforces it: no MediKube file may import it, and
+go.mod must keep it `// indirect`. `contracts/cli.md` and research D-12 describe MediKube's own
+commands (`routes`, `openapi`, `healthcheck`, `seed`) as `*cobra.Command` values added to
+`app.RootCmd` — but constructing one requires importing cobra in the file doing the constructing,
+which is exactly what the pin forbids. The two cannot both hold.
+
+The pin wins: it has a measured failure mode (a stray `go get -u` pinning a cobra version
+PocketBase wasn't built against) and the Cobra-subcommand design doesn't have one of its own.
+`cmd/medikube/main.go`'s `run()` now dispatches MediKube's four commands out of `os.Args` before
+`app.Execute()` (`internal/cli.Dispatch`), each with its own `flag.FlagSet`. Only `migrate` stays a
+real RootCmd subcommand, via `migratecmd.Register(app, app.RootCmd, ...)`, which takes `app.RootCmd`
+already typed as `*cobra.Command` without MediKube spelling that type itself. What's lost:
+PocketBase's RootCmd no longer lists MediKube's four commands on its own, so `medikube help`/`-h`
+now prints `internal/cli.Usage` first and a disposable RootCmd's own `--help` beneath it.

@@ -18,9 +18,11 @@ import (
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/cmd"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 	"github.com/pocketbase/pocketbase/tools/hook"
 	"github.com/rs/zerolog"
 
+	"medikube/internal/cli"
 	"medikube/internal/config"
 	"medikube/internal/di"
 	"medikube/internal/httproute"
@@ -80,13 +82,45 @@ func versionRequested(args []string) bool {
 	}
 }
 
+// helpRequested is deliberately false for no arguments: that already means
+// "print the version" (versionRequested above).
+func helpRequested(args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+
+	switch args[0] {
+	case "help", "--help", "-h":
+		return true
+	default:
+		return false
+	}
+}
+
 // run loads the configuration, assembles the instance and hands control to
 // PocketBase's command surface.
+//
+// MediKube's own commands are dispatched out of os.Args first, before
+// config.Load — docs/spec-defects.md D28.
 func run() error {
 	if versionRequested(os.Args[1:]) {
 		_, err := fmt.Fprintf(os.Stdout, "medikube %s\n", version)
 
 		return err
+	}
+
+	if helpRequested(os.Args[1:]) {
+		return printCombinedHelp()
+	}
+
+	if handled, err := dispatchMediKube(os.Args[1:]); handled {
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err) //nolint:errcheck // stderr is best-effort on the way to a non-zero exit
+
+			return err
+		}
+
+		return nil
 	}
 
 	cfg, err := config.Load()
@@ -101,6 +135,19 @@ func run() error {
 	}
 
 	log := logging.New(cfg.Log, version)
+
+	// FR-059: the only place that sees the raw args before Cobra's parse, so
+	// --force can be stripped before a flag PocketBase never defined reaches it.
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		rewritten, guardErr := cli.GuardMigrateDown(os.Args[2:], cfg.Env)
+		if guardErr != nil {
+			log.Error().Err(guardErr).Msg("run the MediKube migrate command")
+
+			return guardErr
+		}
+
+		os.Args = append(os.Args[:2:2], rewritten...)
+	}
 
 	app, container, _, err := build(cfg, log)
 	if err != nil {
@@ -128,6 +175,23 @@ func run() error {
 	}
 
 	return nil
+}
+
+// printCombinedHelp answers help/--help/-h with MediKube's own commands, then
+// a disposable RootCmd's --help for PocketBase's (serve, superuser, migrate).
+func printCombinedHelp() error {
+	if err := cli.Usage(os.Stdout); err != nil {
+		return err
+	}
+
+	app := pb.New(config.Config{}, pb.Options{})
+	if err := registerCommands(app, config.Config{}); err != nil {
+		return err
+	}
+
+	app.RootCmd.SetArgs([]string{"--help"})
+
+	return app.RootCmd.Execute()
 }
 
 // build assembles the instance: the container, the embedded PocketBase, both
@@ -381,7 +445,27 @@ func registerCommands(app *pocketbase.PocketBase, cfg config.Config) error {
 	}
 
 	app.RootCmd.AddCommand(serve)
-	app.RootCmd.AddCommand(cmd.NewSuperuserCommand(app))
+
+	// contracts/cli.md's "Removed" clause: `delete` would let an operator
+	// remove the only superuser the admin UI can authenticate against, so it
+	// is not exposed. superuser/sub are never typed by name, which keeps
+	// *cobra.Command unmentioned here too (docs/spec-defects.md D28).
+	superuser := cmd.NewSuperuserCommand(app)
+
+	for _, sub := range superuser.Commands() {
+		if sub.Name() == "delete" {
+			superuser.RemoveCommand(sub)
+		}
+	}
+
+	app.RootCmd.AddCommand(superuser)
+
+	// Automigrate follows cfg.Dev (README.md); config.Validate already
+	// refuses MEDIKUBE_DEV=true in production, so this can never conflict
+	// with FR-059's guard.
+	if err := migratecmd.Register(app, app.RootCmd, migratecmd.Config{Automigrate: cfg.Dev}); err != nil {
+		return fmt.Errorf("register the MediKube migrate command: %w", err)
+	}
 
 	return nil
 }

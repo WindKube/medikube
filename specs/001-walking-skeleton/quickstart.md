@@ -274,7 +274,7 @@ one-second window.
 ```bash
 task lint          # depguard + forbidigo
 task test
-task openapi && git diff --exit-code docs/openapi.json
+task openapi:check  # regenerates api/openapi.json and fails on any diff
 task smoke         # Playwright, both viewports
 ```
 

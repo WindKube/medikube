@@ -6,10 +6,10 @@
 // original: the server writes to it, and a smoke run that left the fixture
 // dirty would make the next `go test` compare yesterday's data.
 //
-// `medikube seed` cannot be used instead, because there is no seed subcommand
-// yet (T288 registers it and internal/cli/seed.go is the behaviour it will
-// register). When it lands this file becomes `migrate` + `seed` against an
-// empty directory and nothing else here changes.
+// `medikube seed` now exists (T288, internal/cli/seed.go), but this file
+// still clones the committed fixture rather than running `migrate` + `seed`
+// against an empty directory — that switch is a separate change and not one
+// this comment update makes on its own.
 //
 // It also assembles the instance's OUTGOING MAIL, because T223p's recovery
 // flow is not testable without it: the link a person follows exists only in a

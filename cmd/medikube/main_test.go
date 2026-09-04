@@ -473,9 +473,41 @@ func TestTheServeCommandTakesItsDefaultsFromTheValidatedConfiguration(t *testing
 	}
 
 	// superuser is the only door to a first superuser, because pb.BindServe
-	// nils PocketBase's first-run installer.
-	assert.Subset(t, registered, []string{"serve", "superuser"},
+	// nils PocketBase's first-run installer. migrate is PocketBase's own
+	// migratecmd plugin, registered over MediKube's migrations.
+	assert.Subset(t, registered, []string{"serve", "superuser", "migrate"},
 		"the command surface this build registers")
+}
+
+// contracts/cli.md's "Removed" clause: the built-in destructive helper is not
+// exposed, and superuser creation stays, because the first boot needs it.
+func TestSuperuserDeleteIsNotExposed(t *testing.T) {
+	t.Parallel()
+
+	cfg := testConfig(t, filepath.Join(t.TempDir(), "pb_data"))
+
+	app, container, _, err := build(cfg, logging.NewTo(io.Discard, cfg.Log, "test"))
+	require.NoError(t, err)
+
+	t.Cleanup(func() { assert.NoError(t, container.Shutdown()) })
+
+	require.NoError(t, registerCommands(app, cfg))
+
+	var subcommands []string
+
+	for _, command := range app.RootCmd.Commands() {
+		if command.Name() != "superuser" {
+			continue
+		}
+
+		for _, sub := range command.Commands() {
+			subcommands = append(subcommands, sub.Name())
+		}
+	}
+
+	assert.NotContains(t, subcommands, "delete")
+	assert.Subset(t, subcommands, []string{"upsert", "create", "update"},
+		"managing a superuser day to day still works")
 }
 
 func TestConfigurationThatDoesNotValidateIsABootFailureRatherThanAServer(t *testing.T) {
