@@ -96,17 +96,8 @@ func sentryOptions(cfg config.SentryConfig, release string, log zerolog.Logger, 
 // Active reports whether an operator has configured a destination.
 func (r *Reporter) Active() bool { return r != nil && r.client != nil }
 
-// Report sends the occurrence err recorded for the request e and reports
-// whether it went anywhere.
-//
-// It reports Recordable(e, err) rather than err: PocketBase's ApiError renders
-// as the vague public message a client is shown, and an issue tracker full of
-// "Something went wrong while processing your request." is an issue tracker
-// nobody can act on — while below a server failure the message behind it is
-// composed from the submitted values and is withheld (defect D20).
-//
-// The correlation id travels as a tag so that the Sentry issue, the log line
-// and the id the person was shown are the same handle (FR-054).
+// Report sends Recordable(e, err) and reports whether it went anywhere. The
+// correlation id travels as a tag so the issue and the log line share a handle.
 func (r *Reporter) Report(e *core.RequestEvent, err error) bool {
 	if !r.Active() || err == nil || e == nil || e.Request == nil {
 		return false
@@ -176,11 +167,8 @@ func scrub(event *sentry.Event, _ *sentry.EventHint) *sentry.Event {
 		}
 	}
 
-	// One exception value, not the chain. sentry-go walks Unwrap and
-	// serialises every error it reaches, outermost last; only the outermost is
-	// the message Report chose to send, and a fmt.Errorf message already
-	// carries what it wraps, so the rest add disclosure and nothing else
-	// (defect D20). MaxErrorDepth cannot express this: zero means the default.
+	// Outermost exception only: sentry-go serialises the whole Unwrap chain
+	// and MaxErrorDepth cannot express "one" (zero means the default).
 	if n := len(event.Exception); n > 1 {
 		event.Exception = event.Exception[n-1:]
 		event.Exception[0].Mechanism = nil

@@ -19,8 +19,6 @@ import (
 	"medikube/internal/testsupport/phileak"
 )
 
-// answered builds a request event whose response has already been written
-// with status, or not written at all when status is zero.
 func answered(t *testing.T, status int) *core.RequestEvent {
 	t.Helper()
 
@@ -35,9 +33,6 @@ func answered(t *testing.T, status int) *core.RequestEvent {
 	return e
 }
 
-// enumerationOracle is the shape PocketBase's password-reset handler produces:
-// a 204 already on the wire, then an error carrying the submitted address so
-// that its own activity logger can record it (defect D20).
 func enumerationOracle() error {
 	return fmt.Errorf("failed to fetch users record with email %s: %w", emailSentinel, errors.New("sql: no rows in result set"))
 }
@@ -119,10 +114,6 @@ func TestRecordableWithholdsTheCauseBelowAServerFailure(t *testing.T) {
 	assert.NoError(t, Recordable(answered(t, 0), nil), "nil in, nil out") //nolint:testifylint // nil is the assertion
 }
 
-// TestRequestLoggerWithholdsTheEnumerationOracle is the log half of defect
-// D20: the line for a 204 that PocketBase paired with an error must not carry
-// the address, because whether the line exists at all is then an oracle for
-// whether the address has an account (FR-073).
 func TestRequestLoggerWithholdsTheEnumerationOracle(t *testing.T) {
 	t.Parallel()
 
@@ -166,7 +157,6 @@ func reporterInto(t *testing.T, transport *phileak.SentryTransport) *Reporter {
 	return reporter
 }
 
-// TestSentryReportWithholdsTheEnumerationOracle is the Sentry half of D20.
 func TestSentryReportWithholdsTheEnumerationOracle(t *testing.T) {
 	t.Parallel()
 
@@ -182,9 +172,6 @@ func TestSentryReportWithholdsTheEnumerationOracle(t *testing.T) {
 	assertNoSentinelInEnvelope(t, events[0])
 }
 
-// TestSentryReportsOneExceptionValueNotTheChain pins the scrubber's
-// truncation: sentry-go serialises every error Unwrap reaches, and only the
-// outermost message is something the reporter chose to send.
 func TestSentryReportsOneExceptionValueNotTheChain(t *testing.T) {
 	t.Parallel()
 

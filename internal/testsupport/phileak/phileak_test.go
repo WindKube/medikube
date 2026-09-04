@@ -365,20 +365,8 @@ type knownLeak struct {
 // registerCap stops the register becoming the place findings go to die.
 const registerCap = 3
 
-// knownLeaks is EMPTY, and the guard below fails if an entry stops being true,
-// so the register cannot rot into a list of things that used to be so.
-//
-// It held two entries once, both found by this suite on its first real run and
-// both fixed by internal/obs.Recordable (defect D20): PocketBase's native
-// password-reset handler answers 204 whether or not the address has an
-// account and then returns "failed to fetch users record with email <address>"
-// so that its own activity logger can record it. MediKube unbinds that logger
-// and wrote obs.Cause(err) in its place, which put the address — and an
-// account-enumeration oracle, since the line existed only when the address had
-// no account — into the log stream and, through the reporter, into Sentry.
-// Below a server failure the recorded cause is now MediKube's own domain
-// sentinel or nothing, and the Sentry scrubber keeps one exception value rather
-// than the whole Unwrap chain.
+// knownLeaks is empty. It held D20's two entries, both closed by
+// obs.Recordable; the guard below fails on any entry that stops being true.
 var knownLeaks = []knownLeak{}
 
 type leakReport struct {
