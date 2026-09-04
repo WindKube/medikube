@@ -117,10 +117,11 @@ func CorrelationID(ctx context.Context) string {
 func record(log zerolog.Logger, e *core.RequestEvent, err error, took time.Duration) {
 	event := log.Info()
 	if err != nil {
-		// Cause, not err: PocketBase's ApiError renders as the vague public
-		// message a client is shown, and the fact worth recording — the panic,
-		// the driver failure — is behind it.
-		event = log.Error().Err(Cause(err))
+		// Recordable, not err: PocketBase's ApiError renders as the vague
+		// public message a client is shown and the fact worth recording is
+		// behind it — and below a server failure that fact is composed from
+		// what the request submitted, so it is withheld (defect D20).
+		event = log.Error().Err(Recordable(e, err))
 	}
 
 	if e.Auth != nil {
