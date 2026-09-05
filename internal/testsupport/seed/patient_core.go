@@ -91,9 +91,10 @@ func Practitioners() []directory.Practitioner {
 // photo), her child and her parent; Account B's self-record only, the
 // isolation counterparty every stranger test addresses Account A's ids as.
 //
-// Medications on the self-record and the parent are Medications' own rows
-// (mkmedamara*), still attributed by `owner` — phase 002 does not repoint
-// medications; research D-13's migration is a later phase's.
+// Medications on the self-record and the parent are attributed by `patient`
+// (research D-13's repointing): Medications' own rows (mkmedamara*) sit on the
+// self-record, and mkmedemeka* sits on the parent, so a test can address two
+// patients under one account.
 func Patients() []person.Patient {
 	return []person.Patient{
 		{

@@ -97,6 +97,15 @@
           "notes": {
             "type": "string"
           },
+          "patient": {
+            "type": "string"
+          },
+          "pharmacy": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
           "route": {
             "type": "string"
           },
@@ -114,7 +123,8 @@
           }
         },
         "required": [
-          "name"
+          "name",
+          "patient"
         ],
         "type": "object"
       },
@@ -150,6 +160,12 @@
             "type": "string"
           },
           "notes": {
+            "type": "string"
+          },
+          "pharmacy": {
+            "type": "string"
+          },
+          "practitioner": {
             "type": "string"
           },
           "route": {
@@ -294,6 +310,15 @@
           "notes": {
             "type": "string"
           },
+          "patient": {
+            "type": "string"
+          },
+          "pharmacy": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
           "route": {
             "type": "string"
           },
@@ -322,6 +347,7 @@
           "id",
           "kind",
           "name",
+          "patient",
           "started_on",
           "status",
           "updated_at"
@@ -1676,6 +1702,15 @@
         "operationId": "listRecords",
         "parameters": [
           {
+            "description": "The patient whose records are listed. Required: absent is 400 (research D-13).",
+            "in": "query",
+            "name": "patient",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "description": "Restrict to these registered path segments. Absent means every kind. Comma-separated; whitespace is not trimmed.",
             "in": "query",
             "name": "kind",
@@ -1807,6 +1842,15 @@
             }
           },
           {
+            "description": "The patient whose records are listed. Required: absent is 400 (research D-13).",
+            "in": "query",
+            "name": "patient",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "description": "Case-insensitive substring match over the kind's searchable text.",
             "in": "query",
             "name": "q",
@@ -1918,7 +1962,7 @@
         "summary": "One kind's records for the signed-in account, cursor-paginated."
       },
       "post": {
-        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nThe owner is taken from the session. The request body has no owner member at all, so re-attribution is impossible by shape rather than by a runtime check (FR-032).",
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nThe owner is taken from the session. The request body has no owner member at all, so re-attribution is impossible by shape rather than by a runtime check (FR-032). The record is filed against the `patient` the body names, which must belong to the caller's own account (research D-13).",
         "operationId": "createRecord",
         "parameters": [
           {
@@ -2328,6 +2372,15 @@
         "operationId": "streamRecords",
         "parameters": [
           {
+            "description": "The patient whose records are streamed. Required: absent is 400 (research D-13).",
+            "in": "query",
+            "name": "patient",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "description": "Restrict to these registered path segments. Absent means every kind. Comma-separated; whitespace is not trimmed.",
             "in": "query",
             "name": "kind",
@@ -2346,6 +2399,16 @@
               }
             },
             "description": "A Datastar element stream. Two event names are sent and no others: `datastar-patch-elements` for a record that was created, changed or removed, and `datastar-patch-signals` for the heartbeat."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`invalid_token` for a recovery or confirmation token that is expired, already used or tampered with — one code for all three, so no token's former existence is disclosed — or `invalid_cursor` for a forged, tampered or unparseable cursor."
           },
           "401": {
             "content": {
