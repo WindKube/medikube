@@ -103,6 +103,16 @@ func (h *patientHandlers) renderChart(ctx context.Context, actor access.Actor, c
 	}, nil
 }
 
+// TargetExists is targetExists, exported so internal/web/page can resolve the
+// same answer for the same reason the JSON handler does: the chart carries
+// no separate existence store (research D-22), and there is exactly one way
+// to check it.
+func TargetExists(ctx context.Context, records Resolve, actor access.Actor, event domainaudit.Event) bool {
+	h := &patientHandlers{records: records}
+
+	return h.targetExists(ctx, actor, event)
+}
+
 // targetExists resolves whether an audited target row still exists, with no
 // query of its own for a target_kind this build cannot address: the chart
 // carries no separate existence store (research D-22), so this is answered

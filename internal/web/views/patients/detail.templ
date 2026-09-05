@@ -1,6 +1,11 @@
 package patients
 
-import "medikube/internal/web/views/ids"
+import (
+	"strconv"
+
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
 
 const patientChartRegion = "Patient chart"
 
@@ -11,25 +16,37 @@ templ PatientDetail(props PatientDetailProps) {
 	<section
 		id={ ids.PatientDetail(props.Patient.ID) }
 		aria-label={ patientChartRegion }
+		if !props.Patient.IsSelfRecord {
+			data-signals={ "{" + DeleteConfirmSignal + ": false, etag: " + strconv.Quote(props.Patient.Version) + "}" }
+		}
 		class="flex flex-col gap-4"
 	>
-		<div class="flex items-center gap-4">
-			@PatientPhoto(PatientPhotoProps{
-				PatientID: props.Patient.ID,
-				PhotoURL:  props.Patient.PhotoURL,
-				Name:      props.Patient.FullName(),
-			})
-			<div>
-				<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">
-					{ props.Patient.FullName() }
-					if props.Patient.IsSelfRecord {
-						<span class="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800 dark:bg-teal-900 dark:text-teal-200">{ selfMarker }</span>
+		<div class="flex items-center justify-between gap-4">
+			<div class="flex items-center gap-4">
+				@PatientPhoto(PatientPhotoProps{
+					PatientID: props.Patient.ID,
+					PhotoURL:  props.Patient.PhotoURL,
+					Name:      props.Patient.FullName(),
+				})
+				<div>
+					<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">
+						{ props.Patient.FullName() }
+						if props.Patient.IsSelfRecord {
+							<span class="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800 dark:bg-teal-900 dark:text-teal-200">{ selfMarker }</span>
+						}
+					</h1>
+					if props.Patient.Age != "" {
+						<p class="text-sm text-slate-600 dark:text-slate-400">{ props.Patient.Age }</p>
 					}
-				</h1>
-				if props.Patient.Age != "" {
-					<p class="text-sm text-slate-600 dark:text-slate-400">{ props.Patient.Age }</p>
-				}
+				</div>
 			</div>
+			if !props.Patient.IsSelfRecord {
+				<button
+					type="button"
+					data-on:click={ "$" + DeleteConfirmSignal + " = true" }
+					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
+				>Delete</button>
+			}
 		</div>
 		if len(props.Patient.Entries()) > 0 {
 			<dl class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
@@ -44,6 +61,55 @@ templ PatientDetail(props PatientDetailProps) {
 					</div>
 				}
 			</dl>
+		}
+		if props.Empty() {
+			@components.EmptyState(components.EmptyStateProps{
+				ID:    ids.PatientEmpty(),
+				Title: "Nothing recorded yet",
+				Body:  "Every kind of record for this person starts here, at zero.",
+			})
+		} else {
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+				for _, tile := range props.Tiles {
+					<a
+						href={ templ.SafeURL(tile.Href) }
+						class="rounded-lg border border-slate-200 p-4 hover:border-teal-600 dark:border-slate-800"
+					>
+						<p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{ tile.Label }</p>
+						if tile.Empty() {
+							<p class="mt-1 text-sm text-slate-600 dark:text-slate-400">None yet — add the first one</p>
+						} else {
+							<p class="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">{ strconv.Itoa(tile.Count) }</p>
+						}
+					</a>
+				}
+			</div>
+			if len(props.Activity) > 0 {
+				<div>
+					<h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Recent activity</h2>
+					<ul class="mt-2 flex flex-col gap-1">
+						for _, item := range props.Activity {
+							<li class="text-sm text-slate-600 dark:text-slate-400">
+								if item.Href != "" {
+									<a href={ templ.SafeURL(item.Href) } class="hover:underline">{ item.Text }</a>
+								} else {
+									{ item.Text }
+								}
+								<span class="text-slate-400 dark:text-slate-600"> — { item.When }</span>
+							</li>
+						}
+					</ul>
+				</div>
+			}
+		}
+		if !props.Patient.IsSelfRecord {
+			@DeleteConfirm(DeleteConfirmProps{
+				PatientID:    props.Patient.ID,
+				Name:         props.Patient.FullName(),
+				TotalRecords: props.TotalRecords,
+				Version:      props.Patient.Version,
+				DeleteHref:   props.Patient.Links.Record,
+			})
 		}
 	</section>
 }

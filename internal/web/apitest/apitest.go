@@ -420,6 +420,7 @@ func handlerTable(
 	patientPages, err := page.PatientPages(page.PatientDeps{
 		Resolve: patientResolve,
 		UnitOf:  unitSystemOf(accounts.Service),
+		Records: resolve,
 	})
 	if err != nil {
 		return nil, err

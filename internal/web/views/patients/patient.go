@@ -1,6 +1,7 @@
 package patients
 
 import (
+	"strconv"
 	"time"
 
 	"medikube/internal/domain"
@@ -305,11 +306,172 @@ type PatientListProps struct {
 	CreateHref   string
 	PreviousHref string
 	NextHref     string
+
+	// Notice is FR-017/US3-3's explanation for a stale window: a person the
+	// account was just looking at, or just deleted, that this list no longer
+	// carries. Empty renders nothing.
+	Notice string
 }
 
-// PatientDetailProps is one patient's own chart header.
+// ChartTile is one kind's own tile (contracts/patient-chart.md): its label,
+// its own empty state when the count is zero, and where "add the first one"
+// goes.
+type ChartTile struct {
+	Label string
+	Href  string
+	Count int
+}
+
+// Empty answers whether the patient has no rows of this kind yet — FR-030's
+// own tile-level empty state, distinct from the chart's page-level one.
+func (t ChartTile) Empty() bool { return t.Count == 0 }
+
+// NewChartTiles renders one tile per count entry, in the order the chart
+// summary sent them — the registry's own order, never re-sorted here.
+func NewChartTiles(patientID string, counts []CountTile) []ChartTile {
+	tiles := make([]ChartTile, 0, len(counts))
+
+	for _, entry := range counts {
+		tiles = append(tiles, ChartTile{
+			Label: entry.Label,
+			Href:  entry.Path + "?patient=" + patientID,
+			Count: entry.Count,
+		})
+	}
+
+	return tiles
+}
+
+// CountTile is the page's own read of one of getPatientChart's `counts`
+// entries — a plain struct so this package need not import internal/web/api
+// for three strings and an int.
+type CountTile struct {
+	Label string
+	Path  string
+	Count int
+}
+
+// ActivityItem is one recent-activity entry, already rendered to words: no
+// name, value, note or filename ever reaches this type (FR-029), and a
+// deleted target links nowhere.
+type ActivityItem struct {
+	Text string
+	When string
+	Href string
+}
+
+// PatientDetailProps is one patient's own chart: the header, the per-kind
+// tiles and the recent-activity list, all inside the one landmark.
 type PatientDetailProps struct {
-	Patient PatientView
+	Patient      PatientView
+	Tiles        []ChartTile
+	Activity     []ActivityItem
+	TotalRecords int
+}
+
+// activityKindWords is every target_kind the chart can show this phase
+// (data-model §5's own trigger table): a patient-scoped event names only
+// "patient" or one of internal/records' registered kinds.
+var activityKindWords = map[string]string{
+	"patient":    "This person's record",
+	"medication": "A medication",
+}
+
+func activityKindWord(targetKind string) string {
+	if word, known := activityKindWords[targetKind]; known {
+		return word
+	}
+
+	return "A record"
+}
+
+// ActivityText renders one audit action to the words FR-029 asks for: what
+// kind of record changed and what happened, never a name, a value or a note.
+func ActivityText(action, targetKind string) string {
+	subject := activityKindWord(targetKind)
+
+	switch action {
+	case "create":
+		return subject + " was added"
+	case "update":
+		return subject + " was updated"
+	case "delete":
+		return subject + " was deleted"
+	case "switch_patient":
+		return "This person became the one in view"
+	case "read_sensitive":
+		return "A photograph was viewed"
+	case "access_denied":
+		return "An attempt to reach this person was refused"
+	default:
+		return subject + ": " + action
+	}
+}
+
+// NewActivityItems renders the chart's recent-activity list, newest first —
+// exactly the order it arrived in. targetHref answers the empty string for
+// an entry whose target no longer exists, so the item renders as plain text
+// and links nowhere (FR-029, US4-5).
+func NewActivityItems(events []ActivityEventView, targetHref func(kind, id string) string) []ActivityItem {
+	items := make([]ActivityItem, 0, len(events))
+
+	for _, event := range events {
+		href := ""
+		if event.TargetExists {
+			href = targetHref(event.TargetKind, event.TargetID)
+		}
+
+		items = append(items, ActivityItem{
+			Text: ActivityText(event.Action, event.TargetKind),
+			When: event.OccurredAt.Format("2 January"),
+			Href: href,
+		})
+	}
+
+	return items
+}
+
+// ActivityEventView is one audit event as this package needs it: the four
+// members FR-029 permits and nothing else.
+type ActivityEventView struct {
+	OccurredAt   time.Time
+	Action       string
+	TargetKind   string
+	TargetID     string
+	TargetExists bool
+}
+
+// DeleteConfirmProps is FR-048's confirmation: the person's own name and how
+// many records will be destroyed, read from the chart summary the page
+// already loaded rather than a second, dedicated preview endpoint (research
+// D-26).
+type DeleteConfirmProps struct {
+	PatientID    string
+	Name         string
+	TotalRecords int
+	Version      string
+	DeleteHref   string
+}
+
+// Consequence is FR-048's own sentence: how many records go with the person.
+func (p DeleteConfirmProps) Consequence() string {
+	switch p.TotalRecords {
+	case 0:
+		return "This is permanent. There is no recycle bin and no undo."
+	case 1:
+		return "This is permanent and destroys the one record kept for them. There is no recycle bin and no undo."
+	default:
+		return "This is permanent and destroys all " + strconv.Itoa(p.TotalRecords) +
+			" records kept for them. There is no recycle bin and no undo."
+	}
+}
+
+// Empty is FR-030/US4-2's page-level empty state: nothing recorded and
+// nothing to show in the activity list either, which is when the whole
+// tile-and-activity section renders as one @EmptyState rather than a grid of
+// zero-count tiles.
+func (p PatientDetailProps) Empty() bool {
+	return p.TotalRecords == 0 && len(p.Activity) == 0
 }
 
 // PatientFormProps is the create form and the edit form: the same nine
