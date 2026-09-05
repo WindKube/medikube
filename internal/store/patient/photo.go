@@ -103,7 +103,7 @@ func (p *PhotoStore) Put(ctx context.Context, ownerID, patientID string, upload 
 		if txApp.TxInfo() != nil {
 			txApp.TxInfo().OnComplete(func(txErr error) error {
 				if txErr != nil {
-					return nil
+					return nil //nolint:nilerr // the write itself rolled back; there is no original on disk to thumbnail and no new failure to report
 				}
 
 				return p.createThumbs(basePath, filename)
@@ -181,7 +181,7 @@ func (p *PhotoStore) Serve(ctx context.Context, w http.ResponseWriter, r *http.R
 	if err != nil {
 		return fmt.Errorf("opening the filesystem to serve a photograph: %w", err)
 	}
-	defer fsys.Close()
+	defer func() { _ = fsys.Close() }()
 
 	w.Header().Set("Cache-Control", "private, no-store")
 	w.Header().Set("Vary", "Cookie, Authorization")
@@ -218,7 +218,7 @@ func (p *PhotoStore) createThumbs(basePath, filename string) error {
 	if err != nil {
 		return fmt.Errorf("opening the filesystem for thumbnails: %w", err)
 	}
-	defer fsys.Close()
+	defer func() { _ = fsys.Close() }()
 
 	original := basePath + "/" + filename
 
@@ -277,7 +277,7 @@ func mapPhotoError(err error) error {
 
 func mapFileValidationSubstring(message string) error {
 	switch {
-	case strings.Contains(message, "unsupported file type"):
+	case strings.Contains(message, "unsupported file type"), strings.Contains(message, "mime type must be one of"):
 		return domain.ErrUnsupportedMedia
 	case strings.Contains(message, "the maximum allowed file size is"):
 		return domain.ErrTooLarge

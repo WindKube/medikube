@@ -1,11 +1,11 @@
 package patienttest
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"net/http"
 	"slices"
 	"strconv"
 	"strings"
@@ -363,7 +363,7 @@ func (p *PhotoStore) Put(_ context.Context, _, patientID string, upload patient.
 	buf := make([]byte, 512)
 
 	n, _ := upload.Reader.Read(buf)
-	sniffed := http.DetectContentType(buf[:n])
+	sniffed := sniffImageType(buf[:n])
 
 	if !slices.Contains(p.allowed, sniffed) {
 		return patient.PhotoMeta{}, domain.ErrUnsupportedMedia
@@ -373,6 +373,24 @@ func (p *PhotoStore) Put(_ context.Context, _, patientID string, upload patient.
 	p.photos[patientID] = photoRecord{contentType: sniffed, sizes: []string{"original", "100x100t", "400x400f"}, updatedAt: now}
 
 	return patient.PhotoMeta{Sizes: []string{"original", "100x100t", "400x400f"}, UpdatedAt: now.Format(time.RFC3339)}, nil
+}
+
+// sniffImageType is this fake's own content sniff — from the bytes, never
+// the declared name, the same rule FR-008 states — kept to the three formats
+// contracts/patient-photo.md ever allows so this package (internal/service
+// may import only the standard library and zerolog) needs no net/http or
+// third-party sniffer to stand in for PocketBase's real one.
+func sniffImageType(buf []byte) string {
+	switch {
+	case bytes.HasPrefix(buf, []byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}):
+		return "image/png"
+	case bytes.HasPrefix(buf, []byte{0xFF, 0xD8, 0xFF}):
+		return "image/jpeg"
+	case len(buf) >= 12 && bytes.Equal(buf[0:4], []byte("RIFF")) && bytes.Equal(buf[8:12], []byte("WEBP")):
+		return "image/webp"
+	default:
+		return "application/octet-stream"
+	}
 }
 
 func (p *PhotoStore) Remove(_ context.Context, _, patientID string) error {

@@ -166,8 +166,8 @@ func (h *patientHandlers) create(e *core.RequestEvent, actor access.Actor) error
 	}
 
 	var body PatientCreate
-	if err := web.Decode(e, &body); err != nil {
-		return err
+	if decodeErr := web.Decode(e, &body); decodeErr != nil {
+		return decodeErr
 	}
 
 	draft, err := body.Draft()
@@ -230,8 +230,8 @@ func (h *patientHandlers) update(e *core.RequestEvent, actor access.Actor) error
 	}
 
 	var body PatientPatch
-	if err := web.Decode(e, &body); err != nil {
-		return err
+	if decodeErr := web.Decode(e, &body); decodeErr != nil {
+		return decodeErr
 	}
 
 	patch, err := body.ToServicePatch()

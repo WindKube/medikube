@@ -76,7 +76,7 @@ func (h *patientPhotoHandlers) put(e *core.RequestEvent, actor access.Actor) err
 	if err != nil {
 		return err
 	}
-	defer upload.file.Close()
+	defer func() { _ = upload.file.Close() }()
 
 	meta, err := svc.SetPhoto(e.Request.Context(), actor, id, patient.Upload{
 		Reader: upload.file,
