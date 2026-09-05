@@ -1,3 +1,5 @@
+// Package injury is the injury kind's use cases: the ports it declares, and
+// the service that authorizes and validates against them.
 package injury
 
 import (

@@ -134,7 +134,7 @@ func TestListNarrowsByUnresolved(t *testing.T) {
 	page, err := h.service.List(t.Context(), actor(), injury.Query{PatientID: injurytest.PatientID, Unresolved: true})
 	require.NoError(t, err)
 
-	var found []string
+	found := make([]string, 0, len(page.Items))
 	for _, item := range page.Items {
 		found = append(found, item.ID)
 	}

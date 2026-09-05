@@ -78,10 +78,12 @@ const (
 var checkpointPackagesOutsideTheRule = map[string]string{
 	"internal/service/access": "the checkpoint itself. It is what the rule points at, so requiring it to call something to authorize would be requiring a second checkpoint — which is the thing this story exists to prevent (T239)",
 
-	"internal/records/recordstest":               "the record family's hand-written fakes (T108). A fake kind service exists to be driven without a database or a checkpoint; a fake that authorized would be testing itself",
-	"internal/service/medication/medicationtest": "the medication contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, and its repository fake answers from a map",
-	"internal/service/identity/identitytest":     "the account contract suite and its in-memory fake, for the same reason",
-	"internal/service/patient/patienttest":       "the patient contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, for the same reason",
+	"internal/records/recordstest":                   "the record family's hand-written fakes (T108). A fake kind service exists to be driven without a database or a checkpoint; a fake that authorized would be testing itself",
+	"internal/service/medication/medicationtest":     "the medication contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, and its repository fake answers from a map",
+	"internal/service/immunization/immunizationtest": "the immunization contract suite and its in-memory fake, for the same reason",
+	"internal/service/injury/injurytest":             "the injury contract suite and its in-memory fake, for the same reason",
+	"internal/service/identity/identitytest":         "the account contract suite and its in-memory fake, for the same reason",
+	"internal/service/patient/patienttest":           "the patient contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, for the same reason",
 }
 
 // exemption is one method the rule does not reach, and why.
