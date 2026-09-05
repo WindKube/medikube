@@ -143,8 +143,8 @@ func (h *practitionerHandlers) create(e *core.RequestEvent, actor access.Actor) 
 	}
 
 	var body PractitionerCreate
-	if err := web.Decode(e, &body); err != nil {
-		return err
+	if decodeErr := web.Decode(e, &body); decodeErr != nil {
+		return decodeErr
 	}
 
 	created, err := service.Create(e.Request.Context(), actor, practitionerDraft(body))
@@ -183,8 +183,8 @@ func (h *practitionerHandlers) update(e *core.RequestEvent, actor access.Actor) 
 	}
 
 	var body PractitionerPatch
-	if err := web.Decode(e, &body); err != nil {
-		return err
+	if decodeErr := web.Decode(e, &body); decodeErr != nil {
+		return decodeErr
 	}
 
 	updated, err := service.Update(e.Request.Context(), actor, id, version, practitionerPatch(body))

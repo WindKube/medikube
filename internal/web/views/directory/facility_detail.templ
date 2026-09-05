@@ -1,0 +1,70 @@
+package directory
+
+import (
+	"strconv"
+
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
+
+const facilityConfirmSignal = "confirming_delete"
+
+const (
+	facilityDetailArticle = "Facility"
+	facilityConfirmTitle  = "Delete this facility?"
+	facilityConfirmBody   = "This is permanent. Any practitioner or medication naming it keeps its own record, with this reference cleared."
+	facilityConfirmLabel  = "Delete permanently"
+	facilityConfirmCancel = "Keep it"
+	facilityEditLabel     = "Edit"
+	facilityDeleteLabel   = "Delete"
+)
+
+// FacilityDetail is contracts/pages.md P6's landmark.
+templ FacilityDetail(props FacilityDetailProps) {
+	<article
+		id={ ids.DirectoryDetail(FacilitySegment, props.Facility.ID) }
+		aria-label={ facilityDetailArticle }
+		data-signals={ "{" + facilityConfirmSignal + ": false, etag: " + jsQuote(props.Facility.Version) + "}" }
+		class="flex flex-col"
+	>
+		<header class="flex flex-wrap items-start justify-between gap-3">
+			<h1
+				id={ ids.DirectoryDetailHeading(FacilitySegment, props.Facility.ID) }
+				tabindex="-1"
+				class="break-words text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ props.Facility.Name }</h1>
+			<div class="flex flex-wrap gap-2">
+				<a
+					href={ "#" + ids.DirectoryForm(FacilitySegment, props.Facility.ID) }
+					class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+				>{ facilityEditLabel }</a>
+				<button
+					type="button"
+					data-on:click={ "$" + facilityConfirmSignal + " = true" }
+					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
+				>{ facilityDeleteLabel }</button>
+			</div>
+		</header>
+		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+			for _, entry := range props.Facility.Entries() {
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				@directoryValue(entry)
+			}
+		</dl>
+		if props.Facility.UsagePractitioners > 0 || props.Facility.UsageRecords > 0 {
+			<p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
+				{ "Named by " + strconv.Itoa(props.Facility.UsagePractitioners) + " practitioner(s) and " + strconv.Itoa(props.Facility.UsageRecords) + " record(s)." }
+			</p>
+		}
+		@components.Confirm(components.ConfirmProps{
+			ID:           ids.DirectoryConfirm(FacilitySegment, props.Facility.ID),
+			Signal:       facilityConfirmSignal,
+			Title:        facilityConfirmTitle,
+			Subject:      props.Facility.Name,
+			Consequence:  facilityConfirmBody,
+			ConfirmLabel: facilityConfirmLabel,
+			ConfirmOn:    "@delete(" + jsQuote(props.Facility.Links.Record) + ", {headers: {'If-Match': $etag}})",
+			CancelLabel:  facilityConfirmCancel,
+		})
+	</article>
+}

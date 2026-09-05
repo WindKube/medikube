@@ -469,6 +469,30 @@ func pageRoutes() []Route {
 			Landmark: `article[name="Medication"]`, SmokeURL: list + "/" + seed.NameOnlyID,
 		},
 		{
+			OpID: "practitionerListPage", Method: http.MethodGet, Path: "/practitioners",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "contracts/pages.md P3: the account's practitioner directory.",
+			Landmark: `region[name="Practitioners"]`, SmokeURL: "/practitioners",
+		},
+		{
+			OpID: "practitionerDetailPage", Method: http.MethodGet, Path: "/practitioners/{id}",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "contracts/pages.md P4: one practitioner, with usage.",
+			Landmark: `article[name="Practitioner"]`, SmokeURL: "/practitioners/" + seed.AccountAPractitionerID,
+		},
+		{
+			OpID: "facilityListPage", Method: http.MethodGet, Path: "/facilities",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "contracts/pages.md P5: the account's directory of places of care.",
+			Landmark: `region[name="Facilities"]`, SmokeURL: "/facilities",
+		},
+		{
+			OpID: "facilityDetailPage", Method: http.MethodGet, Path: "/facilities/{id}",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "contracts/pages.md P6: one facility, with usage.",
+			Landmark: `article[name="Facility"]`, SmokeURL: "/facilities/" + seed.AccountAFacilityPracticeID,
+		},
+		{
 			OpID: "settingsPage", Method: http.MethodGet, Path: settingsPath,
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "Display name, preferences, address confirmation and the danger zone.",

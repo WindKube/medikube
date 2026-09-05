@@ -1,0 +1,128 @@
+package shared
+
+import "medikube/internal/web/views/ids"
+
+// PickerOption is one row a picker offers: enough to render and to submit.
+type PickerOption struct {
+	ID    string
+	Label string
+}
+
+// PickerProps is FR-039's type-ahead picker, generic over practitioners and
+// facilities: a search box seeded with every option this account already has
+// (searchable by typing, without a live round trip this phase has no
+// fragment-rendering endpoint for), a hidden field carrying the chosen id, and
+// an inline drawer that creates a new entry without leaving the page or
+// resetting anything else the enclosing form holds — the drawer mutates only
+// its own signals, so the record being written stays exactly as typed
+// (FR-039).
+type PickerProps struct {
+	// Name is the enclosing form's field name the chosen id binds to, e.g.
+	// "facility" on a practitioner form.
+	Name  string
+	Label string
+
+	// FormID namespaces every element this component mints, so two pickers on
+	// one page (or a picker beside the record's own form) cannot collide.
+	FormID string
+
+	Options  []PickerOption
+	Selected PickerOption
+
+	// CreateHref is where the drawer's own form posts. The response is read as
+	// JSON — {id, name} — and merged into this picker's signals directly,
+	// which is what lets the drawer close without a page reload (FR-039).
+	CreateHref string
+
+	Required bool
+}
+
+func (p PickerProps) idSignal() string    { return p.FormID + "_" + p.Name + "_id" }
+func (p PickerProps) labelSignal() string { return p.FormID + "_" + p.Name + "_label" }
+func (p PickerProps) drawerSignal() string { return p.FormID + "_" + p.Name + "_drawer" }
+func (p PickerProps) draftSignal() string  { return p.FormID + "_" + p.Name + "_draft" }
+
+// DirectoryPicker is the component. It never spells a kind's own vocabulary —
+// CreateHref, Name and Options are all supplied — so the same markup serves
+// every directory this or a later phase adds.
+templ DirectoryPicker(props PickerProps) {
+	<div
+		id={ ids.Field(props.FormID, props.Name) + "-picker" }
+		data-signals={ pickerSignals(props) }
+		class="flex flex-col gap-2"
+	>
+		<label for={ ids.Field(props.FormID, props.Name) + "-search" } class="text-sm font-medium text-slate-900 dark:text-slate-100">
+			{ props.Label }
+		</label>
+		<input type="hidden" name={ props.Name } data-bind={ "$" + props.idSignal() }/>
+		<input
+			id={ ids.Field(props.FormID, props.Name) + "-search" }
+			type="text"
+			list={ ids.Field(props.FormID, props.Name) + "-options" }
+			data-bind={ "$" + props.labelSignal() }
+			data-on:change={ pickerChangeExpr(props) }
+			required?={ props.Required }
+			class="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		/>
+		<datalist id={ ids.Field(props.FormID, props.Name) + "-options" }>
+			for _, option := range props.Options {
+				<option value={ option.Label } data-id={ option.ID }></option>
+			}
+		</datalist>
+		<button
+			type="button"
+			data-on:click={ "$" + props.drawerSignal() + " = true" }
+			class="self-start text-sm font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900 dark:text-teal-300"
+		>Add a new one</button>
+		<div data-show={ "$" + props.drawerSignal() } class="rounded-md border border-slate-300 p-3 dark:border-slate-600">
+			<label class="text-sm font-medium text-slate-900 dark:text-slate-100">Name</label>
+			<input
+				type="text"
+				data-bind={ "$" + props.draftSignal() }
+				class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+			/>
+			<div class="mt-2 flex gap-3">
+				<button
+					type="button"
+					data-on:click={ pickerCreateExpr(props) }
+					class="rounded-md bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"
+				>Add</button>
+				<button
+					type="button"
+					data-on:click={ "$" + props.drawerSignal() + " = false" }
+					class="text-sm font-medium text-slate-700 dark:text-slate-300"
+				>Cancel</button>
+			</div>
+		</div>
+	</div>
+}
+
+func pickerSignals(props PickerProps) string {
+	return "{" + props.idSignal() + ": " + jsQuoteShared(props.Selected.ID) +
+		", " + props.labelSignal() + ": " + jsQuoteShared(props.Selected.Label) +
+		", " + props.drawerSignal() + ": false, " + props.draftSignal() + ": ''}"
+}
+
+// pickerChangeExpr resolves the typed label back to an id via the datalist's
+// own options: a name alone is ambiguous the moment two entries share one, so
+// the match is against the <option data-id> the browser just confirmed rather
+// than the text.
+func pickerChangeExpr(props PickerProps) string {
+	optionsID := jsQuoteShared(ids.Field(props.FormID, props.Name) + "-options")
+	return "(() => { const opt = [...document.getElementById(" + optionsID +
+		").options].find(o => o.value === $" + props.labelSignal() + "); $" + props.idSignal() +
+		" = opt ? opt.dataset.id : '' })()"
+}
+
+// pickerCreateExpr is the inline drawer's own submission. It reads the JSON
+// body directly rather than going through Datastar's SSE actions, because
+// this phase's directory endpoints answer plain JSON and not a fragment to
+// merge — and because doing the fetch here, instead of navigating anywhere,
+// is the whole of what keeps the record the enclosing form is mid-writing
+// exactly as typed (FR-039).
+func pickerCreateExpr(props PickerProps) string {
+	return "fetch(" + jsQuoteShared(props.CreateHref) + ", {method: 'POST', headers: {'Content-Type': 'application/json'}, " +
+		"body: JSON.stringify({name: $" + props.draftSignal() + "})})" +
+		".then(r => r.json()).then(d => { $" + props.idSignal() + " = d.id; $" + props.labelSignal() +
+		" = d.name; $" + props.drawerSignal() + " = false; $" + props.draftSignal() + " = '' })"
+}

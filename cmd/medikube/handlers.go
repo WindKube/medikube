@@ -171,15 +171,15 @@ func operations(
 	// cursor codec, and the codec is keyed from a secret the migrations have
 	// only just created — see directoryFamily.
 	practitionerResolve := api.PractitionerResolve(func() (*practitionersvc.Service, error) {
-		services, err := resolveDirectory()
+		services, resolveErr := resolveDirectory()
 
-		return services.Practitioner, err
+		return services.Practitioner, resolveErr
 	})
 
 	facilityResolve := api.FacilityResolve(func() (*facilitysvc.Service, error) {
-		services, err := resolveDirectory()
+		services, resolveErr := resolveDirectory()
 
-		return services.Facility, err
+		return services.Facility, resolveErr
 	})
 
 	practitionerOps, err := api.PractitionerHandlers(api.PractitionerDeps{
@@ -197,6 +197,21 @@ func operations(
 
 	maps.Copy(table, practitionerOps)
 	maps.Copy(table, facilityOps)
+
+	// contracts/pages.md P3-P6, the same four resolvers as the JSON operations
+	// above.
+	practitionerPages, err := page.PractitionerHandlers(practitionerResolve, facilityResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	facilityPages, err := page.FacilityHandlers(facilityResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, practitionerPages)
+	maps.Copy(table, facilityPages)
 
 	// The two embedded assets every page's head links. Neither needs the
 	// application: they are compiled into the binary, so they are wired here
@@ -550,6 +565,8 @@ func directoryOperations() []string {
 		api.OpUpdatePractitioner, api.OpDeletePractitioner,
 		api.OpListFacilities, api.OpCreateFacility, api.OpGetFacility,
 		api.OpUpdateFacility, api.OpDeleteFacility,
+		page.OpPractitionerListPage, page.OpPractitionerDetailPage,
+		page.OpFacilityListPage, page.OpFacilityDetailPage,
 	}
 }
 

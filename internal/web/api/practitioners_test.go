@@ -91,7 +91,7 @@ func TestListPractitioners(t *testing.T) {
 
 		list := answer.practitionerList(t)
 
-		var ids []string
+		ids := make([]string, 0, len(list.Items))
 		for _, item := range list.Items {
 			ids = append(ids, item.ID)
 		}

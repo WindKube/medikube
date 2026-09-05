@@ -90,8 +90,9 @@ func TestListFacilities(t *testing.T) {
 		answer := caller.get(facilitiesURL())
 		require.Equal(t, http.StatusOK, answer.Status, answer.Body)
 
-		var ids []string
-		for _, item := range answer.facilityList(t).Items {
+		items := answer.facilityList(t).Items
+		ids := make([]string, 0, len(items))
+		for _, item := range items {
 			ids = append(ids, item.ID)
 		}
 

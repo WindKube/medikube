@@ -677,14 +677,23 @@ func directoryHandlers(practitionerService *practitionersvc.Service, facilitySer
 		return nil, err
 	}
 
-	table := make(httproute.Handlers, len(practitionerOps)+len(facilityOps))
-
-	for opID, handler := range practitionerOps {
-		table[opID] = handler
+	practitionerPages, err := page.PractitionerHandlers(practitionerResolve, facilityResolve)
+	if err != nil {
+		return nil, err
 	}
 
-	for opID, handler := range facilityOps {
-		table[opID] = handler
+	facilityPages, err := page.FacilityHandlers(facilityResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	table := make(httproute.Handlers,
+		len(practitionerOps)+len(facilityOps)+len(practitionerPages)+len(facilityPages))
+
+	for _, group := range []httproute.Handlers{practitionerOps, facilityOps, practitionerPages, facilityPages} {
+		for opID, handler := range group {
+			table[opID] = handler
+		}
 	}
 
 	return table, nil

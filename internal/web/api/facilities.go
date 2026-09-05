@@ -111,8 +111,8 @@ func (h *facilityHandlers) create(e *core.RequestEvent, actor access.Actor) erro
 	}
 
 	var body FacilityCreate
-	if err := web.Decode(e, &body); err != nil {
-		return err
+	if decodeErr := web.Decode(e, &body); decodeErr != nil {
+		return decodeErr
 	}
 
 	created, err := service.Create(e.Request.Context(), actor, facilityDraft(body))
@@ -151,8 +151,8 @@ func (h *facilityHandlers) update(e *core.RequestEvent, actor access.Actor) erro
 	}
 
 	var body FacilityPatch
-	if err := web.Decode(e, &body); err != nil {
-		return err
+	if decodeErr := web.Decode(e, &body); decodeErr != nil {
+		return decodeErr
 	}
 
 	updated, err := service.Update(e.Request.Context(), actor, id, version, facilityPatch(body))
