@@ -56,6 +56,10 @@ func startMetrics(t *testing.T, cfg config.MetricsConfig) (*Metrics, *MetricsSer
 	return metrics, server
 }
 
+// A pooled connection that never carried a request keeps http.Server.Shutdown
+// waiting for its first five seconds, which is the whole cleanup budget.
+var scrapeClient = &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
+
 // scrape reads the exposition the way a Prometheus server would.
 func scrape(t *testing.T, address, token string) (int, string) {
 	t.Helper()
@@ -67,7 +71,7 @@ func scrape(t *testing.T, address, token string) (int, string) {
 		request.Header.Set("Authorization", "Bearer "+token)
 	}
 
-	response, err := http.DefaultClient.Do(request)
+	response, err := scrapeClient.Do(request)
 	require.NoError(t, err)
 
 	defer response.Body.Close()
@@ -273,7 +277,7 @@ func TestTheMetricsListenerServesNothingButTheMeasurements(t *testing.T) {
 			request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+server.Addr()+path, nil)
 			require.NoError(t, err)
 
-			response, err := http.DefaultClient.Do(request)
+			response, err := scrapeClient.Do(request)
 			require.NoError(t, err)
 
 			defer response.Body.Close()
