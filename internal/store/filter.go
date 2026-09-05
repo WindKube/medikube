@@ -42,6 +42,19 @@ const (
 	OpNotEqual Operator = "not_equal"
 	OpOneOf    Operator = "one_of"
 	OpContains Operator = "contains"
+	// OpGTE and OpLTE are the two halves of a date range (`?from=`/`?to=`,
+	// research D-05): each is one term, so a range is two Conditions ANDed by
+	// Build, never a single term neither half of this package's callers can
+	// spell as a filter string.
+	OpGTE Operator = "gte"
+	OpLTE Operator = "lte"
+	// OpAnyOf and OpAllOf are `?tags=&match=any|all`: membership in a
+	// MaxSelect:0 relation column, which PocketBase stores as a JSON array of
+	// ids in one text column. Every id is bound as its own parameter and
+	// compared with LIKE against the escaped JSON fragment — never IN, which
+	// tests scalar equality and would never match a multi-valued column.
+	OpAnyOf Operator = "any_of"
+	OpAllOf Operator = "all_of"
 )
 
 // Condition is one narrowing term. Build them with the constructors below
@@ -89,6 +102,29 @@ func Contains(column, value string) Condition {
 // silently, and looking exactly like a list that has no matches.
 func ContainsAny(value string, columns ...string) Condition {
 	return Condition{Columns: columns, Op: OpContains, Values: []string{value}}
+}
+
+// GTE and LTE are a date range's two halves. `?from=2026-01-01&to=2026-03-01`
+// is Query{Conditions: []Condition{GTE(col, from), LTE(col, to)}} — two
+// conjuncts, each applied only when its half of the range was given.
+func GTE(column, value string) Condition {
+	return Condition{Columns: []string{column}, Op: OpGTE, Values: []string{value}}
+}
+
+func LTE(column, value string) Condition {
+	return Condition{Columns: []string{column}, Op: OpLTE, Values: []string{value}}
+}
+
+// AnyOf is `?tags=a,b&match=any`: the column's relation carries at least one
+// of the given ids.
+func AnyOf(column string, ids ...string) Condition {
+	return Condition{Columns: []string{column}, Op: OpAnyOf, Values: ids}
+}
+
+// AllOf is `?tags=a,b&match=all`: the column's relation carries every one of
+// the given ids.
+func AllOf(column string, ids ...string) Condition {
+	return Condition{Columns: []string{column}, Op: OpAllOf, Values: ids}
 }
 
 // Query is a list request, expressed in columns rather than in a filter string.
@@ -625,12 +661,12 @@ func orderTerms(sortColumns []Column, sortKeys []domain.SortKey) []string {
 // parameter rather than the same string twice.
 func renderCondition(columns []Column, condition Condition, binder *paramBinder) (string, error) {
 	switch condition.Op {
-	case OpEqual, OpNotEqual, OpContains:
+	case OpEqual, OpNotEqual, OpContains, OpGTE, OpLTE:
 		if len(condition.Values) != 1 {
 			return "", fmt.Errorf("%w: %s takes exactly one value, not %d",
 				ErrInvalidQuery, condition.Op, len(condition.Values))
 		}
-	case OpOneOf:
+	case OpOneOf, OpAnyOf, OpAllOf:
 		if len(condition.Values) == 0 {
 			return "", fmt.Errorf("%w: %s of nothing matches nothing, which is a query nobody meant to ask",
 				ErrInvalidQuery, condition.Op)
@@ -655,9 +691,18 @@ func renderCondition(columns []Column, condition Condition, binder *paramBinder)
 
 	placeholders := make([]string, 0, len(condition.Values))
 
-	if condition.Op == OpContains {
+	switch condition.Op {
+	case OpContains:
 		placeholders = append(placeholders, binder.bind("%"+escapeLike(condition.Values[0])+"%"))
-	} else {
+	case OpAnyOf, OpAllOf:
+		// A MaxSelect:0 relation is stored as a JSON array of ids in one text
+		// column; membership is a LIKE against the id wrapped in its JSON
+		// quoting, not IN, which tests scalar equality against the whole
+		// column and would never match a multi-valued one.
+		for _, value := range condition.Values {
+			placeholders = append(placeholders, binder.bind(`%"`+escapeLike(value)+`"%`))
+		}
+	default:
 		for _, value := range condition.Values {
 			placeholders = append(placeholders, binder.bind(value))
 		}
@@ -689,6 +734,22 @@ func renderComparison(column Column, op Operator, placeholders []string) (string
 		return column.Expr + " LIKE " + placeholders[0] + ` ESCAPE '\'`, nil
 	case OpOneOf:
 		return column.Expr + " IN (" + strings.Join(placeholders, ", ") + ")", nil
+	case OpGTE:
+		return column.Expr + " >= " + placeholders[0], nil
+	case OpLTE:
+		return column.Expr + " <= " + placeholders[0], nil
+	case OpAnyOf, OpAllOf:
+		joiner := " OR "
+		if op == OpAllOf {
+			joiner = " AND "
+		}
+
+		parts := make([]string, 0, len(placeholders))
+		for _, p := range placeholders {
+			parts = append(parts, column.Expr+` LIKE `+p+` ESCAPE '\'`)
+		}
+
+		return "(" + strings.Join(parts, joiner) + ")", nil
 	default:
 		return "", fmt.Errorf("%w: %q is not one of this package's operators", ErrInvalidQuery, op)
 	}
