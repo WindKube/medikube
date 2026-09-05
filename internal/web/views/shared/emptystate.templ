@@ -1,0 +1,60 @@
+package shared
+
+// EmptyStateProps is FR-008's pair: a list with nothing recorded yet, and a
+// list with records that the current narrowing excludes. The two read
+// differently on purpose — the second alone offers to clear the narrowing —
+// so a caller builds one through NothingRecorded or NothingMatches rather than
+// filling the struct by hand.
+type EmptyStateProps struct {
+	// ID is the element a list's first row patches away, and the render
+	// target while none has arrived (ids.RecordEmpty).
+	ID    string
+	Title string
+	Body  string
+
+	// ClearOn is the Datastar expression that resets the narrowing. Empty
+	// means no clear affordance is offered — the "nothing recorded" variant,
+	// where there is no narrowing to blame.
+	ClearOn    string
+	ClearLabel string
+}
+
+// NothingRecorded is FR-008's first state: the kind has no records at all.
+func NothingRecorded(id, kindLabel string) EmptyStateProps {
+	return EmptyStateProps{
+		ID:    id,
+		Title: "No " + kindLabel + " recorded yet",
+		Body:  "Nothing has been recorded here yet.",
+	}
+}
+
+// NothingMatches is FR-008's second state: records exist, but the criteria in
+// force exclude all of them. clearOn is the expression removing every
+// criterion, matching what Criteria's own chips each clear one of.
+func NothingMatches(id, kindLabel, clearOn string) EmptyStateProps {
+	return EmptyStateProps{
+		ID:         id,
+		Title:      "Nothing matches",
+		Body:       "No " + kindLabel + " match the current narrowing.",
+		ClearOn:    clearOn,
+		ClearLabel: "Clear narrowing",
+	}
+}
+
+templ EmptyState(props EmptyStateProps) {
+	<div
+		id={ props.ID }
+		role="status"
+		class="flex flex-col items-center gap-3 rounded-lg border border-dashed border-slate-300 px-6 py-12 text-center dark:border-slate-700"
+	>
+		<p class="text-base font-medium text-slate-900 dark:text-slate-100">{ props.Title }</p>
+		<p class="max-w-prose text-sm text-slate-600 dark:text-slate-400">{ props.Body }</p>
+		if props.ClearOn != "" {
+			<button
+				type="button"
+				data-on:click={ props.ClearOn }
+				class="mt-2 inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+			>{ props.ClearLabel }</button>
+		}
+	</div>
+}

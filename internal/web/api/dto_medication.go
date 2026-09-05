@@ -203,6 +203,25 @@ func MedicationSchema() records.Schema {
 	}
 }
 
+// MedicationSearchFields reads the two search_index columns off the wire DTO
+// Record.Body carries after a create or an update (research D-11): the name,
+// and the side effects and notes FR-069 calls "the details of each type".
+func MedicationSearchFields(body any) (title, text string) {
+	medication, ok := body.(*Medication)
+	if !ok {
+		return "", ""
+	}
+
+	return medication.Name, medication.SideEffects + " " + medication.Notes
+}
+
+// MedicationBasis narrows nothing yet: medication's one narrowing beyond
+// status is `?active=true` (contracts/records-clinical.md §1), which is a
+// query and not a per-row distinction the way procedure's scheduled/ordered
+// is. It is declared anyway, so the registry's completeness check has
+// something to find.
+func MedicationBasis(any, records.Criteria) []string { return nil }
+
 // Summary renders the list shape.
 func (MedicationCodec) Summary(m clinical.Medication) any {
 	return &MedicationSummary{

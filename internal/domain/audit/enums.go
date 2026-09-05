@@ -94,6 +94,15 @@ const (
 	// or pharmacy field points at.
 	TargetKindPractitioner TargetKind = "practitioner"
 	TargetKindFacility     TargetKind = "facility"
+
+	// TargetKindTag and TargetKindSearch are phase 003's additive extension
+	// (data-model §5.4, research D-19): a tag is an auditable resource, and
+	// search is the target kind [D-12](../../../specs/003-clinical-records/research.md#d-12--fr-075-the-search-term-is-a-first-class-secret)
+	// requires for the row a search writes. Written by
+	// internal/store/migrations' audit_vocab migration, never by this phase's
+	// record-kind migrations.
+	TargetKindTag    TargetKind = "tag"
+	TargetKindSearch TargetKind = "search"
 )
 
 // One declaration per vocabulary, in the order data-model §3 declares it, which
@@ -158,6 +167,8 @@ var (
 		TargetKindSystem,
 		TargetKindPractitioner,
 		TargetKindFacility,
+		TargetKindTag,
+		TargetKindSearch,
 	}
 )
 

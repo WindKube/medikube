@@ -416,6 +416,11 @@ func applyMedications(app core.App) error {
 		if err := app.Save(record); err != nil {
 			return fmt.Errorf("seeding %s: %w", medication.ID, err)
 		}
+
+		if err := IndexRecord(app, kind.Medication, medication.ID, medication.PatientID,
+			medication.Name, medication.Indication, medication.StartedOn); err != nil {
+			return err
+		}
 	}
 
 	return nil

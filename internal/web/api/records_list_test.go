@@ -317,7 +317,9 @@ func statusList(statuses []clinical.TherapyStatus) string {
 
 // TestAStateOutsideTheVocabularyIsRefusedRatherThanDropped is the other half of
 // the filter: a dropped term narrows to everything and reads as a list that is
-// simply long.
+// simply long. It is 400 bad_request and not a rejected field
+// (contracts/records-clinical.md §1): naming the value back discloses nothing
+// a caller who already knows the kind's vocabulary did not have.
 func TestAStateOutsideTheVocabularyIsRefusedRatherThanDropped(t *testing.T) {
 	t.Parallel()
 
@@ -325,8 +327,8 @@ func TestAStateOutsideTheVocabularyIsRefusedRatherThanDropped(t *testing.T) {
 
 	answer := caller.get(collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&" + medication.FilterStatus + "=discontinued")
 
-	require.Equal(t, http.StatusUnprocessableEntity, answer.Status, answer.Body)
-	assert.Contains(t, answer.envelope(t).fieldCodes(), [2]string{medication.FilterStatus, "invalid_value"})
+	require.Equal(t, http.StatusBadRequest, answer.Status, answer.Body)
+	assert.Equal(t, "bad_request", answer.envelope(t).Error.Code)
 }
 
 func TestTheSearchNarrowsOverBothNameColumns(t *testing.T) {

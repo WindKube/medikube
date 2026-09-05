@@ -1,0 +1,61 @@
+package shared
+
+import "fmt"
+
+// DeleteConfirmProps is FR-006's confirmation: named, permanent, and honest
+// about how many other records point at the one about to go. It is rendered
+// with the page and hidden behind Signal rather than created on demand — the
+// same rule components.Confirm follows — so it exists for the render gate
+// whether or not it is on screen.
+type DeleteConfirmProps struct {
+	ID     string
+	Signal string
+
+	Title string
+	// Subject is what is about to be destroyed, named — never "this item".
+	Subject string
+	// ReferenceCount is how many other records refer to Subject. Zero is not
+	// hidden: it is stated, because "nothing else refers to this" is still
+	// part of what the confirmation must say.
+	ReferenceCount int
+
+	ConfirmLabel string
+	ConfirmOn    string
+	CancelLabel  string
+}
+
+func (p DeleteConfirmProps) consequence() string {
+	switch p.ReferenceCount {
+	case 0:
+		return "This is permanent and cannot be undone. No other record refers to it."
+	case 1:
+		return "This is permanent and cannot be undone. One other record refers to it."
+	default:
+		return fmt.Sprintf("This is permanent and cannot be undone. %d other records refer to it.", p.ReferenceCount)
+	}
+}
+
+templ DeleteConfirm(props DeleteConfirmProps) {
+	<section
+		id={ props.ID }
+		aria-label="Confirm delete"
+		data-show={ "$" + props.Signal }
+		class="mt-6 rounded-lg border border-rose-300 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950"
+	>
+		<h2 class="text-base font-semibold text-rose-900 dark:text-rose-100">{ props.Title }</h2>
+		<p class="mt-1 text-sm font-medium text-rose-900 dark:text-rose-100">{ props.Subject }</p>
+		<p class="mt-2 max-w-prose text-sm text-rose-800 dark:text-rose-200">{ props.consequence() }</p>
+		<div class="mt-4 flex flex-wrap gap-3">
+			<button
+				type="button"
+				data-on:click={ props.ConfirmOn }
+				class="inline-flex items-center rounded-md bg-rose-700 px-3 py-2 text-sm font-medium text-white hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"
+			>{ props.ConfirmLabel }</button>
+			<button
+				type="button"
+				data-on:click={ "$" + props.Signal + " = false" }
+				class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+			>{ props.CancelLabel }</button>
+		</div>
+	</section>
+}

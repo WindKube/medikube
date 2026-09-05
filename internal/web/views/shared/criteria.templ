@@ -1,0 +1,39 @@
+package shared
+
+// CriteriaChip is one narrowing in force (a kind, a tag, a date range, a
+// status) named and individually removable, per FR-071 and FR-073.
+type CriteriaChip struct {
+	ID    string
+	Label string
+	// ClearOn is the Datastar expression that removes this one criterion —
+	// and only this one, which is what makes the narrowing "visible and
+	// removable" rather than all-or-nothing.
+	ClearOn string
+}
+
+// CriteriaProps is the whole narrowing in force, in the order it was applied.
+type CriteriaProps struct {
+	ID    string
+	Chips []CriteriaChip
+}
+
+templ Criteria(props CriteriaProps) {
+	<ul id={ props.ID } aria-label="Narrowing in force" class="flex flex-wrap gap-2">
+		for _, chip := range props.Chips {
+			<li
+				id={ chip.ID }
+				class="inline-flex items-center gap-1.5 rounded-full border border-slate-300 py-0.5 pl-2.5 pr-1 text-xs font-medium text-slate-900 dark:border-slate-600 dark:text-slate-100"
+			>
+				{ chip.Label }
+				<button
+					type="button"
+					data-on:click={ chip.ClearOn }
+					aria-label={ "Remove " + chip.Label }
+					class="rounded-full px-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+				>
+					&times;
+				</button>
+			</li>
+		}
+	</ul>
+}

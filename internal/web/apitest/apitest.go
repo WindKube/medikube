@@ -48,12 +48,14 @@ import (
 	"medikube/internal/service/medication"
 	"medikube/internal/service/patient"
 	practitionersvc "medikube/internal/service/practitioner"
+	searchsvc "medikube/internal/service/search"
 	"medikube/internal/store"
 	auditstore "medikube/internal/store/audit"
 	facilitystore "medikube/internal/store/facility"
 	storemedication "medikube/internal/store/medication"
 	patientstore "medikube/internal/store/patient"
 	practitionerstore "medikube/internal/store/practitioner"
+	searchstore "medikube/internal/store/search"
 	"medikube/internal/testsupport"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -76,6 +78,11 @@ type Instance struct {
 	// account handlers call, and the authenticator whose comparison counter is
 	// how T202 asserts the anti-enumeration mechanism rather than timing it.
 	Accounts *api.Accounts
+
+	// Search is the search_index write side's real repository, wired the same
+	// way the composition root wires it (T030): every registered kind's
+	// Service indexes through it, and a test reads it back to prove that.
+	Search *searchstore.Repo
 }
 
 // Option adjusts one instance. The zero set is production's wiring; the
@@ -251,7 +258,7 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 
 	hub := realtime.New()
 
-	registry, patientService, photos, err := registerKinds(app, hub)
+	registry, patientService, photos, searchRepo, err := registerKinds(app, hub)
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +343,7 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 		Log:       zerolog.Nop(),
 	})
 
-	return &Instance{App: app, Records: handler, Routes: routes, Hub: hub, Accounts: accounts}, nil
+	return &Instance{App: app, Records: handler, Routes: routes, Hub: hub, Accounts: accounts, Search: searchRepo}, nil
 }
 
 // handlerTable is cmd/medikube's operations(): a 501 under every registered
@@ -475,30 +482,32 @@ func notImplemented(opID string) httproute.Handler {
 
 // registerKinds builds the kind registry this instance serves. One call, seven
 // consumers, no route — the same call cmd/medikube will make.
-func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient.Service, *patientstore.PhotoStore, error) {
+func registerKinds(
+	app core.App, hub *realtime.Hub,
+) (*records.Registry, *patient.Service, *patientstore.PhotoStore, *searchstore.Repo, error) {
 	secret, err := store.CursorSecret(app, "")
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	codec, err := store.NewCursorCodec(secret)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	repository, err := storemedication.New(app, codec)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	owners, err := store.NewOwners(app)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	trail, err := auditstore.New(app)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	// WithRequestID, as the composition root wires it: without it a row the
@@ -507,39 +516,53 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient
 	// place no assertion looks (T231).
 	auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	patientRepo, err := patientstore.New(app, codec)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	authorizer, err := accessservice.New(owners, accessservice.WithPatients(patientRepo, auditor))
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	views, err := page.NewMedicationViews()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
+	}
+
+	searchRepo, err := searchstore.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	indexer, err := searchsvc.NewIndexer(searchRepo)
+	if err != nil {
+		return nil, nil, nil, nil, err
 	}
 
 	registry := records.NewRegistry()
+	registry.SetIndexer(indexer)
+	registry.SetSearchReader(searchRepo)
 
 	if registerErr := medication.Register(registry, medication.Wiring{
-		Repository: repository,
-		Authorizer: authorizer,
-		Codec:      api.MedicationCodec{},
-		Schema:     api.MedicationSchema(),
-		Views:      views,
+		Repository:   repository,
+		Authorizer:   authorizer,
+		Codec:        api.MedicationCodec{},
+		Schema:       api.MedicationSchema(),
+		Views:        views,
+		SearchFields: api.MedicationSearchFields,
+		Basis:        api.MedicationBasis,
 	}); registerErr != nil {
-		return nil, nil, nil, registerErr
+		return nil, nil, nil, nil, registerErr
 	}
 
 	// FR-037's append-only trail, bound where the binary binds it.
 	if guardErr := pb.BindAuditImmutability(app); guardErr != nil {
-		return nil, nil, nil, guardErr
+		return nil, nil, nil, nil, guardErr
 	}
 
 	// The nightly purge. It is bound and never ticks here — nothing starts the
@@ -549,11 +572,11 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient
 	// a failure rather than an omission nobody notices.
 	retention, retentionErr := auditservice.NewRetention(trail, AuditRetentionDays, auditservice.SystemClock{})
 	if retentionErr != nil {
-		return nil, nil, nil, retentionErr
+		return nil, nil, nil, nil, retentionErr
 	}
 
 	if cronErr := pb.BindCron(app, pb.CronOptions{Retention: retention, Log: zerolog.Nop()}); cronErr != nil {
-		return nil, nil, nil, cronErr
+		return nil, nil, nil, nil, cronErr
 	}
 
 	// FR-036's three rows, from the post-commit hooks and never from a
@@ -565,7 +588,7 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient
 		Actor:   web.ActorFrom,
 		Request: obs.CorrelationID,
 	}); recordAuditErr != nil {
-		return nil, nil, nil, recordAuditErr
+		return nil, nil, nil, nil, recordAuditErr
 	}
 
 	// FR-036's sign-in rows, from OnRecordAuthRequest and never from a handler
@@ -576,14 +599,14 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient
 		Trail:   auditor,
 		Request: obs.CorrelationID,
 	}); authAuditErr != nil {
-		return nil, nil, nil, authAuditErr
+		return nil, nil, nil, nil, authAuditErr
 	}
 
 	// contracts/streams.md's post-commit publisher, bound to the same kinds
 	// for the same reason: a live view of a kind this instance does not serve
 	// is a live view of nothing.
 	if streamErr := pb.BindRecordStream(app, pb.RecordStream{Hub: hub, Kinds: registry.Kinds()}); streamErr != nil {
-		return nil, nil, nil, streamErr
+		return nil, nil, nil, nil, streamErr
 	}
 
 	// Phase 002's patients audit, bound where the binary binds it
@@ -594,37 +617,37 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient
 		Actor:   web.ActorFrom,
 		Request: obs.CorrelationID,
 	}); patientAuditErr != nil {
-		return nil, nil, nil, patientAuditErr
+		return nil, nil, nil, nil, patientAuditErr
 	}
 
 	photos, err := patientstore.NewPhotoStore(app, []string{"100x100t", "400x400f"})
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	activePatient, err := patientstore.NewActivePatientRepo(app)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	counter, err := records.NewCounter(registry, func(ctx context.Context, collection, patientID string) (int, error) {
 		return store.CountByPatient(ctx, app, collection, patientID)
 	})
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	activity, err := auditservice.NewRecentActivity(trail)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	patientService, err := patient.New(patientRepo, photos, authorizer, activePatient, auditor, counter, activity)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
-	return registry, patientService, photos, nil
+	return registry, patientService, photos, searchRepo, nil
 }
 
 // registerDirectory builds the two directory services this instance serves —

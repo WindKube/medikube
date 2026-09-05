@@ -147,12 +147,15 @@ func TestEachVocabularyIsExactlyWhatTheMigrationDeclares(t *testing.T) {
 			TargetKindSystem,
 			TargetKindPractitioner,
 			TargetKindFacility,
+			TargetKindTag,
+			TargetKindSearch,
 		}
 
-		assert.Len(t, TargetKinds(), 25,
-			"data-model §3: fifteen record kinds and eight platform kinds, plus phase 002's practitioner and facility")
+		assert.Len(t, TargetKinds(), 27,
+			"data-model §3/§5.4: fifteen record kinds, eight platform kinds, practitioner and facility, "+
+				"plus phase 003's tag and search")
 		assertVocabulary(t, want, TargetKinds, TargetKind.Valid,
-			[]string{"", " ", "Medication", "medications", "tag", "search", "login"})
+			[]string{"", " ", "Medication", "medications", "Tag", "Search", "login"})
 	})
 }
 

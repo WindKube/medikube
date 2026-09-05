@@ -12,7 +12,20 @@ type Kind string
 // The kinds this build knows. Phase 003 adds thirteen and phase 004 adds the
 // fifteenth; each is one line here plus one row in the table below.
 const (
-	Medication Kind = "medication"
+	Medication       Kind = "medication"
+	Allergy          Kind = "allergy"
+	Condition        Kind = "condition"
+	Encounter        Kind = "encounter"
+	Procedure        Kind = "procedure"
+	Treatment        Kind = "treatment"
+	Symptom          Kind = "symptom"
+	Vitals           Kind = "vitals"
+	Immunization     Kind = "immunization"
+	Injury           Kind = "injury"
+	Insurance        Kind = "insurance"
+	Equipment        Kind = "equipment"
+	EmergencyContact Kind = "emergency_contact"
+	FamilyMember     Kind = "family_member"
 )
 
 // entry is a kind's full identity. Upstream carried three spellings of one
@@ -28,11 +41,72 @@ type entry struct {
 	// column because it will not always: a collection is a schema name and a
 	// segment is a URL, and renaming one is not licence to rename the other.
 	collection string
+	// The two ARIA landmarks a kind's list and detail pages assert
+	// (contracts/pages.md §2, data-model §3): `region[name="…"]` and
+	// `article[name="…"]`, spelled out here in full so a page's render test and
+	// this table cannot drift into two different strings for one kind.
+	listLandmark   string
+	detailLandmark string
 }
 
 // THE declaration. Every spelling of a record kind in MediKube starts here.
 var registry = []entry{
-	{kind: Medication, segment: "medications", collection: "medications"},
+	{
+		kind: Medication, segment: "medications", collection: "medications",
+		listLandmark: `region[name="Medications"]`, detailLandmark: `article[name="Medication"]`,
+	},
+	{
+		kind: Allergy, segment: "allergies", collection: "allergies",
+		listLandmark: `region[name="Allergies"]`, detailLandmark: `article[name="Allergy"]`,
+	},
+	{
+		kind: Condition, segment: "conditions", collection: "conditions",
+		listLandmark: `region[name="Conditions"]`, detailLandmark: `article[name="Condition"]`,
+	},
+	{
+		kind: Encounter, segment: "encounters", collection: "encounters",
+		listLandmark: `region[name="Encounters"]`, detailLandmark: `article[name="Encounter"]`,
+	},
+	{
+		kind: Procedure, segment: "procedures", collection: "procedures",
+		listLandmark: `region[name="Procedures"]`, detailLandmark: `article[name="Procedure"]`,
+	},
+	{
+		kind: Treatment, segment: "treatments", collection: "treatments",
+		listLandmark: `region[name="Treatments"]`, detailLandmark: `article[name="Treatment"]`,
+	},
+	{
+		kind: Symptom, segment: "symptoms", collection: "symptoms",
+		listLandmark: `region[name="Symptoms"]`, detailLandmark: `article[name="Symptom episode"]`,
+	},
+	{
+		kind: Vitals, segment: "vitals", collection: "vitals",
+		listLandmark: `region[name="Measurements"]`, detailLandmark: `article[name="Measurement set"]`,
+	},
+	{
+		kind: Immunization, segment: "immunizations", collection: "immunizations",
+		listLandmark: `region[name="Vaccinations"]`, detailLandmark: `article[name="Vaccination"]`,
+	},
+	{
+		kind: Injury, segment: "injuries", collection: "injuries",
+		listLandmark: `region[name="Injuries"]`, detailLandmark: `article[name="Injury"]`,
+	},
+	{
+		kind: Insurance, segment: "insurance", collection: "insurances",
+		listLandmark: `region[name="Insurance"]`, detailLandmark: `article[name="Insurance policy"]`,
+	},
+	{
+		kind: Equipment, segment: "equipment", collection: "equipment",
+		listLandmark: `region[name="Equipment"]`, detailLandmark: `article[name="Equipment"]`,
+	},
+	{
+		kind: EmergencyContact, segment: "emergency-contacts", collection: "emergency_contacts",
+		listLandmark: `region[name="Emergency contacts"]`, detailLandmark: `article[name="Emergency contact"]`,
+	},
+	{
+		kind: FamilyMember, segment: "family-history", collection: "family_members",
+		listLandmark: `region[name="Family history"]`, detailLandmark: `article[name="Relative"]`,
+	},
 }
 
 var (
@@ -81,6 +155,11 @@ func (k Kind) Enum() string { return string(k) }
 func (k Kind) Segment() string { return byKind[k].segment }
 
 func (k Kind) Collection() string { return byKind[k].collection }
+
+// ListLandmark and DetailLandmark are the two ARIA landmarks a kind's list and
+// detail pages assert, spelled `region[name="…"]` and `article[name="…"]`.
+func (k Kind) ListLandmark() string   { return byKind[k].listLandmark }
+func (k Kind) DetailLandmark() string { return byKind[k].detailLandmark }
 
 func (k Kind) Valid() bool {
 	_, declared := byKind[k]

@@ -235,7 +235,7 @@ func KindQuery(e *core.RequestEvent, entry records.Entry) (records.Query, error)
 	return records.Query{
 		PatientID: patientID,
 		Search:    params.Search,
-		Filters:   filters(e, entry.Schema.Filters),
+		Filters:   filters(e),
 		Sort:      params.Sort,
 		Limit:     params.Limit,
 		Cursor:    params.Cursor,
@@ -573,20 +573,41 @@ func (h *recordHandlers) selection(e *core.RequestEvent) ([]kind.Kind, error) {
 	return selected, nil
 }
 
-// filters reads the kind's own named parameters and nothing else. A parameter
-// the kind does not publish is not read at all, so PocketBase's filter DSL has
-// no member to arrive in.
-func filters(e *core.RequestEvent, declared []string) map[string][]string {
-	if len(declared) == 0 {
-		return nil
-	}
+// universalListParams are the query parameters every list handles itself,
+// before a kind's own filter allowlist is asked about anything — including
+// ParamPatient, which requiredPatient reads before filters is ever called and
+// which must never be mistaken for an unpublished filter name.
+var universalListParams = map[string]bool{
+	ParamPatient:    true,
+	web.ParamSearch: true,
+	web.ParamSort:   true,
+	web.ParamLimit:  true,
+	web.ParamCursor: true,
+	web.ParamCount:  true,
+}
 
+// filters reads every query parameter that is not one of the universal ones
+// above, and passes each through unresolved: whether the name is one the kind
+// publishes, and whether its value is one the kind allows, is
+// records.checkFilters's question and not this layer's — asking it twice
+// would be two allowlists that could drift apart
+// (contracts/records-clinical.md §1).
+func filters(e *core.RequestEvent) map[string][]string {
 	query := e.Request.URL.Query()
-	supplied := make(map[string][]string, len(declared))
+	supplied := make(map[string][]string, len(query))
 
-	for _, name := range declared {
-		if values := commaList(query.Get(name)); len(values) > 0 {
-			supplied[name] = values
+	for name, values := range query {
+		if universalListParams[name] {
+			continue
+		}
+
+		var all []string
+		for _, raw := range values {
+			all = append(all, commaList(raw)...)
+		}
+
+		if len(all) > 0 {
+			supplied[name] = all
 		}
 	}
 

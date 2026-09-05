@@ -30,6 +30,13 @@ type Record struct {
 	ID   string
 	Kind kind.Kind
 
+	// PatientID is the record's own anchor, set by the kind's adapter from the
+	// entity it just read or wrote. It is what lets the registry index a
+	// record into search_index (patient-scoped, FR-087) without a kind-
+	// specific accessor: every registered kind is patient-scoped, so this is
+	// never empty for anything a kind's Service returns.
+	PatientID string
+
 	// Version is the ETag source — store.Version(record) — carried on the
 	// record rather than fetched separately, because If-Match is required on
 	// every write and a version read by a second call is a version that can
@@ -37,6 +44,16 @@ type Record struct {
 	Version string
 
 	Body any
+}
+
+// Criteria is a list's resolved narrowing: what the caller asked for, after
+// the registry checked it against the kind's own vocabulary. It is what a
+// kind's Basis function reads to say why one row qualifies for a reason
+// materially different from another's (research D-05), and US9 echoes it in
+// the response envelope so a chip can be removed for what it names.
+type Criteria struct {
+	Filters map[string][]string
+	Search  string
 }
 
 // Query is one list request, already parsed at the edge and not yet resolved to
@@ -152,11 +169,13 @@ type Schema struct {
 	// list that looks right and is not (contracts/records.md).
 	Sorts []domain.SortKey
 
-	// Filters are the kind's own named query parameters. It may be empty: a
-	// kind whose list takes nothing but the shared parameters is a legitimate
-	// registration, and requiring a value here would only make somebody invent
-	// one.
-	Filters []string
+	// Filters are the kind's own named query parameters, keyed by name. It may
+	// be empty: a kind whose list takes nothing but the shared parameters is a
+	// legitimate registration, and requiring a value here would only make
+	// somebody invent one. An unknown parameter, or a value outside a
+	// FilterSpec's declared vocabulary, is 400 bad_request and never silently
+	// ignored (contracts/records-clinical.md §1).
+	Filters map[string]FilterSpec
 }
 
 // Inventory is what the operator surface prints for a kind: the human name of

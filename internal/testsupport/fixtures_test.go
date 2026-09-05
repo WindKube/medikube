@@ -362,3 +362,26 @@ func snapshot(t *testing.T, app core.App) []string {
 
 	return lines
 }
+
+// The cross-kind list pages search_index, so a seeded record without an index
+// row is invisible there and nowhere else, which is how the gap stayed hidden
+// until a second kind registered.
+func TestEverySeededRecordHasASearchIndexRow(t *testing.T) {
+	t.Parallel()
+
+	app := NewApp(t)
+
+	for _, k := range kind.Kinds() {
+		if _, err := app.FindCollectionByNameOrId(k.Collection()); err != nil {
+			continue
+		}
+
+		records, err := app.FindAllRecords(k.Collection())
+		require.NoError(t, err)
+
+		for _, record := range records {
+			err := app.RecordQuery("search_index").AndWhere(dbx.HashExp{"kind": string(k), "record_id": record.Id}).One(&core.Record{})
+			assert.NoErrorf(t, err, "%s %s has no search_index row: seed it through seed.IndexRecord", k, record.Id)
+		}
+	}
+}

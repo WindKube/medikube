@@ -28,6 +28,7 @@ func sentinelsByName(t *testing.T) map[string]error {
 		"ErrRateLimited":      ErrRateLimited,
 		"ErrUnsupportedMedia": ErrUnsupportedMedia,
 		"ErrTooLarge":         ErrTooLarge,
+		"ErrBadRequest":       ErrBadRequest,
 	}
 }
 

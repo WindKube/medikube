@@ -40,6 +40,7 @@ func contractTaxonomy() []taxonomyRow {
 		{"If-Match did not match", domain.ErrVersionMismatch, http.StatusPreconditionFailed, CodeVersionMismatch},
 		{"uniqueness or invariant", domain.ErrConflict, http.StatusConflict, CodeConflict},
 		{"rate limited", domain.ErrRateLimited, http.StatusTooManyRequests, CodeRateLimited},
+		{"an unknown filter or a value outside its allowed set", domain.ErrBadRequest, http.StatusBadRequest, CodeBadRequest},
 		{"a rejected field", new(domain.ValidationError), http.StatusUnprocessableEntity, domain.CodeValidationFailed},
 		{"registration while closed", ErrRegistrationClosed, http.StatusForbidden, CodeRegistrationClosed},
 		{"an expired, used or tampered token", ErrInvalidToken, http.StatusBadRequest, CodeInvalidToken},

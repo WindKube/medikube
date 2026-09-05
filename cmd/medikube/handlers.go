@@ -27,12 +27,14 @@ import (
 	"medikube/internal/service/medication"
 	"medikube/internal/service/patient"
 	practitionersvc "medikube/internal/service/practitioner"
+	searchsvc "medikube/internal/service/search"
 	"medikube/internal/store"
 	auditstore "medikube/internal/store/audit"
 	facilitystore "medikube/internal/store/facility"
 	medicationstore "medikube/internal/store/medication"
 	patientstore "medikube/internal/store/patient"
 	practitionerstore "medikube/internal/store/practitioner"
+	searchstore "medikube/internal/store/search"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
 	"medikube/internal/web/page"
@@ -494,12 +496,27 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		return err
 	}
 
+	searchRepo, err := searchstore.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	indexer, err := searchsvc.NewIndexer(searchRepo)
+	if err != nil {
+		return err
+	}
+
+	registry.SetIndexer(indexer)
+	registry.SetSearchReader(searchRepo)
+
 	if err := medication.Register(registry, medication.Wiring{
-		Repository: repository,
-		Authorizer: authorizer,
-		Codec:      api.MedicationCodec{},
-		Schema:     api.MedicationSchema(),
-		Views:      views,
+		Repository:   repository,
+		Authorizer:   authorizer,
+		Codec:        api.MedicationCodec{},
+		Schema:       api.MedicationSchema(),
+		Views:        views,
+		SearchFields: api.MedicationSearchFields,
+		Basis:        api.MedicationBasis,
 	}); err != nil {
 		return err
 	}
