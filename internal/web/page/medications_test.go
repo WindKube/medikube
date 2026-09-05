@@ -174,6 +174,29 @@ func TestAnAccountWithNothingRecordedStillGetsTheLandmark(t *testing.T) {
 	assert.Greater(t, empty, region, "the empty state rendered instead of the landmark rather than inside it")
 }
 
+// T079/FR-019/SC-003: a page of somebody's medications is never a page of
+// "medications" in the abstract — it names the patient they belong to, so a
+// caregiver looking after several people is never left guessing whose list
+// or whose record is on screen.
+func TestTheListPageNamesThePatientItShows(t *testing.T) {
+	t.Parallel()
+
+	_, _, body := newBrowser(t).get(pageRoutes(t)[page.OpMedicationListPage].Path +
+		"?patient=" + testsupport.AccountAPatientSelfID)
+
+	assert.Contains(t, body, "Amara Okonkwo", "the list page does not name the patient whose records these are")
+}
+
+func TestTheDetailPageNamesThePatientItShows(t *testing.T) {
+	t.Parallel()
+
+	partial := seeded(t, seed.NameOnlyID)
+
+	_, _, body := newBrowser(t).get(detailURL(t, partial.ID))
+
+	assert.Contains(t, body, "Amara Okonkwo", "the detail page does not name the patient this record belongs to")
+}
+
 func TestTheDetailPageIsTitledWithTheRecordsOwnName(t *testing.T) {
 	t.Parallel()
 
