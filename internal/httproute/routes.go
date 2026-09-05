@@ -487,13 +487,13 @@ func pageRoutes() []Route {
 			Landmark: `article[name="Medication"]`, SmokeURL: list + "/" + seed.NameOnlyID,
 		},
 		{
-			// The smoke URL points at the account whose /immunizations is
+			// The smoke URL points at the patient whose /immunizations is
 			// seeded empty on purpose (T116, contracts/pages.md §5): the
 			// empty-state path needs a gate that actually reaches it.
 			OpID: "immunizationListPage", Method: http.MethodGet, Path: "/" + kind.Immunization.Segment(),
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "The record list, with its empty state inside the landmark rather than instead of it.",
-			Landmark: `region[name="Vaccinations"]`, SmokeURL: "/" + kind.Immunization.Segment() + "?patient=" + seed.AccountCPatientSelfID,
+			Landmark: `region[name="Vaccinations"]`, SmokeURL: "/" + kind.Immunization.Segment() + "?patient=" + seed.AccountAPatientParentID,
 		},
 		{
 			OpID: "immunizationDetailPage", Method: http.MethodGet, Path: "/" + kind.Immunization.Segment() + "/{id}",

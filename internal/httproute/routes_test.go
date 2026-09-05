@@ -193,7 +193,7 @@ func TestTheTableCarriesTheNineteenPages(t *testing.T) {
 		},
 		{
 			"immunizationListPage", "/" + kind.Immunization.Segment(), httproute.AuthUser, `region[name="Vaccinations"]`,
-			"/" + kind.Immunization.Segment() + "?patient=" + seed.AccountCPatientSelfID,
+			"/" + kind.Immunization.Segment() + "?patient=" + seed.AccountAPatientParentID,
 		},
 		{
 			"immunizationDetailPage", "/" + kind.Immunization.Segment() + "/{id}", httproute.AuthUser,
