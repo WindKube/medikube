@@ -533,6 +533,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	registry.SetSearchReader(searchRepo)
 
 	if err = medication.Register(registry, medication.Wiring{
+	err = medication.Register(registry, medication.Wiring{
 		Repository:   repository,
 		Authorizer:   authorizer,
 		Codec:        api.MedicationCodec{},
@@ -540,7 +541,8 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Views:        views,
 		SearchFields: api.MedicationSearchFields,
 		Basis:        api.MedicationBasis,
-	}); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 
@@ -565,6 +567,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.ImmunizationSearchFields,
 		Basis:        api.ImmunizationBasis,
 	if err := insurance.Register(registry, insurance.Wiring{
+	err = insurance.Register(registry, insurance.Wiring{
 		Repository:   insuranceRepository,
 		Authorizer:   authorizer,
 		Codec:        api.InsuranceCodec{},
@@ -572,7 +575,8 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Views:        insuranceViews,
 		SearchFields: api.InsuranceSearchFields,
 		Basis:        api.InsuranceBasis,
-	}); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 

@@ -124,12 +124,15 @@ func (s *Service) Update(ctx context.Context, actor access.Actor, id, version st
 		return Result{}, err
 	}
 
-	if err := s.authorizePatient(ctx, actor, current.PatientID, access.PermEdit); err != nil {
+	err = s.authorizePatient(ctx, actor, current.PatientID, access.PermEdit)
+	if err != nil {
 		return Result{}, err
 	}
 
 	changed := patch.applyTo(current)
-	if err := changed.Validate(); err != nil {
+
+	err = changed.Validate()
+	if err != nil {
 		return Result{}, err
 	}
 
