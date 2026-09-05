@@ -24,7 +24,7 @@ const (
 	OpFacilityDetailPage = "facilityDetailPage"
 )
 
-const facilityListTitle = "Facilities"
+const facilityListTitle = "Places of care"
 
 // FacilityHandlers is P5 and P6's contribution to the route table.
 func FacilityHandlers(resolve api.FacilityResolve) (httproute.Handlers, error) {
