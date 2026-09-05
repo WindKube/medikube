@@ -149,7 +149,7 @@ func TestSentryIsEntirelyOffUntilADSNIsConfigured(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, tc.wantActive, reporter.Active())
-			assert.Equal(t, tc.wantActive, reporter.Report(t.Context(), errors.New("a failure worth reporting")),
+			assert.Equal(t, tc.wantActive, reporter.Report(answered(t, 0), errors.New("a failure worth reporting")),
 				"Report disagrees with Active about whether there is a destination")
 
 			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)

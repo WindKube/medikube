@@ -365,51 +365,9 @@ type knownLeak struct {
 // registerCap stops the register becoming the place findings go to die.
 const registerCap = 3
 
-// knownLeaks: FOUND BY THIS SUITE ON ITS FIRST RUN, and reported rather than
-// buried.
-//
-// One value, one mechanism, two sinks. PocketBase's native password-reset
-// handler answers 204 whether or not the address has an account — its own
-// anti-enumeration measure — and then returns an error carrying the submitted
-// address so that its activity logger records it (apis/record_password_reset.go).
-// internal/platform/pb unbinds that logger, deliberately, and MediKube's own
-// request logger takes its place and writes obs.Cause(err), which unwraps an
-// ApiError to exactly that raw error.
-//
-// The result is an account-enumeration oracle in the operational record: the
-// line exists when the address has no account and does not when it has one.
-// FR-073 requires that difference to be unobservable and this is it, written
-// down and retained. The response is 204 either way, which is why no HTTP-level
-// test in the repository can see this and why it took a suite that reads the
-// log stream to find it.
-//
-// The Sentry half has a second cause worth stating on its own, because it
-// generalises beyond this route: Reporter.Report is careful to report
-// obs.Cause(err) rather than err, but sentry-go's EventFromException walks the
-// whole Unwrap chain and serialises EVERY error in it into event.Exception. So
-// the scrubber's allowlist — which is thorough about Request, User, breadcrumbs
-// and attachments — does not reach the one field that carries a message the
-// application composed. Any 500 whose error chain quotes a value discloses it.
-var knownLeaks = []knownLeak{
-	{
-		Sink:     SinkLogs,
-		Sentinel: AccountEmail,
-		Fragment: "failed to fetch users record with email",
-		Producer: "POST /api/collections/users/request-password-reset, answered 204, error recorded by web.Errors and written by obs's request logger",
-		Owner:    "internal/obs/request_log.go — record() writes Err(Cause(err)) (edge-hardening)",
-		Fix: "either record the classified public error rather than the raw cause for statuses MediKube answered as success, " +
-			"or drop the documented native recovery routes from contracts/README.md's reachable set",
-	},
-	{
-		Sink:     SinkSentry,
-		Sentinel: AccountEmail,
-		Fragment: "failed to fetch users record with email",
-		Producer: "the same request, reported through obs.Reporter.Report",
-		Owner:    "internal/obs/sentry.go — scrub() does not touch event.Exception",
-		Fix: "sentry-go serialises the whole Unwrap chain, so reporting Cause(err) is not enough; " +
-			"the allowlist has to cover the exception values too, or Report must hand over an error whose chain is severed",
-	},
-}
+// knownLeaks is empty. It held D20's two entries, both closed by
+// obs.Recordable; the guard below fails on any entry that stops being true.
+var knownLeaks = []knownLeak{}
 
 type leakReport struct {
 	messages []string

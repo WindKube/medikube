@@ -261,7 +261,7 @@ func Run(t testing.TB) *Result {
 		Endpoint:    traces.address(),
 		Insecure:    true,
 		SampleRatio: 1,
-		Environment: Indication,
+		Environment: environment,
 	}, release, capture.Logger())
 	require.NoError(t, err, "starting tracing")
 	require.True(t, tracing.Active(),
@@ -467,10 +467,11 @@ func observer(metrics *obs.Metrics, reporter *obs.Reporter, w *watcher) *hook.Ha
 			// site will report. The question this sink answers is whether any
 			// error message the application CONSTRUCTS carries a person's
 			// data, and which status that message was answered with is a
-			// routing decision that will change.
+			// routing decision that will change — so the reporter is handed
+			// the raw fault and the withholding is its own to get right.
 			reported := false
 			if fault != nil {
-				reported = reporter.Report(e.Request.Context(), fault)
+				reported = reporter.Report(e, fault)
 			}
 
 			w.record(e.Request.Pattern, e.Request.Method+" "+e.Request.URL.Path, fault != nil, reported)

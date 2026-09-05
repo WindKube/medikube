@@ -860,3 +860,26 @@ asserting nothing, and that names the sink and the sentinel on failure.
 so nothing in CI runs it and the PR is green with these three open. That is the
 same shape of hole D18 described, one level up. Putting it on the gate is the
 obvious next step and it cannot happen until all three are resolved.
+
+**Resolution (2026-09-04).** All three are closed and the suite is on the gate.
+
+1. and 2. share one fix, `internal/obs.Recordable`: the request logger and the
+   Sentry reporter both record the *recordable* error rather than the raw
+   `Cause`. At or above 500 that is still the cause — the driver message is what
+   makes a 500 actionable. Below 500 it is the cause only when the chain ends
+   in one of `internal/domain`'s sentinels, whose messages are PHI-free by
+   contract, and otherwise a fixed stand-in that names the status and says the
+   cause was withheld. PocketBase's 204-with-error therefore produces a line
+   that is identical whether or not the address has an account, which closes
+   the enumeration oracle as well as the disclosure. The Sentry scrubber
+   additionally keeps one exception value rather than the whole `Unwrap` chain
+   (`MaxErrorDepth` cannot express "outermost only": zero means the default).
+   `Reporter.Report` now takes the request event, so the status decision is the
+   reporter's own and not the caller's.
+3. was a harness artefact, as suspected: `exercise_test.go` passed the
+   `Indication` sentinel as the tracing `Environment` where every other sink got
+   the `environment` constant. Nothing in the application composes a span
+   attribute from a record.
+
+The `knownLeaks` register is empty, `task test:phileak` runs as the `phi-leak`
+job in `.github/workflows/go.yaml`, and a leak now fails the merge.
