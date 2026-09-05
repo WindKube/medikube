@@ -571,7 +571,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	registry.SetIndexer(indexer)
 	registry.SetSearchReader(searchRepo)
 
-	err = medication.Register(registry, medication.Wiring{
+	if medicationRegisterErr := medication.Register(registry, medication.Wiring{
 		Repository:   repository,
 		Authorizer:   authorizer,
 		Codec:        api.MedicationCodec{},
@@ -579,9 +579,8 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Views:        views,
 		SearchFields: api.MedicationSearchFields,
 		Basis:        api.MedicationBasis,
-	})
-	if err != nil {
-		return err
+	}); medicationRegisterErr != nil {
+		return medicationRegisterErr
 	}
 
 	insuranceViews, err := page.NewInsuranceViews()
@@ -709,7 +708,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		return err
 	}
 
-	if err := symptom.Register(registry, symptom.Wiring{
+	if symptomRegisterErr := symptom.Register(registry, symptom.Wiring{
 		Repository:   symptomRepo,
 		Authorizer:   authorizer,
 		Codec:        api.SymptomCodec{},
@@ -717,8 +716,8 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Views:        symptomViews,
 		SearchFields: api.SymptomSearchFields,
 		Basis:        api.SymptomBasis,
-	}); err != nil {
-		return err
+	}); symptomRegisterErr != nil {
+		return symptomRegisterErr
 	}
 
 	vitalsViews, err := page.NewVitalsViews()
@@ -731,7 +730,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		return err
 	}
 
-	if err := vitals.Register(registry, vitals.Wiring{
+	if vitalsRegisterErr := vitals.Register(registry, vitals.Wiring{
 		Repository:   vitalsRepo,
 		Authorizer:   authorizer,
 		Codec:        api.VitalsCodec{},
@@ -740,8 +739,8 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Views:        vitalsViews,
 		SearchFields: api.VitalsSearchFields,
 		Basis:        api.VitalsBasis,
-	}); err != nil {
-		return err
+	}); vitalsRegisterErr != nil {
+		return vitalsRegisterErr
 	}
 
 	// FR-036's three rows, written by the post-commit hooks and by no handler

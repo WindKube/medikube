@@ -5,6 +5,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"medikube/internal/domain"
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
 )
@@ -168,8 +169,19 @@ func applySymptoms(app core.App) error {
 		record.Set(columnIsChronic, symptom.IsChronic)
 		record.Set(columnStatus, string(symptom.Status))
 
-		if err := app.Save(record); err != nil {
-			return fmt.Errorf("seeding %s: %w", symptom.ID, err)
+		if saveErr := app.Save(record); saveErr != nil {
+			return fmt.Errorf("seeding %s: %w", symptom.ID, saveErr)
+		}
+
+		occurredOn, err := domain.NewDate(
+			symptom.OccurredAt.Time().Year(), symptom.OccurredAt.Time().Month(), symptom.OccurredAt.Time().Day())
+		if err != nil {
+			return fmt.Errorf("indexing %s: %w", symptom.ID, err)
+		}
+
+		if err := IndexRecord(app, kind.Symptom, symptom.ID, symptom.PatientID,
+			symptom.Name, symptom.BodySite, occurredOn); err != nil {
+			return err
 		}
 	}
 
@@ -219,8 +231,18 @@ func applyVitals(app core.App) error {
 		record.Set(columnPainScale, v.PainScale)
 		record.Set(columnDevice, v.Device)
 
-		if err := app.Save(record); err != nil {
-			return fmt.Errorf("seeding %s: %w", v.ID, err)
+		if saveErr := app.Save(record); saveErr != nil {
+			return fmt.Errorf("seeding %s: %w", v.ID, saveErr)
+		}
+
+		occurredOn, err := domain.NewDate(
+			v.RecordedAt.Time().Year(), v.RecordedAt.Time().Month(), v.RecordedAt.Time().Day())
+		if err != nil {
+			return fmt.Errorf("indexing %s: %w", v.ID, err)
+		}
+
+		if err := IndexRecord(app, kind.Vitals, v.ID, v.PatientID, v.RecordedAt.String(), v.Device, occurredOn); err != nil {
+			return err
 		}
 	}
 

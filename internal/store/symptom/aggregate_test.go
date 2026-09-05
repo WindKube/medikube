@@ -54,10 +54,10 @@ func TestAggregateCountsEpisodesAndTracksTheMostRecentOccurrence(t *testing.T) {
 		// "HeadAche" — names differing only in case must group together.
 		name := []string{"Headache", "headache", "HEADACHE", "HeadAche"}[i]
 
-		created, err := repo.Create(t.Context(), clinical.Symptom{
+		created, createErr := repo.Create(t.Context(), clinical.Symptom{
 			PatientID: patientID, Name: name, Severity: clinical.SeverityModerate, OccurredAt: clinical.NewInstant(when),
 		})
-		require.NoError(t, err)
+		require.NoError(t, createErr)
 
 		if i == len(occurredAt)-1 {
 			newestID = created.ID

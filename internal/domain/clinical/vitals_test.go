@@ -78,7 +78,7 @@ func TestVitalsValidate(t *testing.T) {
 		var invalid *domain.ValidationError
 		require.ErrorAs(t, err, &invalid)
 
-		var reported []string
+		reported := make([]string, 0, len(invalid.Fields))
 		for _, field := range invalid.Fields {
 			reported = append(reported, field.Field)
 		}
