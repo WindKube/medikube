@@ -519,6 +519,12 @@ func applyImmunizations(app core.App) error {
 		if err := app.Save(record); err != nil {
 			return fmt.Errorf("seeding %s: %w", immunization.ID, err)
 		}
+
+		body := immunization.TradeName + " " + immunization.Manufacturer + " " + immunization.LotNumber
+		if err := IndexRecord(app, kind.Immunization, immunization.ID, immunization.PatientID,
+			immunization.VaccineName, body, immunization.AdministeredOn); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -582,6 +588,12 @@ func applyInjuries(app core.App) error {
 
 		if err := app.Save(record); err != nil {
 			return fmt.Errorf("seeding %s: %w", injury.ID, err)
+		}
+
+		body := injury.BodyPart + " " + injury.Mechanism + " " + injury.RecoveryNotes
+		if err := IndexRecord(app, kind.Injury, injury.ID, injury.PatientID,
+			injury.Name, body, injury.OccurredOn); err != nil {
+			return err
 		}
 	}
 
