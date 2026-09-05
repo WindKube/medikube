@@ -37,6 +37,9 @@ const (
 	CodeInternal             = "internal_error"
 	CodeUnsupportedMediaType = "unsupported_media_type"
 
+	// CodePayloadTooLarge is phase 002's photo upload limit (FR-008).
+	CodePayloadTooLarge = "payload_too_large"
+
 	// CodeBadRequest is the one code contracts/README.md's table does not name.
 	// It is what a 4xx raised inside PocketBase and not by MediKube resolves to
 	// — the body-limit middleware, a method mismatch — so that such a response
@@ -177,6 +180,8 @@ func Classify(err error) (int, string) {
 		return http.StatusTooManyRequests, CodeRateLimited
 	case errors.Is(err, domain.ErrUnsupportedMedia):
 		return http.StatusUnsupportedMediaType, CodeUnsupportedMediaType
+	case errors.Is(err, domain.ErrTooLarge):
+		return http.StatusRequestEntityTooLarge, CodePayloadTooLarge
 	}
 
 	var apiErr *router.ApiError
@@ -247,6 +252,8 @@ func Message(code string) string {
 		return "the request took too long"
 	case CodeUnsupportedMediaType:
 		return "that file type is not accepted"
+	case CodePayloadTooLarge:
+		return "that file is too large"
 	case CodeBadRequest:
 		return "the request could not be processed"
 	}
@@ -273,13 +280,18 @@ func NewFailure(err error, requestID string) Failure {
 // file type.`. This is the one recognisable, filename-free part of it.
 const unsupportedFileTypeSubstring = "unsupported file type"
 
+// fileTooLargeSubstring is core/validators/file.go's UploadedFileSize
+// message: `Failed to upload %q - the maximum allowed file size is %d
+// bytes.`. Also filename-free once matched on this substring alone.
+const fileTooLargeSubstring = "the maximum allowed file size is"
+
 // MapFileValidationError replaces a PocketBase file-field validation failure
-// with domain.ErrUnsupportedMedia (research D-17), and returns every other
-// error unchanged.
+// with domain.ErrUnsupportedMedia or domain.ErrTooLarge (research D-17), and
+// returns every other error unchanged.
 //
-// PocketBase's own message embeds the uploaded filename
-// (`core/validators/file.go:63`), which constitution VII names as PHI: it must
-// never reach the response, the log stream or Sentry. The match is on a
+// PocketBase's own messages embed the uploaded filename
+// (`core/validators/file.go`), which constitution VII names as PHI: it must
+// never reach the response, the log stream or Sentry. Each match is on a
 // substring PocketBase's own message always contains and the filename never
 // does, so this never needs to parse or echo any part of what it replaces.
 func MapFileValidationError(err error) error {
@@ -287,11 +299,14 @@ func MapFileValidationError(err error) error {
 		return nil
 	}
 
-	if strings.Contains(err.Error(), unsupportedFileTypeSubstring) {
+	switch {
+	case strings.Contains(err.Error(), unsupportedFileTypeSubstring):
 		return domain.ErrUnsupportedMedia
+	case strings.Contains(err.Error(), fileTooLargeSubstring):
+		return domain.ErrTooLarge
+	default:
+		return err
 	}
-
-	return err
 }
 
 // NewEnvelope builds the whole body.

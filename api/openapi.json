@@ -1122,6 +1122,528 @@
         "summary": "Replace the password and rotate the token key, which ends every other session."
       }
     },
+    "/api/v1/patients": {
+      "get": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nSorted `last_name, first_name, id` ascending; not configurable in this phase. Never empty in practice: the self-record guarantees one row (FR-005).",
+        "operationId": "listPatients",
+        "parameters": [
+          {
+            "description": "Case-insensitive substring over first and last name.",
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size, 1..100.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "An opaque, server-minted continuation token encoding the sort keys and the last id — never an offset, so a row inserted or deleted between two pages cannot shift a boundary. A forged or unparseable cursor is 400.",
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of the signed-in account's patients, `total` and `owned_count` always present."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`invalid_token` for a recovery or confirmation token that is expired, already used or tampered with — one code for all three, so no token's former existence is disclosed — or `invalid_cursor` for a forged, tampered or unparseable cursor."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Every person the signed-in account owns. total and owned_count are unconditional."
+      },
+      "post": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nThe owner is taken from the session and `is_self_record` is always false; neither is a member of the request body, so re-attribution and a second self-record are impossible by shape (FR-002, FR-004). A `primary_practitioner` the actor does not own is 404.",
+        "operationId": "createPatient",
+        "responses": {
+          "201": {
+            "description": "The created patient.",
+            "headers": {
+              "ETag": {
+                "description": "The record's current version, derived from `updated`. It is what `If-Match` is compared against.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "description": "The address of the created resource.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`not_found`. On owner-scoped data this is also the answer for a record belonging to somebody else, byte-identical apart from `request_id` to an id that never existed (FR-033)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`validation_failed`, with every offending member reported at once in `fields[]`. An unknown or unexpected member is reported with the field code `unknown_field`."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Add a person. The owner comes from the session, never from the body."
+      }
+    },
+    "/api/v1/patients/{patientId}": {
+      "get": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nMembers that were never filled in are absent or null, never a value that reads as recorded (FR-030).",
+        "operationId": "getPatient",
+        "parameters": [
+          {
+            "description": "The patientId.",
+            "in": "path",
+            "name": "patientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The patient.",
+            "headers": {
+              "ETag": {
+                "description": "The record's current version, derived from `updated`. It is what `If-Match` is compared against.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`not_found`. On owner-scoped data this is also the answer for a record belonging to somebody else, byte-identical apart from `request_id` to an id that never existed (FR-033)."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "One person. Another account's id answers 404, byte-identical to an id that never existed."
+      },
+      "patch": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nOnly supplied members change. A missing `If-Match` is 422 on that header; a mismatch is 412 and the response carries the stored patient's current representation.",
+        "operationId": "updatePatient",
+        "parameters": [
+          {
+            "description": "The patientId.",
+            "in": "path",
+            "name": "patientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The version the caller last saw, from the record's `ETag`. Required: an optional precondition is a precondition nobody sends. A mismatch is 412.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The updated patient.",
+            "headers": {
+              "ETag": {
+                "description": "The record's current version, derived from `updated`. It is what `If-Match` is compared against.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`not_found`. On owner-scoped data this is also the answer for a record belonging to somebody else, byte-identical apart from `request_id` to an id that never existed (FR-033)."
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`version_mismatch`: the `If-Match` precondition did not match the stored version."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`validation_failed`, with every offending member reported at once in `fields[]`. An unknown or unexpected member is reported with the field code `unknown_field`."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Partial update. If-Match is required; a mismatch is 412 carrying the current representation."
+      }
+    },
+    "/api/v1/patients/{patientId}/photo": {
+      "delete": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nHard deleted; there is no recycle bin.",
+        "operationId": "deletePatientPhoto",
+        "parameters": [
+          {
+            "description": "The patientId.",
+            "in": "path",
+            "name": "patientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The photo and both thumbnails are gone. Removing a patient with no photo is also 204."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`not_found`. On owner-scoped data this is also the answer for a record belonging to somebody else, byte-identical apart from `request_id` to an id that never existed (FR-033)."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Remove the photograph and its thumbnails. Idempotent."
+      },
+      "get": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nNot owned, does not exist, and no photo recorded are the identical 404 (FR-042, FR-044). Served only through this route: never PocketBase's own file-token mechanism (FR-044).",
+        "operationId": "getPatientPhoto",
+        "parameters": [
+          {
+            "description": "The patientId.",
+            "in": "path",
+            "name": "patientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "`original`, `100x100t` or `400x400f`, default `100x100t`. Any other value is 422.",
+            "in": "query",
+            "name": "size",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The image bytes."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`not_found`. On owner-scoped data this is also the answer for a record belonging to somebody else, byte-identical apart from `request_id` to an id that never existed (FR-033)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`validation_failed`, with every offending member reported at once in `fields[]`. An unknown or unexpected member is reported with the field code `unknown_field`."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "The photograph's bytes, streamed only after the request is authorized. Never a PocketBase file token."
+      },
+      "put": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\n`multipart/form-data`, one part named `photo`. The type is sniffed from the bytes, never trusted from the declared Content-Type or the filename (FR-008). Replacing removes the previous file and its thumbnails; the previous photograph is not retrievable afterwards (FR-008, US1-5). The uploaded filename is PHI and never appears in a response or a log line (FR-046).",
+        "operationId": "putPatientPhoto",
+        "parameters": [
+          {
+            "description": "The patientId.",
+            "in": "path",
+            "name": "patientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The photo was stored and both thumbnails were generated eagerly, before any request for them."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`not_found`. On owner-scoped data this is also the answer for a record belonging to somebody else, byte-identical apart from `request_id` to an id that never existed (FR-033)."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`payload_too_large`: the upload exceeds the configured maximum."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unsupported_media_type`: the sniffed content type is not one this instance accepts."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`validation_failed`, with every offending member reported at once in `fields[]`. An unknown or unexpected member is reported with the field code `unknown_field`."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Replace the one photograph. The type is decided from its content, never its name."
+      }
+    },
     "/api/v1/readyz": {
       "get": {
         "description": "Authorization: public. No session is required, and the response names no account.\n\nIt reports whether the instance can serve and nothing about the data it holds.",

@@ -33,7 +33,7 @@ func inventoryByOpID(t *testing.T) map[string]httproute.Route {
 
 // contracts/README.md, "Operation inventory — 22". The stream is one of the
 // twenty-two, which is also what plan.md's Project Structure says.
-func TestTheTableCarriesTheTwentyTwoDocumentedOperations(t *testing.T) {
+func TestTheTableCarriesTheTwentyNineDocumentedOperations(t *testing.T) {
 	t.Parallel()
 
 	want := []struct {
@@ -65,8 +65,15 @@ func TestTheTableCarriesTheTwentyTwoDocumentedOperations(t *testing.T) {
 		{"confirmPasswordReset", http.MethodPost, "/api/v1/auth/password-reset/confirm", httproute.KindAPI, httproute.AuthPublic},
 		{"requestEmailVerification", http.MethodPost, "/api/v1/auth/verify-email", httproute.KindAPI, httproute.AuthUser},
 		{"confirmEmailVerification", http.MethodPost, "/api/v1/auth/verify-email/confirm", httproute.KindAPI, httproute.AuthPublic},
+		{"listPatients", http.MethodGet, "/api/v1/patients", httproute.KindAPI, httproute.AuthUser},
+		{"createPatient", http.MethodPost, "/api/v1/patients", httproute.KindAPI, httproute.AuthUser},
+		{"getPatient", http.MethodGet, "/api/v1/patients/{patientId}", httproute.KindAPI, httproute.AuthUser},
+		{"updatePatient", http.MethodPatch, "/api/v1/patients/{patientId}", httproute.KindAPI, httproute.AuthUser},
+		{"putPatientPhoto", http.MethodPut, "/api/v1/patients/{patientId}/photo", httproute.KindAPI, httproute.AuthUser},
+		{"getPatientPhoto", http.MethodGet, "/api/v1/patients/{patientId}/photo", httproute.KindAPI, httproute.AuthUser},
+		{"deletePatientPhoto", http.MethodDelete, "/api/v1/patients/{patientId}/photo", httproute.KindAPI, httproute.AuthUser},
 	}
-	require.Len(t, want, 22)
+	require.Len(t, want, 29)
 
 	byOpID := inventoryByOpID(t)
 
@@ -117,7 +124,7 @@ func TestExactlyEightOperationsArePublic(t *testing.T) {
 // contracts/pages.md, "The pages". The landmark strings are what a Playwright
 // getByRole selector contains, so changing one is a breaking change to the gate
 // and has to break this test first.
-func TestTheTableCarriesTheNinePages(t *testing.T) {
+func TestTheTableCarriesTheElevenPages(t *testing.T) {
 	t.Parallel()
 
 	segment := kind.Medication.Segment()
@@ -147,8 +154,13 @@ func TestTheTableCarriesTheNinePages(t *testing.T) {
 			"verifyEmailPage", "/verify-email/{token}", httproute.AuthPublic,
 			`region[name="Email confirmation"]`, "/verify-email/expired-token-for-smoke",
 		},
+		{"patientListPage", "/patients", httproute.AuthUser, `region[name="Patients"]`, "/patients"},
+		{
+			"patientDetailPage", "/patients/{patientId}", httproute.AuthUser,
+			`region[name="Patient chart"]`, "/patients/" + seed.AccountAPatientSelfID,
+		},
 	}
-	require.Len(t, want, 9)
+	require.Len(t, want, 11)
 
 	byOpID := inventoryByOpID(t)
 
@@ -292,11 +304,11 @@ func TestNewReportsWiringThatDoesNotMatchTheTable(t *testing.T) {
 		for opID, handler := range full {
 			stray[opID] = handler
 		}
-		stray["listPatients"] = func(e *core.RequestEvent) error { return nil }
+		stray["notARegisteredOperation"] = func(e *core.RequestEvent) error { return nil }
 
 		_, err := httproute.New(stray)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "listPatients")
+		assert.Contains(t, err.Error(), "notARegisteredOperation")
 	})
 
 	t.Run("a handler for a documented external", func(t *testing.T) {

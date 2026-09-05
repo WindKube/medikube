@@ -17,7 +17,9 @@
 package apitest
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -29,8 +31,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"medikube/internal/domain"
+	"medikube/internal/domain/access"
 	"medikube/internal/domain/audit"
 	"medikube/internal/domain/clinical"
+	"medikube/internal/domain/identity"
 	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
 	"medikube/internal/obs"
@@ -39,10 +43,13 @@ import (
 	"medikube/internal/records"
 	accessservice "medikube/internal/service/access"
 	auditservice "medikube/internal/service/audit"
+	serviceidentity "medikube/internal/service/identity"
 	"medikube/internal/service/medication"
+	"medikube/internal/service/patient"
 	"medikube/internal/store"
 	auditstore "medikube/internal/store/audit"
 	storemedication "medikube/internal/store/medication"
+	patientstore "medikube/internal/store/patient"
 	"medikube/internal/testsupport"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -76,6 +83,7 @@ type Option func(*settings)
 type settings struct {
 	heartbeat time.Duration
 	now       func() time.Time
+	logTo     io.Writer
 
 	registrationOpen bool
 }
@@ -110,6 +118,15 @@ func WithStreamHeartbeat(interval time.Duration) Option {
 // the value on the wire rather than that it parses.
 func WithStreamClock(now func() time.Time) Option {
 	return func(s *settings) { s.now = now }
+}
+
+// WithLogWriter replaces the request logger's sink with w, so a test can
+// capture the log stream itself — FR-046's "no substring of the uploaded
+// filename" is an assertion about what a real deployment's logger would have
+// recorded, and the production wiring's zerolog.Nop() discards everything a
+// test could scan.
+func WithLogWriter(w io.Writer) Option {
+	return func(s *settings) { s.logTo = w }
 }
 
 // New builds one isolated instance. Call it again for the next one: a
@@ -230,7 +247,7 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 
 	hub := realtime.New()
 
-	registry, err := registerKinds(app, hub)
+	registry, patientService, photos, err := registerKinds(app, hub)
 	if err != nil {
 		return nil, err
 	}
@@ -238,18 +255,21 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 	handler := records.NewHandler(registry)
 
 	resolve := api.Resolve(func() (*records.Handler, error) { return handler, nil })
+	patientResolve := api.PatientResolve(func() (*patient.Service, error) { return patientService, nil })
+	photoResolve := api.PatientPhotoResolve(func() (*patient.Service, api.PhotoServer, error) { return patientService, photos, nil })
 
 	accounts, err := api.NewAccounts(app, api.AccountsConfig{
 		RegistrationOpen: chosen.registrationOpen,
 		SessionTTL:       SessionTTL,
 		PublicURL:        PublicURL,
 		Resolve:          resolve,
+		SelfRecord:       api.SelfRecordOf(patientResolve),
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	table, err := handlerTable(resolve, hub, chosen, accounts)
+	table, err := handlerTable(resolve, patientResolve, photoResolve, hub, chosen, accounts)
 	if err != nil {
 		return nil, err
 	}
@@ -268,13 +288,18 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 		return nil, fmt.Errorf("apitest: wiring the error views: %w", err)
 	}
 
+	requestLog := zerolog.Nop()
+	if chosen.logTo != nil {
+		requestLog = zerolog.New(chosen.logTo)
+	}
+
 	pb.BindServe(app, pb.ServeOptions{
 		Middlewares: []*hook.Handler[*core.RequestEvent]{
 			// The correlation id first, and it is not optional here: it is
 			// what fills request_id on every refusal, and FR-033's
 			// byte-identical comparison would be trivially satisfied by two
 			// bodies that both carried an empty one.
-			obs.RequestLogger(zerolog.Nop()),
+			obs.RequestLogger(requestLog),
 			web.Errors(errorPages.Render),
 			// -1021: before PocketBase's loadAuthToken, which is the whole of
 			// how a browser's cookie becomes a bearer token. Without it every
@@ -305,6 +330,8 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 // that would panic on its first request.
 func handlerTable(
 	resolve api.Resolve,
+	patientResolve api.PatientResolve,
+	photoResolve api.PatientPhotoResolve,
 	hub *realtime.Hub,
 	chosen settings,
 	accounts *api.Accounts,
@@ -359,18 +386,54 @@ func handlerTable(
 		return nil, err
 	}
 
+	patientOps, err := api.PatientHandlers(patientResolve, unitSystemOf(accounts.Service))
+	if err != nil {
+		return nil, err
+	}
+
+	photoOps, err := api.PatientPhotoHandlers(photoResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	patientPages, err := page.PatientPages(page.PatientDeps{
+		Resolve: patientResolve,
+		UnitOf:  unitSystemOf(accounts.Service),
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	assets := httproute.Handlers{
 		"assetAppCSS":     web.ServeAppCSS,
 		"assetDatastarJS": web.ServeDatastarJS,
 	}
 
-	for _, group := range []httproute.Handlers{recordOps, pageOps, streamOps, accountOps, accountPages, overviewPage, assets} {
+	groups := []httproute.Handlers{
+		recordOps, pageOps, streamOps, accountOps, accountPages, overviewPage, assets,
+		patientOps, photoOps, patientPages,
+	}
+
+	for _, group := range groups {
 		for opID, handler := range group {
 			table[opID] = handler
 		}
 	}
 
 	return table, nil
+}
+
+// unitSystemOf mirrors cmd/medikube's own: the patient surface's Display
+// rendering (FR-007) reads the same account row contracts/account.md does.
+func unitSystemOf(accounts *serviceidentity.Service) api.UnitSystemOf {
+	return func(ctx context.Context, actor access.Actor) (identity.UnitSystem, error) {
+		user, err := accounts.Me(ctx, actor)
+		if err != nil {
+			return "", err
+		}
+
+		return user.UnitSystem, nil
+	}
 }
 
 func notImplemented(opID string) httproute.Handler {
@@ -383,35 +446,35 @@ func notImplemented(opID string) httproute.Handler {
 
 // registerKinds builds the kind registry this instance serves. One call, seven
 // consumers, no route — the same call cmd/medikube will make.
-func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, error) {
+func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient.Service, *patientstore.PhotoStore, error) {
 	secret, err := store.CursorSecret(app, "")
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	codec, err := store.NewCursorCodec(secret)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	repository, err := storemedication.New(app, codec)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	owners, err := store.NewOwners(app)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	authorizer, err := accessservice.New(owners)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	trail, err := auditstore.New(app)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	// WithRequestID, as the composition root wires it: without it a row the
@@ -420,30 +483,30 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, error) {
 	// place no assertion looks (T231).
 	auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	views, err := page.NewMedicationViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	registry := records.NewRegistry()
 
-	if err := medication.Register(registry, medication.Wiring{
+	if registerErr := medication.Register(registry, medication.Wiring{
 		Repository: repository,
 		Authorizer: authorizer,
 		Auditor:    auditor,
 		Codec:      api.MedicationCodec{},
 		Schema:     api.MedicationSchema(),
 		Views:      views,
-	}); err != nil {
-		return nil, err
+	}); registerErr != nil {
+		return nil, nil, nil, registerErr
 	}
 
 	// FR-037's append-only trail, bound where the binary binds it.
 	if guardErr := pb.BindAuditImmutability(app); guardErr != nil {
-		return nil, guardErr
+		return nil, nil, nil, guardErr
 	}
 
 	// The nightly purge. It is bound and never ticks here — nothing starts the
@@ -453,44 +516,75 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, error) {
 	// a failure rather than an omission nobody notices.
 	retention, retentionErr := auditservice.NewRetention(trail, AuditRetentionDays, auditservice.SystemClock{})
 	if retentionErr != nil {
-		return nil, retentionErr
+		return nil, nil, nil, retentionErr
 	}
 
 	if cronErr := pb.BindCron(app, pb.CronOptions{Retention: retention, Log: zerolog.Nop()}); cronErr != nil {
-		return nil, cronErr
+		return nil, nil, nil, cronErr
 	}
 
 	// FR-036's three rows, from the post-commit hooks and never from a
 	// handler. Bound after the kinds are registered, so the hook is bound to
 	// exactly what this instance serves.
-	if err := pb.BindRecordAudit(app, pb.RecordAudit{
+	if recordAuditErr := pb.BindRecordAudit(app, pb.RecordAudit{
 		Trail:   auditor,
 		Kinds:   registry.Kinds(),
 		Actor:   web.ActorFrom,
 		Request: obs.CorrelationID,
-	}); err != nil {
-		return nil, err
+	}); recordAuditErr != nil {
+		return nil, nil, nil, recordAuditErr
 	}
 
 	// FR-036's sign-in rows, from OnRecordAuthRequest and never from a handler
 	// (research D-14): PocketBase's native auth route stays reachable, so a
 	// handler-side audit would leave one of the two paths to a session
 	// unrecorded.
-	if err := pb.BindAuthAudit(app, pb.AuthAudit{
+	if authAuditErr := pb.BindAuthAudit(app, pb.AuthAudit{
 		Trail:   auditor,
 		Request: obs.CorrelationID,
-	}); err != nil {
-		return nil, err
+	}); authAuditErr != nil {
+		return nil, nil, nil, authAuditErr
 	}
 
 	// contracts/streams.md's post-commit publisher, bound to the same kinds
 	// for the same reason: a live view of a kind this instance does not serve
 	// is a live view of nothing.
-	if err := pb.BindRecordStream(app, pb.RecordStream{Hub: hub, Kinds: registry.Kinds()}); err != nil {
-		return nil, err
+	if streamErr := pb.BindRecordStream(app, pb.RecordStream{Hub: hub, Kinds: registry.Kinds()}); streamErr != nil {
+		return nil, nil, nil, streamErr
 	}
 
-	return registry, nil
+	// Phase 002's patients audit, bound where the binary binds it
+	// (internal/architecture holds the two to the same set of platform
+	// bindings).
+	if patientAuditErr := pb.BindPatientAudit(app, pb.PatientAudit{
+		Trail:   auditor,
+		Actor:   web.ActorFrom,
+		Request: obs.CorrelationID,
+	}); patientAuditErr != nil {
+		return nil, nil, nil, patientAuditErr
+	}
+
+	patientRepo, err := patientstore.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	patientAuthorizer, err := accessservice.New(owners, accessservice.WithPatients(patientRepo, auditor))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	photos, err := patientstore.NewPhotoStore(app, []string{"100x100t", "400x400f"})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	patientService, err := patient.New(patientRepo, photos, patientAuthorizer)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return registry, patientService, photos, nil
 }
 
 // Events reads the trail back, newest last, so a test can assert what one

@@ -54,7 +54,15 @@ var unknownFieldFixtures = map[string]any{
 	"DeleteAccountRequest": api.DeleteAccountRequest{
 		Password: "old", Confirmation: "DELETE",
 	},
+	"PatientCreate": api.PatientCreate{
+		FirstName: "Amara", LastName: "Okonkwo", BirthDate: "1988-04-12",
+	},
+	"PatientPatch": api.PatientPatch{
+		FirstName: &patientPatchFirstNameFixture,
+	},
 }
+
+var patientPatchFirstNameFixture = "Amara"
 
 func TestEveryWriteDTORejectsUnknownFields(t *testing.T) {
 	t.Parallel()

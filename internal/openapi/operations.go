@@ -80,9 +80,11 @@ var errorDescriptions = map[int]string{
 	http.StatusPreconditionFailed: "`version_mismatch`: the `If-Match` precondition did not match the stored version.",
 	http.StatusUnprocessableEntity: "`validation_failed`, with every offending member reported at once in `fields[]`. " +
 		"An unknown or unexpected member is reported with the field code `unknown_field`.",
-	http.StatusTooManyRequests:     "`rate_limited`.",
-	http.StatusInternalServerError: "`internal_error`. The message is a constant: no internal error string ever reaches a client.",
-	http.StatusServiceUnavailable:  "`mail_unconfigured`: this instance has no outgoing mail configured, so the request is refused rather than accepted as though it had succeeded (FR-076).",
+	http.StatusRequestEntityTooLarge: "`payload_too_large`: the upload exceeds the configured maximum.",
+	http.StatusUnsupportedMediaType:  "`unsupported_media_type`: the sniffed content type is not one this instance accepts.",
+	http.StatusTooManyRequests:       "`rate_limited`.",
+	http.StatusInternalServerError:   "`internal_error`. The message is a constant: no internal error string ever reaches a client.",
+	http.StatusServiceUnavailable:    "`mail_unconfigured`: this instance has no outgoing mail configured, so the request is refused rather than accepted as though it had succeeded (FR-076).",
 }
 
 func stringParam(name, description string) param {
@@ -346,6 +348,99 @@ func operationDocs() map[string]operationDoc {
 			headers:     []param{ifMatch},
 			ownerScoped: true,
 			notes:       "`If-Match` is required for the same reason as on update: deleting the record you last saw is a different act from deleting whatever is there now.",
+		},
+
+		// contracts/patients.md
+		"listPatients": {
+			successStatus: http.StatusOK,
+			successNote:   "A page of the signed-in account's patients, `total` and `owned_count` always present.",
+			errors: []int{
+				http.StatusBadRequest,
+				http.StatusUnauthorized,
+				http.StatusInternalServerError,
+			},
+			query:       []param{stringParam("q", "Case-insensitive substring over first and last name."), limitParam(), cursorParam()},
+			ownerScoped: true,
+			notes:       "Sorted `last_name, first_name, id` ascending; not configurable in this phase. Never empty in practice: the self-record guarantees one row (FR-005).",
+		},
+		"createPatient": {
+			successStatus:  http.StatusCreated,
+			successNote:    "The created patient.",
+			successHeaders: []string{"Location", "ETag"},
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			ownerScoped: true,
+			notes: "The owner is taken from the session and `is_self_record` is always false; neither is a member of " +
+				"the request body, so re-attribution and a second self-record are impossible by shape (FR-002, FR-004). " +
+				"A `primary_practitioner` the actor does not own is 404.",
+		},
+		"getPatient": {
+			successStatus:  http.StatusOK,
+			successNote:    "The patient.",
+			successHeaders: []string{"ETag"},
+			errors:         []int{http.StatusUnauthorized, http.StatusNotFound, http.StatusInternalServerError},
+			ownerScoped:    true,
+			notes:          "Members that were never filled in are absent or null, never a value that reads as recorded (FR-030).",
+		},
+		"updatePatient": {
+			successStatus:  http.StatusOK,
+			successNote:    "The updated patient.",
+			successHeaders: []string{"ETag"},
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusPreconditionFailed,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			headers:     []param{ifMatch},
+			ownerScoped: true,
+			notes: "Only supplied members change. A missing `If-Match` is 422 on that header; a mismatch is 412 and " +
+				"the response carries the stored patient's current representation.",
+		},
+
+		// contracts/patient-photo.md
+		"putPatientPhoto": {
+			successStatus: http.StatusOK,
+			successNote:   "The photo was stored and both thumbnails were generated eagerly, before any request for them.",
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusUnprocessableEntity,
+				http.StatusRequestEntityTooLarge,
+				http.StatusUnsupportedMediaType,
+				http.StatusInternalServerError,
+			},
+			ownerScoped: true,
+			notes: "`multipart/form-data`, one part named `photo`. The type is sniffed from the bytes, never trusted " +
+				"from the declared Content-Type or the filename (FR-008). Replacing removes the previous file and its " +
+				"thumbnails; the previous photograph is not retrievable afterwards (FR-008, US1-5). The uploaded " +
+				"filename is PHI and never appears in a response or a log line (FR-046).",
+		},
+		"getPatientPhoto": {
+			successStatus: http.StatusOK,
+			successNote:   "The image bytes.",
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			query:       []param{stringParam("size", "`original`, `100x100t` or `400x400f`, default `100x100t`. Any other value is 422.")},
+			ownerScoped: true,
+			notes: "Not owned, does not exist, and no photo recorded are the identical 404 (FR-042, FR-044). Served " +
+				"only through this route: never PocketBase's own file-token mechanism (FR-044).",
+		},
+		"deletePatientPhoto": {
+			successStatus: http.StatusNoContent,
+			successNote:   "The photo and both thumbnails are gone. Removing a patient with no photo is also 204.",
+			errors:        []int{http.StatusUnauthorized, http.StatusNotFound, http.StatusInternalServerError},
+			ownerScoped:   true,
+			notes:         "Hard deleted; there is no recycle bin.",
 		},
 
 		// contracts/streams.md

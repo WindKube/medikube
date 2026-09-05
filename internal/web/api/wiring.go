@@ -26,6 +26,10 @@ type AccountsConfig struct {
 
 	// Resolve is the record family, for the account's own record counts.
 	Resolve Resolve
+
+	// SelfRecord provisions the account's one self-record patient at
+	// registration (FR-005). Nil is tolerated (see Deps.SelfRecord).
+	SelfRecord SelfRecordFunc
 }
 
 // Accounts is one assembled identity stack.
@@ -103,10 +107,11 @@ func NewAccounts(app core.App, cfg AccountsConfig) (*Accounts, error) {
 
 	return &Accounts{
 		Deps: Deps{
-			Accounts: service,
-			Sessions: sessions,
-			Counts:   counts,
-			Mail:     pb.MailConfigured(app),
+			Accounts:   service,
+			Sessions:   sessions,
+			Counts:     counts,
+			Mail:       pb.MailConfigured(app),
+			SelfRecord: cfg.SelfRecord,
 		},
 		Service:       service,
 		Authenticator: authenticator,

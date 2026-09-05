@@ -1,0 +1,37 @@
+package patients
+
+import "medikube/internal/web/views/ids"
+
+// PatientRow is one row of the list: the name and the date of birth together
+// (Edge case: two people sharing a name), and a marker for the account
+// holder's own row (FR-010).
+templ PatientRow(patient PatientView) {
+	<li
+		id={ ids.PatientRow(patient.ID) }
+		class="flex items-center gap-3 py-3"
+	>
+		if patient.PhotoURL != "" {
+			<img
+				src={ patient.PhotoURL }
+				alt=""
+				class="h-10 w-10 rounded-full object-cover"
+			/>
+		}
+		<div class="flex flex-col">
+			<a
+				href={ patient.Links.Detail }
+				class="font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-teal-300 dark:hover:text-teal-200"
+			>
+				{ patient.FullName() }
+				if patient.IsSelfRecord {
+					<span class="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800 dark:bg-teal-900 dark:text-teal-200">{ selfMarker }</span>
+				}
+			</a>
+			if patient.BirthDate != "" {
+				<span class="text-sm text-slate-600 dark:text-slate-400">
+					<time datetime={ patient.BirthDate }>{ patient.BirthDate }</time>
+				</span>
+			}
+		</div>
+	</li>
+}

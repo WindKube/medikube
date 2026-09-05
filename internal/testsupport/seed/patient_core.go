@@ -1,12 +1,10 @@
 package seed
 
 import (
-	"encoding/base64"
 	"fmt"
 	"time"
 
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/tools/filesystem"
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/directory"
@@ -52,13 +50,6 @@ const (
 	practitionersCollection = "practitioners"
 	patientsCollection      = "patients"
 )
-
-// selfPhotoPNG is a one-pixel, transparent PNG — the smallest byte sequence
-// PocketBase's own content sniffing accepts as image/png. What data-model §9
-// asks for is that Account A's self-record *carries* a photo; nothing asks
-// what the photo shows, so it is the smallest file that satisfies the field's
-// MimeTypes validator rather than an image of anything.
-const selfPhotoPNGBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
 
 // Facilities is data-model §9's two rows: one practice, one pharmacy, both
 // Account A's. Account B's directory stays empty — SC-013 requires the smoke
@@ -232,11 +223,6 @@ func applyPatients(app core.App) error {
 		return requireErr
 	}
 
-	photo, err := selfPhoto()
-	if err != nil {
-		return fmt.Errorf("building the seeded self-record's photo: %w", err)
-	}
-
 	for _, patient := range Patients() {
 		if err := patient.Validate(); err != nil {
 			return fmt.Errorf("seeding %s: %w", patient.ID, err)
@@ -256,11 +242,6 @@ func applyPatients(app core.App) error {
 		record.Set(columnRelationshipToOwner, string(patient.RelationshipToOwner))
 		record.Set(columnPrimaryPractitioner, patient.PrimaryPractitionerID)
 		record.Set(columnIsSelfRecord, patient.IsSelfRecord)
-
-		// data-model §9: only Account A's self-record carries a photo.
-		if patient.ID == AccountAPatientSelfID {
-			record.Set(columnPhoto, photo)
-		}
 
 		if err := app.Save(record); err != nil {
 			return fmt.Errorf("seeding %s: %w", patient.ID, err)
@@ -302,13 +283,4 @@ func applyActivePatients(app core.App) error {
 	}
 
 	return nil
-}
-
-func selfPhoto() (*filesystem.File, error) {
-	raw, err := base64.StdEncoding.DecodeString(selfPhotoPNGBase64)
-	if err != nil {
-		return nil, fmt.Errorf("decoding the seeded photo: %w", err)
-	}
-
-	return filesystem.NewFileFromBytes(raw, "self.png")
 }

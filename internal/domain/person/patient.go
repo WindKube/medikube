@@ -45,6 +45,13 @@ type Patient struct {
 	// Absent from every request DTO. FR-040.
 	PrimaryPractitionerID string
 
+	// HasPhoto is read-only and never persisted from this struct:
+	// internal/store/patient's photo store is the only writer of the photo
+	// column (research D-17), and this is a projection of whether it has
+	// written one, filled by internal/store.PatientFromRecord for the wire
+	// layer's `photo_url` (contracts/patients.md).
+	HasPhoto bool
+
 	// Server-set (FR-004). At most one true row per owner, enforced by a
 	// partial unique index at the storage layer.
 	IsSelfRecord bool

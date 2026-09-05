@@ -143,8 +143,10 @@ func table() []Route {
 	routes = append(routes, authRoutes()...)
 	routes = append(routes, accountRoutes()...)
 	routes = append(routes, recordRoutes()...)
+	routes = append(routes, patientRoutes()...)
 	routes = append(routes, healthRoutes()...)
 	routes = append(routes, pageRoutes()...)
+	routes = append(routes, patientPageRoutes()...)
 	routes = append(routes, assetRoutes()...)
 	routes = append(routes, externalRoutes()...)
 
@@ -320,6 +322,78 @@ func recordRoutes() []Route {
 			// a 300-per-10-seconds budget is meaningless; being cut off by it
 			// on a reconnect storm is not.
 			Unbind: []string{apis.DefaultRateLimitMiddlewareId},
+		},
+	}
+}
+
+// contracts/patients.md and contracts/patient-photo.md. Patients are not a
+// kind.Kind (research D-05, the anchor rather than a record kind), so these
+// seven are their own routes rather than a kind registered with recordRoutes'
+// generic six.
+func patientRoutes() []Route {
+	collection := apiBase + "/patients"
+	one := collection + "/{patientId}"
+	photo := one + "/photo"
+
+	return []Route{
+		{
+			OpID: "listPatients", Method: http.MethodGet, Path: collection,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Every person the signed-in account owns. total and owned_count are unconditional.",
+		},
+		{
+			OpID: "createPatient", Method: http.MethodPost, Path: collection,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Add a person. The owner comes from the session, never from the body.",
+		},
+		{
+			OpID: "getPatient", Method: http.MethodGet, Path: one,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "One person. Another account's id answers 404, byte-identical to an id that never existed.",
+		},
+		{
+			OpID: "updatePatient", Method: http.MethodPatch, Path: one,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Partial update. If-Match is required; a mismatch is 412 carrying the current representation.",
+		},
+		{
+			OpID: "putPatientPhoto", Method: http.MethodPut, Path: photo,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Replace the one photograph. The type is decided from its content, never its name.",
+		},
+		{
+			OpID: "getPatientPhoto", Method: http.MethodGet, Path: photo,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "The photograph's bytes, streamed only after the request is authorized. Never a PocketBase file token.",
+		},
+		{
+			OpID: "deletePatientPhoto", Method: http.MethodDelete, Path: photo,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Remove the photograph and its thumbnails. Idempotent.",
+		},
+	}
+}
+
+// contracts/pages.md P1 and P2. Registered separately from pageRoutes'
+// medication pair because both need the plural this package would otherwise
+// have to spell twice: patients are not a kind.Kind, so there is no
+// kind.Patient.Segment() to read it back from.
+func patientPageRoutes() []Route {
+	list := "/patients"
+	detail := list + "/{patientId}"
+
+	return []Route{
+		{
+			OpID: "patientListPage", Method: http.MethodGet, Path: list,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "The people this account keeps records for, with its empty state inside the landmark.",
+			Landmark: `region[name="Patients"]`, SmokeURL: list,
+		},
+		{
+			OpID: "patientDetailPage", Method: http.MethodGet, Path: detail,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "One person's own chart header.",
+			Landmark: `region[name="Patient chart"]`, SmokeURL: list + "/" + seed.AccountAPatientSelfID,
 		},
 	}
 }

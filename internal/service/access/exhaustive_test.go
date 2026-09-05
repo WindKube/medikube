@@ -81,6 +81,7 @@ var checkpointPackagesOutsideTheRule = map[string]string{
 	"internal/records/recordstest":               "the record family's hand-written fakes (T108). A fake kind service exists to be driven without a database or a checkpoint; a fake that authorized would be testing itself",
 	"internal/service/medication/medicationtest": "the medication contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, and its repository fake answers from a map",
 	"internal/service/identity/identitytest":     "the account contract suite and its in-memory fake, for the same reason",
+	"internal/service/patient/patienttest":       "the patient contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, for the same reason",
 }
 
 // exemption is one method the rule does not reach, and why.
@@ -158,6 +159,14 @@ var checkpointExempt = map[string]exemption{
 	},
 	"internal/service/identity.Service.RequestPasswordReset": {
 		reason: "anonymous by requirement. It takes an address and no actor — the parameter is `_` — and answers identically whether the address has an account, which is the oracle FR-073 closes. PROSE ONLY: nothing below proves this one",
+	},
+	"internal/service/patient.Service.List": {
+		reason:         "reads only the actor's own patients: the repository query is filtered by owner and there is no id parameter anywhere for a caller to name another account's row in (contracts/patients.md's unconditional owner scope). Get is where a single patient is authorized against the person (research D-05)",
+		insteadReaches: "Authenticated",
+	},
+	"internal/service/patient.Service.Create": {
+		reason:         "creates a new patient for the actor; owner is taken from the session and there is no existing row to authorize against yet (FR-002)",
+		insteadReaches: "Authenticated",
 	},
 }
 

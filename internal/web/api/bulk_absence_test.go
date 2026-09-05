@@ -15,6 +15,7 @@ import (
 	"medikube/internal/platform/pb"
 	"medikube/internal/testsupport"
 	"medikube/internal/web"
+	"medikube/internal/web/api"
 	"medikube/internal/web/apitest"
 )
 
@@ -278,6 +279,14 @@ func TestNoPublishedRouteHonoursPocketBasesQueryLanguage(t *testing.T) {
 
 	for _, route := range httproute.Inventory().Routes() {
 		if route.Kind != httproute.KindAPI || route.Auth != httproute.AuthUser || route.Method != http.MethodGet {
+			continue
+		}
+
+		// getPatientPhoto answers raw bytes, not the JSON list envelope this
+		// sweep probes with PocketBase's own list parameters (contracts/patient-photo.md),
+		// and the fixture's self-record carries no photograph to stream —
+		// contracts/patient-photo.md's own suite (T051) exercises it directly.
+		if route.OpID == api.OpGetPatientPhoto {
 			continue
 		}
 

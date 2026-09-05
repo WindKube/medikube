@@ -110,10 +110,6 @@ func TestEveryPhase002FixtureIdentifierNamesASeededRecord(t *testing.T) {
 		require.NoError(t, err, "no patient %s: the seed and the constants have drifted", id)
 	}
 
-	self, err := app.FindRecordById("patients", AccountAPatientSelfID)
-	require.NoError(t, err)
-	assert.NotEmpty(t, self.GetString("photo"), "Account A's self-record should carry the seeded photo (data-model §9)")
-
 	for accountID, patientID := range map[string]string{
 		AccountAID: AccountAPatientSelfID,
 		AccountBID: AccountBPatientSelfID,

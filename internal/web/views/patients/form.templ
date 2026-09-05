@@ -1,0 +1,95 @@
+package patients
+
+import (
+	"medikube/internal/domain/person"
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
+
+const (
+	cancelLabel = "Cancel"
+	notRecorded = "Not recorded"
+)
+
+// PatientForm is both the create form and the edit form (FR-001, FR-012):
+// the same nine fields either way, with every refusal rendered as the
+// control's next sibling and named by its aria-describedby (FR-048), and the
+// controls holding what was submitted rather than being cleared.
+templ PatientForm(props PatientFormProps) {
+	<form
+		id={ props.FormID }
+		aria-label={ props.Label() }
+		data-on:submit__prevent={ props.OnSubmit }
+		class="flex max-w-2xl flex-col gap-5"
+	>
+		@textControl(props, FieldFirstName, "text", true)
+		@textControl(props, FieldLastName, "text", true)
+		@textControl(props, FieldBirthDate, "date", true)
+		@selectControl(props, FieldSex, SexOptions(person.Sex(props.Patient.SexValue)), true)
+		@selectControl(props, FieldBloodType, BloodTypeOptions(person.BloodType(props.Patient.BloodTypeVal)), true)
+		@textControl(props, FieldAddress, "text", false)
+		@selectControl(props, FieldRelationship, RelationshipOptions(person.RelationshipToOwner(props.Patient.RelationVal)), true)
+		<div class="flex flex-wrap items-center gap-3">
+			<button
+				type="submit"
+				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ props.SubmitLabel() }</button>
+			if props.CancelHref != "" {
+				<a
+					href={ props.CancelHref }
+					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
+				>{ cancelLabel }</a>
+			}
+		</div>
+	</form>
+}
+
+templ textControl(props PatientFormProps, field, inputType string, required bool) {
+	<div class="flex flex-col">
+		<label
+			for={ ids.Field(props.FormID, field) }
+			class="text-sm font-medium text-slate-900 dark:text-slate-100"
+		>{ FieldLabel(field) }</label>
+		<input
+			id={ ids.Field(props.FormID, field) }
+			name={ field }
+			type={ inputType }
+			value={ props.Patient.Value(field) }
+			data-bind={ field }
+			required?={ required }
+			if props.Errors.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(props.FormID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		/>
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+	</div>
+}
+
+templ selectControl(props PatientFormProps, field string, options []Option, optional bool) {
+	<div class="flex flex-col">
+		<label
+			for={ ids.Field(props.FormID, field) }
+			class="text-sm font-medium text-slate-900 dark:text-slate-100"
+		>{ FieldLabel(field) }</label>
+		<select
+			id={ ids.Field(props.FormID, field) }
+			name={ field }
+			data-bind={ field }
+			if props.Errors.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(props.FormID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		>
+			if optional {
+				<option value="" selected?={ props.Patient.Value(field) == "" }>{ notRecorded }</option>
+			}
+			for _, option := range options {
+				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+			}
+		</select>
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+	</div>
+}

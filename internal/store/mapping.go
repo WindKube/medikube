@@ -16,6 +16,7 @@ import (
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/identity"
 	"medikube/internal/domain/kind"
+	"medikube/internal/domain/person"
 )
 
 // auditCollection is the audit trail. Like the auth collection above it, it is
@@ -119,6 +120,102 @@ const (
 	medicationFieldSideEffects     = "side_effects"
 	medicationFieldNotes           = "notes"
 )
+
+// patientsCollection is phase 002's central entity (data-model §3). Published
+// as PatientCollection for the same reason AuditCollection is: the anchor is
+// not a kind.Kind (research D-05), so there is no kind.Collection() to read it
+// from, and internal/service/access reaches this package for PatientOwners
+// without a second spelling of the name.
+const patientsCollection = "patients"
+
+// PatientCollection is that name, published.
+const PatientCollection = patientsCollection
+
+// data-model §3's thirteen columns, less id/created/updated.
+const (
+	patientFieldOwner               = "owner"
+	patientFieldFirstName           = "first_name"
+	patientFieldLastName            = "last_name"
+	patientFieldBirthDate           = "birth_date"
+	patientFieldSex                 = "sex"
+	patientFieldBloodType           = "blood_type"
+	patientFieldHeightCM            = "height_cm"
+	patientFieldWeightKG            = "weight_kg"
+	patientFieldAddress             = "address"
+	patientFieldRelationshipToOwner = "relationship_to_owner"
+	patientFieldPrimaryPractitioner = "primary_practitioner"
+	patientFieldIsSelfRecord        = "is_self_record"
+	patientFieldPhoto               = "photo"
+)
+
+// The patient columns a repository names when it builds a store.Query, and
+// PatientPhotoField for internal/store/patient's photo store, which needs the
+// bare column name to read back the stored filename.
+const (
+	PatientOwner        = patientFieldOwner
+	PatientLastName     = patientFieldLastName
+	PatientPhoto        = patientFieldPhoto
+	PatientIsSelfRecord = patientFieldIsSelfRecord
+)
+
+// PatientFromRecord reads a stored row into the entity. It does not validate,
+// for the same reason MedicationFromRecord does not (research D-26): a row
+// already stored is a fact whatever the current rules say about it.
+func PatientFromRecord(record *core.Record) (person.Patient, error) {
+	if err := expectCollection(record, patientsCollection); err != nil {
+		return person.Patient{}, err
+	}
+
+	birthDate, err := recordDate(record, patientFieldBirthDate)
+	if err != nil {
+		return person.Patient{}, err
+	}
+
+	return person.Patient{
+		ID:                    record.Id,
+		OwnerID:               record.GetString(patientFieldOwner),
+		FirstName:             record.GetString(patientFieldFirstName),
+		LastName:              record.GetString(patientFieldLastName),
+		BirthDate:             birthDate,
+		Sex:                   person.Sex(record.GetString(patientFieldSex)),
+		BloodType:             person.BloodType(record.GetString(patientFieldBloodType)),
+		RelationshipToOwner:   person.RelationshipToOwner(record.GetString(patientFieldRelationshipToOwner)),
+		HeightCM:              record.GetFloat(patientFieldHeightCM),
+		WeightKG:              record.GetFloat(patientFieldWeightKG),
+		Address:               record.GetString(patientFieldAddress),
+		PrimaryPractitionerID: record.GetString(patientFieldPrimaryPractitioner),
+		IsSelfRecord:          record.GetBool(patientFieldIsSelfRecord),
+		HasPhoto:              record.GetString(patientFieldPhoto) != "",
+		CreatedAt:             recordInstant(record, fieldCreated),
+		UpdatedAt:             recordInstant(record, fieldUpdated),
+		Version:               Version(record),
+	}, nil
+}
+
+// PatientToRecord writes the entity's columns onto the record. It never
+// touches the photo field: internal/store/patient's photo store is the only
+// writer of patientFieldPhoto, so a profile save can never orphan or
+// overwrite a photograph it did not touch.
+func PatientToRecord(record *core.Record, patient person.Patient) error {
+	if err := expectCollection(record, patientsCollection); err != nil {
+		return err
+	}
+
+	record.Set(patientFieldOwner, patient.OwnerID)
+	record.Set(patientFieldFirstName, patient.FirstName)
+	record.Set(patientFieldLastName, patient.LastName)
+	setDate(record, patientFieldBirthDate, patient.BirthDate)
+	record.Set(patientFieldSex, string(patient.Sex))
+	record.Set(patientFieldBloodType, string(patient.BloodType))
+	record.Set(patientFieldRelationshipToOwner, string(patient.RelationshipToOwner))
+	record.Set(patientFieldHeightCM, patient.HeightCM)
+	record.Set(patientFieldWeightKG, patient.WeightKG)
+	record.Set(patientFieldAddress, patient.Address)
+	record.Set(patientFieldPrimaryPractitioner, patient.PrimaryPractitionerID)
+	record.Set(patientFieldIsSelfRecord, patient.IsSelfRecord)
+
+	return nil
+}
 
 // data-model §3's seven columns. The list is the point: there is nothing here a
 // value, a name, a note or a diff could be written into.
@@ -351,11 +448,19 @@ func AssertMappedFields(app core.App) error {
 			auditFieldAction, auditFieldTargetKind, auditFieldTargetID,
 			auditFieldRequestID, auditFieldPatient,
 		},
+		patientsCollection: {
+			fieldID, fieldCreated, fieldUpdated,
+			patientFieldOwner, patientFieldFirstName, patientFieldLastName,
+			patientFieldBirthDate, patientFieldSex, patientFieldBloodType,
+			patientFieldHeightCM, patientFieldWeightKG, patientFieldAddress,
+			patientFieldRelationshipToOwner, patientFieldPrimaryPractitioner,
+			patientFieldIsSelfRecord, patientFieldPhoto,
+		},
 	}
 
 	var problems []error
 
-	for _, name := range []string{authCollection, kind.Medication.Collection(), auditCollection} {
+	for _, name := range []string{authCollection, kind.Medication.Collection(), auditCollection, patientsCollection} {
 		collection, err := app.FindCollectionByNameOrId(name)
 		if err != nil {
 			problems = append(problems, fmt.Errorf("%w: %s is missing entirely: %w", ErrSchemaDrift, name, err))
