@@ -14,6 +14,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/records"
 	"medikube/internal/service/allergy"
+	"medikube/internal/service/link"
 )
 
 // AllergySeedFixtureID is the fixture `medikube seed` builds for this kind.
@@ -161,6 +162,13 @@ type AllergyWiring struct {
 
 	SearchFields func(any) (title, body string)
 	Basis        func(any, records.Criteria) []string
+
+	// LinkResolver and LinkAuthorizer are FR-057's validation for the
+	// `medications` field. Both nil is accepted — a registration built
+	// without them writes the field unvalidated — but supplying only one is
+	// refused: a half-wired checkpoint is worse than none.
+	LinkResolver   link.Resolver
+	LinkAuthorizer link.Authorizer
 }
 
 // RegisterAllergy wires allergies into the record registry.
@@ -169,7 +177,12 @@ func RegisterAllergy(registry *records.Registry, wiring AllergyWiring) error {
 		return fmt.Errorf("allergy: there is no registry to register %s into", kind.Allergy)
 	}
 
-	service, err := allergy.New(wiring.Repository, wiring.Authorizer)
+	var options []allergy.Option
+	if wiring.LinkResolver != nil && wiring.LinkAuthorizer != nil {
+		options = append(options, allergy.WithLinks(wiring.LinkResolver, wiring.LinkAuthorizer))
+	}
+
+	service, err := allergy.New(wiring.Repository, wiring.Authorizer, options...)
 	if err != nil {
 		return err
 	}

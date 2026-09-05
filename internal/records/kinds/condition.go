@@ -11,6 +11,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/records"
 	"medikube/internal/service/condition"
+	"medikube/internal/service/link"
 )
 
 // ConditionSeedFixtureID is the fixture `medikube seed` builds for this kind.
@@ -154,6 +155,11 @@ type ConditionWiring struct {
 
 	SearchFields func(any) (title, body string)
 	Basis        func(any, records.Criteria) []string
+
+	// LinkResolver and LinkAuthorizer are FR-057's validation for the
+	// `medications` field. See allergy's own AllergyWiring for the reasoning.
+	LinkResolver   link.Resolver
+	LinkAuthorizer link.Authorizer
 }
 
 // RegisterCondition wires conditions into the record registry.
@@ -162,7 +168,12 @@ func RegisterCondition(registry *records.Registry, wiring ConditionWiring) error
 		return fmt.Errorf("condition: there is no registry to register %s into", kind.Condition)
 	}
 
-	service, err := condition.New(wiring.Repository, wiring.Authorizer)
+	var options []condition.Option
+	if wiring.LinkResolver != nil && wiring.LinkAuthorizer != nil {
+		options = append(options, condition.WithLinks(wiring.LinkResolver, wiring.LinkAuthorizer))
+	}
+
+	service, err := condition.New(wiring.Repository, wiring.Authorizer, options...)
 	if err != nil {
 		return err
 	}

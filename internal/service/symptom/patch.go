@@ -24,6 +24,11 @@ type Patch struct {
 	// FR-065): nil leaves the applied tags alone, non-nil (including empty)
 	// replaces the whole set.
 	Tags *[]string
+
+	// TreatedByMedicationIDs and CausedByMedicationIDs are FR-032's two
+	// distinct medication roles: replace-set, nil leaves the set alone.
+	TreatedByMedicationIDs *[]string
+	CausedByMedicationIDs  *[]string
 }
 
 func (p Patch) applyTo(s clinical.Symptom) clinical.Symptom {
@@ -43,6 +48,14 @@ func (p Patch) applyTo(s clinical.Symptom) clinical.Symptom {
 
 	if p.Tags != nil {
 		s.Tags = *p.Tags
+	}
+
+	if p.TreatedByMedicationIDs != nil {
+		s.TreatedByMedicationIDs = *p.TreatedByMedicationIDs
+	}
+
+	if p.CausedByMedicationIDs != nil {
+		s.CausedByMedicationIDs = *p.CausedByMedicationIDs
 	}
 
 	return s

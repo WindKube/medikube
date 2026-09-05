@@ -8,6 +8,8 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/clinical"
+	"medikube/internal/domain/kind"
+	"medikube/internal/service/link"
 )
 
 // FieldPatient is the field a create's missing patient is reported against.
@@ -17,9 +19,25 @@ const FieldPatient = "patient"
 type Service struct {
 	repository Repository
 	authorizer Authorizer
+
+	linkResolver   link.Resolver
+	linkAuthorizer link.Authorizer
 }
 
-func New(repository Repository, authorizer Authorizer) (*Service, error) {
+// Option configures a dependency only some callers need. WithLinks is the
+// FR-057 validation for the `medications` field; a service built without it
+// writes MedicationIDs unvalidated, which is only acceptable where a test
+// does not exercise that field.
+type Option func(*Service)
+
+func WithLinks(resolver link.Resolver, authorizer link.Authorizer) Option {
+	return func(s *Service) {
+		s.linkResolver = resolver
+		s.linkAuthorizer = authorizer
+	}
+}
+
+func New(repository Repository, authorizer Authorizer, options ...Option) (*Service, error) {
 	var missing []string
 
 	if repository == nil {
@@ -34,7 +52,25 @@ func New(repository Repository, authorizer Authorizer) (*Service, error) {
 		return nil, fmt.Errorf("allergy: the service is wired with no %s", joinWords(missing))
 	}
 
-	return &Service{repository: repository, authorizer: authorizer}, nil
+	service := &Service{repository: repository, authorizer: authorizer}
+
+	for _, option := range options {
+		option(service)
+	}
+
+	return service, nil
+}
+
+// validateMedications is FR-057 applied to the one multi-relation field this
+// kind carries: every id must belong to the same patient and be editable by
+// the actor. It is a no-op when the service was built with no link resolver
+// (WithLinks not supplied) or the field was not part of this write.
+func (s *Service) validateMedications(ctx context.Context, actor access.Actor, patientID string, ids []string) ([]string, error) {
+	if s.linkResolver == nil {
+		return ids, nil
+	}
+
+	return link.ValidateSet(ctx, s.linkResolver, s.linkAuthorizer, actor, patientID, kind.Medication, ids)
 }
 
 func (s *Service) List(ctx context.Context, actor access.Actor, query Query) (domain.Page[clinical.Allergy], error) {
@@ -88,6 +124,15 @@ func (s *Service) Create(ctx context.Context, actor access.Actor, draft clinical
 		return clinical.Allergy{}, err
 	}
 
+	if len(draft.MedicationIDs) > 0 {
+		validated, err := s.validateMedications(ctx, actor, draft.PatientID, draft.MedicationIDs)
+		if err != nil {
+			return clinical.Allergy{}, err
+		}
+
+		draft.MedicationIDs = validated
+	}
+
 	return s.repository.Create(ctx, draft)
 }
 
@@ -99,6 +144,15 @@ func (s *Service) Update(ctx context.Context, actor access.Actor, id, version st
 
 	if err := s.authorizePatient(ctx, actor, current.PatientID, access.PermEdit); err != nil {
 		return clinical.Allergy{}, err
+	}
+
+	if patch.MedicationIDs != nil {
+		validated, err := s.validateMedications(ctx, actor, current.PatientID, *patch.MedicationIDs)
+		if err != nil {
+			return clinical.Allergy{}, err
+		}
+
+		patch.MedicationIDs = &validated
 	}
 
 	changed := patch.applyTo(current)

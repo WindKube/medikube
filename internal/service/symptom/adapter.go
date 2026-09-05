@@ -10,6 +10,7 @@ import (
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
 	"medikube/internal/records"
+	"medikube/internal/service/link"
 )
 
 // Codec is the kind's DTO boundary, declared here so this package never names
@@ -204,6 +205,12 @@ type Wiring struct {
 
 	SearchFields func(any) (title, body string)
 	Basis        func(any, records.Criteria) []string
+
+	// LinkResolver and LinkAuthorizer are FR-057's validation for the two
+	// medication-role fields. See allergy's own AllergyWiring for the
+	// reasoning.
+	LinkResolver   link.Resolver
+	LinkAuthorizer link.Authorizer
 }
 
 // Register wires symptoms into the record registry.
@@ -212,7 +219,12 @@ func Register(registry *records.Registry, wiring Wiring) error {
 		return fmt.Errorf("symptom: there is no registry to register %s into", kind.Symptom)
 	}
 
-	service, err := New(wiring.Repository, wiring.Authorizer)
+	var options []Option
+	if wiring.LinkResolver != nil && wiring.LinkAuthorizer != nil {
+		options = append(options, WithLinks(wiring.LinkResolver, wiring.LinkAuthorizer))
+	}
+
+	service, err := New(wiring.Repository, wiring.Authorizer, options...)
 	if err != nil {
 		return err
 	}

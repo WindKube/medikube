@@ -53,6 +53,7 @@ import (
 	storeimmunization "medikube/internal/store/immunization"
 	storeinjury "medikube/internal/store/injury"
 	insurancestore "medikube/internal/store/insurance"
+	linkstore "medikube/internal/store/link"
 	medicationstore "medikube/internal/store/medication"
 	patientstore "medikube/internal/store/patient"
 	practitionerstore "medikube/internal/store/practitioner"
@@ -857,6 +858,11 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		return nil, nil, err
 	}
 
+	linkResolver, err := linkstore.NewResolver(app)
+	if err != nil {
+		return err
+	}
+
 	allergyViews, err := page.NewAllergyViews()
 	if err != nil {
 		return nil, nil, err
@@ -868,13 +874,15 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	}
 
 	if err = kinds.RegisterAllergy(registry, kinds.AllergyWiring{
-		Repository:   allergyRepo,
-		Authorizer:   authorizer,
-		Codec:        api.AllergyCodec{},
-		Schema:       api.AllergySchema(),
-		Views:        allergyViews,
-		SearchFields: api.AllergySearchFields,
-		Basis:        api.AllergyBasis,
+		Repository:     allergyRepo,
+		Authorizer:     authorizer,
+		Codec:          api.AllergyCodec{},
+		Schema:         api.AllergySchema(),
+		Views:          allergyViews,
+		SearchFields:   api.AllergySearchFields,
+		Basis:          api.AllergyBasis,
+		LinkResolver:   linkResolver,
+		LinkAuthorizer: authorizer,
 	}); err != nil {
 		return nil, nil, err
 	}
@@ -890,13 +898,15 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	}
 
 	if err = kinds.RegisterCondition(registry, kinds.ConditionWiring{
-		Repository:   conditionRepo,
-		Authorizer:   authorizer,
-		Codec:        api.ConditionCodec{},
-		Schema:       api.ConditionSchema(),
-		Views:        conditionViews,
-		SearchFields: api.ConditionSearchFields,
-		Basis:        api.ConditionBasis,
+		Repository:     conditionRepo,
+		Authorizer:     authorizer,
+		Codec:          api.ConditionCodec{},
+		Schema:         api.ConditionSchema(),
+		Views:          conditionViews,
+		SearchFields:   api.ConditionSearchFields,
+		Basis:          api.ConditionBasis,
+		LinkResolver:   linkResolver,
+		LinkAuthorizer: authorizer,
 	}); err != nil {
 		return nil, nil, err
 	}
@@ -1004,13 +1014,15 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	}
 
 	if symptomRegisterErr := symptom.Register(registry, symptom.Wiring{
-		Repository:   symptomRepo,
-		Authorizer:   authorizer,
-		Codec:        api.SymptomCodec{},
-		Schema:       api.SymptomSchema(),
-		Views:        symptomViews,
-		SearchFields: api.SymptomSearchFields,
-		Basis:        api.SymptomBasis,
+		Repository:     symptomRepo,
+		Authorizer:     authorizer,
+		Codec:          api.SymptomCodec{},
+		Schema:         api.SymptomSchema(),
+		Views:          symptomViews,
+		SearchFields:   api.SymptomSearchFields,
+		Basis:          api.SymptomBasis,
+		LinkResolver:   linkResolver,
+		LinkAuthorizer: authorizer,
 	}); symptomRegisterErr != nil {
 		return nil, nil, symptomRegisterErr
 	}
