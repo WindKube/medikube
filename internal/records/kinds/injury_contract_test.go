@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/kind"
 	"medikube/internal/records"
@@ -95,7 +96,7 @@ func TestInjurySatisfiesTheSharedRecordContracts(t *testing.T) {
 			},
 			Entry:       entry,
 			Fixture:     fixture,
-			DefaultSort: injury.Sorts()[0],
+			DefaultSort: []domain.SortKey{injury.Sorts()[0]},
 			NoPatient: func() any {
 				return &api.InjuryCreate{Name: "Twisted ankle", BodyPart: "ankle"}
 			},

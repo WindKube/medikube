@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/kind"
 	"medikube/internal/records"
@@ -91,7 +92,7 @@ func TestImmunizationSatisfiesTheSharedRecordContracts(t *testing.T) {
 			},
 			Entry:       entry,
 			Fixture:     fixture,
-			DefaultSort: immunization.Sorts()[0],
+			DefaultSort: []domain.SortKey{immunization.Sorts()[0]},
 			NoPatient: func() any {
 				return &api.ImmunizationCreate{VaccineName: "Influenza", AdministeredOn: strPtr("2024-01-01")}
 			},
