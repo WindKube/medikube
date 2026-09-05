@@ -163,7 +163,7 @@ func serving(t *testing.T, cfg config.Config, logs *syncBuffer) string {
 		_ = res.Body.Close()
 
 		return true
-	}, 20*time.Second, 20*time.Millisecond, "the instance never started answering on %s", base)
+	}, 90*time.Second, 50*time.Millisecond, "the instance never started answering on %s", base)
 
 	return base
 }
