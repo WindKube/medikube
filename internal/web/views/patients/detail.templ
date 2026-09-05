@@ -1,0 +1,49 @@
+package patients
+
+import "medikube/internal/web/views/ids"
+
+const patientChartRegion = "Patient chart"
+
+// PatientDetail is contracts/pages.md P2's landmark: the person's own header,
+// with every absent detail simply not rendered as a row (FR-030, US1-6) — an
+// absent blood type is not shown as an unknown-but-recorded value.
+templ PatientDetail(props PatientDetailProps) {
+	<section
+		id={ ids.PatientDetail(props.Patient.ID) }
+		aria-label={ patientChartRegion }
+		class="flex flex-col gap-4"
+	>
+		<div class="flex items-center gap-4">
+			@PatientPhoto(PatientPhotoProps{
+				PatientID: props.Patient.ID,
+				PhotoURL:  props.Patient.PhotoURL,
+				Name:      props.Patient.FullName(),
+			})
+			<div>
+				<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">
+					{ props.Patient.FullName() }
+					if props.Patient.IsSelfRecord {
+						<span class="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800 dark:bg-teal-900 dark:text-teal-200">{ selfMarker }</span>
+					}
+				</h1>
+				if props.Patient.Age != "" {
+					<p class="text-sm text-slate-600 dark:text-slate-400">{ props.Patient.Age }</p>
+				}
+			</div>
+		</div>
+		if len(props.Patient.Entries()) > 0 {
+			<dl class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+				for _, entry := range props.Patient.Entries() {
+					<div>
+						<dt class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+						if entry.Datetime != "" {
+							<dd class="text-sm text-slate-900 dark:text-slate-100"><time datetime={ entry.Datetime }>{ entry.Value }</time></dd>
+						} else {
+							<dd class="text-sm text-slate-900 dark:text-slate-100">{ entry.Value }</dd>
+						}
+					</div>
+				}
+			</dl>
+		}
+	</section>
+}

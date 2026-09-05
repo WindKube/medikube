@@ -33,7 +33,7 @@ func inventoryByOpID(t *testing.T) map[string]httproute.Route {
 
 // contracts/README.md, "Operation inventory — 22". The stream is one of the
 // twenty-two, which is also what plan.md's Project Structure says.
-func TestTheTableCarriesTheTwentyTwoDocumentedOperations(t *testing.T) {
+func TestTheTableCarriesTheTwentyNineDocumentedOperations(t *testing.T) {
 	t.Parallel()
 
 	want := []struct {
@@ -65,8 +65,15 @@ func TestTheTableCarriesTheTwentyTwoDocumentedOperations(t *testing.T) {
 		{"confirmPasswordReset", http.MethodPost, "/api/v1/auth/password-reset/confirm", httproute.KindAPI, httproute.AuthPublic},
 		{"requestEmailVerification", http.MethodPost, "/api/v1/auth/verify-email", httproute.KindAPI, httproute.AuthUser},
 		{"confirmEmailVerification", http.MethodPost, "/api/v1/auth/verify-email/confirm", httproute.KindAPI, httproute.AuthPublic},
+		{"listPatients", http.MethodGet, "/api/v1/patients", httproute.KindAPI, httproute.AuthUser},
+		{"createPatient", http.MethodPost, "/api/v1/patients", httproute.KindAPI, httproute.AuthUser},
+		{"getPatient", http.MethodGet, "/api/v1/patients/{id}", httproute.KindAPI, httproute.AuthUser},
+		{"updatePatient", http.MethodPatch, "/api/v1/patients/{id}", httproute.KindAPI, httproute.AuthUser},
+		{"putPatientPhoto", http.MethodPut, "/api/v1/patients/{id}/photo", httproute.KindAPI, httproute.AuthUser},
+		{"getPatientPhoto", http.MethodGet, "/api/v1/patients/{id}/photo", httproute.KindAPI, httproute.AuthUser},
+		{"deletePatientPhoto", http.MethodDelete, "/api/v1/patients/{id}/photo", httproute.KindAPI, httproute.AuthUser},
 	}
-	require.Len(t, want, 22)
+	require.Len(t, want, 29)
 
 	byOpID := inventoryByOpID(t)
 

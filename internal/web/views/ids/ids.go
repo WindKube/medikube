@@ -163,3 +163,27 @@ func isIDByte(b byte) bool {
 }
 
 func isLetter(b byte) bool { return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') }
+
+// The patient anchor's own ids (research D-05): a patient is not a kind.Kind,
+// so it carries no prefix() entry and mints its ids directly, "patient" in
+// place of a kind's segment.
+const patientPrefix = "patient"
+
+func PatientList() string { return join(patientPrefix, roleList) }
+
+func PatientRow(patientID string) string { return join(patientPrefix, roleRow, patientID) }
+
+func PatientEmpty() string { return join(patientPrefix, roleEmpty) }
+
+func PatientDetail(patientID string) string { return join(patientPrefix, roleDetail, patientID) }
+
+// PatientForm takes an empty patientID for the create form, which has no
+// patient to name yet — mirrors RecordForm.
+func PatientForm(patientID string) string { return join(patientPrefix, roleForm, patientID) }
+
+func PatientPhoto(patientID string) string { return join(patientPrefix, "photo", patientID) }
+
+// ActivePatientSwitcher is contracts/pages.md's shell control: the
+// `combobox[name="Active patient"]` every authenticated page renders,
+// outside #main (phases 002-006).
+func ActivePatientSwitcher() string { return join(patientPrefix, "switcher") }

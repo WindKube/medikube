@@ -36,6 +36,12 @@ var (
 	// wraps, PocketBase's own message: that message embeds the uploaded
 	// filename, which constitution VII names as PHI.
 	ErrUnsupportedMedia = errors.New("unsupported media type")
+
+	// ErrTooLarge is an upload over the configured limit (phase 002,
+	// FR-008). Like ErrUnsupportedMedia it replaces PocketBase's own message
+	// rather than wrapping it: that message also embeds the uploaded
+	// filename.
+	ErrTooLarge = errors.New("payload too large")
 )
 
 // Sentinels returns every sentinel the domain defines, so the error mapper's
@@ -53,5 +59,6 @@ func Sentinels() []error {
 		ErrConflict,
 		ErrRateLimited,
 		ErrUnsupportedMedia,
+		ErrTooLarge,
 	}
 }

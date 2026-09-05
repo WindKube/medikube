@@ -1,0 +1,32 @@
+package patients
+
+import "medikube/internal/web/views/ids"
+
+// PatientPhoto is the thumbnail the list, the chart header and the form all
+// embed. It never carries the uploaded filename (FR-046) — Name is the
+// person's own display name, for the alt text, and nothing about the file
+// that produced the image.
+templ PatientPhoto(props PatientPhotoProps) {
+	<span id={ ids.PatientPhoto(props.PatientID) } class="inline-block">
+		if props.PhotoURL != "" {
+			<img
+				src={ props.PhotoURL }
+				alt={ props.Name }
+				class="h-16 w-16 rounded-full object-cover"
+			/>
+		} else {
+			<span
+				aria-hidden="true"
+				class="flex h-16 w-16 items-center justify-center rounded-full bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+			>{ initial(props.Name) }</span>
+		}
+	</span>
+}
+
+func initial(name string) string {
+	for _, r := range name {
+		return string(r)
+	}
+
+	return ""
+}

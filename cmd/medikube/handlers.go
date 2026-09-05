@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"net/http"
@@ -11,6 +12,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"medikube/internal/config"
+	"medikube/internal/domain/access"
+	"medikube/internal/domain/identity"
 	"medikube/internal/httproute"
 	"medikube/internal/obs"
 	"medikube/internal/platform/pb"
@@ -18,10 +21,13 @@ import (
 	"medikube/internal/records"
 	accessservice "medikube/internal/service/access"
 	auditservice "medikube/internal/service/audit"
+	serviceidentity "medikube/internal/service/identity"
 	"medikube/internal/service/medication"
+	"medikube/internal/service/patient"
 	"medikube/internal/store"
 	auditstore "medikube/internal/store/audit"
 	medicationstore "medikube/internal/store/medication"
+	patientstore "medikube/internal/store/patient"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
 	"medikube/internal/web/page"
@@ -69,6 +75,13 @@ func operations(
 	// the composition root already holds by the time it calls this.
 	maps.Copy(table, api.HealthHandlers(health))
 
+	// contracts/patients.md and contracts/patient-photo.md. The stack is
+	// resolved lazily (patientFamily), the same reason recordFamily is: the
+	// repository needs the cursor codec, which is keyed from a secret the
+	// migrations have only just created. Resolved here, ahead of the account
+	// surface, so registration can provision the self-record FR-005 requires.
+	patientResolve, photoResolve := patientFamily(app, cfg)
+
 	// The account surface is assembled separately because it is the one group
 	// that needs the application itself: PocketBase owns the credential, the
 	// token and the mailer, so the identity stack cannot be built out of the
@@ -79,6 +92,7 @@ func operations(
 		SessionTTL:       cfg.Auth.SessionTTL,
 		PublicURL:        cfg.PublicURL,
 		Resolve:          resolve,
+		SelfRecord:       api.SelfRecordOf(patientResolve),
 	})
 	if err != nil {
 		return nil, err
@@ -110,6 +124,30 @@ func operations(
 	}
 
 	maps.Copy(table, accountPages)
+
+	patientOps, err := api.PatientHandlers(patientResolve, unitSystemOf(accounts.Service))
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, patientOps)
+
+	photoOps, err := api.PatientPhotoHandlers(photoResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, photoOps)
+
+	patientPages, err := page.PatientPages(page.PatientDeps{
+		Resolve: patientResolve,
+		UnitOf:  unitSystemOf(accounts.Service),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, patientPages)
 
 	// P3, the application root. It needs only the counter the account surface
 	// already built, so it is wired here rather than in wired() alongside the
@@ -169,6 +207,114 @@ func wired(resolve api.Resolve, hub *realtime.Hub) (httproute.Handlers, error) {
 	maps.Copy(table, streams)
 
 	return table, nil
+}
+
+// unitSystemOf resolves an actor's own display preference through the
+// identity service, so internal/web/api's Display rendering (FR-007) reads
+// the same account row contracts/account.md does, rather than a second query
+// of its own.
+func unitSystemOf(accounts *serviceidentity.Service) api.UnitSystemOf {
+	return func(ctx context.Context, actor access.Actor) (identity.UnitSystem, error) {
+		user, err := accounts.Me(ctx, actor)
+		if err != nil {
+			return "", err
+		}
+
+		return user.UnitSystem, nil
+	}
+}
+
+// patientStack is everything contracts/patients.md and
+// contracts/patient-photo.md need, built once and shared by both resolvers
+// below.
+type patientStack struct {
+	service *patient.Service
+	photos  *patientstore.PhotoStore
+}
+
+// patientFamily resolves the patient stack lazily, mirroring recordFamily:
+// the repository and the photo store both need the cursor codec / a running
+// filesystem, neither of which exists before the migrations have run.
+func patientFamily(app core.App, cfg config.Config) (api.PatientResolve, api.PatientPhotoResolve) {
+	once := sync.OnceValues(func() (patientStack, error) {
+		secret, err := store.CursorSecret(app, "")
+		if err != nil {
+			return patientStack{}, err
+		}
+
+		cursors, err := store.NewCursorCodec(secret)
+		if err != nil {
+			return patientStack{}, err
+		}
+
+		owners, err := store.NewOwners(app)
+		if err != nil {
+			return patientStack{}, err
+		}
+
+		trail, err := auditstore.New(app)
+		if err != nil {
+			return patientStack{}, err
+		}
+
+		auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
+		if err != nil {
+			return patientStack{}, err
+		}
+
+		repository, err := patientstore.New(app, cursors)
+		if err != nil {
+			return patientStack{}, err
+		}
+
+		authorizer, err := accessservice.New(owners, accessservice.WithPatients(repository, auditor))
+		if err != nil {
+			return patientStack{}, err
+		}
+
+		photos, err := patientstore.NewPhotoStore(app, cfg.Files.PhotoThumbs)
+		if err != nil {
+			return patientStack{}, err
+		}
+
+		service, err := patient.New(repository, photos, authorizer)
+		if err != nil {
+			return patientStack{}, err
+		}
+
+		// FR-036's three rows for the patients collection, bound once the
+		// stack it audits exists and not before — a hook bound ahead of the
+		// collection it targets would bind to nothing.
+		if err := pb.BindPatientAudit(app, pb.PatientAudit{
+			Trail:   auditor,
+			Actor:   web.ActorFrom,
+			Request: obs.CorrelationID,
+		}); err != nil {
+			return patientStack{}, err
+		}
+
+		return patientStack{service: service, photos: photos}, nil
+	})
+
+	resolve := func() (*patient.Service, error) {
+		stack, err := once()
+		if err != nil {
+			return nil, err
+		}
+
+		return stack.service, nil
+	}
+
+	photoResolve := func() (*patient.Service, api.PhotoServer, error) {
+		stack, err := once()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return stack.service, stack.photos, nil
+	}
+
+	return resolve, photoResolve
 }
 
 // recordFamily resolves the kind registry, once, on first use.
@@ -294,6 +440,14 @@ func unimplemented() []string {
 	}
 
 	for _, opID := range page.AccountPageOperations() {
+		implemented[opID] = nil
+	}
+
+	for _, opID := range api.PatientOperations() {
+		implemented[opID] = nil
+	}
+
+	for _, opID := range page.PatientPageOperations() {
 		implemented[opID] = nil
 	}
 

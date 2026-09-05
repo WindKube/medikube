@@ -9,6 +9,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/hook"
 
+	"medikube/internal/domain/access"
 	"medikube/internal/domain/audit"
 	"medikube/internal/domain/kind"
 	"medikube/internal/obs"
@@ -322,6 +323,136 @@ func (c AuthAudit) recordRefusal(e *core.RecordAuthWithPasswordRequestEvent) err
 // reason the record hooks' is: a row that correlates to nothing cannot be
 // joined to the log line for the request that produced it.
 func (c AuthAudit) requestID(ctx context.Context) string {
+	if c.Request != nil && ctx != nil {
+		if id := c.Request(ctx); id != "" {
+			return id
+		}
+	}
+
+	_, edge := obs.NewEdge(context.Background(), "")
+
+	return edge.CorrelationID()
+}
+
+// The hook ids of the patients audit, so a second Bind replaces rather than
+// appends (T067).
+const (
+	patientAuditCreateHookID = "medikube_audit_patient_create"
+	patientAuditUpdateHookID = "medikube_audit_patient_update"
+	patientAuditDeleteHookID = "medikube_audit_patient_delete"
+)
+
+// PatientAudit is everything the three patient hooks need. It is not
+// RecordAudit (hooks_records.go): a patient is not a kind.Kind (research
+// D-05, the anchor rather than a record kind), so it carries no Kinds
+// allowlist and every write it is bound to is a patient row by construction —
+// and every row it writes sets PatientID, which RecordAudit's rows never
+// carry.
+type PatientAudit struct {
+	Trail Trail
+
+	Actor   func(context.Context) (access.Actor, bool)
+	Request func(context.Context) string
+}
+
+// BindPatientAudit binds FR-036's three post-commit hooks for the patients
+// collection.
+//
+// After…Success and not the pre-commit family, for the same reason
+// BindRecordAudit is (research D-21): a hook bound before the commit would
+// record a write that then rolled back.
+//
+// It tolerates a nil request context (T067): a patient write reached from a
+// background job or a migration still gets a row, with a freshly minted
+// correlation id in place of one a request never carried.
+func BindPatientAudit(app core.App, config PatientAudit) error {
+	if app == nil {
+		return errors.New("pb: the patient audit is bound to no application")
+	}
+
+	if config.Trail == nil {
+		return errors.New("pb: the patient audit is bound with no trail, so every write would go unrecorded")
+	}
+
+	bindPatient(app.OnRecordAfterCreateSuccess(), patientAuditCreateHookID, config, audit.ActionCreate)
+	bindPatient(app.OnRecordAfterUpdateSuccess(), patientAuditUpdateHookID, config, audit.ActionUpdate)
+	bindPatient(app.OnRecordAfterDeleteSuccess(), patientAuditDeleteHookID, config, audit.ActionDelete)
+
+	return nil
+}
+
+func bindPatient(
+	on *hook.TaggedHook[*core.RecordEvent],
+	id string,
+	config PatientAudit,
+	action audit.Action,
+) {
+	on.Bind(&hook.Handler[*core.RecordEvent]{
+		Id: id,
+		Func: func(e *core.RecordEvent) error {
+			if e.Record.Collection().Name != store.PatientCollection {
+				return e.Next()
+			}
+
+			if err := config.Trail.Record(e.Context, config.event(e, action)); err != nil {
+				return fmt.Errorf("pb: recording the %s of a patient: %w", action, err)
+			}
+
+			return e.Next()
+		},
+	})
+}
+
+// event is the row. TargetID and PatientID are both the patient's own id —
+// unlike a clinical record's audit row, a patient row's target IS the
+// patient — and there is nowhere on it a name, a birth date or an address
+// could be written (FR-038).
+func (c PatientAudit) event(e *core.RecordEvent, action audit.Action) audit.Event {
+	event := audit.Event{
+		OccurredAt: time.Now().UTC(),
+		ActorKind:  audit.ActorKindSystem,
+		Action:     action,
+		TargetKind: audit.TargetKindPatient,
+		TargetID:   e.Record.Id,
+		RequestID:  c.requestID(e.Context),
+	}
+
+	// PatientID is a RelationField (research D-25/FR-029): a delete row would
+	// name a patient the write itself just removed, which the relation
+	// cannot validate against — this AFTER hook runs once the row is
+	// genuinely gone. TargetID already carries the same id as plain text, so
+	// nothing about which patient this was is lost (US6-5, SC-009).
+	if action != audit.ActionDelete {
+		event.PatientID = e.Record.Id
+	}
+
+	actor, present := c.actor(e.Context)
+	if !present || !actor.Authenticated() {
+		return event
+	}
+
+	switch {
+	case actor.IsSuperuser:
+		event.ActorKind = audit.ActorKindSuperuser
+	default:
+		event.ActorKind = audit.ActorKindUser
+		event.ActorID = actor.UserID
+	}
+
+	return event
+}
+
+func (c PatientAudit) actor(ctx context.Context) (access.Actor, bool) {
+	if c.Actor == nil || ctx == nil {
+		return access.Actor{}, false
+	}
+
+	return c.Actor(ctx)
+}
+
+// requestID mirrors RecordAudit's own: a write with no request behind it
+// still gets a correlation handle, minted the same way a request's is.
+func (c PatientAudit) requestID(ctx context.Context) string {
 	if c.Request != nil && ctx != nil {
 		if id := c.Request(ctx); id != "" {
 			return id

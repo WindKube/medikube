@@ -70,6 +70,12 @@ type Deps struct {
 	Counts Counter
 
 	Mail MailConfigured
+
+	// SelfRecord provisions the one patient FR-005 guarantees for every
+	// account, right after Register creates it. Nil is tolerated so a build
+	// that wires no patient stack at all (a test harness exercising only
+	// auth) still boots; register skips provisioning rather than panicking.
+	SelfRecord SelfRecordFunc
 }
 
 type authHandlers struct {
@@ -175,6 +181,12 @@ func (h *authHandlers) register(e *core.RequestEvent, actor access.Actor) error 
 	})
 	if err != nil {
 		return refused(err)
+	}
+
+	if h.deps.SelfRecord != nil {
+		if _, selfRecordErr := h.deps.SelfRecord(e.Request.Context(), user.ID, body.Name); selfRecordErr != nil {
+			return selfRecordErr
+		}
 	}
 
 	me, err := h.render(e, actor, user)

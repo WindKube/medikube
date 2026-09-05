@@ -331,6 +331,31 @@ func MedicationSchema() Schema {
 	)
 }
 
+// PatientsSchema is the patient list's query surface (research D-29): last
+// name, first name and id, matching web.PatientsSort's published ordering,
+// plus first and last name searchable for `?q=` (contracts/patients.md).
+func PatientsSchema() Schema {
+	return NewSchema(PatientCollection,
+		Column{Name: PatientOwner},
+		Column{
+			Name:       patientFieldLastName,
+			Expr:       "LOWER(" + quoteColumn(patientFieldLastName) + ")",
+			Searchable: true,
+			Value: func(record *core.Record) string {
+				return asciiLower(record.GetString(patientFieldLastName))
+			},
+		},
+		Column{
+			Name:       patientFieldFirstName,
+			Expr:       "LOWER(" + quoteColumn(patientFieldFirstName) + ")",
+			Searchable: true,
+			Value: func(record *core.Record) string {
+				return asciiLower(record.GetString(patientFieldFirstName))
+			},
+		},
+	)
+}
+
 // AccountSchema is the account collection's query surface, and it publishes
 // exactly one narrowable column: the address.
 //
