@@ -304,10 +304,23 @@ test.describe('P6 — settings', () => {
   });
 });
 
+// A medication list is one person's (phase 002 FR-023): the page needs
+// ?patient=, so each account visits its own self-record's list.
+async function ownListPath(page: Page): Promise<string> {
+  const response = await page.request.get('/api/v1/patients');
+  expect(response.ok(), 'the patient list did not answer').toBe(true);
+
+  const { items } = (await response.json()) as { items: { id: string; is_self_record: boolean }[] };
+  const self = items.find((patient) => patient.is_self_record);
+  expect(self, 'the account has no self-record').toBeDefined();
+
+  return `${fixtures.listPath}?patient=${self?.id}`;
+}
+
 test.describe('P4 — the record list', () => {
   test('lists what the account owns and nothing else', async ({ page }) => {
     const list = await open(page, {
-      path: fixtures.listPath,
+      path: await ownListPath(page),
       title: fixtures.title('Medications'),
       landmark: listLandmark,
     });
@@ -319,7 +332,7 @@ test.describe('P4 — the record list', () => {
 
     // The partial-data row is on the list, and a renderer that assumed a dose
     // or a start date would have had to invent one to get here.
-    await expect(list.locator(`a[href="${fixtures.detailPath(fixtures.partialRecordID)}"]`)).toBeVisible();
+    await expect(list.locator(`a[href^="${fixtures.detailPath(fixtures.partialRecordID)}"]`)).toBeVisible();
   });
 
   test.describe('as the isolation counterparty', () => {
@@ -327,13 +340,13 @@ test.describe('P4 — the record list', () => {
 
     test('holds fewer rows, and not one belonging to the populated account', async ({ page }) => {
       const list = await open(page, {
-        path: fixtures.listPath,
+        path: await ownListPath(page),
         title: fixtures.title('Medications'),
         landmark: listLandmark,
       });
 
       await expect(rowsOf(list)).toHaveCount(fixtures.counts.counterparty);
-      await expect(list.locator(`a[href="${fixtures.detailPath(fixtures.partialRecordID)}"]`)).toHaveCount(0);
+      await expect(list.locator(`a[href^="${fixtures.detailPath(fixtures.partialRecordID)}"]`)).toHaveCount(0);
     });
   });
 
@@ -342,7 +355,7 @@ test.describe('P4 — the record list', () => {
 
     test('renders its empty state INSIDE the landmark, with the create action (FR-029)', async ({ page }) => {
       const list = await open(page, {
-        path: fixtures.listPath,
+        path: await ownListPath(page),
         title: fixtures.title('Medications'),
         landmark: listLandmark,
       });
@@ -528,7 +541,7 @@ function reached(walk: Focused[], expected: string[]): void {
 test.describe('SC-014 — the keyboard', () => {
   test('reaches every control of the list page and its create form, showing where the focus is', async ({ page }) => {
     await watch(page);
-    await page.goto(fixtures.listPath);
+    await page.goto(await ownListPath(page));
 
     const expected = await focusableControls(page, 'main');
     expect(expected.length, 'the page offers no controls at all').toBeGreaterThan(12);
