@@ -35,10 +35,10 @@ Project Structure section of [plan.md](./plan.md).
 
 **Purpose**: make the workspace ready. No behaviour ships in this phase.
 
-- [ ] T001 [P] Create `internal/domain/person/doc.go` and `internal/domain/directory/doc.go` with package comments stating that these packages import only the standard library (Principle II)
+- [x] T001 [P] Create `internal/domain/person/doc.go` and `internal/domain/directory/doc.go` with package comments stating that these packages import only the standard library (Principle II)
 - [ ] T002 [P] Create service package skeletons with `doc.go` in `internal/service/patient/`, `internal/service/practitioner/`, `internal/service/facility/` and their `patienttest/`, `practitionertest/`, `facilitytest/` subpackages
 - [ ] T003 [P] Create store package skeletons with `doc.go` in `internal/store/patient/`, `internal/store/practitioner/`, `internal/store/facility/`, each stating it is a `[PB]` package permitted to import PocketBase
-- [ ] T004 Extend `.golangci.yml`: add the new `internal/domain/**` and `internal/service/**` paths to the `depguard` rule `domain-and-services-stay-pure`, and add the three new `internal/store/*` packages to the `forbidigo` exclusion list alongside the existing adapter exclusions
+- [x] T004 Extend `.golangci.yml`: add the new `internal/domain/**` and `internal/service/**` paths to the `depguard` rule `domain-and-services-stay-pure`, and add the three new `internal/store/*` packages to the `forbidigo` exclusion list alongside the existing adapter exclusions
 - [ ] T005 Add `FilesConfig{PhotoMaxBytes int64, PhotoMimeTypes []string, PhotoThumbs []string}` under `envPrefix:"FILES_"` to `internal/config/config.go` (defaults 15 MiB, `image/jpeg,image/png,image/webp`, `100x100t,400x400f`) with a defaults-and-validation table test in `internal/config/config_test.go`
 - [ ] T006 [P] Add `fixture:rebuild` and `bench:chart` targets to `Taskfile.yaml`, following the existing `gen`/`test` conventions
 - [ ] T007 [P] Add `internal/store/migrations/doc.go` recording this phase's six migration filenames, their required order and why the order is forced by the relation graph (research D-15)
@@ -54,22 +54,22 @@ every user story below depends on.
 
 ### Domain — tests first
 
-- [ ] T008 [P] Table test for `person.Sex`, `person.BloodType`, `person.RelationshipToOwner` `Valid()` covering every listed value plus three rejects, in `internal/domain/person/enums_test.go`
-- [ ] T009 [P] Table test for `person.AgeAt` covering: born today ("0 days", never "0"), born yesterday, the day before a birthday, on a birthday, a 29 February birth date evaluated in a non-leap year, and an unset birth date, in `internal/domain/person/age_test.go`
-- [ ] T010 [P] Table test for metric↔imperial height and weight formatting and for the invariant that conversion never mutates the SI value, in `internal/domain/person/measure_test.go`
-- [ ] T011 [P] Table test for `person.Patient.Validate()` asserting a payload with four simultaneous faults returns four `fields[]` entries in one `*domain.ValidationError` (FR-003, US1-3), plus each individual rule from data-model.md §3, in `internal/domain/person/validate_test.go`
-- [ ] T012 [P] Test that `person.Patient.MarshalZerologObject` emits only `id` and `owner_id` and that no name, birth date or address appears in the rendered event (FR-046), in `internal/domain/person/patient_test.go`
-- [ ] T013 [P] Table test for `directory.FacilityKind.Valid()` and `directory.Specialty.Valid()`, asserting the catch-all `other` is present and that the Go slice and the generated select vocabulary are identical, in `internal/domain/directory/enums_test.go`
-- [ ] T014 [P] Table test for `directory.Practitioner.Validate()` / `Facility.Validate()` and their redacting marshallers, in `internal/domain/directory/validate_test.go`
+- [x] T008 [P] Table test for `person.Sex`, `person.BloodType`, `person.RelationshipToOwner` `Valid()` covering every listed value plus three rejects, in `internal/domain/person/enums_test.go`
+- [x] T009 [P] Table test for `person.AgeAt` covering: born today ("0 days", never "0"), born yesterday, the day before a birthday, on a birthday, a 29 February birth date evaluated in a non-leap year, and an unset birth date, in `internal/domain/person/age_test.go`
+- [x] T010 [P] Table test for metric↔imperial height and weight formatting and for the invariant that conversion never mutates the SI value, in `internal/domain/person/measure_test.go`
+- [x] T011 [P] Table test for `person.Patient.Validate()` asserting a payload with four simultaneous faults returns four `fields[]` entries in one `*domain.ValidationError` (FR-003, US1-3), plus each individual rule from data-model.md §3, in `internal/domain/person/validate_test.go`
+- [x] T012 [P] Test that `person.Patient.MarshalZerologObject` emits only `id` and `owner_id` and that no name, birth date or address appears in the rendered event (FR-046), in `internal/domain/person/patient_test.go`
+- [x] T013 [P] Table test for `directory.FacilityKind.Valid()` and `directory.Specialty.Valid()`, asserting the catch-all `other` is present and that the Go slice and the generated select vocabulary are identical, in `internal/domain/directory/enums_test.go`
+- [x] T014 [P] Table test for `directory.Practitioner.Validate()` / `Facility.Validate()` and their redacting marshallers, in `internal/domain/directory/validate_test.go`
 
 ### Domain — implementation
 
-- [ ] T015 [P] Implement `person.Sex`, `person.BloodType`, `person.RelationshipToOwner` with `Valid()` and the generated select vocabularies in `internal/domain/person/enums.go`
-- [ ] T016 [P] Implement `person.AgeAt(birth, on) person.Age` with a `String()` that degrades to months and days below one year, in `internal/domain/person/age.go`
-- [ ] T017 [P] Implement `person.FormatHeight` / `person.FormatWeight` over canonical SI in `internal/domain/person/measure.go` (kept here rather than a shared `units` package until vitals in phase 003 makes a second consumer — research D-21)
-- [ ] T018 Implement `person.Patient` plus `Validate()` and `MarshalZerologObject` in `internal/domain/person/patient.go` and `internal/domain/person/validate.go` (depends on T015–T017)
-- [ ] T019 [P] Implement `directory.FacilityKind` — practice, pharmacy, hospital, laboratory, imaging centre, other (FR-034) — and the 42-value `directory.Specialty` in `internal/domain/directory/enums.go`
-- [ ] T020 Implement `directory.Practitioner` and `directory.Facility` with `Validate()` and redacting marshallers in `internal/domain/directory/practitioner.go` and `internal/domain/directory/facility.go` (depends on T019)
+- [x] T015 [P] Implement `person.Sex`, `person.BloodType`, `person.RelationshipToOwner` with `Valid()` and the generated select vocabularies in `internal/domain/person/enums.go`
+- [x] T016 [P] Implement `person.AgeAt(birth, on) person.Age` with a `String()` that degrades to months and days below one year, in `internal/domain/person/age.go`
+- [x] T017 [P] Implement `person.FormatHeight` / `person.FormatWeight` over canonical SI in `internal/domain/person/measure.go` (kept here rather than a shared `units` package until vitals in phase 003 makes a second consumer — research D-21)
+- [x] T018 Implement `person.Patient` plus `Validate()` and `MarshalZerologObject` in `internal/domain/person/patient.go` and `internal/domain/person/validate.go` (depends on T015–T017)
+- [x] T019 [P] Implement `directory.FacilityKind` — practice, pharmacy, hospital, laboratory, imaging centre, other (FR-034) — and the 42-value `directory.Specialty` in `internal/domain/directory/enums.go`
+- [x] T020 Implement `directory.Practitioner` and `directory.Facility` with `Validate()` and redacting marshallers in `internal/domain/directory/practitioner.go` and `internal/domain/directory/facility.go` (depends on T019)
 
 ### Schema — tests first
 
