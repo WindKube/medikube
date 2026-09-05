@@ -257,23 +257,23 @@ and confirm a helpful empty state rather than zeros, blanks or an error.
 
 ### Tests for User Story 4 ⚠️ write first
 
-- [ ] T105 [P] [US4] Fake `RecordCounter` and `RecentActivityReader` in `internal/service/patient/patienttest/counter.go`
-- [ ] T106 [P] [US4] Unit tests for the chart service: counts include kinds with zero records (US4-2), the header shows absent details as absent (FR-027), age renders meaningfully for a person born today (US4-4), and the display block follows the actor's unit system while the SI values are untouched (US4-3) — in `internal/service/patient/chart_test.go`
-- [ ] T107 [P] [US4] Integration test asserting the count for a kind equals the rows attributed to that patient and excludes every other patient's (FR-028, US4-1, SC-007) — in `internal/store/patient/chart_integration_test.go`
-- [ ] T108 [P] [US4] `tests.ApiScenario` for `getPatientChart`: 200 shape, `recent_activity: []` and never `null`, `404` for another account's patient, `401` anonymous — in `internal/web/api/patient_chart_test.go`
-- [ ] T109 [P] [US4] Test asserting each recent-activity entry states kind, action and time and carries no name, value, note or filename, and that an entry whose target has been deleted reports `target_exists: false` and links nowhere (FR-029, US4-5) — in `internal/web/api/patient_chart_test.go`
-- [ ] T110 [P] [US4] Test asserting that changing `unit_system` changes only the `display` block and leaves `height_cm`/`weight_kg` byte-identical (FR-007, US4-3) — in `internal/web/api/patient_chart_units_test.go`
-- [ ] T111 [P] [US4] Benchmark seeding 50,000 medications on one patient and asserting the chart summary p95 is under 2 seconds (SC-004, US4-6) — in `internal/store/patient/chart_bench_test.go`
-- [ ] T112 [P] [US4] templ render tests: the `region[name="Patient chart"]` landmark is present in **both** the populated and the entirely empty case, and `@EmptyState` renders **inside** the landmark (FR-030, US4-2, SC-013) — in `internal/web/views/patients/detail_test.go`
+- [x] T105 [P] [US4] Fake `RecordCounter` and `RecentActivityReader` in `internal/service/patient/patienttest/counter.go`
+- [x] T106 [P] [US4] Unit tests for the chart service: counts include kinds with zero records (US4-2), the header shows absent details as absent (FR-027), age renders meaningfully for a person born today (US4-4), and the display block follows the actor's unit system while the SI values are untouched (US4-3) — in `internal/service/patient/chart_test.go`
+- [x] T107 [P] [US4] Integration test asserting the count for a kind equals the rows attributed to that patient and excludes every other patient's (FR-028, US4-1, SC-007) — in `internal/store/patient/chart_integration_test.go`
+- [x] T108 [P] [US4] `tests.ApiScenario` for `getPatientChart`: 200 shape, `recent_activity: []` and never `null`, `404` for another account's patient, `401` anonymous — in `internal/web/api/patient_chart_test.go`
+- [x] T109 [P] [US4] Test asserting each recent-activity entry states kind, action and time and carries no name, value, note or filename, and that an entry whose target has been deleted reports `target_exists: false` and links nowhere (FR-029, US4-5) — in `internal/web/api/patient_chart_test.go`
+- [x] T110 [P] [US4] Test asserting that changing `unit_system` changes only the `display` block and leaves `height_cm`/`weight_kg` byte-identical (FR-007, US4-3) — in `internal/web/api/patient_chart_units_test.go`
+- [x] T111 [P] [US4] Benchmark seeding 50,000 medications on one patient and asserting the chart summary p95 is under 2 seconds (SC-004, US4-6) — in `internal/store/patient/chart_bench_test.go`
+- [x] T112 [P] [US4] templ render tests: the `region[name="Patient chart"]` landmark is present in **both** the populated and the entirely empty case, and `@EmptyState` renders **inside** the landmark (FR-030, US4-2, SC-013) — in `internal/web/views/patients/detail_test.go`
 
 ### Implementation for User Story 4
 
-- [ ] T113 [US4] Declare the `RecordCounter` and `RecentActivityReader` ports (1 method each) in `internal/service/patient/ports.go`
-- [ ] T114 [US4] Implement the counter adapter over the kind registry — one indexed `COUNT(*)` per registered kind, nothing switching on kind — in `internal/records/counter.go`
-- [ ] T115 [US4] Implement `patient.Service.Summary` in `internal/service/patient/chart.go` (depends on T113, T114)
-- [ ] T116 [US4] Implement the `PatientChart` DTO and the `getPatientChart` handler with `Cache-Control: private, no-store` and no ETag, in `internal/web/api/patient_chart.go`
-- [ ] T117 [US4] Implement the chart view — header, per-kind tiles with their own empty states, recent-activity list — in `internal/web/views/patients/detail.templ`
-- [ ] T118 [US4] Register `getPatientChart` in `internal/httproute/routes.go`
+- [x] T113 [US4] Declare the `RecordCounter` and `RecentActivityReader` ports (1 method each) in `internal/service/patient/ports.go`
+- [x] T114 [US4] Implement the counter adapter over the kind registry — one indexed `COUNT(*)` per registered kind, nothing switching on kind — in `internal/records/counter.go`
+- [x] T115 [US4] Implement `patient.Service.Summary` in `internal/service/patient/chart.go` (depends on T113, T114)
+- [x] T116 [US4] Implement the `PatientChart` DTO and the `getPatientChart` handler with `Cache-Control: private, no-store` and no ETag, in `internal/web/api/patient_chart.go`
+- [x] T117 [US4] Implement the chart view — header, per-kind tiles with their own empty states, recent-activity list — in `internal/web/views/patients/detail.templ`
+- [x] T118 [US4] Register `getPatientChart` in `internal/httproute/routes.go`
 
 **Checkpoint**: the chart is the landing place after switching, correct at 50,000 records and
 helpful at zero.
@@ -345,20 +345,20 @@ trail.
 
 ### Tests for User Story 6 ⚠️ write first
 
-- [ ] T144 [P] [US6] Unit tests for `patient.Service.Delete`: a self-record returns `409` with the "closing the account is what removes it" explanation (FR-051, US6-4), a missing `If-Match` is `422` and a mismatch is `412` — in `internal/service/patient/delete_test.go`
-- [ ] T145 [P] [US6] Integration test asserting deletion destroys every medication attributed to the patient and the photograph together with both thumbnails, and that `SELECT COUNT(*) FROM medications WHERE patient = '<deleted id>'` is 0 — permanent and complete, with no recovery path (FR-049, US6-2, US6-3, SC-010) — in `internal/store/patient/delete_integration_test.go`
-- [ ] T146 [P] [US6] Integration test walking every collection asserting that no row anywhere references the deleted patient id after the delete, and that nothing in the application offers to bring it back (FR-049, US6-3) — in `internal/store/patient/delete_integration_test.go`
-- [ ] T147 [P] [US6] `tests.ApiScenario` for `deletePatient` covering 204/409/412/404/401 and asserting exactly one `delete`/`patient` audit row exists carrying no name and no record content (US6-5, SC-009) — in `internal/web/api/patients_delete_test.go`
-- [ ] T148 [P] [US6] Authorization test asserting Account B deleting Account A's patient is `404`, that nothing was deleted, and that the attempt was audited — only the owning account may delete (FR-050, US6-6, SC-005) — in `internal/web/api/patients_delete_test.go`
-- [ ] T149 [P] [US6] templ render test asserting the confirmation names the person and states how many records will be destroyed before anything is removed (FR-048, US6-1) — in `internal/web/views/patients/delete_confirm_test.go`
+- [x] T144 [P] [US6] Unit tests for `patient.Service.Delete`: a self-record returns `409` with the "closing the account is what removes it" explanation (FR-051, US6-4), a missing `If-Match` is `422` and a mismatch is `412` — in `internal/service/patient/delete_test.go`
+- [x] T145 [P] [US6] Integration test asserting deletion destroys every medication attributed to the patient and the photograph together with both thumbnails, and that `SELECT COUNT(*) FROM medications WHERE patient = '<deleted id>'` is 0 — permanent and complete, with no recovery path (FR-049, US6-2, US6-3, SC-010) — in `internal/store/patient/delete_integration_test.go`
+- [x] T146 [P] [US6] Integration test walking every collection asserting that no row anywhere references the deleted patient id after the delete, and that nothing in the application offers to bring it back (FR-049, US6-3) — in `internal/store/patient/delete_integration_test.go`
+- [x] T147 [P] [US6] `tests.ApiScenario` for `deletePatient` covering 204/409/412/404/401 and asserting exactly one `delete`/`patient` audit row exists carrying no name and no record content (US6-5, SC-009) — in `internal/web/api/patients_delete_test.go`
+- [x] T148 [P] [US6] Authorization test asserting Account B deleting Account A's patient is `404`, that nothing was deleted, and that the attempt was audited — only the owning account may delete (FR-050, US6-6, SC-005) — in `internal/web/api/patients_delete_test.go`
+- [x] T149 [P] [US6] templ render test asserting the confirmation names the person and states how many records will be destroyed before anything is removed (FR-048, US6-1) — in `internal/web/views/patients/delete_confirm_test.go`
 
 ### Implementation for User Story 6
 
-- [ ] T150 [US6] Implement `Delete` with the self-record refusal and the `If-Match` requirement in `internal/service/patient/service.go`
-- [ ] T151 [US6] Implement the transactional delete over `app.RunInTransaction` in `internal/store/patient/repo.go`, relying on `medications.patient`'s cascade rather than deleting records by hand
-- [ ] T152 [US6] Implement the `deletePatient` handler in `internal/web/api/patients.go` and register it in `internal/httproute/routes.go`
-- [ ] T153 [US6] Implement the confirmation dialog, reading its record count from the chart summary the page already loaded, in `internal/web/views/patients/delete_confirm.templ`
-- [ ] T154 [US6] Implement the post-delete redirect to `/patients` with an explanation, and the same landing when a stale window acts on a now-deleted person (FR-017, US3-3), in `internal/web/page/patients.go`
+- [x] T150 [US6] Implement `Delete` with the self-record refusal and the `If-Match` requirement in `internal/service/patient/service.go`
+- [x] T151 [US6] Implement the transactional delete over `app.RunInTransaction` in `internal/store/patient/repo.go`, relying on `medications.patient`'s cascade rather than deleting records by hand
+- [x] T152 [US6] Implement the `deletePatient` handler in `internal/web/api/patients.go` and register it in `internal/httproute/routes.go`
+- [x] T153 [US6] Implement the confirmation dialog, reading its record count from the chart summary the page already loaded, in `internal/web/views/patients/delete_confirm.templ`
+- [x] T154 [US6] Implement the post-delete redirect to `/patients` with an explanation, and the same landing when a stale window acts on a now-deleted person (FR-017, US3-3), in `internal/web/page/patients.go`
 
 **Checkpoint**: all six stories are independently functional.
 

@@ -52,6 +52,7 @@ func operations(
 	app core.App,
 	cfg config.Config,
 	resolve api.Resolve,
+	registry *records.Registry,
 	resolveDirectory func() (directoryServices, error),
 	hub *realtime.Hub,
 	health api.HealthDeps,
@@ -75,7 +76,7 @@ func operations(
 	// that reads it — wired()'s medication pages need it for the context
 	// header and the redirect, and the account surface needs it so
 	// registration can provision the self-record FR-005 requires.
-	patientResolve, photoResolve := patientFamily(app, cfg)
+	patientResolve, photoResolve := patientFamily(app, cfg, registry)
 
 	// The real ones win. This is the only line each later group touches.
 	served, err := wired(resolve, patientResolve, hub)
@@ -134,7 +135,7 @@ func operations(
 
 	maps.Copy(table, accountPages)
 
-	patientOps, err := api.PatientHandlers(patientResolve, unitSystemOf(accounts.Service))
+	patientOps, err := api.PatientHandlers(patientResolve, unitSystemOf(accounts.Service), resolve)
 	if err != nil {
 		return nil, err
 	}
@@ -158,6 +159,7 @@ func operations(
 	patientPages, err := page.PatientPages(page.PatientDeps{
 		Resolve: patientResolve,
 		UnitOf:  unitSystemOf(accounts.Service),
+		Records: resolve,
 	})
 	if err != nil {
 		return nil, err
@@ -299,7 +301,13 @@ type patientStack struct {
 // patientFamily resolves the patient stack lazily, mirroring recordFamily:
 // the repository and the photo store both need the cursor codec / a running
 // filesystem, neither of which exists before the migrations have run.
-func patientFamily(app core.App, cfg config.Config) (api.PatientResolve, api.PatientPhotoResolve) {
+//
+// registry is the same *records.Registry recordFamily registers every kind
+// into: the chart's per-kind counts (contracts/patient-chart.md) walk it
+// rather than switching on kind, and this is what lets a request-time read of
+// it be correct regardless of which of the two families' OnceValues runs
+// first — the boot gate forces both before anything serves.
+func patientFamily(app core.App, cfg config.Config, registry *records.Registry) (api.PatientResolve, api.PatientPhotoResolve) {
 	once := sync.OnceValues(func() (patientStack, error) {
 		secret, err := store.CursorSecret(app, "")
 		if err != nil {
@@ -346,7 +354,19 @@ func patientFamily(app core.App, cfg config.Config) (api.PatientResolve, api.Pat
 			return patientStack{}, err
 		}
 
-		service, err := patient.New(repository, photos, authorizer, activePatient, auditor)
+		counter, err := records.NewCounter(registry, func(ctx context.Context, collection, patientID string) (int, error) {
+			return store.CountByPatient(ctx, app, collection, patientID)
+		})
+		if err != nil {
+			return patientStack{}, err
+		}
+
+		activity, err := auditservice.NewRecentActivity(trail)
+		if err != nil {
+			return patientStack{}, err
+		}
+
+		service, err := patient.New(repository, photos, authorizer, activePatient, auditor, counter, activity)
 		if err != nil {
 			return patientStack{}, err
 		}

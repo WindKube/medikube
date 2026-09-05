@@ -18,8 +18,9 @@ import (
 // testsupport.RunOwnershipMatrix, the same harness records_authz_test.go
 // drives its own six through.
 //
-// Only seven operations exist in this build: deletePatient is US6 (tasks.md),
-// not yet implemented, so it is not one of the cases below.
+// deletePatient is not one of the cases below: it is destructive, and a
+// matrix case that removed the subject would break every case that follows
+// it. Its own ownership boundary is patients_delete_test.go's.
 func TestEveryPatientAndPhotoOperationIsOwnerScoped(t *testing.T) {
 	t.Parallel()
 
@@ -91,6 +92,13 @@ func TestEveryPatientAndPhotoOperationIsOwnerScoped(t *testing.T) {
 				ContentType: "application/json",
 				Headers:     precondition,
 				MissingPath: patientURL(missingPatientID),
+				Secrets:     secrets,
+			},
+			{
+				Name:        "the chart summary",
+				Method:      http.MethodGet,
+				Path:        patientChartURL(subject),
+				MissingPath: patientChartURL(missingPatientID),
 				Secrets:     secrets,
 			},
 			{

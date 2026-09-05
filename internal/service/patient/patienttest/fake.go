@@ -187,6 +187,30 @@ func (r *Repository) Update(_ context.Context, changed person.Patient, expectedV
 	return changed, nil
 }
 
+// Delete mirrors internal/store/patient.Repo.Delete's own refusals, plus the
+// cascade a real PocketBase instance performs and this fake does not need to
+// simulate: nothing here reads the deleted row's medications, because
+// nothing in this package's unit tests needs to see them survive or not —
+// that guarantee belongs to the integration suite, against the real
+// database.
+func (r *Repository) Delete(_ context.Context, ownerID, id, expectedVersion string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	current, ok := r.rows[id]
+	if !ok || current.OwnerID != ownerID {
+		return domain.ErrNotFound
+	}
+
+	if current.Version != expectedVersion {
+		return domain.ErrVersionMismatch
+	}
+
+	delete(r.rows, id)
+
+	return nil
+}
+
 func (r *Repository) SelfRecord(_ context.Context, ownerID string) (person.Patient, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

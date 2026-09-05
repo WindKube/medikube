@@ -70,6 +70,10 @@ func TestTheTableCarriesTheTwentyNineDocumentedOperations(t *testing.T) {
 		{"createPatient", http.MethodPost, "/api/v1/patients", httproute.KindAPI, httproute.AuthUser},
 		{"getPatient", http.MethodGet, "/api/v1/patients/{patientId}", httproute.KindAPI, httproute.AuthUser},
 		{"updatePatient", http.MethodPatch, "/api/v1/patients/{patientId}", httproute.KindAPI, httproute.AuthUser},
+		// US4/US6: the chart summary and the permanent delete, added beside
+		// US1's original four rather than folded into README.md's count.
+		{"deletePatient", http.MethodDelete, "/api/v1/patients/{patientId}", httproute.KindAPI, httproute.AuthUser},
+		{"getPatientChart", http.MethodGet, "/api/v1/patients/{patientId}/summary", httproute.KindAPI, httproute.AuthUser},
 		{"putPatientPhoto", http.MethodPut, "/api/v1/patients/{patientId}/photo", httproute.KindAPI, httproute.AuthUser},
 		{"getPatientPhoto", http.MethodGet, "/api/v1/patients/{patientId}/photo", httproute.KindAPI, httproute.AuthUser},
 		{"deletePatientPhoto", http.MethodDelete, "/api/v1/patients/{patientId}/photo", httproute.KindAPI, httproute.AuthUser},
@@ -88,7 +92,7 @@ func TestTheTableCarriesTheTwentyNineDocumentedOperations(t *testing.T) {
 		{"updateFacility", http.MethodPatch, "/api/v1/facilities/{id}", httproute.KindAPI, httproute.AuthUser},
 		{"deleteFacility", http.MethodDelete, "/api/v1/facilities/{id}", httproute.KindAPI, httproute.AuthUser},
 	}
-	require.Len(t, want, 40)
+	require.Len(t, want, 42)
 
 	byOpID := inventoryByOpID(t)
 

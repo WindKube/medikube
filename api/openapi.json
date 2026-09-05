@@ -1756,6 +1756,91 @@
       }
     },
     "/api/v1/patients/{patientId}": {
+      "delete": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\n`If-Match` is required. A self-record is 409: closing the account is what removes it (FR-051). Another account's patient is 404 and nothing is deleted (FR-050).",
+        "operationId": "deletePatient",
+        "parameters": [
+          {
+            "description": "The patientId.",
+            "in": "path",
+            "name": "patientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The version the caller last saw, from the record's `ETag`. Required: an optional precondition is a precondition nobody sends. A mismatch is 412.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Permanently gone: the cascade removes every medication, the photo and its thumbnails. There is no recycle bin and no undo."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`not_found`. On owner-scoped data this is also the answer for a record belonging to somebody else, byte-identical apart from `request_id` to an id that never existed (FR-033)."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`conflict`. The message names no address and no record."
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`version_mismatch`: the `If-Match` precondition did not match the stored version."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Permanent. A self-record is refused with 409: closing the account is what removes it."
+      },
       "get": {
         "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nMembers that were never filled in are absent or null, never a value that reads as recorded (FR-030).",
         "operationId": "getPatient",
@@ -2130,6 +2215,64 @@
           }
         ],
         "summary": "Replace the one photograph. The type is decided from its content, never its name."
+      }
+    },
+    "/api/v1/patients/{patientId}/summary": {
+      "get": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nComputed on every request; there is no counter column and no cache (research D-22). Never cached and never an ETag: the response aggregates several collections. An activity entry carries no name, value, note or filename (FR-029), and `target_exists` says whether the deleted target still has anything to link to.",
+        "operationId": "getPatientChart",
+        "parameters": [
+          {
+            "description": "The patientId.",
+            "in": "path",
+            "name": "patientId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The patient, one entry per registered kind (including a kind with zero records), the total record count, and the last ten activity entries newest first."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`not_found`. On owner-scoped data this is also the answer for a record belonging to somebody else, byte-identical apart from `request_id` to an id that never existed (FR-033)."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Per-kind counts and the last ten activity entries. Never cached, never an ETag."
       }
     },
     "/api/v1/practitioners": {

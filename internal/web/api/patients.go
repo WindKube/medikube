@@ -23,6 +23,7 @@ const (
 	OpCreatePatient = "createPatient"
 	OpGetPatient    = "getPatient"
 	OpUpdatePatient = "updatePatient"
+	OpDeletePatient = "deletePatient"
 )
 
 // PathPatientID is the one path parameter every patient and photo route
@@ -35,7 +36,8 @@ const PathPatientID = "patientId"
 // construction.
 func PatientOperations() []string {
 	return []string{
-		OpListPatients, OpCreatePatient, OpGetPatient, OpUpdatePatient,
+		OpListPatients, OpCreatePatient, OpGetPatient, OpUpdatePatient, OpDeletePatient,
+		OpGetPatientChart,
 		OpPutPatientPhoto, OpGetPatientPhoto, OpDeletePatientPhoto,
 		OpSetActivePatient,
 	}
@@ -82,11 +84,16 @@ func SelfRecordOf(resolve PatientResolve) SelfRecordFunc {
 type patientHandlers struct {
 	resolve  PatientResolve
 	unitOf   UnitSystemOf
+	records  Resolve
 	photoURL func(id string) string
 }
 
-// PatientHandlers is contracts/patients.md's four CRUD operations.
-func PatientHandlers(resolve PatientResolve, unitOf UnitSystemOf) (httproute.Handlers, error) {
+// PatientHandlers is contracts/patients.md's five CRUD operations plus
+// contracts/patient-chart.md's summary. records resolves the kind registry's
+// generic handler, used only to answer whether an audited target still
+// exists (patient_chart.go); a nil records still serves every other
+// operation, so tests that do not need it may omit it.
+func PatientHandlers(resolve PatientResolve, unitOf UnitSystemOf, records Resolve) (httproute.Handlers, error) {
 	if resolve == nil {
 		return nil, ErrNoPatients
 	}
@@ -98,16 +105,19 @@ func PatientHandlers(resolve PatientResolve, unitOf UnitSystemOf) (httproute.Han
 	h := &patientHandlers{
 		resolve: resolve,
 		unitOf:  unitOf,
+		records: records,
 		photoURL: func(id string) string {
 			return "/api/v1/patients/" + id + "/photo"
 		},
 	}
 
 	return httproute.Handlers{
-		OpListPatients:  web.WithActor(h.list),
-		OpCreatePatient: web.WithActor(h.create),
-		OpGetPatient:    web.WithActor(h.get),
-		OpUpdatePatient: web.WithActor(h.update),
+		OpListPatients:    web.WithActor(h.list),
+		OpCreatePatient:   web.WithActor(h.create),
+		OpGetPatient:      web.WithActor(h.get),
+		OpUpdatePatient:   web.WithActor(h.update),
+		OpDeletePatient:   web.WithActor(h.remove),
+		OpGetPatientChart: web.WithActor(h.chart),
 	}, nil
 }
 
@@ -274,6 +284,33 @@ func (h *patientHandlers) stale(e *core.RequestEvent, actor access.Actor, svc *p
 	e.Response.Header().Set("Cache-Control", patientCacheControl)
 
 	return web.WriteVersionMismatch(e, obs.CorrelationID(e.Request.Context()), current.Version, rendered)
+}
+
+// remove is deletePatient (FR-049): permanent, no recovery path, a self-record
+// refused with the account-closure explanation (FR-051) rather than the
+// generic conflict text.
+func (h *patientHandlers) remove(e *core.RequestEvent, actor access.Actor) error {
+	svc, err := h.resolve()
+	if err != nil {
+		return err
+	}
+
+	id := e.Request.PathValue(PathPatientID)
+
+	version, err := web.IfMatch(e)
+	if err != nil {
+		return err
+	}
+
+	if deleteErr := svc.Delete(e.Request.Context(), actor, id, version); deleteErr != nil {
+		if errors.Is(deleteErr, patient.ErrSelfRecordProtected) {
+			return web.ErrSelfRecordProtected
+		}
+
+		return h.stale(e, actor, svc, id, deleteErr)
+	}
+
+	return e.NoContent(http.StatusNoContent)
 }
 
 func (h *patientHandlers) summary(p person.Patient) any {

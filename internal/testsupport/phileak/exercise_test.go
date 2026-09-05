@@ -978,12 +978,17 @@ func drivePatients(c *client) {
 	c.do(http.MethodGet, address+"/photo?size=original", "")
 	c.do(http.MethodDelete, address+"/photo", "")
 
+	c.do(http.MethodGet, address+"/summary", "")
 	c.do(http.MethodPut, "/api/v1/me/active-patient", jsonBody(c.t, api.ActivePatientBody{Patient: &patientID}))
 
 	c.bearer = ""
 	c.do(http.MethodGet, "/patients", "")
 	c.do(http.MethodGet, "/patients/"+patientID, "")
 	c.do(http.MethodGet, "/patients/"+missingRecordID, "")
+
+	c.token(testsupport.AccountAEmail)
+	current := c.do(http.MethodGet, address, "")
+	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current.Header.Get("ETag")})
 }
 
 // driveDirectory: the ten directory operations and their four pages.

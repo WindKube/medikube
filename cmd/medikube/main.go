@@ -237,13 +237,14 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 	// The hub comes from the container so that its Shutdown runs with
 	// everything else the container holds: a hub nobody closes leaves every
 	// open stream's watcher goroutine parked until the process exits.
-	resolve := recordFamily(app, records.NewRegistry(), container.Hub())
+	kindRegistry := records.NewRegistry()
+	resolve := recordFamily(app, kindRegistry, container.Hub())
 	resolveDirectory := directoryFamily(app)
 
 	readiness := obs.NewReadiness()
 	startedAt := time.Now()
 
-	table, err := operations(app, cfg, resolve, resolveDirectory, container.Hub(), api.HealthDeps{
+	table, err := operations(app, cfg, resolve, kindRegistry, resolveDirectory, container.Hub(), api.HealthDeps{
 		Version:   version,
 		StartedAt: startedAt,
 		Readiness: readiness,

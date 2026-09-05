@@ -7,6 +7,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/core"
 
+	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/identity"
 	domainperson "medikube/internal/domain/person"
@@ -36,10 +37,14 @@ func PatientPageOperations() []string {
 // to resolve the patient stack.
 var ErrNoPatientPages = errors.New("page: the patient pages were wired without a way to resolve the patient service")
 
-// PatientDeps is what the two patient pages need.
+// PatientDeps is what the two patient pages need. Records resolves the kind
+// registry's generic handler, used only to answer whether an activity
+// entry's target still exists (api.TargetExists) — the same seam
+// getPatientChart itself reaches through, so the two never disagree.
 type PatientDeps struct {
 	Resolve api.PatientResolve
 	UnitOf  api.UnitSystemOf
+	Records api.Resolve
 }
 
 // PatientPages is the route table's contribution for P1 and P2.
@@ -100,13 +105,29 @@ func (p *patientPages) list(e *core.RequestEvent, actor access.Actor) error {
 	main := patients.PatientList(patients.PatientListProps{
 		Patients: views,
 		Total:    total,
+		Notice:   noticeFor(e.Request.URL.Query().Get("notice")),
 	})
 
 	return RenderPage(e, http.StatusOK, patientListTitle, p.nav(e, actor), main)
 }
 
+// noticeFor is FR-017/US3-3's explanation for a stale window: a tab left
+// open on a person later deleted lands here rather than on a bare 404, and
+// this is what it reads.
+func noticeFor(notice string) string {
+	if notice == "gone" {
+		return "That person's page is no longer available."
+	}
+
+	return ""
+}
+
 // detail renders P2: a patient belonging to somebody else is a 404 here for
-// the same reason it is one through the API (FR-042).
+// the same reason it is one through the API (FR-042). A patient that no
+// longer exists — including one this very tab just deleted, or one deleted
+// from another tab while this one sat open (US3-3's stale window) — lands
+// on the list with an explanation instead of a bare 404 (FR-017, US6's
+// post-delete redirect).
 func (p *patientPages) detail(e *core.RequestEvent, actor access.Actor) error {
 	if err := requireSession(actor); err != nil {
 		return err
@@ -117,8 +138,12 @@ func (p *patientPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	found, err := svc.Get(e.Request.Context(), actor, e.Request.PathValue(api.PathPatientID))
+	chart, err := svc.Summary(e.Request.Context(), actor, e.Request.PathValue(api.PathPatientID))
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return e.Redirect(http.StatusSeeOther, p.links.listPage+"?notice=gone")
+		}
+
 		return err
 	}
 
@@ -127,9 +152,30 @@ func (p *patientPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	view := p.view(found, system)
+	view := p.view(chart.Patient, system)
 
-	main := patients.PatientDetail(patients.PatientDetailProps{Patient: view})
+	tiles := make([]patients.CountTile, 0, len(chart.Counts))
+	for _, entry := range chart.Counts {
+		tiles = append(tiles, patients.CountTile{Label: entry.Label, Path: entry.Path, Count: entry.Count})
+	}
+
+	events := make([]patients.ActivityEventView, 0, len(chart.RecentActivity))
+	for _, event := range chart.RecentActivity {
+		events = append(events, patients.ActivityEventView{
+			OccurredAt:   event.OccurredAt,
+			Action:       string(event.Action),
+			TargetKind:   string(event.TargetKind),
+			TargetID:     event.TargetID,
+			TargetExists: api.TargetExists(e.Request.Context(), p.deps.Records, actor, event),
+		})
+	}
+
+	main := patients.PatientDetail(patients.PatientDetailProps{
+		Patient:      view,
+		Tiles:        patients.NewChartTiles(view.ID, tiles),
+		Activity:     patients.NewActivityItems(events, func(string, string) string { return "" }),
+		TotalRecords: chart.TotalRecords,
+	})
 
 	return RenderPage(e, http.StatusOK, view.FullName(), p.nav(e, actor), main)
 }

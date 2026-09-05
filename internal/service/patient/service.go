@@ -2,12 +2,21 @@ package patient
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/person"
 )
+
+// ErrSelfRecordProtected is Delete's refusal of a self-record (FR-051,
+// US6-4). It is a package sentinel rather than a domain one: internal/web
+// translates it to its own 409 (web.ErrSelfRecordProtected) with the
+// account-closure explanation, the same way it translates a stale If-Match
+// into a version-mismatch response, rather than through the generic
+// domain-sentinel mapper.
+var ErrSelfRecordProtected = errors.New("patient: a self-record cannot be deleted; closing the account is what removes it")
 
 // Patch is a change to a patient: every field optional, and a supplied
 // field's zero value is a value the person chose rather than a field they
@@ -38,6 +47,8 @@ type Service struct {
 	authorizer Authorizer
 	pointer    ActivePatientStore
 	auditor    Auditor
+	counter    RecordCounter
+	activity   RecentActivityReader
 }
 
 // New refuses an incomplete service rather than returning one (mirrors
@@ -48,6 +59,8 @@ func New(
 	authorizer Authorizer,
 	pointer ActivePatientStore,
 	auditor Auditor,
+	counter RecordCounter,
+	activity RecentActivityReader,
 ) (*Service, error) {
 	var missing []string
 
@@ -71,6 +84,14 @@ func New(
 		missing = append(missing, "auditor")
 	}
 
+	if counter == nil {
+		missing = append(missing, "record counter")
+	}
+
+	if activity == nil {
+		missing = append(missing, "recent activity reader")
+	}
+
 	if len(missing) > 0 {
 		return nil, fmt.Errorf("patient: the service is wired with no %s", joinWords(missing))
 	}
@@ -81,6 +102,8 @@ func New(
 		authorizer: authorizer,
 		pointer:    pointer,
 		auditor:    auditor,
+		counter:    counter,
+		activity:   activity,
 	}, nil
 }
 
@@ -146,6 +169,32 @@ func (s *Service) Update(ctx context.Context, actor access.Actor, id, version st
 	}
 
 	return s.repository.Update(ctx, changed, version)
+}
+
+// Delete is permanent (FR-049, US6-2, US6-3): the cascade over the patient's
+// medications, its photo and its thumbnails, and the auto-unset of every
+// pointer at the row, are the repository's job, relying on PocketBase's own
+// cascade (research D-06).
+//
+// A self-record is refused with domain.ErrSelfRecordProtected (FR-051,
+// US6-4): closing the account is what removes it, and this is checked ahead
+// of the version comparison so the refusal is about what the record is, not
+// about who is asking or when they last read it.
+func (s *Service) Delete(ctx context.Context, actor access.Actor, id, version string) error {
+	if _, err := s.authorizer.Patient(ctx, actor, id, access.PermOwn); err != nil {
+		return err
+	}
+
+	current, err := s.repository.Get(ctx, actor.UserID, id)
+	if err != nil {
+		return err
+	}
+
+	if current.IsSelfRecord {
+		return ErrSelfRecordProtected
+	}
+
+	return s.repository.Delete(ctx, actor.UserID, id, version)
 }
 
 func (p Patch) applyTo(patient person.Patient) person.Patient {

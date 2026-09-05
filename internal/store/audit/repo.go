@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"medikube/internal/domain/audit"
@@ -49,6 +50,36 @@ func (r *Repo) Append(ctx context.Context, event audit.Event) error {
 	}
 
 	return nil
+}
+
+// RecentForPatient is the chart summary's own read (contracts/patient-chart.md,
+// data-model §5's `(patient, occurred_at DESC)` index): up to limit rows
+// concerning patientID, newest first.
+func (r *Repo) RecentForPatient(ctx context.Context, patientID string, limit int) ([]audit.Event, error) {
+	var records []*core.Record
+
+	err := r.app.RecordQuery(store.AuditCollection).
+		AndWhere(dbx.HashExp{store.AuditFieldPatient: patientID}).
+		OrderBy(store.AuditFieldOccurredAt + " DESC").
+		Limit(int64(limit)).
+		WithContext(ctx).
+		All(&records)
+	if err != nil {
+		return nil, fmt.Errorf("audit: reading recent activity for a patient: %w", err)
+	}
+
+	events := make([]audit.Event, 0, len(records))
+
+	for _, record := range records {
+		event, mapErr := store.AuditEventFromRecord(record)
+		if mapErr != nil {
+			return nil, mapErr
+		}
+
+		events = append(events, event)
+	}
+
+	return events, nil
 }
 
 // DeleteBefore removes every row that occurred strictly before cutoff.
