@@ -946,9 +946,9 @@ the console open; every page has the shell, nothing overflows, and the console i
 - [x] T255 [P] [US4] TEST `internal/web/api/feedback_test.go` — every data-changing operation
   produces an explicit success or failure message announced through the `role="status"` or
   `role="alert"` region (FR-047).
-- [ ] T256 [P] [US4] TEST `e2e/a11y.spec.ts` — keyboard reachability and a visible focus indicator on
+- [x] T256 [P] [US4] TEST `e2e/a11y.spec.ts` — keyboard reachability and a visible focus indicator on
   every interactive element of every page, at both viewports (FR-048, SC-014).
-- [ ] T257 [P] [US4] TEST `e2e/responsive.spec.ts` — at 390 px no page scrolls horizontally and
+- [x] T257 [P] [US4] TEST `e2e/responsive.spec.ts` — at 390 px no page scrolls horizontally and
   every navigation target remains reachable (FR-044).
 - [x] T258 [P] [US4] TEST `internal/web/views/shell/live_regions_test.go` — `#error-banner` is
   `role="alert" aria-live="assertive"` and `#toast` is `role="status" aria-live="polite"`, on
@@ -956,7 +956,7 @@ the console open; every page has the shell, nothing overflows, and the console i
 - [x] T259 [P] [US4] TEST `internal/architecture/templ_coverage_test.go` — every `.templ`
   component has a render-to-buffer test. A component nobody renders in a test is a component the
   gate only catches once it is already on a page (Principle VIII, SC-014).
-- [ ] T260 [P] [US4] TEST `e2e/smoke.spec.ts` — the seven assertions from contracts/pages.md for
+- [x] T260 [P] [US4] TEST `e2e/smoke.spec.ts` — the seven assertions from contracts/pages.md for
   every page **and every error view**, at both viewports: status, shell landmarks, the page's own
   landmark **non-empty**, title, zero console errors or warnings, zero CSP violations, zero failed
   requests (FR-066, SC-003).
@@ -974,12 +974,12 @@ the console open; every page has the shell, nothing overflows, and the console i
   nothing overflows horizontally at 390 px (FR-044).
 - [x] T266 [P] [US4] Wire the appearance preference through `updateMe` to the rendered class
   (FR-045).
-- [ ] T267 [US4] Configure `e2e/playwright.config.ts` with the two projects — desktop 1440×900 and
+- [x] T267 [US4] Configure `e2e/playwright.config.ts` with the two projects — desktop 1440×900 and
   mobile 390×844 — and the two flakiness mitigations from reconciliation C16.
-- [ ] T268 [US4] Implement `e2e/routes.ts` — the smoke list produced by shelling out to
+- [x] T268 [US4] Implement `e2e/routes.ts` — the smoke list produced by shelling out to
   `medikube routes --json` at collection time, so the gate's page list **is** the application's own
   inventory (FR-067).
-- [ ] T269 [P] [US4] Implement `e2e/package.json` and pin the Playwright version.
+- [x] T269 [P] [US4] Implement `e2e/package.json` and pin the Playwright version.
 
 **Checkpoint**: every page renders, at both viewports, with a silent console. All eight of US4's
 acceptance scenarios pass.
@@ -1073,10 +1073,10 @@ each break the build for the right reason.
 - [x] T293 [P] [US6] TEST `internal/openapi/staleness_test.go` — regenerating the document produces
   **no diff** against the committed `api/openapi.json`; CI runs `task openapi` and
   `git diff --exit-code` (FR-064).
-- [ ] T294 [P] [US6] TEST `internal/httproute/gate_test.go` — the registry, the OpenAPI document and
+- [x] T294 [P] [US6] TEST `internal/httproute/gate_test.go` — the registry, the OpenAPI document and
   the Playwright route list agree in every direction, with no route documented but unserved and
   none served but undocumented (FR-065, SC-011).
-- [ ] T295 [US6] TEST `e2e/routes.gate.spec.ts` — a registered page with no smoke case **fails**.
+- [x] T295 [US6] TEST `e2e/routes.gate.spec.ts` — a registered page with no smoke case **fails**.
   Then demonstrate it: add a page without a case, watch it go red, and record the demonstration in
   `e2e/README.md` (FR-067, SC-009).
 - [ ] T296 [US6] TEST — **the red-gate demonstration for a removed landmark.** Build with one
