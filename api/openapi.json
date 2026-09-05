@@ -61,6 +61,7 @@
             "emergency_contact": "#/components/schemas/Record_emergency-contacts",
             "encounter": "#/components/schemas/Record_encounters",
             "equipment": "#/components/schemas/Record_equipment",
+            "family_member": "#/components/schemas/Record_family-history",
             "immunization": "#/components/schemas/Record_immunizations",
             "injury": "#/components/schemas/Record_injuries",
             "insurance": "#/components/schemas/Record_insurance",
@@ -111,6 +112,9 @@
           },
           {
             "$ref": "#/components/schemas/Record_emergency-contacts"
+          },
+          {
+            "$ref": "#/components/schemas/Record_family-history"
           }
         ]
       },
@@ -154,6 +158,9 @@
           },
           {
             "$ref": "#/components/schemas/RecordCreate_emergency-contacts"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_family-history"
           }
         ]
       },
@@ -371,6 +378,68 @@
           "name",
           "patient",
           "type"
+        ],
+        "type": "object"
+      },
+      "RecordCreate_family-history": {
+        "additionalProperties": false,
+        "properties": {
+          "birth_year": {
+            "type": "integer"
+          },
+          "conditions": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "diagnosed_age": {
+                  "type": "integer"
+                },
+                "icd10_code": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "notes": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "death_year": {
+            "type": "integer"
+          },
+          "is_deceased": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          },
+          "sex": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "patient",
+          "relationship"
         ],
         "type": "object"
       },
@@ -917,6 +986,9 @@
           },
           {
             "$ref": "#/components/schemas/RecordPatch_emergency-contacts"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_family-history"
           }
         ]
       },
@@ -1113,6 +1185,66 @@
             "type": "string"
           },
           "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RecordPatch_family-history": {
+        "additionalProperties": false,
+        "properties": {
+          "birth_year": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "conditions": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "diagnosed_age": {
+                  "type": "integer"
+                },
+                "icd10_code": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "notes": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "death_year": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "is_deceased": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          },
+          "sex": {
             "type": "string"
           }
         },
@@ -1639,6 +1771,7 @@
             "emergency_contact": "#/components/schemas/RecordSummary_emergency-contacts",
             "encounter": "#/components/schemas/RecordSummary_encounters",
             "equipment": "#/components/schemas/RecordSummary_equipment",
+            "family_member": "#/components/schemas/RecordSummary_family-history",
             "immunization": "#/components/schemas/RecordSummary_immunizations",
             "injury": "#/components/schemas/RecordSummary_injuries",
             "insurance": "#/components/schemas/RecordSummary_insurance",
@@ -1689,6 +1822,9 @@
           },
           {
             "$ref": "#/components/schemas/RecordSummary_emergency-contacts"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_family-history"
           }
         ]
       },
@@ -1930,6 +2066,37 @@
           "name",
           "service_due_on",
           "type",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "RecordSummary_family-history": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "family_member"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "relationship",
           "updated_at"
         ],
         "type": "object"
@@ -2683,6 +2850,88 @@
           "service_due_on",
           "serviced_on",
           "type",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "Record_family-history": {
+        "additionalProperties": false,
+        "properties": {
+          "birth_year": {
+            "type": "integer"
+          },
+          "conditions": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "diagnosed_age": {
+                  "type": "integer"
+                },
+                "icd10_code": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "notes": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "death_year": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "is_deceased": {
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "family_member"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          },
+          "sex": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "conditions",
+          "created_at",
+          "id",
+          "kind",
+          "name",
+          "patient",
+          "relationship",
           "updated_at"
         ],
         "type": "object"
@@ -5979,7 +6228,8 @@
                 "injuries",
                 "insurance",
                 "equipment",
-                "emergency-contacts"
+                "emergency-contacts",
+                "family-history"
               ],
               "type": "string"
             }
@@ -6127,7 +6377,8 @@
                 "injuries",
                 "insurance",
                 "equipment",
-                "emergency-contacts"
+                "emergency-contacts",
+                "family-history"
               ],
               "type": "string"
             }
@@ -6241,7 +6492,8 @@
                 "injuries",
                 "insurance",
                 "equipment",
-                "emergency-contacts"
+                "emergency-contacts",
+                "family-history"
               ],
               "type": "string"
             }
@@ -6350,7 +6602,8 @@
                 "injuries",
                 "insurance",
                 "equipment",
-                "emergency-contacts"
+                "emergency-contacts",
+                "family-history"
               ],
               "type": "string"
             }
@@ -6445,7 +6698,8 @@
                 "injuries",
                 "insurance",
                 "equipment",
-                "emergency-contacts"
+                "emergency-contacts",
+                "family-history"
               ],
               "type": "string"
             }
