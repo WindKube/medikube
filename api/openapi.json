@@ -56,6 +56,8 @@
       "Record": {
         "discriminator": {
           "mapping": {
+            "immunization": "#/components/schemas/Record_immunizations",
+            "injury": "#/components/schemas/Record_injuries",
             "medication": "#/components/schemas/Record_medications"
           },
           "propertyName": "kind"
@@ -63,6 +65,12 @@
         "oneOf": [
           {
             "$ref": "#/components/schemas/Record_medications"
+          },
+          {
+            "$ref": "#/components/schemas/Record_immunizations"
+          },
+          {
+            "$ref": "#/components/schemas/Record_injuries"
           }
         ]
       },
@@ -70,8 +78,109 @@
         "oneOf": [
           {
             "$ref": "#/components/schemas/RecordCreate_medications"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_immunizations"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_injuries"
           }
         ]
+      },
+      "RecordCreate_immunizations": {
+        "additionalProperties": false,
+        "properties": {
+          "administered_on": {
+            "type": "string"
+          },
+          "dose_number": {
+            "type": "integer"
+          },
+          "expires_on": {
+            "type": "string"
+          },
+          "facility": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "manufacturer": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "route": {
+            "type": "string"
+          },
+          "site": {
+            "type": "string"
+          },
+          "trade_name": {
+            "type": "string"
+          },
+          "vaccine_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "patient",
+          "vaccine_name"
+        ],
+        "type": "object"
+      },
+      "RecordCreate_injuries": {
+        "additionalProperties": false,
+        "properties": {
+          "body_part": {
+            "type": "string"
+          },
+          "laterality": {
+            "type": "string"
+          },
+          "mechanism": {
+            "type": "string"
+          },
+          "medication_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "occurred_on": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "recovery_notes": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "patient"
+        ],
+        "type": "object"
       },
       "RecordCreate_medications": {
         "additionalProperties": false,
@@ -132,8 +241,104 @@
         "oneOf": [
           {
             "$ref": "#/components/schemas/RecordPatch_medications"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_immunizations"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_injuries"
           }
         ]
+      },
+      "RecordPatch_immunizations": {
+        "additionalProperties": false,
+        "properties": {
+          "administered_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dose_number": {
+            "type": "integer"
+          },
+          "expires_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "facility": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "manufacturer": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "route": {
+            "type": "string"
+          },
+          "site": {
+            "type": "string"
+          },
+          "trade_name": {
+            "type": "string"
+          },
+          "vaccine_name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RecordPatch_injuries": {
+        "additionalProperties": false,
+        "properties": {
+          "body_part": {
+            "type": "string"
+          },
+          "laterality": {
+            "type": "string"
+          },
+          "mechanism": {
+            "type": "string"
+          },
+          "medication_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "occurred_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "recovery_notes": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
       },
       "RecordPatch_medications": {
         "additionalProperties": false,
@@ -192,6 +397,8 @@
       "RecordSummary": {
         "discriminator": {
           "mapping": {
+            "immunization": "#/components/schemas/RecordSummary_immunizations",
+            "injury": "#/components/schemas/RecordSummary_injuries",
             "medication": "#/components/schemas/RecordSummary_medications"
           },
           "propertyName": "kind"
@@ -199,6 +406,12 @@
         "oneOf": [
           {
             "$ref": "#/components/schemas/RecordSummary_medications"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_immunizations"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_injuries"
           }
         ]
       },
@@ -224,6 +437,87 @@
         "required": [
           "items",
           "next_cursor"
+        ],
+        "type": "object"
+      },
+      "RecordSummary_immunizations": {
+        "additionalProperties": false,
+        "properties": {
+          "administered_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dose_number": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "immunization"
+            ],
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "vaccine_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "administered_on",
+          "id",
+          "kind",
+          "updated_at",
+          "vaccine_name"
+        ],
+        "type": "object"
+      },
+      "RecordSummary_injuries": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "injury"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "occurred_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "occurred_on",
+          "status",
+          "updated_at"
         ],
         "type": "object"
       },
@@ -266,6 +560,152 @@
           "kind",
           "name",
           "started_on",
+          "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "Record_immunizations": {
+        "additionalProperties": false,
+        "properties": {
+          "administered_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "dose_number": {
+            "type": "integer"
+          },
+          "expires_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "facility": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "immunization"
+            ],
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "manufacturer": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "route": {
+            "type": "string"
+          },
+          "site": {
+            "type": "string"
+          },
+          "trade_name": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "vaccine_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "administered_on",
+          "created_at",
+          "expires_on",
+          "id",
+          "kind",
+          "patient",
+          "updated_at",
+          "vaccine_name"
+        ],
+        "type": "object"
+      },
+      "Record_injuries": {
+        "additionalProperties": false,
+        "properties": {
+          "body_part": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "injury"
+            ],
+            "type": "string"
+          },
+          "laterality": {
+            "type": "string"
+          },
+          "mechanism": {
+            "type": "string"
+          },
+          "medication_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "occurred_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "recovery_notes": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "id",
+          "kind",
+          "name",
+          "occurred_on",
+          "patient",
           "status",
           "updated_at"
         ],
@@ -2884,7 +3324,9 @@
             "required": true,
             "schema": {
               "enum": [
-                "medications"
+                "medications",
+                "immunizations",
+                "injuries"
               ],
               "type": "string"
             }
@@ -3020,7 +3462,9 @@
             "required": true,
             "schema": {
               "enum": [
-                "medications"
+                "medications",
+                "immunizations",
+                "injuries"
               ],
               "type": "string"
             }
@@ -3122,7 +3566,9 @@
             "required": true,
             "schema": {
               "enum": [
-                "medications"
+                "medications",
+                "immunizations",
+                "injuries"
               ],
               "type": "string"
             }
@@ -3219,7 +3665,9 @@
             "required": true,
             "schema": {
               "enum": [
-                "medications"
+                "medications",
+                "immunizations",
+                "injuries"
               ],
               "type": "string"
             }
@@ -3302,7 +3750,9 @@
             "required": true,
             "schema": {
               "enum": [
-                "medications"
+                "medications",
+                "immunizations",
+                "injuries"
               ],
               "type": "string"
             }
