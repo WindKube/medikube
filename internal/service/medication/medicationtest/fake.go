@@ -14,7 +14,6 @@ import (
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
-	"medikube/internal/domain/audit"
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
 	"medikube/internal/records"
@@ -27,6 +26,15 @@ import (
 const (
 	OwnerID    = "mkfakeowner0001"
 	StrangerID = "mkfakestrangr01"
+
+	// PatientID and StrangerPatientID are phase 002's addition: the anchor a
+	// medication is now scoped and authorized by is a patient, not the
+	// account directly (research D-13). The fake Authorizer still answers
+	// from the actor's account alone — it does not model a patient-to-account
+	// mapping — because that mapping is access.Authorizer.Patient's own job
+	// and is covered by internal/service/access's tests.
+	PatientID         = "mkfakepatient01"
+	StrangerPatientID = "mkfakestrangp1"
 )
 
 // epoch is where the fake's clock starts. Every write advances it by a
@@ -52,10 +60,10 @@ type Repository struct {
 	next  int
 	clock time.Time
 
-	calls     []string
-	writes    []string
-	lastOwner string
-	lastQuery medication.Query
+	calls       []string
+	writes      []string
+	lastPatient string
+	lastQuery   medication.Query
 }
 
 func NewRepository() *Repository {
@@ -89,12 +97,12 @@ func (r *Repository) Forget() {
 	r.calls, r.writes = nil, nil
 }
 
-// LastOwner is the account the last owner-scoped call was made for.
-func (r *Repository) LastOwner() string {
+// LastPatient is the patient the last patient-scoped call was made for.
+func (r *Repository) LastPatient() string {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	return r.lastOwner
+	return r.lastPatient
 }
 
 // LastQuery is the query the last list was asked, after the service resolved
@@ -106,12 +114,12 @@ func (r *Repository) LastQuery() medication.Query {
 	return r.lastQuery
 }
 
-func (r *Repository) List(_ context.Context, ownerID string, query medication.Query) (domain.Page[clinical.Medication], error) {
+func (r *Repository) List(_ context.Context, patientID string, query medication.Query) (domain.Page[clinical.Medication], error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	r.calls = append(r.calls, "list")
-	r.lastOwner, r.lastQuery = ownerID, query
+	r.lastPatient, r.lastQuery = patientID, query
 
 	sortKeys := query.Sort
 	if len(sortKeys) == 0 {
@@ -121,7 +129,7 @@ func (r *Repository) List(_ context.Context, ownerID string, query medication.Qu
 	matched := make([]clinical.Medication, 0, len(r.rows))
 
 	for _, row := range r.rows {
-		if row.OwnerID != ownerID || !matches(row, query) {
+		if row.PatientID != patientID || !matches(row, query) {
 			continue
 		}
 
@@ -182,14 +190,13 @@ func (r *Repository) List(_ context.Context, ownerID string, query medication.Qu
 // this is only what an unstated limit means here.
 const defaultLimit = 25
 
-func (r *Repository) Get(_ context.Context, ownerID, id string) (clinical.Medication, error) {
+func (r *Repository) Get(_ context.Context, id string) (clinical.Medication, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	r.calls = append(r.calls, "get")
-	r.lastOwner = ownerID
 
-	return r.owned(ownerID, id)
+	return r.byID(id)
 }
 
 func (r *Repository) Create(_ context.Context, entity clinical.Medication) (clinical.Medication, error) {
@@ -218,7 +225,7 @@ func (r *Repository) Update(_ context.Context, entity clinical.Medication, expec
 
 	r.calls = append(r.calls, "update")
 
-	current, err := r.owned(entity.OwnerID, entity.ID)
+	current, err := r.byID(entity.ID)
 	if err != nil {
 		return clinical.Medication{}, err
 	}
@@ -230,7 +237,7 @@ func (r *Repository) Update(_ context.Context, entity clinical.Medication, expec
 	r.writes = append(r.writes, "update")
 	r.clock = r.clock.Add(time.Millisecond)
 
-	entity.OwnerID = current.OwnerID
+	entity.PatientID = current.PatientID
 	entity.CreatedAt = current.CreatedAt
 	entity.UpdatedAt = r.clock
 	entity.Version = version(entity.ID, revision(current.Version)+1)
@@ -240,13 +247,13 @@ func (r *Repository) Update(_ context.Context, entity clinical.Medication, expec
 	return entity, nil
 }
 
-func (r *Repository) Delete(_ context.Context, ownerID, id, expectedVersion string) error {
+func (r *Repository) Delete(_ context.Context, id, expectedVersion string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	r.calls = append(r.calls, "delete")
 
-	current, err := r.owned(ownerID, id)
+	current, err := r.byID(id)
 	if err != nil {
 		return err
 	}
@@ -261,12 +268,13 @@ func (r *Repository) Delete(_ context.Context, ownerID, id, expectedVersion stri
 	return nil
 }
 
-// owned is FR-033 in this repository: a row that is not there and a row that is
-// somebody else's are the same refusal, with the same error value.
-func (r *Repository) owned(ownerID, id string) (clinical.Medication, error) {
+// byID is FR-033 in this repository for a row that is not there: unscoped, as
+// internal/store/medication's own Get/Update/Delete are (research D-13) — the
+// service resolves and authorizes the patient from the row itself.
+func (r *Repository) byID(id string) (clinical.Medication, error) {
 	row, exists := r.rows[id]
-	if !exists || row.OwnerID != ownerID {
-		return clinical.Medication{}, fmt.Errorf("medicationtest: no such record for this owner: %w", domain.ErrNotFound)
+	if !exists {
+		return clinical.Medication{}, fmt.Errorf("medicationtest: no such record: %w", domain.ErrNotFound)
 	}
 
 	return row, nil
@@ -441,11 +449,11 @@ func compareToBoundary(row clinical.Medication, after boundary, sortKeys []domai
 type Authorizer struct {
 	mu sync.Mutex
 
-	owner    string
-	level    access.Permission
-	err      error
-	calls    int
-	lastKind kind.Kind
+	owner       string
+	level       access.Permission
+	err         error
+	calls       int
+	lastPatient string
 }
 
 func NewAuthorizer(owner string) *Authorizer {
@@ -481,27 +489,24 @@ func (a *Authorizer) Calls() int {
 	return a.calls
 }
 
-func (a *Authorizer) LastKind() kind.Kind {
+// LastPatient is the patient id the last call was made with.
+func (a *Authorizer) LastPatient() string {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	return a.lastKind
+	return a.lastPatient
 }
 
-func (a *Authorizer) Record(_ context.Context, actor access.Actor, k kind.Kind, _ string, _ access.Permission) (access.Grant, error) {
-	return a.answer(actor, k)
-}
-
-func (a *Authorizer) Kind(_ context.Context, actor access.Actor, k kind.Kind, _ access.Permission) (access.Grant, error) {
-	return a.answer(actor, k)
-}
-
-func (a *Authorizer) answer(actor access.Actor, k kind.Kind) (access.Grant, error) {
+// Patient answers from the actor's account alone. It does not model a
+// patient-to-account mapping — the fake is coarse on purpose, the same way
+// phase 001's fake ignored the record it was asked about — because that
+// mapping is access.Authorizer.Patient's own job (internal/service/access).
+func (a *Authorizer) Patient(_ context.Context, actor access.Actor, patientID string, _ access.Permission) (access.Grant, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
 	a.calls++
-	a.lastKind = k
+	a.lastPatient = patientID
 
 	if a.err != nil {
 		return access.Grant{}, a.err
@@ -512,47 +517,6 @@ func (a *Authorizer) answer(actor access.Actor, k kind.Kind) (access.Grant, erro
 	}
 
 	return access.Grant{Level: a.level}, nil
-}
-
-// Auditor collects the rows the service writes.
-type Auditor struct {
-	mu sync.Mutex
-
-	events []audit.Event
-	err    error
-}
-
-func NewAuditor() *Auditor { return &Auditor{} }
-
-// Fail makes the trail unwritable, which is the case the service must not turn
-// into a different answer for the caller.
-func (a *Auditor) Fail(err error) *Auditor {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	a.err = err
-
-	return a
-}
-
-func (a *Auditor) Events() []audit.Event {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	return slices.Clone(a.events)
-}
-
-func (a *Auditor) Record(_ context.Context, event audit.Event) error {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
-	if a.err != nil {
-		return a.err
-	}
-
-	a.events = append(a.events, event)
-
-	return nil
 }
 
 // The stand-in DTOs. internal/web/api owns the real four (contracts/records.md
@@ -578,11 +542,13 @@ type (
 		Dosage string
 	}
 
-	// Create carries no owner and no identity, which is how FR-032 is enforced
-	// by shape rather than by a check.
+	// Create carries no identity and no version, which is how FR-032 is
+	// enforced by shape rather than by a check. Patient is required, mirroring
+	// the real DTO (contracts/medications-rescope.md).
 	Create struct {
-		Name   string
-		Dosage string
+		Patient string
+		Name    string
+		Dosage  string
 	}
 
 	// Patch distinguishes a field that was sent from one that was not.
@@ -614,7 +580,7 @@ func (Codec) Draft(body any) (clinical.Medication, error) {
 		return clinical.Medication{}, fmt.Errorf("medicationtest: a create was handed %T and not this package's own create type", body)
 	}
 
-	return clinical.Medication{Name: create.Name, Dosage: create.Dosage}, nil
+	return clinical.Medication{PatientID: create.Patient, Name: create.Name, Dosage: create.Dosage}, nil
 }
 
 func (Codec) Patch(body any) (medication.Patch, error) {

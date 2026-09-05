@@ -47,6 +47,12 @@ type Query struct {
 	// list; ListOfKind takes its kind from the path.
 	Kinds []kind.Kind
 
+	// PatientID is phase 002's addition (contracts/medications-rescope.md):
+	// every list over patient-scoped data requires one, so this package
+	// carries it rather than each kind inventing its own query member for the
+	// same required parameter.
+	PatientID string
+
 	// The case-insensitive substring search (`?q=`).
 	Search string
 
@@ -104,20 +110,21 @@ type Views interface {
 // publisher fans out identifiers and never record bodies, which is what makes
 // per-subscriber authorization possible at all.
 type StreamFilter interface {
-	Streams(recordID, ownerID string) bool
+	Streams(recordID, patientID string) bool
 }
 
 // Authorizer is the checkpoint a kind's records are reached through. The
-// signature is the one contracts/streams.md names, kind included, so the single
-// implementation in internal/service/access satisfies it directly and every
-// kind registers the same instance.
+// signature is the one contracts/medications-rescope.md and
+// contracts/streams.md name — the patient anchor, phase 002 onward — so the
+// single implementation in internal/service/access satisfies it directly and
+// every kind registers the same instance.
 //
 // It is a registered facet rather than something the handler looks up, because
-// phase 002 anchors authorization on the patient and phase 005 on the share: a
-// checkpoint that switched on kind.Kind to decide which anchor to use would be
-// the open/closed violation this registry exists to prevent.
+// phase 005 anchors sharing on top of the same patient and a checkpoint that
+// switched on kind.Kind to decide which anchor to use would be the open/closed
+// violation this registry exists to prevent.
 type Authorizer interface {
-	Record(ctx context.Context, actor access.Actor, k kind.Kind, recordID string, need access.Permission) (access.Grant, error)
+	Patient(ctx context.Context, actor access.Actor, patientID string, need access.Permission) (access.Grant, error)
 }
 
 // Schema is the kind's typed boundary: the four DTO shapes and the query

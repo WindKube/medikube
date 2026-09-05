@@ -19,10 +19,17 @@ import (
 type Medication struct {
 	ID string
 
-	// The authorization anchor and the cascade parent. Server-set: it is absent
-	// from every request DTO, so a request cannot nominate its own owner.
-	// Phase 002 replaces it with a patient relation.
-	OwnerID string
+	// The authorization anchor and the cascade parent (phase 002 research
+	// D-13). Server-set on create and absent from the patch DTO entirely, so a
+	// request can neither nominate nor change it.
+	PatientID string
+
+	// The prescriber and the pharmacy. Both optional and both auto-unset
+	// rather than cascading when the practitioner or facility they name is
+	// deleted (data-model §6): a medication survives the deletion of who
+	// prescribed it or where it was filled.
+	PractitionerID string
+	PharmacyID     string
 
 	Name            string
 	AlternativeName string
@@ -64,5 +71,5 @@ func (m Medication) IsCurrent() bool { return m.Status == TherapyStatusActive }
 // drug name, a dose, a reason or a note is that this method never had a line
 // that could. Adding one here is the whole failure — there is no second gate.
 func (m Medication) MarshalZerologObject(e *zerolog.Event) {
-	e.Str("medication_id", m.ID).Str("owner_id", m.OwnerID)
+	e.Str("medication_id", m.ID).Str("patient_id", m.PatientID)
 }

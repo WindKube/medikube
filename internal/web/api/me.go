@@ -51,21 +51,39 @@ func AccountHandlers(deps Deps) (httproute.Handlers, error) {
 	}, nil
 }
 
-// NewCounter resolves the account's own record counts through the record
-// family.
+// PatientLister lists the ids of every patient one account owns.
 //
-// Through the family and not through a query of its own, deliberately: the
-// count then passes the SAME authorization checkpoint every record read passes,
-// with the actor as its only input. A second COUNT(*) written here would be a
-// second place the owner scope could be got wrong, and a count is exactly the
-// kind of read nobody thinks of as a disclosure until it is one.
-func NewCounter(resolve Resolve) (Counter, error) {
+// Every clinical kind the record family now serves is patient-anchored
+// (research D-13): "the account's records" is the union over its patients, so
+// NewCounter needs this to sum a kind's count rather than asking the family
+// for a total it can no longer answer with no patient named.
+type PatientLister func(ctx context.Context, ownerID string) ([]string, error)
+
+// NewCounter resolves the account's own record counts through the record
+// family, one patient at a time.
+//
+// Through the family and not through a query of its own, deliberately: each
+// patient's count still passes the SAME authorization checkpoint every record
+// read passes, with the actor as its only input. A second COUNT(*) written
+// here would be a second place the patient scope could be got wrong, and a
+// count is exactly the kind of read nobody thinks of as a disclosure until it
+// is one.
+func NewCounter(resolve Resolve, patientsOf PatientLister) (Counter, error) {
 	if resolve == nil {
 		return nil, ErrNoRecords
 	}
 
+	if patientsOf == nil {
+		return nil, fmt.Errorf("api: the account's record counter is wired with no patient lister")
+	}
+
 	return func(ctx context.Context, actor access.Actor) (MeCounts, error) {
 		handler, err := resolve()
+		if err != nil {
+			return nil, err
+		}
+
+		patientIDs, err := patientsOf(ctx, actor.UserID)
 		if err != nil {
 			return nil, err
 		}
@@ -78,21 +96,28 @@ func NewCounter(resolve Resolve) (Counter, error) {
 		counts := make(MeCounts, len(handler.Segments()))
 
 		for _, segment := range handler.Segments() {
-			page, err := handler.ListOfKind(ctx, actor, segment, records.Query{
-				// One row, because the answer wanted is the total beside it.
-				// The page itself is discarded.
-				Limit: 1,
-				Count: true,
-			})
-			if err != nil {
-				return nil, web.OwnerScoped(err)
+			var total int
+
+			for _, patientID := range patientIDs {
+				page, err := handler.ListOfKind(ctx, actor, segment, records.Query{
+					PatientID: patientID,
+					// One row, because the answer wanted is the total beside
+					// it. The page itself is discarded.
+					Limit: 1,
+					Count: true,
+				})
+				if err != nil {
+					return nil, web.OwnerScoped(err)
+				}
+
+				if page.Total == nil {
+					return nil, fmt.Errorf("%w: %s", ErrNoCount, segment)
+				}
+
+				total += *page.Total
 			}
 
-			if page.Total == nil {
-				return nil, fmt.Errorf("%w: %s", ErrNoCount, segment)
-			}
-
-			counts[segment] = *page.Total
+			counts[segment] = total
 		}
 
 		return counts, nil

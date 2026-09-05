@@ -119,15 +119,16 @@ func publish(
 			config.Hub.Publish(realtime.Event{
 				Kind:     k,
 				RecordID: e.Record.Id,
-				// store.MedicationOwner is "owner", the column every clinical
-				// collection carries its account in (data-model §2), and
-				// store.AssertMappedFields is what refuses to boot if the
-				// schema stops spelling it that way. Reading it through that
-				// constant rather than a literal is what stops this hook
-				// publishing an empty owner in silence — core.Record's getters
-				// are casts that cannot fail, so a misspelling reads back as
-				// the empty string and every removal would then be suppressed.
-				OwnerID: e.Record.GetString(store.MedicationOwner),
+				// store.MedicationPatient is "patient", the column every
+				// clinical collection carries its person in from phase 002
+				// onward (data-model §6), and store.AssertMappedFields is what
+				// refuses to boot if the schema stops spelling it that way.
+				// Reading it through that constant rather than a literal is
+				// what stops this hook publishing an empty patient in silence
+				// — core.Record's getters are casts that cannot fail, so a
+				// misspelling reads back as the empty string and every removal
+				// would then be suppressed.
+				PatientID: e.Record.GetString(store.MedicationPatient),
 			})
 
 			return e.Next()

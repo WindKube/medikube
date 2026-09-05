@@ -25,8 +25,8 @@ import (
 // The stranger is never written to by the contract itself. It exists so that
 // every owner-scoped assertion has somebody to be scoped against.
 type Accounts struct {
-	Owner    string
-	Stranger string
+	Patient         string
+	StrangerPatient string
 }
 
 // Factory builds one empty repository, per test. Per test and not per run: a
@@ -64,9 +64,9 @@ func (c *repositoryContract) SetupTest() {
 	repository, accounts := c.newRepository(c.T())
 
 	c.Require().NotNil(repository, "the factory returned no repository")
-	c.Require().NotEmpty(accounts.Owner, "the factory named no owner")
-	c.Require().NotEmpty(accounts.Stranger, "the factory named no stranger to be scoped against")
-	c.Require().NotEqual(accounts.Owner, accounts.Stranger,
+	c.Require().NotEmpty(accounts.Patient, "the factory named no owner")
+	c.Require().NotEmpty(accounts.StrangerPatient, "the factory named no stranger to be scoped against")
+	c.Require().NotEqual(accounts.Patient, accounts.StrangerPatient,
 		"the owner and the stranger are the same account, so every scoping assertion below would pass vacuously")
 
 	c.repository, c.accounts = repository, accounts
@@ -77,11 +77,11 @@ func (c *repositoryContract) ctx() context.Context { return c.T().Context() }
 // draft is the minimum a stored medication needs: a name, an owner and a
 // state. Every other field is optional by data-model §2 and the cases that care
 // about one set it.
-func (c *repositoryContract) draft(owner, name string) clinical.Medication {
+func (c *repositoryContract) draft(patientID, name string) clinical.Medication {
 	return clinical.Medication{
-		OwnerID: owner,
-		Name:    name,
-		Status:  clinical.TherapyStatusActive,
+		PatientID: patientID,
+		Name:      name,
+		Status:    clinical.TherapyStatusActive,
 	}
 }
 
@@ -97,7 +97,7 @@ func (c *repositoryContract) create(medication clinical.Medication) clinical.Med
 func (c *repositoryContract) list(query medication.Query) domain.Page[clinical.Medication] {
 	c.T().Helper()
 
-	page, err := c.repository.List(c.ctx(), c.accounts.Owner, query)
+	page, err := c.repository.List(c.ctx(), c.accounts.Patient, query)
 	c.Require().NoError(err)
 
 	return page
@@ -123,7 +123,7 @@ func (c *repositoryContract) TestCreateStoresEveryFieldAndMintsAnIdentity() {
 	c.Require().NoError(err)
 
 	full := clinical.Medication{
-		OwnerID:         c.accounts.Owner,
+		PatientID:       c.accounts.Patient,
 		Name:            "Amoxicillin",
 		AlternativeName: "Amoxil",
 		Type:            clinical.MedicationTypePrescription,
@@ -145,7 +145,7 @@ func (c *repositoryContract) TestCreateStoresEveryFieldAndMintsAnIdentity() {
 	c.Assert().False(stored.CreatedAt.IsZero())
 	c.Assert().False(stored.UpdatedAt.IsZero())
 
-	read, err := c.repository.Get(c.ctx(), c.accounts.Owner, stored.ID)
+	read, err := c.repository.Get(c.ctx(), stored.ID)
 	c.Require().NoError(err)
 
 	c.Assert().Equal(stored.ID, read.ID)
@@ -154,7 +154,7 @@ func (c *repositoryContract) TestCreateStoresEveryFieldAndMintsAnIdentity() {
 
 	// Compared field by field rather than as a struct, so a failure names the
 	// column that was dropped instead of printing two thirteen-field values.
-	c.Assert().Equal(c.accounts.Owner, read.OwnerID)
+	c.Assert().Equal(c.accounts.Patient, read.PatientID)
 	c.Assert().Equal(full.Name, read.Name)
 	c.Assert().Equal(full.AlternativeName, read.AlternativeName)
 	c.Assert().Equal(full.Type, read.Type)
@@ -172,8 +172,8 @@ func (c *repositoryContract) TestCreateStoresEveryFieldAndMintsAnIdentity() {
 // TestCreateMintsADistinctIdentityEveryTime — two courses of the same drug are
 // legitimate (data-model §2: no unique index on name), and they are two rows.
 func (c *repositoryContract) TestCreateMintsADistinctIdentityEveryTime() {
-	first := c.create(c.draft(c.accounts.Owner, "Ibuprofen"))
-	second := c.create(c.draft(c.accounts.Owner, "Ibuprofen"))
+	first := c.create(c.draft(c.accounts.Patient, "Ibuprofen"))
+	second := c.create(c.draft(c.accounts.Patient, "Ibuprofen"))
 
 	c.Assert().NotEqual(first.ID, second.ID)
 }
@@ -183,9 +183,9 @@ func (c *repositoryContract) TestCreateMintsADistinctIdentityEveryTime() {
 // repository that wrote a zero date as a real one would make the detail page
 // show a start date the person never gave.
 func (c *repositoryContract) TestAnAbsentOptionalFieldStaysAbsent() {
-	stored := c.create(c.draft(c.accounts.Owner, "Paracetamol"))
+	stored := c.create(c.draft(c.accounts.Patient, "Paracetamol"))
 
-	read, err := c.repository.Get(c.ctx(), c.accounts.Owner, stored.ID)
+	read, err := c.repository.Get(c.ctx(), stored.ID)
 	c.Require().NoError(err)
 
 	c.Assert().True(read.StartedOn.IsZero())
@@ -196,19 +196,8 @@ func (c *repositoryContract) TestAnAbsentOptionalFieldStaysAbsent() {
 	c.Assert().Empty(read.Notes)
 }
 
-// TestGetIsScopedToTheOwner is FR-033 at the storage layer. The service
-// authorizes above this and the repository refuses anyway: two independent
-// refusals, because one of them is one edit away from not being there.
-func (c *repositoryContract) TestGetIsScopedToTheOwner() {
-	stored := c.create(c.draft(c.accounts.Owner, "Metformin"))
-
-	_, err := c.repository.Get(c.ctx(), c.accounts.Stranger, stored.ID)
-	c.Require().ErrorIs(err, domain.ErrNotFound,
-		"another account's medication is answered exactly as one that does not exist")
-}
-
 func (c *repositoryContract) TestGetOfAnIdentityThatNeverExistedIsNotFound() {
-	_, err := c.repository.Get(c.ctx(), c.accounts.Owner, "nosuchrecord01")
+	_, err := c.repository.Get(c.ctx(), "nosuchrecord01")
 
 	c.Require().ErrorIs(err, domain.ErrNotFound)
 }
@@ -216,8 +205,8 @@ func (c *repositoryContract) TestGetOfAnIdentityThatNeverExistedIsNotFound() {
 // TestListReturnsOnlyTheOwnersRows. The counterparty's rows are written through
 // the same repository, so a scoping mistake has something to leak.
 func (c *repositoryContract) TestListReturnsOnlyTheOwnersRows() {
-	mine := c.create(c.draft(c.accounts.Owner, "Atorvastatin"))
-	theirs := c.create(c.draft(c.accounts.Stranger, "Bisoprolol"))
+	mine := c.create(c.draft(c.accounts.Patient, "Atorvastatin"))
+	theirs := c.create(c.draft(c.accounts.StrangerPatient, "Bisoprolol"))
 
 	page := c.list(medication.Query{})
 
@@ -227,13 +216,13 @@ func (c *repositoryContract) TestListReturnsOnlyTheOwnersRows() {
 
 // TestListNarrowsByStatus is FR-022's narrowing by state.
 func (c *repositoryContract) TestListNarrowsByStatus() {
-	active := c.create(c.draft(c.accounts.Owner, "Ramipril"))
+	active := c.create(c.draft(c.accounts.Patient, "Ramipril"))
 
-	stopped := c.draft(c.accounts.Owner, "Simvastatin")
+	stopped := c.draft(c.accounts.Patient, "Simvastatin")
 	stopped.Status = clinical.TherapyStatusStopped
 	stoppedID := c.create(stopped).ID
 
-	onHold := c.draft(c.accounts.Owner, "Warfarin")
+	onHold := c.draft(c.accounts.Patient, "Warfarin")
 	onHold.Status = clinical.TherapyStatusOnHold
 	onHoldID := c.create(onHold).ID
 
@@ -251,13 +240,13 @@ func (c *repositoryContract) TestListNarrowsByStatus() {
 // match. Both columns, because a person who recorded the brand name and
 // searched for the generic one is the case the alternative name exists for.
 func (c *repositoryContract) TestListSearchesNameAndAlternativeNameCaseInsensitively() {
-	byName := c.create(c.draft(c.accounts.Owner, "Salbutamol"))
+	byName := c.create(c.draft(c.accounts.Patient, "Salbutamol"))
 
-	alternative := c.draft(c.accounts.Owner, "Ventolin")
+	alternative := c.draft(c.accounts.Patient, "Ventolin")
 	alternative.AlternativeName = "Salbutamol inhaler"
 	byAlternative := c.create(alternative)
 
-	unrelated := c.create(c.draft(c.accounts.Owner, "Omeprazole"))
+	unrelated := c.create(c.draft(c.accounts.Patient, "Omeprazole"))
 
 	page := c.list(medication.Query{Search: "salbuta"})
 
@@ -269,8 +258,8 @@ func (c *repositoryContract) TestListSearchesNameAndAlternativeNameCaseInsensiti
 // the case fold: the index is on LOWER(name), so "amoxicillin" sorts before
 // "Betahistine" and a byte comparison would put it after.
 func (c *repositoryContract) TestListSortsByNameInBothDirections() {
-	lower := c.create(c.draft(c.accounts.Owner, "amoxicillin"))
-	upper := c.create(c.draft(c.accounts.Owner, "Betahistine"))
+	lower := c.create(c.draft(c.accounts.Patient, "amoxicillin"))
+	upper := c.create(c.draft(c.accounts.Patient, "Betahistine"))
 
 	ascending := c.list(medication.Query{Sort: []domain.SortKey{{Field: medication.FieldName}}})
 	c.Assert().Equal([]string{lower.ID, upper.ID}, ids(ascending))
@@ -284,8 +273,8 @@ func (c *repositoryContract) TestListSortsByNameInBothDirections() {
 // and a repository that leaves them to the database orders them differently on
 // two runs — which makes the page after them repeat one and skip the other.
 func (c *repositoryContract) TestRowsSharingASortValueAreOrderedByIdentityDescending() {
-	first := c.create(c.draft(c.accounts.Owner, "Codeine"))
-	second := c.create(c.draft(c.accounts.Owner, "Codeine"))
+	first := c.create(c.draft(c.accounts.Patient, "Codeine"))
+	second := c.create(c.draft(c.accounts.Patient, "Codeine"))
 
 	expected := []string{first.ID, second.ID}
 	sort.Sort(sort.Reverse(sort.StringSlice(expected)))
@@ -311,15 +300,15 @@ func (c *repositoryContract) TestAnAbsentStartDateSortsLastInBothDirections() {
 	later, err := domain.NewDate(2026, time.June, 9)
 	c.Require().NoError(err)
 
-	early := c.draft(c.accounts.Owner, "Enalapril")
+	early := c.draft(c.accounts.Patient, "Enalapril")
 	early.StartedOn = earlier
 	earlyID := c.create(early).ID
 
-	late := c.draft(c.accounts.Owner, "Furosemide")
+	late := c.draft(c.accounts.Patient, "Furosemide")
 	late.StartedOn = later
 	lateID := c.create(late).ID
 
-	undated := c.create(c.draft(c.accounts.Owner, "Gliclazide")).ID
+	undated := c.create(c.draft(c.accounts.Patient, "Gliclazide")).ID
 
 	descending := c.list(medication.Query{Sort: []domain.SortKey{{Field: medication.FieldStartedOn, Desc: true}}})
 	c.Assert().Equal([]string{lateID, earlyID, undated}, ids(descending))
@@ -337,7 +326,7 @@ func (c *repositoryContract) TestAnAbsentStartDateSortsLastInBothDirections() {
 // that the identity tiebreaker decides when it is not.
 func (c *repositoryContract) TestListOrdersByLastChange() {
 	for _, name := range []string{"Levothyroxine", "Naproxen", "Prednisolone"} {
-		c.create(c.draft(c.accounts.Owner, name))
+		c.create(c.draft(c.accounts.Patient, name))
 	}
 
 	descending := c.list(medication.Query{Sort: []domain.SortKey{{Field: medication.FieldUpdated, Desc: true}}})
@@ -383,7 +372,7 @@ func (c *repositoryContract) TestListPagesWithACursorAndNeverRepeatsOrSkips() {
 
 	throughout := make([]string, 0, len(names))
 	for _, name := range names {
-		throughout = append(throughout, c.create(c.draft(c.accounts.Owner, name)).ID)
+		throughout = append(throughout, c.create(c.draft(c.accounts.Patient, name)).ID)
 	}
 
 	query := medication.Query{Sort: []domain.SortKey{{Field: medication.FieldName}}, Limit: 3}
@@ -404,7 +393,7 @@ func (c *repositoryContract) TestListPagesWithACursorAndNeverRepeatsOrSkips() {
 		if !inserted {
 			// Sorts first under this ordering, and therefore behind the
 			// boundary the first page ended on.
-			c.create(c.draft(c.accounts.Owner, "Adrenaline"))
+			c.create(c.draft(c.accounts.Patient, "Adrenaline"))
 			inserted = true
 		}
 
@@ -429,7 +418,7 @@ func (c *repositoryContract) TestListPagesWithACursorAndNeverRepeatsOrSkips() {
 // member is present either way, and "there is more" has to be answerable
 // without a second request.
 func (c *repositoryContract) TestALastPageCarriesNoCursor() {
-	c.create(c.draft(c.accounts.Owner, "Hydrocortisone"))
+	c.create(c.draft(c.accounts.Patient, "Hydrocortisone"))
 
 	page := c.list(medication.Query{Limit: 25})
 
@@ -441,13 +430,13 @@ func (c *repositoryContract) TestALastPageCarriesNoCursor() {
 // slice of the list, which is FR-023's failure with none of its symptoms.
 func (c *repositoryContract) TestACursorFromAnotherOrderingIsRefused() {
 	for _, name := range []string{"Insulin", "Ketoprofen", "Lansoprazole"} {
-		c.create(c.draft(c.accounts.Owner, name))
+		c.create(c.draft(c.accounts.Patient, name))
 	}
 
 	first := c.list(medication.Query{Sort: []domain.SortKey{{Field: medication.FieldName}}, Limit: 2})
 	c.Require().NotNil(first.NextCursor)
 
-	_, err := c.repository.List(c.ctx(), c.accounts.Owner, medication.Query{
+	_, err := c.repository.List(c.ctx(), c.accounts.Patient, medication.Query{
 		Sort:   []domain.SortKey{{Field: medication.FieldName, Desc: true}},
 		Limit:  2,
 		Cursor: *first.NextCursor,
@@ -460,9 +449,9 @@ func (c *repositoryContract) TestACursorFromAnotherOrderingIsRefused() {
 // boundary chooses a query the service never offered — including one over
 // somebody else's rows.
 func (c *repositoryContract) TestACursorThisRepositoryDidNotMintIsRefused() {
-	c.create(c.draft(c.accounts.Owner, "Morphine"))
+	c.create(c.draft(c.accounts.Patient, "Morphine"))
 
-	_, err := c.repository.List(c.ctx(), c.accounts.Owner, medication.Query{Cursor: "not-a-cursor-this-instance-issued"})
+	_, err := c.repository.List(c.ctx(), c.accounts.Patient, medication.Query{Cursor: "not-a-cursor-this-instance-issued"})
 
 	c.Assert().Error(err)
 }
@@ -471,10 +460,10 @@ func (c *repositoryContract) TestACursorThisRepositoryDidNotMintIsRefused() {
 // page is a cost nobody asked for, so the member is absent unless it was.
 func (c *repositoryContract) TestCountIsOnlyProducedWhenAsked() {
 	for _, name := range []string{"Nitrofurantoin", "Olanzapine", "Propranolol"} {
-		c.create(c.draft(c.accounts.Owner, name))
+		c.create(c.draft(c.accounts.Patient, name))
 	}
 
-	c.create(c.draft(c.accounts.Stranger, "Quinine"))
+	c.create(c.draft(c.accounts.StrangerPatient, "Quinine"))
 
 	silent := c.list(medication.Query{Limit: 2})
 	c.Assert().Nil(silent.Total)
@@ -486,7 +475,7 @@ func (c *repositoryContract) TestCountIsOnlyProducedWhenAsked() {
 
 // TestUpdateReplacesTheStoredValuesWhenTheVersionMatches.
 func (c *repositoryContract) TestUpdateReplacesTheStoredValuesWhenTheVersionMatches() {
-	stored := c.create(c.draft(c.accounts.Owner, "Rifampicin"))
+	stored := c.create(c.draft(c.accounts.Patient, "Rifampicin"))
 
 	changed := stored
 	changed.Dosage = "600 mg"
@@ -498,7 +487,7 @@ func (c *repositoryContract) TestUpdateReplacesTheStoredValuesWhenTheVersionMatc
 	c.Assert().Equal("600 mg", updated.Dosage)
 	c.Assert().Equal(clinical.TherapyStatusStopped, updated.Status)
 
-	read, err := c.repository.Get(c.ctx(), c.accounts.Owner, stored.ID)
+	read, err := c.repository.Get(c.ctx(), stored.ID)
 	c.Require().NoError(err)
 
 	c.Assert().Equal("600 mg", read.Dosage)
@@ -511,7 +500,7 @@ func (c *repositoryContract) TestUpdateReplacesTheStoredValuesWhenTheVersionMatc
 // assertion is the half that matters: a refused write that wrote anyway is a
 // silent overwrite with an error message.
 func (c *repositoryContract) TestUpdateRefusesAVersionThatIsNotTheCurrentOne() {
-	stored := c.create(c.draft(c.accounts.Owner, "Sertraline"))
+	stored := c.create(c.draft(c.accounts.Patient, "Sertraline"))
 
 	changed := stored
 	changed.Dosage = "100 mg"
@@ -519,32 +508,14 @@ func (c *repositoryContract) TestUpdateRefusesAVersionThatIsNotTheCurrentOne() {
 	_, err := c.repository.Update(c.ctx(), changed, "not-the-version-that-was-read")
 	c.Require().ErrorIs(err, domain.ErrVersionMismatch)
 
-	read, err := c.repository.Get(c.ctx(), c.accounts.Owner, stored.ID)
+	read, err := c.repository.Get(c.ctx(), stored.ID)
 	c.Require().NoError(err)
 	c.Assert().Empty(read.Dosage, "the refused update was applied anyway")
 }
 
-// TestUpdateIsScopedToTheOwner. The stranger addresses a row that exists and
-// is told it does not, and the row is untouched.
-func (c *repositoryContract) TestUpdateIsScopedToTheOwner() {
-	stored := c.create(c.draft(c.accounts.Owner, "Tamsulosin"))
-
-	hijacked := stored
-	hijacked.OwnerID = c.accounts.Stranger
-	hijacked.Name = "Taken over"
-
-	_, err := c.repository.Update(c.ctx(), hijacked, stored.Version)
-	c.Require().ErrorIs(err, domain.ErrNotFound)
-
-	read, err := c.repository.Get(c.ctx(), c.accounts.Owner, stored.ID)
-	c.Require().NoError(err)
-	c.Assert().Equal("Tamsulosin", read.Name)
-	c.Assert().Equal(c.accounts.Owner, read.OwnerID, "the row changed hands")
-}
-
 // TestUpdateOfAnIdentityThatNeverExistedIsNotFound.
 func (c *repositoryContract) TestUpdateOfAnIdentityThatNeverExistedIsNotFound() {
-	absent := c.draft(c.accounts.Owner, "Ursodeoxycholic acid")
+	absent := c.draft(c.accounts.Patient, "Ursodeoxycholic acid")
 	absent.ID = "nosuchrecord01"
 
 	_, err := c.repository.Update(c.ctx(), absent, "any-version")
@@ -555,11 +526,11 @@ func (c *repositoryContract) TestUpdateOfAnIdentityThatNeverExistedIsNotFound() 
 // TestDeleteRemovesTheRowWhenTheVersionMatches. FR-028: permanent, no recycle
 // bin, so the assertion is that the second read is a miss.
 func (c *repositoryContract) TestDeleteRemovesTheRowWhenTheVersionMatches() {
-	stored := c.create(c.draft(c.accounts.Owner, "Valsartan"))
+	stored := c.create(c.draft(c.accounts.Patient, "Valsartan"))
 
-	c.Require().NoError(c.repository.Delete(c.ctx(), c.accounts.Owner, stored.ID, stored.Version))
+	c.Require().NoError(c.repository.Delete(c.ctx(), stored.ID, stored.Version))
 
-	_, err := c.repository.Get(c.ctx(), c.accounts.Owner, stored.ID)
+	_, err := c.repository.Get(c.ctx(), stored.ID)
 	c.Assert().ErrorIs(err, domain.ErrNotFound)
 
 	page := c.list(medication.Query{})
@@ -567,27 +538,17 @@ func (c *repositoryContract) TestDeleteRemovesTheRowWhenTheVersionMatches() {
 }
 
 func (c *repositoryContract) TestDeleteRefusesAVersionThatIsNotTheCurrentOne() {
-	stored := c.create(c.draft(c.accounts.Owner, "Zopiclone"))
+	stored := c.create(c.draft(c.accounts.Patient, "Zopiclone"))
 
-	err := c.repository.Delete(c.ctx(), c.accounts.Owner, stored.ID, "not-the-version-that-was-read")
+	err := c.repository.Delete(c.ctx(), stored.ID, "not-the-version-that-was-read")
 	c.Require().ErrorIs(err, domain.ErrVersionMismatch)
 
-	_, err = c.repository.Get(c.ctx(), c.accounts.Owner, stored.ID)
+	_, err = c.repository.Get(c.ctx(), stored.ID)
 	c.Assert().NoError(err, "the refused delete removed the row anyway")
 }
 
-func (c *repositoryContract) TestDeleteIsScopedToTheOwner() {
-	stored := c.create(c.draft(c.accounts.Owner, "Xylometazoline"))
-
-	err := c.repository.Delete(c.ctx(), c.accounts.Stranger, stored.ID, stored.Version)
-	c.Require().ErrorIs(err, domain.ErrNotFound)
-
-	_, err = c.repository.Get(c.ctx(), c.accounts.Owner, stored.ID)
-	c.Assert().NoError(err, "a stranger deleted a row they were told does not exist")
-}
-
 func (c *repositoryContract) TestDeleteOfAnIdentityThatNeverExistedIsNotFound() {
-	err := c.repository.Delete(c.ctx(), c.accounts.Owner, "nosuchrecord01", "any-version")
+	err := c.repository.Delete(c.ctx(), "nosuchrecord01", "any-version")
 
 	c.Require().ErrorIs(err, domain.ErrNotFound)
 }
@@ -596,7 +557,7 @@ func (c *repositoryContract) TestDeleteOfAnIdentityThatNeverExistedIsNotFound() 
 // here onto a status, and it maps by errors.Is: a repository returning a bare
 // driver error for a missing row produces a 500 where the contract says 404.
 func (c *repositoryContract) TestEveryRefusalIsOneOfTheDomainSentinels() {
-	_, err := c.repository.Get(c.ctx(), c.accounts.Owner, "nosuchrecord01")
+	_, err := c.repository.Get(c.ctx(), "nosuchrecord01")
 
 	c.Require().Error(err)
 	c.Assert().True(

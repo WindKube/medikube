@@ -2,15 +2,12 @@ package medication
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
-	"medikube/internal/domain/audit"
 	"medikube/internal/domain/clinical"
-	"medikube/internal/domain/kind"
 )
 
 // Patch is a change to a medication: every field optional, and a supplied
@@ -36,19 +33,28 @@ type Patch struct {
 	Status          *clinical.TherapyStatus
 	SideEffects     *string
 	Notes           *string
+
+	// Practitioner and Pharmacy, phase 002's additions. There is deliberately
+	// no Patient here: contracts/medications-rescope.md makes re-attribution
+	// impossible by shape, and a field added here would put it back.
+	Practitioner *string
+	Pharmacy     *string
 }
+
+// FieldPatient is the field a create's missing patient is reported against.
+const FieldPatient = "patient"
 
 // Service is the medication use cases. Every method authorizes first, and the
 // order below is the order every method runs in: the checkpoint, then the
 // rules, then the store.
 //
-// It holds no clock, no logger and no transaction. The audit rows for the three
-// writes are the post-commit hooks' to write (see Auditor), and the one row
-// this package writes is the refusal.
+// It holds no clock, no logger and no transaction. Every write's audit row is
+// the post-commit hooks' to write, and every refusal's audit row is the
+// checkpoint's own (research D-13): unlike phase 001, this package writes none
+// itself.
 type Service struct {
 	repository Repository
 	authorizer Authorizer
-	auditor    Auditor
 }
 
 // New refuses an incomplete service rather than returning one.
@@ -57,7 +63,7 @@ type Service struct {
 // panic on its first request, after the process has been accepting traffic for
 // however long it took somebody to reach this kind. The composition root gets
 // the error instead, at boot.
-func New(repository Repository, authorizer Authorizer, auditor Auditor) (*Service, error) {
+func New(repository Repository, authorizer Authorizer) (*Service, error) {
 	var missing []string
 
 	if repository == nil {
@@ -68,24 +74,20 @@ func New(repository Repository, authorizer Authorizer, auditor Auditor) (*Servic
 		missing = append(missing, "authorizer")
 	}
 
-	if auditor == nil {
-		missing = append(missing, "auditor")
-	}
-
 	if len(missing) > 0 {
 		return nil, fmt.Errorf("medication: the service is wired with no %s", joinWords(missing))
 	}
 
-	return &Service{repository: repository, authorizer: authorizer, auditor: auditor}, nil
+	return &Service{repository: repository, authorizer: authorizer}, nil
 }
 
-// List is the owner's medications, one page at a time.
+// List is the requested patient's medications, one page at a time.
 //
-// The owner is read from the authenticated actor and from nowhere else: there
-// is no parameter here a caller could name another account in, which is FR-032
-// enforced by shape.
+// The patient is authorized before this touches the repository at all
+// (contracts/medications-rescope.md's lists section): a list for another
+// account's patient is a 404 that never runs a query.
 func (s *Service) List(ctx context.Context, actor access.Actor, query Query) (domain.Page[clinical.Medication], error) {
-	if err := s.authorizeKind(ctx, actor, access.PermView); err != nil {
+	if err := s.authorizePatient(ctx, actor, query.PatientID, access.PermView); err != nil {
 		return domain.Page[clinical.Medication]{}, err
 	}
 
@@ -94,36 +96,44 @@ func (s *Service) List(ctx context.Context, actor access.Actor, query Query) (do
 		return domain.Page[clinical.Medication]{}, err
 	}
 
-	page, err := s.repository.List(ctx, actor.UserID, resolved)
-	if err != nil {
-		return domain.Page[clinical.Medication]{}, err
-	}
-
-	return page, nil
+	return s.repository.List(ctx, query.PatientID, resolved)
 }
 
+// Get reads one record, authorized from the row itself: the repository is read
+// first (which is not a data disclosure — nothing here answers the caller yet)
+// and the patient it names is what the checkpoint decides on.
 func (s *Service) Get(ctx context.Context, actor access.Actor, id string) (clinical.Medication, error) {
-	if err := s.authorizeRecord(ctx, actor, id, access.PermView); err != nil {
+	found, err := s.repository.Get(ctx, id)
+	if err != nil {
 		return clinical.Medication{}, err
 	}
 
-	return s.repository.Get(ctx, actor.UserID, id)
+	if err := s.authorizePatient(ctx, actor, found.PatientID, access.PermView); err != nil {
+		return clinical.Medication{}, err
+	}
+
+	return found, nil
 }
 
-// Create stores a new medication for the actor.
+// Create stores a new medication for the patient named in the draft.
 //
-// The four server-owned fields are taken from the draft and thrown away rather
-// than trusted: the request DTO has no member for any of them, so this can only
-// be reached by a caller inside the process, and the day one of those exists is
-// the day this line is the only thing between it and a record attributed to
-// somebody else (FR-032).
+// The patient is required (FR-021, US2-3): draft.PatientID is authorized
+// before anything is validated or stored, and an empty one is refused as a
+// validation failure rather than an authorization one — there is no patient to
+// resolve yet, so "which person is this for" is the honest refusal.
 func (s *Service) Create(ctx context.Context, actor access.Actor, draft clinical.Medication) (clinical.Medication, error) {
-	if err := s.authorizeKind(ctx, actor, access.PermEdit); err != nil {
+	if draft.PatientID == "" {
+		var invalid domain.ValidationError
+		invalid.Add(FieldPatient, domain.CodeRequired, "a medication is filed against a person")
+
+		return clinical.Medication{}, invalid.OrNil()
+	}
+
+	if err := s.authorizePatient(ctx, actor, draft.PatientID, access.PermEdit); err != nil {
 		return clinical.Medication{}, err
 	}
 
 	draft.ID = ""
-	draft.OwnerID = actor.UserID
 	draft.CreatedAt = time.Time{}
 	draft.UpdatedAt = time.Time{}
 	draft.Version = ""
@@ -148,12 +158,12 @@ func (s *Service) Create(ctx context.Context, actor access.Actor, draft clinical
 // a property of neither half alone: patching only the end date has to be
 // refused against the start date already stored.
 func (s *Service) Update(ctx context.Context, actor access.Actor, id, version string, patch Patch) (clinical.Medication, error) {
-	if err := s.authorizeRecord(ctx, actor, id, access.PermEdit); err != nil {
+	current, err := s.repository.Get(ctx, id)
+	if err != nil {
 		return clinical.Medication{}, err
 	}
 
-	current, err := s.repository.Get(ctx, actor.UserID, id)
-	if err != nil {
+	if err := s.authorizePatient(ctx, actor, current.PatientID, access.PermEdit); err != nil {
 		return clinical.Medication{}, err
 	}
 
@@ -173,99 +183,37 @@ func (s *Service) Update(ctx context.Context, actor access.Actor, id, version st
 // unrecoverable act defaulting to the editing level is the kind of decision
 // nobody revisits once a share exists.
 func (s *Service) Delete(ctx context.Context, actor access.Actor, id, version string) error {
-	if err := s.authorizeRecord(ctx, actor, id, access.PermOwn); err != nil {
+	current, err := s.repository.Get(ctx, id)
+	if err != nil {
 		return err
 	}
 
-	return s.repository.Delete(ctx, actor.UserID, id, version)
-}
-
-func (s *Service) authorizeRecord(ctx context.Context, actor access.Actor, id string, need access.Permission) error {
-	grant, err := s.authorizer.Record(ctx, actor, kind.Medication, id, need)
-
-	return s.decide(ctx, actor, id, grant, need, err)
-}
-
-func (s *Service) authorizeKind(ctx context.Context, actor access.Actor, need access.Permission) error {
-	grant, err := s.authorizer.Kind(ctx, actor, kind.Medication, need)
-
-	return s.decide(ctx, actor, "", grant, need, err)
-}
-
-// decide is the one place a checkpoint's answer is read, so that every method
-// reads it the same way.
-//
-// The grant is checked even when the error is nil. An implementation that
-// returned a zero Grant and no error would otherwise be granting: the level is
-// the answer and the error is only how a refusal travels.
-func (s *Service) decide(
-	ctx context.Context,
-	actor access.Actor,
-	id string,
-	grant access.Grant,
-	need access.Permission,
-	err error,
-) error {
-	switch {
-	case err == nil && grant.Allows(need):
-		return nil
-	case err == nil, errors.Is(err, domain.ErrNotFound), errors.Is(err, domain.ErrForbidden):
-		return s.denied(ctx, actor, id)
-	default:
-		// A checkpoint that could not answer has refused nobody. Answering a
-		// miss here would tell a caller the record is not theirs on the
-		// strength of a database being down, and would fill the trail with
-		// denials nobody attempted.
-		return fmt.Errorf("medication: the authorization checkpoint could not answer: %w", err)
-	}
-}
-
-// denied writes the one audit row this package writes and returns the refusal.
-//
-// The refusal is domain.ErrNotFound whatever the checkpoint said, because a
-// record that is somebody else's is answered exactly as one that does not exist
-// (FR-033) — and the service is where that becomes true, not the edge.
-func (s *Service) denied(ctx context.Context, actor access.Actor, id string) error {
-	refusal := fmt.Errorf("medication: the actor may not reach that record: %w", domain.ErrNotFound)
-
-	if err := s.auditor.Record(ctx, denial(actor, id)); err != nil {
-		// Joined, not swallowed and not returned alone. The caller still gets
-		// the miss — a 500 where every other refusal is a 404 would be an
-		// oracle for "that one exists" — and the unwritten row still reaches
-		// the log and Sentry through the same error.
-		return errors.Join(refusal, fmt.Errorf("medication: the refusal was not recorded: %w", err))
+	if err := s.authorizePatient(ctx, actor, current.PatientID, access.PermOwn); err != nil {
+		return err
 	}
 
-	return refusal
+	return s.repository.Delete(ctx, id, version)
 }
 
-// denial builds the row data-model §3 specifies. An anonymous caller is the
-// second row of that table: a system actor, a system target and no id, because
-// there is no account to name and the id somebody guessed is not one.
-func denial(actor access.Actor, id string) audit.Event {
-	event := audit.Event{
-		OccurredAt: time.Now().UTC(),
-		ActorID:    actor.UserID,
-		ActorKind:  audit.ActorKindUser,
-		Action:     audit.ActionAccessDenied,
-		TargetKind: audit.TargetKindMedication,
-		// The id as addressed, bounded: it is a caller's string, and the
-		// column that holds it is 64 characters. A row refused for being too
-		// long is a refusal nobody recorded.
-		TargetID:  truncate(id, audit.MaxTargetID),
-		RequestID: actor.RequestID,
+// authorizePatient is the one place this package reads the checkpoint's
+// answer. access.Authorizer.Patient already audits its own refusal and already
+// answers domain.ErrNotFound rather than domain.ErrForbidden (FR-042), so
+// there is nothing left for this package to decide except what a failure to
+// answer at all means.
+func (s *Service) authorizePatient(ctx context.Context, actor access.Actor, patientID string, need access.Permission) error {
+	grant, err := s.authorizer.Patient(ctx, actor, patientID, need)
+	if err != nil {
+		return err
 	}
 
-	switch {
-	case actor.IsSuperuser:
-		event.ActorKind = audit.ActorKindSuperuser
-	case !actor.Authenticated():
-		event.ActorKind = audit.ActorKindSystem
-		event.TargetKind = audit.TargetKindSystem
-		event.TargetID = ""
+	if !grant.Allows(need) {
+		// Unreachable while access.Authorizer.Patient answers only a grant or
+		// an error, never a zero grant with a nil error — kept because a
+		// future implementation that did would otherwise silently grant here.
+		return fmt.Errorf("medication: the authorization checkpoint granted nothing and refused nothing: %w", domain.ErrNotFound)
 	}
 
-	return event
+	return nil
 }
 
 // resolve applies the published vocabulary. Both refusals are contract: a sort
@@ -330,6 +278,8 @@ func (p Patch) applyTo(medication clinical.Medication) clinical.Medication {
 	assign(&medication.Status, p.Status)
 	assign(&medication.SideEffects, p.SideEffects)
 	assign(&medication.Notes, p.Notes)
+	assign(&medication.PractitionerID, p.Practitioner)
+	assign(&medication.PharmacyID, p.Pharmacy)
 
 	return medication
 }
@@ -338,15 +288,6 @@ func assign[T any](field *T, supplied *T) {
 	if supplied != nil {
 		*field = *supplied
 	}
-}
-
-func truncate(value string, limit int) string {
-	runes := []rune(value)
-	if len(runes) <= limit {
-		return value
-	}
-
-	return string(runes[:limit])
 }
 
 func joinWords(words []string) string {

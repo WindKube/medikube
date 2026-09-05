@@ -68,12 +68,13 @@ func NewAdapter(service *Service, codec Codec) (*Adapter, error) {
 
 func (a *Adapter) List(ctx context.Context, actor access.Actor, query records.Query) (domain.Page[records.Record], error) {
 	page, err := a.service.List(ctx, actor, Query{
-		Search:   query.Search,
-		Statuses: statuses(query.Filters[FilterStatus]),
-		Sort:     query.Sort,
-		Limit:    query.Limit,
-		Cursor:   query.Cursor,
-		Count:    query.Count,
+		PatientID: query.PatientID,
+		Search:    query.Search,
+		Statuses:  statuses(query.Filters[FilterStatus]),
+		Sort:      query.Sort,
+		Limit:     query.Limit,
+		Cursor:    query.Cursor,
+		Count:     query.Count,
 	})
 	if err != nil {
 		return domain.Page[records.Record]{}, err
@@ -171,8 +172,8 @@ func statuses(values []string) []clinical.TherapyStatus {
 // event for every subscriber.
 type StreamFilter struct{}
 
-func (StreamFilter) Streams(recordID, ownerID string) bool {
-	return recordID != "" && ownerID != ""
+func (StreamFilter) Streams(recordID, patientID string) bool {
+	return recordID != "" && patientID != ""
 }
 
 // Wiring is everything a medication registration needs that this package does
@@ -187,7 +188,6 @@ func (StreamFilter) Streams(recordID, ownerID string) bool {
 type Wiring struct {
 	Repository Repository
 	Authorizer Authorizer
-	Auditor    Auditor
 	Codec      Codec
 
 	// Schema carries the four DTO constructors and nothing else: Sorts and
@@ -210,7 +210,7 @@ func Register(registry *records.Registry, wiring Wiring) error {
 		return fmt.Errorf("medication: there is no registry to register %s into", kind.Medication)
 	}
 
-	service, err := New(wiring.Repository, wiring.Authorizer, wiring.Auditor)
+	service, err := New(wiring.Repository, wiring.Authorizer)
 	if err != nil {
 		return err
 	}

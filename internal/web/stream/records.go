@@ -30,9 +30,14 @@ import (
 // records_test.go rather than spelled twice.
 const OpStreamRecords = "streamRecords"
 
-// ParamKind is the stream's one query parameter: a comma list of registered
-// path segments, absent meaning every registered kind.
+// ParamKind is a comma list of registered path segments, absent meaning every
+// registered kind.
 const ParamKind = "kind"
+
+// ParamPatient is `?patient=`, required (contracts/medications-rescope.md,
+// FR-015): a stream over patient-scoped data names its patient the same way a
+// list does, and there is no fallback to the caller's own active patient.
+const ParamPatient = "patient"
 
 // ErrNoHub is a build whose stream was wired without the fan-out. It is an
 // internal failure and never the caller's: a stream that subscribed to nothing
@@ -134,6 +139,11 @@ func (s *streams) records(e *core.RequestEvent, actor access.Actor) error {
 			&web.Coded{Status: http.StatusUnauthorized, Code: web.CodeUnauthenticated})
 	}
 
+	patientID := e.Request.URL.Query().Get(ParamPatient)
+	if patientID == "" {
+		return web.ErrPatientRequired
+	}
+
 	// Captured before anything is subscribed to, because a stream that cannot
 	// re-check its identity must not open at all.
 	session, err := s.deps.Sessions.Open(e)
@@ -152,7 +162,7 @@ func (s *streams) records(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	return s.pump(ctx, sse, subscriber{actor: actor, session: session}, entries, selected, events)
+	return s.pump(ctx, sse, subscriber{actor: actor, session: session}, entries, selected, patientID, events)
 }
 
 // subscriber is who a stream is running as: the actor every record is
@@ -173,6 +183,7 @@ func (s *streams) pump(
 	who subscriber,
 	entries map[kind.Kind]records.Entry,
 	selected map[kind.Kind]struct{},
+	patientID string,
 	events <-chan realtime.Event,
 ) error {
 	// The first beat goes out immediately. Without it a page opened at the
@@ -223,7 +234,7 @@ func (s *streams) pump(
 				return s.revoked(ctx, err)
 			}
 
-			if err := s.patch(ctx, sse, who.actor, entries, selected, event); err != nil {
+			if err := s.patch(ctx, sse, who.actor, entries, selected, patientID, event); err != nil {
 				return s.ended(ctx, err)
 			}
 		}
@@ -259,8 +270,16 @@ func (s *streams) patch(
 	actor access.Actor,
 	entries map[kind.Kind]records.Entry,
 	selected map[kind.Kind]struct{},
+	patientID string,
 	event realtime.Event,
 ) error {
+	// 0. the subscriber's own patient: a stream is opened for one patient
+	// (contracts/medications-rescope.md), and an event naming another is not
+	// this subscriber's to re-authorize at all.
+	if event.PatientID != patientID {
+		return nil
+	}
+
 	// 1. the subscriber's own kind selection.
 	if len(selected) > 0 {
 		if _, wanted := selected[event.Kind]; !wanted {
@@ -276,12 +295,12 @@ func (s *streams) patch(
 	// The kind's own filter, which is not authorization and never stands in
 	// for it: it runs once per event for every subscriber and knows nothing
 	// about who is listening.
-	if !entry.Stream.Streams(event.RecordID, event.OwnerID) {
+	if !entry.Stream.Streams(event.RecordID, event.PatientID) {
 		return nil
 	}
 
-	// 2. re-authorise, for THIS subscriber, for THIS event.
-	grant, err := entry.Authorizer.Record(ctx, actor, event.Kind, event.RecordID, access.PermView)
+	// 2. re-authorise, for THIS subscriber, for THIS event's patient.
+	grant, err := entry.Authorizer.Patient(ctx, actor, event.PatientID, access.PermView)
 	if err != nil {
 		return err
 	}
@@ -303,7 +322,7 @@ func (s *streams) patch(
 		return s.patchRow(ctx, sse, entry, record)
 
 	case errors.Is(err, domain.ErrNotFound):
-		return s.removeRow(sse, actor, event)
+		return s.removeRow(sse, entry, event)
 
 	case errors.Is(err, domain.ErrForbidden):
 		// Access lost mid-stream. contracts/streams.md's specified behaviour is
@@ -335,25 +354,13 @@ func (s *streams) patchRow(
 
 // removeRow answers a record the subscriber cannot fetch any more.
 //
-// The owner comparison is the one place this package knows what ownership is,
-// and it is here because a deleted record has no owner left for the checkpoint
-// to resolve: internal/service/access grants for an id that is not there, by
-// design (research D-20), so "granted, then not found" is reached both by a row
-// that was just deleted and — if that guard were removed — by a row of somebody
-// else's that never existed for this subscriber. Sending a removal in the
-// second case would put another account's record id on this account's wire,
-// which is the disclosure FR-033 closes and the zero-frames assertion
-// contracts/streams.md requires.
-//
-// Phase 005 replaces it: a share makes "who could see this record before it was
-// deleted" a question only the checkpoint can answer, and the checkpoint will
-// need to be asked about a record that no longer exists.
-func (s *streams) removeRow(sse *datastar.ServerSentEventGenerator, actor access.Actor, event realtime.Event) error {
-	if event.OwnerID != actor.UserID {
-		return nil
-	}
-
-	return sse.RemoveElementByID(ids.RecordRow(event.Kind, event.RecordID))
+// Step 2 already authorized this subscriber against the event's patient, and
+// that patient (unlike the deleted record) still exists — so unlike phase
+// 001's owner-scoped checkpoint, which granted for an id that was not there by
+// design (research D-20), reaching here means the grant was genuine and not a
+// side effect of a miss. There is nothing left to compare here.
+func (s *streams) removeRow(sse *datastar.ServerSentEventGenerator, entry records.Entry, event realtime.Event) error {
+	return sse.RemoveElementByID(ids.RecordRow(entry.Kind, event.RecordID))
 }
 
 // heartbeat is FR-031's half of the staleness detection that the server can

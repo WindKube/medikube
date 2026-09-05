@@ -282,17 +282,6 @@ func patientFamily(app core.App, cfg config.Config) (api.PatientResolve, api.Pat
 			return patientStack{}, err
 		}
 
-		// FR-036's three rows for the patients collection, bound once the
-		// stack it audits exists and not before — a hook bound ahead of the
-		// collection it targets would bind to nothing.
-		if err := pb.BindPatientAudit(app, pb.PatientAudit{
-			Trail:   auditor,
-			Actor:   web.ActorFrom,
-			Request: obs.CorrelationID,
-		}); err != nil {
-			return patientStack{}, err
-		}
-
 		return patientStack{service: service, photos: photos}, nil
 	})
 
@@ -357,17 +346,22 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		return err
 	}
 
-	authorizer, err := accessservice.New(owners)
-	if err != nil {
-		return err
-	}
-
 	trail, err := auditstore.New(app)
 	if err != nil {
 		return err
 	}
 
 	auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
+	if err != nil {
+		return err
+	}
+
+	patientOwners, err := store.NewPatientOwners(app)
+	if err != nil {
+		return err
+	}
+
+	authorizer, err := accessservice.New(owners, accessservice.WithPatients(patientOwners, auditor))
 	if err != nil {
 		return err
 	}
@@ -385,7 +379,6 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	if err := medication.Register(registry, medication.Wiring{
 		Repository: repository,
 		Authorizer: authorizer,
-		Auditor:    auditor,
 		Codec:      api.MedicationCodec{},
 		Schema:     api.MedicationSchema(),
 		Views:      views,
@@ -399,6 +392,16 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	if err := pb.BindRecordAudit(app, pb.RecordAudit{
 		Trail:   auditor,
 		Kinds:   registry.Kinds(),
+		Actor:   web.ActorFrom,
+		Request: obs.CorrelationID,
+	}); err != nil {
+		return err
+	}
+
+	// Patients are not a kind.Kind (research D-05), so their rows are bound
+	// separately rather than through registry.Kinds().
+	if err := pb.BindPatientAudit(app, pb.PatientAudit{
+		Trail:   auditor,
 		Actor:   web.ActorFrom,
 		Request: obs.CorrelationID,
 	}); err != nil {

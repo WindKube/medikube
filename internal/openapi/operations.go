@@ -277,6 +277,7 @@ func operationDocs() map[string]operationDoc {
 		// contracts/records.md
 		"listRecords": pagedListDoc(
 			[]param{
+				requiredParam(stringParam("patient", "The patient whose records are listed. Required: absent is 400 (research D-13).")),
 				listParam("kind", "Restrict to these registered path segments. Absent means every kind."),
 				dateParam("from", "Narrow to records whose primary date is on or after this day."),
 				dateParam("to", "Narrow to records whose primary date is on or before this day."),
@@ -285,6 +286,7 @@ func operationDocs() map[string]operationDoc {
 		),
 		"listRecordsOfKind": pagedListDoc(
 			[]param{
+				requiredParam(stringParam("patient", "The patient whose records are listed. Required: absent is 400 (research D-13).")),
 				stringParam("q", "Case-insensitive substring match over the kind's searchable text."),
 				listParam("status", "Restrict to these status values."),
 				stringParam("sort", "Drawn from the kind's allowlist, with a `-` prefix for descending. "+
@@ -306,7 +308,8 @@ func operationDocs() map[string]operationDoc {
 			requestBody: RecordCreateSchema,
 			ownerScoped: true,
 			notes: "The owner is taken from the session. The request body has no owner member at all, so re-attribution " +
-				"is impossible by shape rather than by a runtime check (FR-032).",
+				"is impossible by shape rather than by a runtime check (FR-032). The record is filed against the " +
+				"`patient` the body names, which must belong to the caller's own account (research D-13).",
 		},
 		"getRecord": {
 			successStatus:  http.StatusOK,
@@ -457,11 +460,13 @@ func operationDocs() map[string]operationDoc {
 			// query parameter names itself, because a caller who reached the
 			// parameter already knows the path exists.
 			errors: []int{
+				http.StatusBadRequest,
 				http.StatusUnauthorized,
 				http.StatusUnprocessableEntity,
 				http.StatusInternalServerError,
 			},
 			query: []param{
+				requiredParam(stringParam("patient", "The patient whose records are streamed. Required: absent is 400 (research D-13).")),
 				listParam("kind", "Restrict to these registered path segments. Absent means every kind."),
 			},
 			ownerScoped: true,

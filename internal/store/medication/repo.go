@@ -16,11 +16,10 @@ import (
 
 // Repo is the medication repository the service declares, against PocketBase.
 //
-// It is owner-scoped in the predicate rather than in a check afterwards. The
-// service authorizes above this and this refuses a row that is not the owner's
-// anyway — two independent refusals, because either one of them is one edit
-// away from not being there and the failure they guard is somebody reading
-// another person's medication.
+// List is patient-scoped in the predicate. Get, Update and Delete are not: the
+// service resolves and authorizes the patient from the row itself before
+// touching it (research D-13), so a second, redundant scope here would only
+// hide which layer actually decided (contracts/medications-rescope.md).
 type Repo struct {
 	app     core.App
 	cursors *store.CursorCodec
@@ -57,8 +56,8 @@ func New(app core.App, cursors *store.CursorCodec) (*Repo, error) {
 	return &Repo{app: app, cursors: cursors, schema: store.MedicationSchema()}, nil
 }
 
-// List returns one page of the owner's medications and mints the boundary for
-// the next one.
+// List returns one page of the patient's medications and mints the boundary
+// for the next one.
 //
 // The boundary is a row, never an offset. An offset is defined against a result
 // set that is changing underneath it, so a row inserted above it shifts every
@@ -66,7 +65,7 @@ func New(app core.App, cursors *store.CursorCodec) (*Repo, error) {
 // exactly FR-023's "must not show the same entry twice nor skip an entry".
 func (r *Repo) List(
 	ctx context.Context,
-	ownerID string,
+	patientID string,
 	query service.Query,
 ) (domain.Page[clinical.Medication], error) {
 	var empty domain.Page[clinical.Medication]
@@ -80,12 +79,12 @@ func (r *Repo) List(
 		sortKeys = service.Sorts()[:1]
 	}
 
-	conditions := r.narrowing(ownerID, query)
+	conditions := r.narrowing(patientID, query)
 
 	listing := store.Query{Conditions: conditions, Sort: sortKeys, Limit: query.Limit}
 
 	if query.Cursor != "" {
-		after, err := r.cursors.Decode(scope(ownerID), sortKeys, query.Cursor)
+		after, err := r.cursors.Decode(scope(patientID), sortKeys, query.Cursor)
 		if err != nil {
 			return empty, err
 		}
@@ -130,7 +129,7 @@ func (r *Repo) List(
 	var next *string
 
 	if more {
-		token, cursorErr := r.boundary(ownerID, records[len(records)-1], sortKeys)
+		token, cursorErr := r.boundary(patientID, records[len(records)-1], sortKeys)
 		if cursorErr != nil {
 			return empty, cursorErr
 		}
@@ -152,15 +151,15 @@ func (r *Repo) List(
 	return page, nil
 }
 
-// narrowing is the query's terms, owner first.
+// narrowing is the query's terms, patient first.
 //
-// The owner is a term of its own and stays one. The search is the only term
+// The patient is a term of its own and stays one. The search is the only term
 // that spans more than one column, and internal/store admits that shape only
 // over columns declared searchable — so a widened disjunction cannot swallow
 // the scope, whatever this function is later edited to say.
-func (r *Repo) narrowing(ownerID string, query service.Query) []store.Condition {
+func (r *Repo) narrowing(patientID string, query service.Query) []store.Condition {
 	conditions := make([]store.Condition, 0, 3)
-	conditions = append(conditions, store.Equal(store.MedicationOwner, ownerID))
+	conditions = append(conditions, store.Equal(store.MedicationPatient, patientID))
 
 	if query.Search != "" {
 		conditions = append(conditions,
@@ -205,17 +204,20 @@ func (r *Repo) count(ctx context.Context, conditions []store.Condition) (int, er
 
 // boundary seals the last row of a page into the token the next request hands
 // back.
-func (r *Repo) boundary(ownerID string, record *core.Record, sortKeys []domain.SortKey) (string, error) {
+func (r *Repo) boundary(patientID string, record *core.Record, sortKeys []domain.SortKey) (string, error) {
 	cursor, err := r.schema.Boundary(record, sortKeys)
 	if err != nil {
 		return "", err
 	}
 
-	return r.cursors.Encode(scope(ownerID), cursor)
+	return r.cursors.Encode(scope(patientID), cursor)
 }
 
-func (r *Repo) Get(ctx context.Context, ownerID, id string) (clinical.Medication, error) {
-	record, err := r.owned(ctx, r.app, ownerID, id)
+// Get answers domain.ErrNotFound for a row that does not exist. It is not
+// scoped by patient: the service reads medication.PatientID off the result and
+// authorizes it there (FR-033, research D-13).
+func (r *Repo) Get(ctx context.Context, id string) (clinical.Medication, error) {
+	record, err := r.byID(ctx, r.app, id)
 	if err != nil {
 		return clinical.Medication{}, err
 	}
@@ -250,8 +252,8 @@ func (r *Repo) Create(ctx context.Context, entity clinical.Medication) (clinical
 	return store.MedicationFromRecord(record)
 }
 
-// Update writes the entity over the row it identifies, within its owner, and
-// only while the stored version is still expectedVersion.
+// Update writes the entity over the row it identifies, only while the stored
+// version is still expectedVersion.
 //
 // The read and the write are one transaction, which is what makes the version
 // check a check. Read the version in the service and write here and two callers
@@ -265,7 +267,7 @@ func (r *Repo) Update(
 	var updated clinical.Medication
 
 	write := func(txApp core.App) error {
-		record, err := r.owned(ctx, txApp, entity.OwnerID, entity.ID)
+		record, err := r.byID(ctx, txApp, entity.ID)
 		if err != nil {
 			return err
 		}
@@ -301,9 +303,9 @@ func (r *Repo) Update(
 
 // Delete is permanent (FR-028): no tombstone, no deleted_at, nothing left
 // behind to be filtered out of a later read.
-func (r *Repo) Delete(ctx context.Context, ownerID, id, expectedVersion string) error {
+func (r *Repo) Delete(ctx context.Context, id, expectedVersion string) error {
 	return store.RunInTransaction(r.app, func(txApp core.App) error {
-		record, err := r.owned(ctx, txApp, ownerID, id)
+		record, err := r.byID(ctx, txApp, id)
 		if err != nil {
 			return err
 		}
@@ -320,16 +322,10 @@ func (r *Repo) Delete(ctx context.Context, ownerID, id, expectedVersion string) 
 	})
 }
 
-// owned reads one row within its owner.
-//
-// A row that is not this owner's is answered exactly as one that never existed
-// (FR-033), and it is answered that way because the owner is part of the
-// predicate: there is no row to compare an owner against afterwards, so there
-// is no comparison for a later edit to drop.
-func (r *Repo) owned(ctx context.Context, app core.App, ownerID, id string) (*core.Record, error) {
+// byID reads one row by id, unscoped: the caller authorizes what it names.
+func (r *Repo) byID(ctx context.Context, app core.App, id string) (*core.Record, error) {
 	built, err := r.schema.Build(store.Query{
 		Conditions: []store.Condition{
-			store.Equal(store.MedicationOwner, ownerID),
 			store.Equal(store.ColumnID, id),
 		},
 		Limit: 1,
@@ -371,12 +367,12 @@ func expectVersion(record *core.Record, id, expected string) error {
 	return fmt.Errorf("%s %s: %w", kind.Medication, id, domain.ErrVersionMismatch)
 }
 
-// scope is the query a cursor continues: this kind, for this account.
+// scope is the query a cursor continues: this kind, for this patient.
 //
 // It is authenticated into the token and never transmitted, so a boundary
 // discloses nothing about whose list it is and cannot be replayed against
 // somebody else's. The separator is a byte no identifier holds, so two
 // different scopes cannot concatenate into the same string.
-func scope(ownerID string) string {
-	return kind.Medication.Collection() + "\x00" + ownerID
+func scope(patientID string) string {
+	return kind.Medication.Collection() + "\x00" + patientID
 }

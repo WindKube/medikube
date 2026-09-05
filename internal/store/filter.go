@@ -300,7 +300,7 @@ func (s Schema) Column(name string) (Column, bool) {
 // case that column exists for.
 func MedicationSchema() Schema {
 	return NewSchema(kind.Medication.Collection(),
-		Column{Name: medicationFieldOwner},
+		Column{Name: medicationFieldPatient},
 		Column{
 			Name:       medicationFieldName,
 			Expr:       "LOWER(" + quoteColumn(medicationFieldName) + ")",
@@ -416,7 +416,9 @@ func SameAddress(email string) Condition {
 const (
 	ColumnID = fieldID
 
-	MedicationOwner           = medicationFieldOwner
+	MedicationPatient         = medicationFieldPatient
+	MedicationPractitioner    = medicationFieldPractitioner
+	MedicationPharmacy        = medicationFieldPharmacy
 	MedicationName            = medicationFieldName
 	MedicationAlternativeName = medicationFieldAlternativeName
 	MedicationStatus          = medicationFieldStatus
