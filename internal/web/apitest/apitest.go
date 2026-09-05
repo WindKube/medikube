@@ -286,6 +286,16 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 		Routes: binders{web.SecurityBinder{}, routes},
 	})
 
+	// Bound so this harness and the binary bind the same platform hooks
+	// (internal/architecture); nothing here ever triggers a slow drain since
+	// no test starts the in-flight middleware.
+	pb.BindDrain(app, pb.DrainOptions{
+		Readiness: obs.NewReadiness(),
+		Delay:     0,
+		Max:       time.Second,
+		Log:       zerolog.Nop(),
+	})
+
 	return &Instance{App: app, Records: handler, Routes: routes, Hub: hub, Accounts: accounts}, nil
 }
 

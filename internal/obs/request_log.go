@@ -39,7 +39,14 @@ type correlationKey struct{}
 // It replaces PocketBase's own activity logger, which must be unbound: that one
 // records the full request URI, and a query string is where a search for a
 // medication name would end up (FR-038).
-func RequestLogger(base zerolog.Logger) *hook.Handler[*core.RequestEvent] {
+//
+// excluded is contracts/health.md's probe traffic (healthz, readyz), as
+// registered patterns. The request-scoped logger is still installed for an
+// excluded request — readyz still needs somewhere to log a failing check —
+// only the summary line is skipped.
+func RequestLogger(base zerolog.Logger, excluded ...string) *hook.Handler[*core.RequestEvent] {
+	skip := newPatternSet(excluded)
+
 	return &hook.Handler[*core.RequestEvent]{
 		Id: RequestLoggerID,
 		// Ahead of everything PocketBase binds, so a line rejected by the rate
@@ -85,18 +92,37 @@ func RequestLogger(base zerolog.Logger) *hook.Handler[*core.RequestEvent] {
 				reported = Fault(e)
 			}
 
-			record(log, e, reported, time.Since(start))
+			if !skip.has(e.Request.Pattern) {
+				record(log, e, reported, time.Since(start))
+			}
 
-			// Claimed only once the line is out. The outermost wrapper writes
-			// the line for requests that never got here — a preflight answered
-			// ahead of this handler cannot happen (this is bound outside CORS)
-			// but a ServeMux redirect never enters the router at all — and an
-			// unclaimed ledger is what tells it to.
+			// Claimed whether or not a line was written, so an excluded
+			// request does not fall through to the edge's own fallback line.
 			edge.MarkLogged()
 
 			return err
 		},
 	}
+}
+
+// patternSet is the exclusion list obs.RequestLogger and obs.Observer both
+// carry, over the registered ServeMux pattern rather than any resolved path —
+// the same distinction FR-055's label clause draws for metrics.
+type patternSet map[string]struct{}
+
+func newPatternSet(patterns []string) patternSet {
+	set := make(patternSet, len(patterns))
+	for _, pattern := range patterns {
+		set[pattern] = struct{}{}
+	}
+
+	return set
+}
+
+func (s patternSet) has(pattern string) bool {
+	_, excluded := s[pattern]
+
+	return excluded
 }
 
 // CorrelationID returns the correlation id carried by ctx, or the empty string

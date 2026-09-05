@@ -32,6 +32,7 @@ import (
 	"medikube/internal/realtime"
 	"medikube/internal/records"
 	"medikube/internal/web"
+	"medikube/internal/web/api"
 )
 
 // syncBuffer is the log destination. samber/do shuts services down in parallel
@@ -335,7 +336,13 @@ func TestOneRequestProducesOneCorrelatedLogLine(t *testing.T) {
 
 	before := len(logs.Lines())
 
-	res, _ := get(t, base+"/api/v1/healthz")
+	// Not /api/v1/healthz: contracts/health.md excludes probe traffic from the
+	// activity log (T277), so healthz would carry a correlation id and write
+	// no line at all — which is a different, equally load-bearing property
+	// asserted in internal/web/api/health_exclusions_test.go, and not this
+	// one. "/" is overviewPage, still a 501 stub in this phase, and an
+	// ordinary request as far as the request logger is concerned.
+	res, _ := get(t, base+"/")
 	correlation := res.Header.Get(obs.CorrelationHeader)
 	require.NotEmpty(t, correlation, "the response carries no correlation id, so nobody can quote one")
 
@@ -373,6 +380,7 @@ func TestTheCompositionRootWiresEveryRouteMediKubeServes(t *testing.T) {
 		cfg,
 		func() (*records.Handler, error) { return nil, nil },
 		realtime.New(),
+		api.HealthDeps{},
 	)
 	require.NoError(t, err)
 
@@ -405,8 +413,6 @@ func TestTheOperationsStillAnsweringNotImplementedAreExactlyThese(t *testing.T) 
 	t.Parallel()
 
 	pending := []string{
-		// internal/web/api/health.go — US5, T285.
-		"healthz", "readyz",
 		// internal/web/page/overview.go — US4, T264.
 		"overviewPage",
 	}
@@ -422,12 +428,18 @@ func TestAnUnimplementedOperationAnswersNotImplementedInTheMediKubeEnvelope(t *t
 
 	base := serving(t, testConfig(t, filepath.Join(t.TempDir(), "pb_data")), &logs)
 
-	res, body := get(t, base+"/api/v1/healthz")
+	// overviewPage, not healthz: healthz has a real handler as of US5 (T285)
+	// and answers 200, so it can no longer stand in for "an operation with no
+	// handler yet". overviewPage is the one name still left in
+	// TestTheOperationsStillAnsweringNotImplementedAreExactlyThese's list, and
+	// it is a page-kind route, so the failure renders as the HTML error page
+	// rather than the JSON envelope (FR-046).
+	res, body := get(t, base+"/")
 
 	assert.Equal(t, http.StatusNotImplemented, res.StatusCode)
-	assertEnvelope(t, body, web.CodeInternal)
+	assert.Contains(t, string(body), `aria-label="Something went wrong"`)
 	assert.NotContains(t, string(body), "not implemented",
-		"the stub's own words reached the client; only Message(code) may")
+		"the stub's own words reached the client; only the page copy may")
 }
 
 // PocketBase's serve command defaults to 127.0.0.1:8090 and to a wildcard CORS
@@ -473,9 +485,41 @@ func TestTheServeCommandTakesItsDefaultsFromTheValidatedConfiguration(t *testing
 	}
 
 	// superuser is the only door to a first superuser, because pb.BindServe
-	// nils PocketBase's first-run installer.
-	assert.Subset(t, registered, []string{"serve", "superuser"},
+	// nils PocketBase's first-run installer. migrate is PocketBase's own
+	// migratecmd plugin, registered over MediKube's migrations.
+	assert.Subset(t, registered, []string{"serve", "superuser", "migrate"},
 		"the command surface this build registers")
+}
+
+// contracts/cli.md's "Removed" clause: the built-in destructive helper is not
+// exposed, and superuser creation stays, because the first boot needs it.
+func TestSuperuserDeleteIsNotExposed(t *testing.T) {
+	t.Parallel()
+
+	cfg := testConfig(t, filepath.Join(t.TempDir(), "pb_data"))
+
+	app, container, _, err := build(cfg, logging.NewTo(io.Discard, cfg.Log, "test"))
+	require.NoError(t, err)
+
+	t.Cleanup(func() { assert.NoError(t, container.Shutdown()) })
+
+	require.NoError(t, registerCommands(app, cfg))
+
+	var subcommands []string
+
+	for _, command := range app.RootCmd.Commands() {
+		if command.Name() != "superuser" {
+			continue
+		}
+
+		for _, sub := range command.Commands() {
+			subcommands = append(subcommands, sub.Name())
+		}
+	}
+
+	assert.NotContains(t, subcommands, "delete")
+	assert.Subset(t, subcommands, []string{"upsert", "create", "update"},
+		"managing a superuser day to day still works")
 }
 
 func TestConfigurationThatDoesNotValidateIsABootFailureRatherThanAServer(t *testing.T) {

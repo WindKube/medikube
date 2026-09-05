@@ -143,6 +143,12 @@ tasks:
     cmds:
       - ./{{.BIN}} openapi --out api/openapi.json
 
+  openapi:check:
+    desc: "The openapi-diff gate: regenerate api/openapi.json and fail if it moved (FR-064)"
+    cmds:
+      - task: openapi
+      - git diff --exit-code -- api/openapi.json
+
   docker:build:
     desc: Build the container image
     # The context is the repository root because this repository *is* the
