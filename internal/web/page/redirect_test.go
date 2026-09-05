@@ -69,8 +69,8 @@ func TestANullPointerWithSeveralPatientsRedirectsToPatients(t *testing.T) {
 
 	browser := newBrowser(t).as(testsupport.AccountCEmail)
 
-	addPatient(t, browser.app, testsupport.AccountCID, "mkpatchidi00001", "Chidi")
 	addPatient(t, browser.app, testsupport.AccountCID, "mkpatchidi00002", "Ngozi")
+	setActivePatientPointer(t, browser.app, testsupport.AccountCID, "")
 
 	status, headers, body := browser.get(pageRoutes(t)[page.OpMedicationListPage].Path)
 

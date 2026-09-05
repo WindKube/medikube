@@ -978,6 +978,8 @@ func drivePatients(c *client) {
 	c.do(http.MethodGet, address+"/photo?size=original", "")
 	c.do(http.MethodDelete, address+"/photo", "")
 
+	c.do(http.MethodPut, "/api/v1/me/active-patient", jsonBody(c.t, api.ActivePatientBody{Patient: &patientID}))
+
 	c.bearer = ""
 	c.do(http.MethodGet, "/patients", "")
 	c.do(http.MethodGet, "/patients/"+patientID, "")
