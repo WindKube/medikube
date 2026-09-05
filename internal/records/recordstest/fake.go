@@ -109,6 +109,10 @@ var SortName = domain.SortKey{Field: "name"}
 // FilterName is the fake kind's one published query parameter.
 const FilterName = "name"
 
+// SeedFixtureID is the fake kind's fixture id, for a registration that needs
+// one and has no real seed to point at.
+const SeedFixtureID = "fake-kind-01"
+
 type stored struct {
 	owner   string
 	version int
@@ -306,7 +310,7 @@ func (s *FakeKindService) owned(actor access.Actor, id string) (stored, error) {
 func (s *FakeKindService) record(id string, row stored) records.Record {
 	detail := row.detail
 
-	return records.Record{ID: id, Kind: s.kind, Version: versionOf(row.version), Body: &detail}
+	return records.Record{ID: id, Kind: s.kind, PatientID: row.owner, Version: versionOf(row.version), Body: &detail}
 }
 
 func versionOf(n int) string { return "v" + strconv.Itoa(n) }
@@ -375,9 +379,22 @@ func Schema() records.Schema {
 		NewCreate:  func() any { return &Create{} },
 		NewPatch:   func() any { return &Patch{} },
 		Sorts:      []domain.SortKey{SortName, {Field: "name", Desc: true}},
-		Filters:    []string{FilterName},
+		Filters:    map[string]records.FilterSpec{FilterName: {Name: FilterName, Kind: records.FilterFreeform}},
 	}
 }
+
+// SearchFields reads the fake kind's own DTO, the same shape Views reads.
+func SearchFields(body any) (title, text string) {
+	detail, ok := body.(*Detail)
+	if !ok {
+		return "", ""
+	}
+
+	return detail.Name, detail.Note
+}
+
+// Basis narrows nothing; the fake kind declares no basis-worthy narrowing.
+func Basis(any, records.Criteria) []string { return nil }
 
 // Registration is a complete registration for any kind, wired to fakes.
 //
@@ -398,6 +415,9 @@ func Registration(k kind.Kind, target audit.TargetKind) records.Registration {
 			Title:   "Fake records",
 			Summary: "A kind wired to fakes, for tests that need a registration and not a database.",
 		},
+		SearchFields:  SearchFields,
+		Basis:         Basis,
+		SeedFixtureID: SeedFixtureID,
 	}
 }
 

@@ -7,8 +7,10 @@ import (
 	"slices"
 	"strings"
 
+	"medikube/internal/domain/access"
 	"medikube/internal/domain/audit"
 	"medikube/internal/domain/kind"
+	"medikube/internal/service/search"
 )
 
 // The seven consumers of a kind, named. T104 asserts that one Register call
@@ -106,6 +108,22 @@ type Registration struct {
 	Target     audit.TargetKind
 	Authorizer Authorizer
 	Inventory  Inventory
+
+	// SearchFields extracts the unified search index's two columns from the
+	// record body the kind's own Service just returned (research D-11): the
+	// same value Views reads, so the indexed text and the rendered text
+	// cannot drift into two different ideas of "the record".
+	SearchFields func(any) (title, body string)
+
+	// Basis states, per row, why a row narrowed by Criteria qualifies, for
+	// narrowings where rows qualify for materially different reasons —
+	// "overdue" against "due soon", "scheduled" against "ordered" (research
+	// D-05). A kind with no such narrowing still declares it; it returns nil.
+	Basis func(any, Criteria) []string
+
+	// SeedFixtureID names the fixture `medikube seed` and the shared contract
+	// suites build for this kind (internal/records/recordstest).
+	SeedFixtureID string
 }
 
 // Entry is a registration with its spellings resolved. It is what all four
@@ -157,7 +175,21 @@ type Registry struct {
 	byKind       map[kind.Kind]int
 	bySegment    map[string]int
 	byCollection map[string]int
+
+	// indexer is what every kind registered from here on writes and removes
+	// search_index rows through. It is set once, before any kind registers
+	// (SetIndexer), and is nil in every test that has no search_index to
+	// write to — a registry with no indexer simply does not index, rather
+	// than requiring one for every fixture that only needs a registration.
+	indexer *search.Indexer
 }
+
+// SetIndexer wires the search index's write side into every kind registered
+// from this point on. It is a setter and not a NewRegistry parameter because
+// the registry is built once, empty, from internal/di (which is not [PB] and
+// so cannot construct a search.Indexer), and wired here by the composition
+// root before the first kind registers.
+func (r *Registry) SetIndexer(indexer *search.Indexer) { r.indexer = indexer }
 
 func NewRegistry() *Registry {
 	return &Registry{
@@ -207,6 +239,15 @@ func (r *Registry) add(registration Registration, segment, collection string, sy
 
 	if err := validate(registration, synthetic); err != nil {
 		return err
+	}
+
+	if r.indexer != nil {
+		registration.Service = &indexingService{
+			Service:      registration.Service,
+			indexer:      r.indexer,
+			kind:         registration.Kind,
+			searchFields: registration.SearchFields,
+		}
 	}
 
 	entry := Entry{
@@ -277,6 +318,24 @@ func validate(registration Registration, synthetic bool) error {
 
 	if registration.Inventory.Title == "" || registration.Inventory.Summary == "" {
 		incomplete.Missing = append(incomplete.Missing, ConsumerInventory)
+	}
+
+	// These three are not among the seven published Consumers(): they are not
+	// consumed through the router, and a consumer added to that list with no
+	// wiring assertion beside it is what T104 catches. They are required all
+	// the same — a kind with no SearchFields is invisible to US8's search and
+	// a kind with no Basis silently drops US9's "why does this row match" —
+	// and a registration missing one is refused here, at boot, the same way.
+	if registration.SearchFields == nil {
+		incomplete.Missing = append(incomplete.Missing, "search fields")
+	}
+
+	if registration.Basis == nil {
+		incomplete.Missing = append(incomplete.Missing, "basis")
+	}
+
+	if registration.SeedFixtureID == "" {
+		incomplete.Missing = append(incomplete.Missing, "seed fixture id")
 	}
 
 	if len(incomplete.Missing) > 0 {
@@ -405,4 +464,76 @@ func (r *Registry) CountByKind(
 	}
 
 	return result, nil
+}
+
+// indexingService decorates a kind's Service with the search index's write
+// side (research D-11): every create and update re-derives the row's title
+// and body from what the service just returned and upserts it, and every
+// delete removes it. This is the whole of "wire it into registration" —
+// nothing above this file knows the index exists.
+//
+// A failed index write is reported and not swallowed, the same trade-off
+// internal/platform/pb/hooks_records.go makes for the audit trail: the
+// underlying write already committed, so there is nothing to undo, and what
+// an unindexed write must not be is silent.
+type indexingService struct {
+	Service
+
+	indexer      *search.Indexer
+	kind         kind.Kind
+	searchFields func(any) (title, body string)
+}
+
+func (s *indexingService) Create(ctx context.Context, actor access.Actor, body any) (Record, error) {
+	record, err := s.Service.Create(ctx, actor, body)
+	if err != nil {
+		return record, err
+	}
+
+	if err := s.index(ctx, record); err != nil {
+		return record, err
+	}
+
+	return record, nil
+}
+
+func (s *indexingService) Update(ctx context.Context, actor access.Actor, id, version string, body any) (Record, error) {
+	record, err := s.Service.Update(ctx, actor, id, version, body)
+	if err != nil {
+		return record, err
+	}
+
+	if err := s.index(ctx, record); err != nil {
+		return record, err
+	}
+
+	return record, nil
+}
+
+func (s *indexingService) Delete(ctx context.Context, actor access.Actor, id, version string) error {
+	if err := s.Service.Delete(ctx, actor, id, version); err != nil {
+		return err
+	}
+
+	if err := s.indexer.Delete(ctx, s.kind, id); err != nil {
+		return fmt.Errorf("records: removing the %s search index row: %w", s.kind, err)
+	}
+
+	return nil
+}
+
+func (s *indexingService) index(ctx context.Context, record Record) error {
+	title, body := s.searchFields(record.Body)
+
+	if err := s.indexer.Create(ctx, search.Row{
+		PatientID: record.PatientID,
+		Kind:      s.kind,
+		RecordID:  record.ID,
+		Title:     title,
+		Body:      body,
+	}); err != nil {
+		return fmt.Errorf("records: indexing the %s search row: %w", s.kind, err)
+	}
+
+	return nil
 }
