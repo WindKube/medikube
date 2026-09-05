@@ -43,6 +43,36 @@ type Service struct {
 	repository Repository
 	authorizer Authorizer
 	auditor    Auditor
+	metrics    Metrics
+}
+
+// Metrics is FR-055's observability seam, mirroring
+// internal/service/patient's own: counts in bounded vocabulary, no import of
+// how they are exported. *obs.Metrics satisfies this with no import here.
+type Metrics interface {
+	RecordCreated(kind string)
+}
+
+type noopMetrics struct{}
+
+func (noopMetrics) RecordCreated(string) {}
+
+// SetMetrics wires the counter, optionally: a service nobody calls this on
+// observes nothing rather than panicking on a nil interface.
+func (s *Service) SetMetrics(metrics Metrics) {
+	if metrics == nil {
+		metrics = noopMetrics{}
+	}
+
+	s.metrics = metrics
+}
+
+func (s *Service) metricsOrNoop() Metrics {
+	if s.metrics == nil {
+		return noopMetrics{}
+	}
+
+	return s.metrics
 }
 
 // New refuses an incomplete service rather than returning one.
@@ -113,7 +143,12 @@ func (s *Service) Create(ctx context.Context, actor access.Actor, draft director
 		return directory.Facility{}, err
 	}
 
-	return s.repository.Create(ctx, draft)
+	created, err := s.repository.Create(ctx, draft)
+	if err == nil {
+		s.metricsOrNoop().RecordCreated("facility")
+	}
+
+	return created, err
 }
 
 // Update applies the supplied fields and nothing else, and checks the rules

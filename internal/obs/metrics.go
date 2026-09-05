@@ -48,6 +48,23 @@ var methods = []string{
 	http.MethodTrace,
 }
 
+// recordKinds is medikube_records_total{kind}'s allowlist: every clinical
+// record kind this build knows (internal/domain/kind, medication today) plus
+// the three phase-002 entities that are not a kind.Kind (research D-05) but
+// are still "a record" for this counter's purpose.
+var recordKinds = []string{"medication", "patient", "practitioner", "facility"}
+
+// thumbSizes is medikube_files_thumb_duration_seconds{size}'s allowlist:
+// config.FilesConfig's default MEDIKUBE_FILES_PHOTO_THUMBS plus the original,
+// which is timed as size zero — a read, not a generation, but the same
+// histogram either way. An operator who reconfigures the thumbnail sizes
+// gets labelOther on the new one rather than an unbounded label value.
+var thumbSizes = []string{"original", "100x100t", "400x400f"}
+
+// switchOutcomes is medikube_patients_switch_total{outcome}'s allowlist,
+// mirroring internal/service/patient.SetActivePatient's own return paths.
+var switchOutcomes = []string{"ok", "cleared", "not_found", "unauthenticated", "error"}
+
 // Metrics is the registry, the collectors and the label allowlist.
 //
 // It is not process state and there is no package-level default registry:
@@ -58,25 +75,30 @@ type Metrics struct {
 	requests *prometheus.CounterVec
 	latency  *prometheus.HistogramVec
 
+	recordsTotal  *prometheus.CounterVec
+	photoBytes    prometheus.Histogram
+	thumbDuration *prometheus.HistogramVec
+	patientSwitch *prometheus.CounterVec
+
 	// The published route set, as registered patterns. Empty means every
 	// observation lands in labelOther, which is a useless endpoint rather than
 	// a leaking one — the right way round for a default.
 	routes map[string]struct{}
 }
 
-// NewMetrics builds the registry over the route patterns that may become label
-// values.
-//
-// The patterns are the registered ones — `GET /api/v1/records/medications/{id}`
-// — never a resolved path. That distinction is the whole of FR-055's label
-// clause: the resolved path carries the id, and the query string carries the
-// search term.
-func NewMetrics(patterns ...string) *Metrics {
+// NewMetrics builds the registry. PublishRoutes adds the route patterns that
+// may become label values; it is separate from construction because this
+// phase's own counters (RecordCreated, PatientSwitch, ...) are wired into the
+// service and store layers before the route table — which patterns are
+// derived from — exists, and a Metrics that could not be built until its
+// consumers already had one would make every one of them wait on the route
+// table too.
+func NewMetrics() *Metrics {
 	registry := prometheus.NewRegistry()
 
 	metrics := &Metrics{
 		registry: registry,
-		routes:   make(map[string]struct{}, len(patterns)),
+		routes:   make(map[string]struct{}),
 		requests: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: metricNamespace,
 			Subsystem: "http",
@@ -90,20 +112,113 @@ func NewMetrics(patterns ...string) *Metrics {
 			Help:      "Time to handle a request, by registered route pattern and method.",
 			Buckets:   prometheus.DefBuckets,
 		}, []string{"route", "method"}),
-	}
-
-	for _, pattern := range patterns {
-		metrics.routes[pattern] = struct{}{}
+		recordsTotal: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: metricNamespace,
+			Name:      "records_total",
+			Help:      "Records created, by kind.",
+		}, []string{"kind"}),
+		photoBytes: prometheus.NewHistogram(prometheus.HistogramOpts{
+			Namespace: metricNamespace,
+			Subsystem: "files",
+			Name:      "photo_bytes",
+			Help:      "Size of an uploaded patient photograph, in bytes.",
+			Buckets:   prometheus.ExponentialBuckets(1<<10, 4, 8), // 1KiB .. 4MiB
+		}),
+		thumbDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Namespace: metricNamespace,
+			Subsystem: "files",
+			Name:      "thumb_duration_seconds",
+			Help:      "Time to produce or read one photo size, by size.",
+			Buckets:   prometheus.DefBuckets,
+		}, []string{"size"}),
+		patientSwitch: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: metricNamespace,
+			Subsystem: "patients",
+			Name:      "switch_total",
+			Help:      "Active-patient switch attempts, by outcome.",
+		}, []string{"outcome"}),
 	}
 
 	registry.MustRegister(
 		metrics.requests,
 		metrics.latency,
+		metrics.recordsTotal,
+		metrics.photoBytes,
+		metrics.thumbDuration,
+		metrics.patientSwitch,
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
 
 	return metrics
+}
+
+// RecordCreated increments medikube_records_total{kind}. kind is reduced to
+// the published set first, the same way ObserveRequest reduces its own
+// labels — an unlisted kind is a wiring mistake, not a new, unbounded label
+// value.
+func (m *Metrics) RecordCreated(kind string) {
+	if m == nil {
+		return
+	}
+
+	m.recordsTotal.WithLabelValues(allowed(kind, recordKinds)).Inc()
+}
+
+// ObservePhotoBytes records the size of one uploaded photograph
+// (medikube_files_photo_bytes). Nil-safe: internal/store/patient's PhotoStore
+// carries a possibly-unset *Metrics, and a build with no destination
+// configured must not need its own nil check at every call site.
+func (m *Metrics) ObservePhotoBytes(n int) {
+	if m == nil {
+		return
+	}
+
+	m.photoBytes.Observe(float64(n))
+}
+
+// ObserveThumbDuration records how long one size took to produce or read
+// (medikube_files_thumb_duration_seconds{size}). Nil-safe, for the same
+// reason as ObservePhotoBytes.
+func (m *Metrics) ObserveThumbDuration(size string, took time.Duration) {
+	if m == nil {
+		return
+	}
+
+	m.thumbDuration.WithLabelValues(allowed(size, thumbSizes)).Observe(took.Seconds())
+}
+
+// PatientSwitch increments medikube_patients_switch_total{outcome}.
+func (m *Metrics) PatientSwitch(outcome string) {
+	if m == nil {
+		return
+	}
+
+	m.patientSwitch.WithLabelValues(allowed(outcome, switchOutcomes)).Inc()
+}
+
+// allowed reduces value to itself when it is on the published list and to
+// labelOther otherwise — ObserveRequest's own mechanism, generalised so the
+// three new instruments do not each grow their own copy.
+func allowed(value string, published []string) string {
+	if slices.Contains(published, value) {
+		return value
+	}
+
+	return labelOther
+}
+
+// PublishRoutes adds patterns to ObserveRequest's route allowlist.
+//
+// The patterns are the registered ones — `GET /api/v1/records/medications/{id}`
+// — never a resolved path. That distinction is the whole of FR-055's label
+// clause: the resolved path carries the id, and the query string carries the
+// search term. Called once, after the route table is built and before the
+// measurements listener starts serving.
+func (m *Metrics) PublishRoutes(patterns ...string) {
+	for _, pattern := range patterns {
+		m.routes[pattern] = struct{}{}
+	}
 }
 
 // Registry is the gatherer. It is exposed rather than an http.Handler because

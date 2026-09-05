@@ -300,7 +300,8 @@ func Run(t testing.TB) *Result {
 
 	// The measurements. The published set is the inventory's own patterns, so
 	// the allowlist and the routes cannot drift apart.
-	metrics := obs.NewMetrics(publishedPatterns()...)
+	metrics := obs.NewMetrics()
+	metrics.PublishRoutes(publishedPatterns()...)
 	capture.WatchMetrics(metrics.Registry())
 
 	app := newInstrumentedApp(t, tracing)

@@ -16,36 +16,50 @@ import (
 // switch_patient (FR-045). A nil or empty patientID clears the pointer, which
 // is never authorized against anything — there is nothing to own.
 func (s *Service) SetActivePatient(ctx context.Context, actor access.Actor, patientID *string) (*person.Patient, error) {
+	ctx, end := s.span(ctx, "service.patient.SetActivePatient", nil)
+
+	active, outcome, err := s.setActivePatient(ctx, actor, patientID)
+	s.metricsOrNoop().PatientSwitch(outcome)
+	end(err)
+
+	return active, err
+}
+
+// setActivePatient returns the switch's outcome alongside its result so the
+// caller can report medikube_patients_switch_total{outcome} for every path,
+// including the two that answer with a nil error: clearing the pointer and
+// choosing one.
+func (s *Service) setActivePatient(ctx context.Context, actor access.Actor, patientID *string) (*person.Patient, string, error) {
 	if !actor.Authenticated() {
-		return nil, domain.ErrUnauthenticated
+		return nil, "unauthenticated", domain.ErrUnauthenticated
 	}
 
 	if patientID == nil || *patientID == "" {
 		if err := s.pointer.SetActivePatient(ctx, actor.UserID, ""); err != nil {
-			return nil, err
+			return nil, "error", err
 		}
 
-		return nil, nil
+		return nil, "cleared", nil
 	}
 
 	if _, err := s.authorizer.Patient(ctx, actor, *patientID, access.PermView); err != nil {
-		return nil, err
+		return nil, "not_found", err
 	}
 
 	chosen, err := s.repository.Get(ctx, actor.UserID, *patientID)
 	if err != nil {
-		return nil, err
+		return nil, "not_found", err
 	}
 
 	if err := s.pointer.SetActivePatient(ctx, actor.UserID, chosen.ID); err != nil {
-		return nil, err
+		return nil, "error", err
 	}
 
 	if err := s.auditor.Record(ctx, switchEvent(actor, chosen.ID)); err != nil {
-		return nil, err
+		return nil, "error", err
 	}
 
-	return &chosen, nil
+	return &chosen, "ok", nil
 }
 
 // ResolveActivePatient answers the pointer as contracts/active-patient.md's

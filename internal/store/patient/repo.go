@@ -12,6 +12,7 @@ import (
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/person"
+	"medikube/internal/obs"
 	service "medikube/internal/service/patient"
 	"medikube/internal/store"
 )
@@ -25,6 +26,12 @@ type Repo struct {
 	app     core.App
 	cursors *store.CursorCodec
 	schema  store.Schema
+
+	// tracer is optional, wired post-construction by SetTracer: see New's own
+	// comment for why the constructor does not grow a required dependency
+	// for it. Nil-safe — *obs.SpanTracer's own zero value behaves like a
+	// noop tracer, so this is never nil-checked here.
+	tracer *obs.SpanTracer
 }
 
 var _ service.Repository = (*Repo)(nil)
@@ -45,6 +52,13 @@ func New(app core.App, cursors *store.CursorCodec) (*Repo, error) {
 	}
 
 	return &Repo{app: app, cursors: cursors, schema: store.PatientsSchema()}, nil
+}
+
+// SetTracer wires store.patients.* spans (FR-038). Optional: a Repo nobody
+// calls this on carries a nil *obs.SpanTracer, whose own methods are
+// nil-safe, so every call below still runs and simply produces no span.
+func (r *Repo) SetTracer(tracer *obs.SpanTracer) {
+	r.tracer = tracer
 }
 
 // scope is the cursor's authenticated binding: this resource and this owner,
@@ -181,7 +195,10 @@ func (r *Repo) Get(ctx context.Context, ownerID, id string) (person.Patient, err
 	return store.PatientFromRecord(record)
 }
 
-func (r *Repo) Create(ctx context.Context, draft person.Patient) (person.Patient, error) {
+func (r *Repo) Create(ctx context.Context, draft person.Patient) (created person.Patient, err error) {
+	ctx, end := r.tracer.Start(ctx, "store.patients.Create", nil)
+	defer func() { end(err) }()
+
 	collection, err := r.collection(r.app)
 	if err != nil {
 		return person.Patient{}, err
@@ -190,21 +207,30 @@ func (r *Repo) Create(ctx context.Context, draft person.Patient) (person.Patient
 	record := core.NewRecord(collection)
 
 	if mapErr := store.PatientToRecord(record, draft); mapErr != nil {
-		return person.Patient{}, mapErr
+		err = mapErr
+
+		return person.Patient{}, err
 	}
 
 	if saveErr := r.app.SaveWithContext(ctx, record); saveErr != nil {
 		if isUniqueViolation(saveErr) {
-			return person.Patient{}, fmt.Errorf("creating a patient: %w", domain.ErrConflict)
+			err = fmt.Errorf("creating a patient: %w", domain.ErrConflict)
+		} else {
+			err = fmt.Errorf("creating a patient: %w", saveErr)
 		}
 
-		return person.Patient{}, fmt.Errorf("creating a patient: %w", saveErr)
+		return person.Patient{}, err
 	}
 
-	return store.PatientFromRecord(record)
+	created, err = store.PatientFromRecord(record)
+
+	return created, err
 }
 
-func (r *Repo) Update(ctx context.Context, patient person.Patient, expectedVersion string) (person.Patient, error) {
+func (r *Repo) Update(ctx context.Context, patient person.Patient, expectedVersion string) (updatedPatient person.Patient, err error) {
+	ctx, end := r.tracer.Start(ctx, "store.patients.Update", nil)
+	defer func() { end(err) }()
+
 	var updated person.Patient
 
 	write := func(txApp core.App) error {
@@ -236,7 +262,9 @@ func (r *Repo) Update(ctx context.Context, patient person.Patient, expectedVersi
 	}
 
 	if txErr := store.RunInTransaction(r.app, write); txErr != nil {
-		return person.Patient{}, txErr
+		err = txErr
+
+		return person.Patient{}, err
 	}
 
 	return updated, nil
@@ -268,8 +296,11 @@ func (r *Repo) SelfRecord(ctx context.Context, ownerID string) (person.Patient, 
 // and its thumbnails go with the record's file field, and every
 // users.active_patient / audit_events.patient pointing here is unset. There
 // is nothing left for this method to delete by hand.
-func (r *Repo) Delete(ctx context.Context, ownerID, id, expectedVersion string) error {
-	return store.RunInTransaction(r.app, func(txApp core.App) error {
+func (r *Repo) Delete(ctx context.Context, ownerID, id, expectedVersion string) (err error) {
+	ctx, end := r.tracer.Start(ctx, "store.patients.Delete", nil)
+	defer func() { end(err) }()
+
+	err = store.RunInTransaction(r.app, func(txApp core.App) error {
 		record, err := r.owned(ctx, txApp, ownerID, id)
 		if err != nil {
 			return err
@@ -285,6 +316,8 @@ func (r *Repo) Delete(ctx context.Context, ownerID, id, expectedVersion string) 
 
 		return nil
 	})
+
+	return err
 }
 
 // PatientOwner is the resolver access.PatientOwners consumes (research D-05):

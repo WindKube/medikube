@@ -41,7 +41,8 @@ var recordsPath = "/api/v1/records/" + kind.Medication.Segment()
 func startMetrics(t *testing.T, cfg config.MetricsConfig) (*Metrics, *MetricsServer) {
 	t.Helper()
 
-	metrics := NewMetrics(testPatterns...)
+	metrics := NewMetrics()
+	metrics.PublishRoutes(testPatterns...)
 
 	server, err := StartMetrics(t.Context(), cfg, metrics, zerolog.Nop())
 	require.NoError(t, err)
@@ -372,4 +373,61 @@ func labelSets(t *testing.T, metrics *Metrics, name string) []map[string]string 
 	require.NotEmpty(t, sets, "the registry carries no series named %s", name)
 
 	return sets
+}
+
+// TestThePhaseTwoInstrumentsRecordAndAllowlistTheirLabels is T160: the four
+// counters/histograms this phase adds, proving both halves — a call
+// increments the right series, and a value off the published list still
+// lands somewhere rather than becoming an unbounded label.
+func TestThePhaseTwoInstrumentsRecordAndAllowlistTheirLabels(t *testing.T) {
+	t.Parallel()
+
+	metrics := NewMetrics()
+
+	metrics.RecordCreated("patient")
+	metrics.RecordCreated("practitioner")
+	metrics.RecordCreated("facility")
+	metrics.RecordCreated("medication")
+	metrics.RecordCreated("a patient nobody should be able to name as a label")
+
+	assert.ElementsMatch(t, []map[string]string{
+		{"kind": "patient"}, {"kind": "practitioner"}, {"kind": "facility"},
+		{"kind": "medication"}, {"kind": labelOther},
+	}, labelSets(t, metrics, "medikube_records_total"))
+
+	metrics.ObservePhotoBytes(1 << 20)
+	assert.Contains(t, labelSets(t, metrics, "medikube_files_photo_bytes"), map[string]string{})
+
+	metrics.ObserveThumbDuration("100x100t", 5*time.Millisecond)
+	metrics.ObserveThumbDuration("some size an operator typed in by hand", time.Millisecond)
+
+	assert.ElementsMatch(t, []map[string]string{
+		{"size": "100x100t"}, {"size": labelOther},
+	}, labelSets(t, metrics, "medikube_files_thumb_duration_seconds"))
+
+	metrics.PatientSwitch("ok")
+	metrics.PatientSwitch("cleared")
+	metrics.PatientSwitch("not_found")
+	metrics.PatientSwitch("something a bug invented")
+
+	assert.ElementsMatch(t, []map[string]string{
+		{"outcome": "ok"}, {"outcome": "cleared"}, {"outcome": "not_found"}, {"outcome": labelOther},
+	}, labelSets(t, metrics, "medikube_patients_switch_total"))
+}
+
+// TestThePhaseTwoInstrumentsAreNilSafe is FR-039/FR-056's other half: a
+// *Metrics that was never wired (SetMetrics/SetTracer never called, or the
+// composition root passed a nil pointer through) must not panic a caller
+// that has no reason to nil-check an observability call.
+func TestThePhaseTwoInstrumentsAreNilSafe(t *testing.T) {
+	t.Parallel()
+
+	var metrics *Metrics
+
+	assert.NotPanics(t, func() {
+		metrics.RecordCreated("patient")
+		metrics.ObservePhotoBytes(1024)
+		metrics.ObserveThumbDuration("100x100t", time.Millisecond)
+		metrics.PatientSwitch("ok")
+	})
 }

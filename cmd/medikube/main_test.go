@@ -385,6 +385,8 @@ func TestTheCompositionRootWiresEveryRouteMediKubeServes(t *testing.T) {
 		records.NewRegistry(),
 		func() (directoryServices, error) { return directoryServices{}, nil },
 		realtime.New(),
+		obs.NewMetrics(),
+		&obs.Tracing{},
 		api.HealthDeps{},
 	)
 	require.NoError(t, err)
