@@ -437,6 +437,11 @@ type packageFacts struct {
 	// declares that itself takes an access.Actor — the ones a method may
 	// discharge the rule by handing the actor to.
 	delegationMethods map[string]bool
+
+	// serviceFields is which struct fields hold a service from another
+	// internal/service package: an adapter that hands the actor to one has
+	// discharged the rule there.
+	serviceFields map[string]map[string]bool
 }
 
 func analyse(t *testing.T, root, dir string) *packageFacts {
@@ -449,6 +454,7 @@ func analyse(t *testing.T, root, dir string) *packageFacts {
 		checkpointFields:  map[string]map[string]bool{},
 		checkpointMethods: map[string]bool{},
 		delegationMethods: map[string]bool{},
+		serviceFields:     map[string]map[string]bool{},
 	}
 
 	fileSet := token.NewFileSet()
@@ -508,6 +514,8 @@ func analyse(t *testing.T, root, dir string) *packageFacts {
 						mark(facts.checkpointFields, name, ident.Name)
 						facts.checkpointMethods["Record"] = true
 						facts.checkpointMethods["Kind"] = true
+					} else if strings.HasPrefix(pkg, "medikube/internal/service/") {
+						mark(facts.serviceFields, name, ident.Name)
 					}
 				}
 			}
@@ -614,6 +622,10 @@ func (p *packageFacts) reachesTheCheckpoint(key string) bool {
 			return true
 		}
 
+		if p.serviceCall(selector, in) && passes(call, in.actor) {
+			return true
+		}
+
 		return p.delegationMethods[selector.Sel.Name] && passes(call, in.actor)
 	})
 }
@@ -641,6 +653,22 @@ func (p *packageFacts) checkpointCall(selector *ast.SelectorExpr, in declared) b
 	}
 
 	return p.checkpointFields[in.receiverType][field.Sel.Name]
+}
+
+// serviceCall is `<receiver>.<field>.<Method>` where the field holds another
+// service package's type.
+func (p *packageFacts) serviceCall(selector *ast.SelectorExpr, in declared) bool {
+	field, isField := selector.X.(*ast.SelectorExpr)
+	if !isField {
+		return false
+	}
+
+	holder, isIdent := field.X.(*ast.Ident)
+	if !isIdent || holder.Name != in.receiver || in.receiver == "" {
+		return false
+	}
+
+	return p.serviceFields[in.receiverType][field.Sel.Name]
 }
 
 // named matches a call by the name being called, for the counter-assertions the
