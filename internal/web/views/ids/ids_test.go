@@ -47,6 +47,7 @@ func kindIDs(k kind.Kind) map[string]string {
 		"RecordForm":    ids.RecordForm(k, "mkmedamara00003"),
 		"RecordCreate":  ids.RecordForm(k, ""),
 		"RecordConfirm": ids.RecordConfirm(k, "mkmedamara00003"),
+		"RecordBasis":   ids.RecordBasis(k, "mkmedamara00003"),
 	}
 }
 
@@ -64,11 +65,14 @@ func TestEveryIDIsAUsableSelector(t *testing.T) {
 	}
 
 	for name, id := range map[string]string{
-		"Main":        ids.Main,
-		"ErrorBanner": ids.ErrorBanner,
-		"Toast":       ids.Toast,
-		"Field":       ids.Field("medication-form", "alternative_name"),
-		"FieldError":  ids.FieldError("medication-form", "alternative_name"),
+		"Main":          ids.Main,
+		"ErrorBanner":   ids.ErrorBanner,
+		"Toast":         ids.Toast,
+		"Field":         ids.Field("medication-form", "alternative_name"),
+		"FieldError":    ids.FieldError("medication-form", "alternative_name"),
+		"Criteria":      ids.Criteria("search"),
+		"CriteriaChip0": ids.CriteriaChip("search", 0),
+		"CriteriaChip1": ids.CriteriaChip("search", 1),
 	} {
 		t.Run("shell "+name, func(t *testing.T) {
 			t.Parallel()
@@ -106,6 +110,7 @@ func TestARecordIDThatIsNotAnIdentifierCannotReachTheDOM(t *testing.T) {
 				"RecordDetail":  ids.RecordDetail(kind.Medication, record.id),
 				"RecordForm":    ids.RecordForm(kind.Medication, record.id),
 				"RecordConfirm": ids.RecordConfirm(kind.Medication, record.id),
+				"RecordBasis":   ids.RecordBasis(kind.Medication, record.id),
 			} {
 				assert.Regexp(t, validID, id, "%s let a hostile id through", name)
 			}
@@ -189,4 +194,12 @@ func TestFieldAndItsErrorAreLinkableAndDistinct(t *testing.T) {
 
 	assert.NotEqual(t, ids.Field("medication-form", "name"), ids.Field("medication-create", "name"),
 		"two forms on one page would otherwise share a control id")
+}
+
+func TestCriteriaChipsAreDistinctPerIndexAndPerScope(t *testing.T) {
+	t.Parallel()
+
+	assert.NotEqual(t, ids.CriteriaChip("search", 0), ids.CriteriaChip("search", 1))
+	assert.NotEqual(t, ids.CriteriaChip("search", 0), ids.CriteriaChip("timeline", 0))
+	assert.Equal(t, ids.CriteriaChip("search", 0), ids.CriteriaChip("search", 0))
 }

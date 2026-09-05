@@ -1,6 +1,7 @@
 package ids
 
 import (
+	"strconv"
 	"strings"
 
 	"medikube/internal/domain/kind"
@@ -29,17 +30,19 @@ const (
 // #medication-row-abc from #medication-detail-abc, so a rename here moves the
 // element and its selector together.
 const (
-	roleList    = "list"
-	roleRows    = "rows"
-	roleRow     = "row"
-	roleEmpty   = "empty"
-	rolePager   = "pager"
-	roleDetail  = "detail"
-	roleForm    = "form"
-	roleConfirm = "confirm"
-	roleField   = "field"
-	roleError   = "error"
-	roleHeading = "heading"
+	roleList     = "list"
+	roleRows     = "rows"
+	roleRow      = "row"
+	roleEmpty    = "empty"
+	rolePager    = "pager"
+	roleDetail   = "detail"
+	roleForm     = "form"
+	roleConfirm  = "confirm"
+	roleField    = "field"
+	roleError    = "error"
+	roleHeading  = "heading"
+	roleBasis    = "basis"
+	roleCriteria = "criteria"
 )
 
 // The forms that belong to no kind: the five on the signed-out surface and the
@@ -106,6 +109,11 @@ func RecordForm(k kind.Kind, recordID string) string { return join(prefix(k), ro
 // window.confirm (FR-028, contracts/pages.md).
 func RecordConfirm(k kind.Kind, recordID string) string {
 	return join(prefix(k), roleConfirm, recordID)
+}
+
+// RecordBasis is shared.Basis's own element, one per row (FR-026, FR-078).
+func RecordBasis(k kind.Kind, recordID string) string {
+	return join(prefix(k), roleBasis, recordID)
 }
 
 // Field and FieldError are the two halves of FR-048's aria-describedby link.
@@ -219,3 +227,16 @@ func PatientPhoto(patientID string) string { return join(patientPrefix, "photo",
 // `combobox[name="Active patient"]` every authenticated page renders,
 // outside #main (phases 002-006).
 func ActivePatientSwitcher() string { return join(patientPrefix, "switcher") }
+
+// Criteria is shared.Criteria's own element: the whole narrowing in force for
+// one scope (a list, a search, a status view). Scope is a caller-chosen word
+// rather than a kind, because a search's criteria narrow across every kind at
+// once (research: US6/US8).
+func Criteria(scope string) string { return join(safe(scope), roleCriteria) }
+
+// CriteriaChip is one removable narrowing within Criteria(scope), indexed
+// rather than named because two criteria of the same kind (two tags, two date
+// bounds) are both legitimate and need different ids.
+func CriteriaChip(scope string, index int) string {
+	return join(safe(scope), roleCriteria, strconv.Itoa(index))
+}
