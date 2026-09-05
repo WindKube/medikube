@@ -89,6 +89,7 @@ const server = spawn(binary, ['serve'], {
     // disappearing (research D-15) — and that branch is covered in
     // internal/web/page/accounts_test.go, where it costs no second instance.
     MEDIKUBE_AUTH_REGISTRATION_OPEN: 'true',
+    MEDIKUBE_RATE_LIMITS: 'false',
     MEDIKUBE_LOG_LEVEL: 'warn',
   },
 });

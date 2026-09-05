@@ -62,7 +62,12 @@ async function switchTo(page: import('@playwright/test').Page, patientID: string
   // selector: open the combobox, choose the option. selectOption drives both
   // through the accessibility tree in one Playwright action, which is what
   // "no more than two interactions" means for a native control.
+  const switched = page.waitForResponse(
+    (response) => response.request().method() === 'PUT' && response.url().includes('/api/v1/me/active-patient'),
+  );
   await switcher.selectOption(patientID);
+  expect((await switched).ok(), 'the switch was refused').toBe(true);
+  await expect(switcher).toHaveValue(patientID);
 }
 
 test.describe('the active-patient switcher', () => {
