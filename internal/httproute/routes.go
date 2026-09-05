@@ -652,6 +652,18 @@ func pageRoutes() []Route {
 			Landmark: `article[name="Treatment"]`, SmokeURL: treatmentList + "/" + seed.TreatmentNameOnlyID,
 		},
 		{
+			OpID: "familyHistoryListPage", Method: http.MethodGet, Path: "/" + kind.FamilyMember.Segment(),
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "The family history list, empty on account A's self patient so the empty state is exercised.",
+			Landmark: `region[name="Family history"]`, SmokeURL: "/" + kind.FamilyMember.Segment() + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			OpID: "familyHistoryDetailPage", Method: http.MethodGet, Path: "/" + kind.FamilyMember.Segment() + "/{id}",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "One relative, every condition recorded against them.",
+			Landmark: `article[name="Relative"]`, SmokeURL: "/" + kind.FamilyMember.Segment() + "/" + seed.FamilyMemberGrandmotherID,
+		},
+		{
 			OpID: "practitionerListPage", Method: http.MethodGet, Path: "/practitioners",
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "contracts/pages.md P3: the account's practitioner directory.",

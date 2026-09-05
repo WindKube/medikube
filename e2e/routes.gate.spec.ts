@@ -200,6 +200,13 @@ async function titleFor(route: PageRoute, page: Page): Promise<string> {
           "name",
         ),
       );
+    case "familyHistoryDetailPage":
+      return fixtures.title(
+        await nameOf(
+          page,
+          `/api/v1/records/family-history/${idOf(route.smokeURL)}`,
+        ),
+      );
     case "patientListPage":
       return fixtures.title("People");
     case "patientDetailPage":

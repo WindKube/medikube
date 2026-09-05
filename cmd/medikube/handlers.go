@@ -26,6 +26,7 @@ import (
 	"medikube/internal/service/encounter"
 	"medikube/internal/service/equipment"
 	facilitysvc "medikube/internal/service/facility"
+	"medikube/internal/service/familymember"
 	serviceidentity "medikube/internal/service/identity"
 	"medikube/internal/service/insurance"
 	"medikube/internal/service/medication"
@@ -44,6 +45,7 @@ import (
 	encounterstore "medikube/internal/store/encounter"
 	equipmentstore "medikube/internal/store/equipment"
 	facilitystore "medikube/internal/store/facility"
+	familymemberstore "medikube/internal/store/familymember"
 	storeidentity "medikube/internal/store/identity"
 	storeimmunization "medikube/internal/store/immunization"
 	storeinjury "medikube/internal/store/injury"
@@ -351,6 +353,11 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 		return nil, err
 	}
 
+	familyMemberPages, err := page.FamilyMemberHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
 	streams, err := stream.Handlers(stream.Deps{Resolve: resolve, Hub: hub})
 	if err != nil {
 		return nil, err
@@ -367,6 +374,7 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 	maps.Copy(table, encounterPages)
 	maps.Copy(table, procedurePages)
 	maps.Copy(table, treatmentPages)
+	maps.Copy(table, familyMemberPages)
 	maps.Copy(table, streams)
 
 	return table, nil
@@ -900,6 +908,28 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Basis:        api.TreatmentBasis,
 	}); err != nil {
 		return err
+	}
+
+	familyMemberViews, err := page.NewFamilyMemberViews()
+	if err != nil {
+		return err
+	}
+
+	familyMemberRepo, err := familymemberstore.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	if familyMemberRegisterErr := familymember.Register(registry, familymember.Wiring{
+		Repository:   familyMemberRepo,
+		Authorizer:   authorizer,
+		Codec:        api.FamilyMemberCodec{},
+		Schema:       api.FamilyMemberSchema(),
+		Views:        familyMemberViews,
+		SearchFields: api.FamilyMemberSearchFields,
+		Basis:        api.FamilyMemberBasis,
+	}); familyMemberRegisterErr != nil {
+		return familyMemberRegisterErr
 	}
 
 	// FR-036's three rows, written by the post-commit hooks and by no handler

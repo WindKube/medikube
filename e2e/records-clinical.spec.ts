@@ -30,6 +30,10 @@ function title(page: string): string {
 
 const symptomListTitle = goString('internal/web/page/symptoms.go', 'symptomListTitle');
 const vitalsListTitle = goString('internal/web/page/vitals.go', 'vitalsListTitle');
+const familyMemberListTitle = goString(
+  'internal/web/views/records/familymember_list.templ',
+  'familyMemberListTitle',
+);
 
 // Read from internal/testsupport/seed/seed_clinical.go rather than restated:
 // the episode's name is what the symptom detail page titles itself with, and
@@ -41,6 +45,15 @@ const vitalsRecordedAt = '2025-06-01T07:00:00Z';
 
 const symptomSegment = 'symptoms';
 const vitalsSegment = 'vitals';
+
+// US10's family history: the seeded relative and the patient it is empty on
+// live in internal/testsupport/seed/family.go and fixtures.go respectively,
+// per contracts/pages.md's instruction to leave /family-history empty on
+// account A's self patient (the smoke case for the empty state).
+const familyMemberID = goString('internal/testsupport/seed/family.go', 'FamilyMemberGrandmotherID');
+const familyMemberName = 'Adaeze Okonkwo';
+const emptySelfPatientID = goString(fixturesGo, 'AccountAPatientSelfID');
+const familyMemberSegment = 'family-history';
 
 test.describe('the symptom pages', () => {
   test('lists the seeded episode', async ({ page }) => {
@@ -78,6 +91,26 @@ test.describe('the measurements pages', () => {
       path: `/${vitalsSegment}/${vitalsID}`,
       title: title(vitalsRecordedAt),
       landmark: { role: 'article', name: 'Measurement set' },
+    });
+  });
+});
+
+test.describe('the family history pages', () => {
+  test("is empty on account A's self patient", async ({ page }) => {
+    const list = await open(page, {
+      path: `/${familyMemberSegment}?patient=${emptySelfPatientID}`,
+      title: title(familyMemberListTitle),
+      landmark: { role: 'region', name: 'Family history' },
+    });
+
+    await expect(list.getByText('Nothing recorded yet')).toBeVisible();
+  });
+
+  test('shows one relative', async ({ page }) => {
+    await open(page, {
+      path: `/${familyMemberSegment}/${familyMemberID}`,
+      title: title(familyMemberName),
+      landmark: { role: 'article', name: 'Relative' },
     });
   });
 });

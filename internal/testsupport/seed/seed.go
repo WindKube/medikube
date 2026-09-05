@@ -364,6 +364,10 @@ func Apply(app core.App) error {
 			return err
 		}
 
+		if err := applyFamilyMembers(tx); err != nil {
+			return err
+		}
+
 		return applyActivePatients(tx)
 	})
 }

@@ -105,6 +105,25 @@ var kindLiteralExempt = map[string]string{
 	"internal/web/api/treatment.go": "FR-028's two multi-relations are named after the collections they point to " +
 		"(data-model §4.5); the JSON struct tags carrying those names are literal by construction and cannot call " +
 		"Segment() or Collection()",
+
+	// family_member's own "conditions" field (a JSON array of FamilyCondition)
+	// spells the unrelated kind.Condition's segment/collection ("conditions")
+	// by coincidence of ordinary English, exactly as equipment/insurance
+	// collide with their own kind's spelling above — every file below is a
+	// field-error message, a JSON key, a struct field or a variable name that
+	// says "conditions" because that is what family_member's own sub-field is
+	// called, not because it hardcodes a route or a collection.
+	"internal/domain/clinical/familycondition.go":            "false positive: FamilyCondition's own field-error messages name family_member's \"conditions\" field in prose",
+	"internal/domain/clinical/familymember_test.go":          "false positive, asserting the same field name",
+	"internal/service/familymember/adapter.go":               "false positive: the adapter's patch/draft wiring names the \"conditions\" field in prose",
+	"internal/store/familymember/mapper.go":                  "false positive: the mapper's own column name and JSON (un)marshal error messages name the \"conditions\" column in prose",
+	"internal/store/familymember/repo_integration_test.go":   "false positive, asserting the same column and messages",
+	"internal/store/migrations/1756400600_family_members.go": "false positive: the migration names the \"conditions\" JSON column it creates",
+	"internal/testsupport/seed/family.go":                    "false positive: the seed's own column constant and JSON encoding name the \"conditions\" column",
+	"internal/web/api/familymember.go":                       "false positive: the DTO's own JSON field and field-error messages name \"conditions\" in prose",
+	"internal/web/api/familymember_test.go":                  "false positive, asserting the same field name",
+	"internal/web/views/records/familymember.go":             "false positive: the view model's field label names family_member's own \"conditions\" field",
+	"internal/web/views/records/familymember_templ_test.go":  "false positive, asserting the same field label",
 }
 
 func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {

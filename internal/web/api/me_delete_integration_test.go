@@ -327,6 +327,7 @@ func TestTheCascadePublishesOneEventPerMedicationAndNoneForTheAccount(t *testing
 		kind.Allergy.Collection(): true, kind.Condition.Collection(): true, kind.EmergencyContact.Collection(): true,
 		kind.Immunization.Collection(): true, kind.Injury.Collection(): true,
 		kind.Symptom.Collection(): true, kind.Vitals.Collection(): true,
+		kind.FamilyMember.Collection(): true,
 	}
 
 	var medications, insurances, equipment, encounters, procedures, treatments, accounts int
