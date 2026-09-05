@@ -22,10 +22,9 @@ pro_attrs=(
 found=0
 
 if [ -d "$targets" ]; then
-  files=$(find "$targets" -name '*.templ')
 
   for attr in "${pro_attrs[@]}"; do
-    hits=$(grep -rnF -- "$attr" $files 2>/dev/null || true)
+    hits=$(grep -rnF --include='*.templ' -- "$attr" "$targets" 2>/dev/null || true)
     if [ -n "$hits" ]; then
       echo "forbidden Datastar Pro attribute $attr:"
       echo "$hits"
@@ -38,7 +37,7 @@ if [ -d "$targets" ]; then
   # attributes; data-on-intersect, data-on-interval and data-on-signal-patch are
   # free-bundle attributes whose own names are hyphenated (they are not an
   # event binding at all) and are excluded here rather than flagged.
-  hits=$(grep -rnE -- 'data-on-[a-z]' $files 2>/dev/null \
+  hits=$(grep -rnE --include='*.templ' -- 'data-on-[a-z]' "$targets" 2>/dev/null \
     | grep -vE 'data-on-(raf|resize|intersect|interval|signal-patch)' || true)
   if [ -n "$hits" ]; then
     echo "forbidden Datastar v0 delimiter (use data-on:<event>, not data-on-<event>):"

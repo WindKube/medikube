@@ -216,7 +216,9 @@ linters:
         # hypermedia-driven — a view's behaviour is legible in its .templ
         # source — and a handler that reaches for one of these instead writes
         # behaviour nowhere a page's own markup names it.
-        - pattern: \.(ExecuteScript|ConsoleLog|ConsoleError|Redirect|Redirectf|DispatchCustomEvent|ReplaceURL|ReplaceURLQuerystring|Prefetch)$
+        - pattern: \.(ExecuteScript|ConsoleLog|ConsoleError|Redirect|Redirectf|DispatchCustomEvent)$
+          pkg: ^github\.com/starfederation/datastar-go/datastar$
+        - pattern: \.(ReplaceURL|ReplaceURLQuerystring|Prefetch)$
           pkg: ^github\.com/starfederation/datastar-go/datastar$
           msg: >-
             SHARED-DESIGN.md and contracts/streams.md. MediKube's SSE stream
