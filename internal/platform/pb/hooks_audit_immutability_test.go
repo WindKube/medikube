@@ -47,6 +47,7 @@ const (
 	trailFieldTargetKind = "target_kind"
 	trailFieldTargetID   = "target_id"
 	trailFieldRequestID  = "request_id"
+	trailFieldPatient    = "patient"
 )
 
 // The two PocketBase bookkeeping columns the migration adds explicitly, because
@@ -119,6 +120,10 @@ func trailSchema(t testing.TB, app core.App) {
 	})
 	collection.Fields.Add(&core.TextField{Name: trailFieldTargetID, Max: audit.MaxTargetID})
 	collection.Fields.Add(&core.TextField{Name: trailFieldRequestID, Required: true, Max: audit.MaxRequestID})
+	// A bare TextField rather than a RelationField to `patients`: this file
+	// deliberately builds no other MediKube collection than the accounts one
+	// (see the file header), and the column stores an opaque id either way.
+	collection.Fields.Add(&core.TextField{Name: trailFieldPatient, Max: audit.MaxPatientID})
 	collection.Fields.Add(&core.AutodateField{Name: trailFieldCreated, OnCreate: true})
 	collection.Fields.Add(&core.AutodateField{Name: trailFieldUpdated, OnCreate: true, OnUpdate: true})
 
@@ -165,6 +170,7 @@ func trailEvent(actorID string) audit.Event {
 		TargetKind: audit.TargetKindMedication,
 		TargetID:   "the-record-somebody-reached-for",
 		RequestID:  "the-request-that-reached-for-it",
+		PatientID:  "mkpatamara00001",
 	}
 }
 
@@ -300,6 +306,7 @@ func trailTamperings() []trailTampering {
 		{field: "TargetKind", change: func(e *audit.Event, _ string) { e.TargetKind = audit.TargetKindAllergy }},
 		{field: "TargetID", change: func(e *audit.Event, _ string) { e.TargetID = "a-record-nobody-reached-for" }},
 		{field: "RequestID", change: func(e *audit.Event, _ string) { e.RequestID = "a-request-that-never-happened" }},
+		{field: "PatientID", change: func(e *audit.Event, _ string) { e.PatientID = "mkptdifferent01" }},
 	}
 }
 

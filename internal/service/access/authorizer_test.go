@@ -367,7 +367,7 @@ func TestThisPhasesLadderHasOneRung(t *testing.T) {
 // with a typed error on every refusal, rather than a Grant of zero value, and
 // every refusal it produces writes exactly one audit row.
 
-const patientID = "mkptamara00001"
+const patientID = "mkpatamara00001"
 
 type fakePatientOwners struct {
 	owners map[string]string

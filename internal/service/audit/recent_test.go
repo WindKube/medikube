@@ -48,15 +48,15 @@ func recentEvent(patientID string) domainaudit.Event {
 func TestRecentForPatientPassesThroughTheReadersRows(t *testing.T) {
 	t.Parallel()
 
-	reader := &fakeReader{events: []domainaudit.Event{recentEvent("mkptamara00001")}}
+	reader := &fakeReader{events: []domainaudit.Event{recentEvent("mkpatamara00001")}}
 	activity, err := NewRecentActivity(reader)
 	require.NoError(t, err)
 
-	events, err := activity.RecentForPatient(t.Context(), "mkptamara00001", 5)
+	events, err := activity.RecentForPatient(t.Context(), "mkpatamara00001", 5)
 	require.NoError(t, err)
 
 	assert.Equal(t, reader.events, events)
-	assert.Equal(t, "mkptamara00001", reader.gotPatient)
+	assert.Equal(t, "mkpatamara00001", reader.gotPatient)
 	assert.Equal(t, 5, reader.gotLimit)
 
 	// The whole point of the type this reads back: nothing in the row is a
@@ -79,7 +79,7 @@ func TestRecentForPatientAppliesTheDefaultLimitToANonPositiveOne(t *testing.T) {
 		activity, err := NewRecentActivity(reader)
 		require.NoError(t, err)
 
-		_, err = activity.RecentForPatient(t.Context(), "mkptamara00001", limit)
+		_, err = activity.RecentForPatient(t.Context(), "mkpatamara00001", limit)
 		require.NoError(t, err)
 		assert.Equal(t, DefaultRecentLimit, reader.gotLimit)
 	}
@@ -102,7 +102,7 @@ func TestRecentForPatientReportsAReaderFailure(t *testing.T) {
 	activity, err := NewRecentActivity(&fakeReader{err: broken})
 	require.NoError(t, err)
 
-	_, err = activity.RecentForPatient(t.Context(), "mkptamara00001", 5)
+	_, err = activity.RecentForPatient(t.Context(), "mkpatamara00001", 5)
 	require.ErrorIs(t, err, broken)
 }
 

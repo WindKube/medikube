@@ -2,7 +2,6 @@ package directory
 
 import (
 	"net/mail"
-	"net/url"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -133,12 +132,26 @@ func isBareAddress(value string) bool {
 
 // isAbsoluteHTTPURL refuses a relative reference or a non-http(s) scheme —
 // neither is a web address a browser can navigate to directly.
+//
+// Hand-rolled rather than net/url.Parse: internal/architecture's domain-imports
+// walk denies net/url under internal/domain (Principle II — "a URL is the
+// edge's vocabulary"), so this checks only what Validate needs, a scheme and a
+// non-empty host, not full RFC 3986.
 func isAbsoluteHTTPURL(value string) bool {
-	parsed, err := url.Parse(value)
-	if err != nil {
+	rest, ok := strings.CutPrefix(value, "https://")
+	if !ok {
+		rest, ok = strings.CutPrefix(value, "http://")
+	}
+	if !ok || rest == "" {
 		return false
 	}
-	return (parsed.Scheme == "http" || parsed.Scheme == "https") && parsed.Host != ""
+
+	host := rest
+	if i := strings.IndexAny(rest, "/?#"); i >= 0 {
+		host = rest[:i]
+	}
+
+	return host != ""
 }
 
 // MarshalZerologObject emits the two identifiers and nothing else.

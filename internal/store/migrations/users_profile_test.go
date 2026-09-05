@@ -83,25 +83,25 @@ func TestUsersCarriesTheSevenMediKubeColumns(t *testing.T) {
 	})
 }
 
-// data-model §0: zero file fields exist in this phase. PocketBase ships `users`
-// with an unprotected `avatar`, and the boot assertion refuses to start on one —
-// so the migration drops it rather than leaving a gate that has to be waived.
-func TestTheMigrationLeavesNoFileFieldInTheSchema(t *testing.T) {
+// data-model §0: this migration itself adds no file field. PocketBase ships
+// `users` with an unprotected `avatar`, and the boot assertion refuses to
+// start on one — so the migration drops it rather than leaving a gate that
+// has to be waived. Phase 002's patients.photo is Protected and is asserted
+// separately (internal/store/migrations/assertions_test.go); the blanket
+// "zero file fields in the schema" this test used to make stopped being true
+// the day that column shipped.
+func TestTheMigrationLeavesNoFileFieldOnUsers(t *testing.T) {
 	t.Parallel()
 
 	app := newTestApp(t)
 
-	collections, err := app.FindAllCollections()
-	require.NoError(t, err)
+	users := usersSchema(t, app)
 
-	for _, collection := range collections {
-		for _, field := range collection.Fields {
-			_, isFile := field.(*core.FileField)
-			assert.Falsef(t, isFile, "%s.%s is a file field", collection.Name, field.GetName())
-		}
+	for _, field := range users.Fields {
+		_, isFile := field.(*core.FileField)
+		assert.Falsef(t, isFile, "users.%s is a file field", field.GetName())
 	}
 
-	users := usersSchema(t, app)
 	assert.Nil(t, users.Fields.GetByName(stockUsersAvatarField))
 	assert.Empty(t, users.OAuth2.MappedFields.AvatarURL,
 		"the OAuth2 avatar mapping still points at a column that no longer exists")

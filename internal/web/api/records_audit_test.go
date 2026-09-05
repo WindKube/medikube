@@ -123,7 +123,7 @@ func TestTheAuditRowHasNoColumnContentCouldBeWrittenInto(t *testing.T) {
 	}
 
 	assert.ElementsMatch(t,
-		[]string{"OccurredAt", "ActorID", "ActorKind", "Action", "TargetKind", "TargetID", "RequestID"},
+		[]string{"OccurredAt", "ActorID", "ActorKind", "Action", "TargetKind", "TargetID", "RequestID", "PatientID"},
 		members,
 		"the audit event grew a member; if it can hold a name, a value or a note, FR-038 no longer holds structurally")
 }
