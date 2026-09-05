@@ -1,6 +1,7 @@
 package kinds_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,14 +18,10 @@ import (
 
 // TestEmergencyContactSatisfiesTheSharedRecordContracts is T045's proof for
 // emergency contacts, mirroring the allergy and condition contract test
-// files, save for KindContract: FR-051 fixes ONE compound default ordering
-// (is_active, is_primary, name) rather than several single-field
-// alternatives, and recordstest.KindContractOptions.DefaultSort — one
-// domain.SortKey — can only ever exercise Entry.Schema.Sorts[0] alone. That
-// single term is not this kind's ordering, so the generic KindContract's
-// internal List calls would be refused by the very query it exists to
-// prove — TestEmergencyContactRegistrationIsComplete below asserts the same
-// registration completeness by hand instead.
+// files. KindContractOptions.DefaultSort is []domain.SortKey (generalised
+// for this kind's own FR-051 case), so RunKindContract exercises it with
+// the full three-term compound (is_active, is_primary, name) rather than
+// Entry.Schema.Sorts[0] alone.
 func TestEmergencyContactSatisfiesTheSharedRecordContracts(t *testing.T) {
 	t.Parallel()
 
@@ -69,59 +66,42 @@ func TestEmergencyContactSatisfiesTheSharedRecordContracts(t *testing.T) {
 			NewPatch:            func() any { return &api.EmergencyContactPatch{} },
 			Sort:                emergencycontact.Sorts(),
 			NullPrimaryDateSkip: "emergency contacts have no primary date column (FR-051's ordering is name/flags, not a date)",
-			CascadeSkip: "emergency contact's cascade-on-patient-delete needs a real instance this harness " +
-				"cannot reach past records.Service into the store directly to prove; not yet covered " +
-				"by an internal/store/emergencycontact integration test",
+			CascadeSkip: "emergency contact's cascade-on-patient-delete is proven directly against a real " +
+				"instance by internal/store/emergencycontact's own TestDeletingAPatientDestroysItsEmergencyContacts",
 		})
 	})
-}
 
-// TestEmergencyContactRegistrationIsComplete replaces KindContract's coverage
-// for the reason documented on the test above: it exercises the same six
-// generic operations and the same registration-completeness assertion, each
-// List call carrying the kind's own full compound default rather than the
-// single term the generic suite would build.
-func TestEmergencyContactRegistrationIsComplete(t *testing.T) {
-	t.Parallel()
+	t.Run("KindContract", func(t *testing.T) {
+		t.Parallel()
 
-	instance := apitest.New(t)
-	entry := contactEntryFor(t, instance)
+		instance := apitest.New(t)
+		entry := contactEntryFor(t, instance)
 
-	recordstest.AssertRegistrationComplete(t, entry)
+		recordstest.RunKindContract(t, recordstest.KindContractOptions{
+			NewHarness: func(t *testing.T) recordstest.RepositoryHarness {
+				t.Helper()
 
-	owner := access.Actor{UserID: testsupport.AccountAID, RequestID: "req-1"}
-	patientID := testsupport.AccountAPatientChildID
+				return recordstest.RepositoryHarness{
+					Service:   entry.Service,
+					Owner:     access.Actor{UserID: testsupport.AccountAID, RequestID: "req-1"},
+					PatientID: testsupport.AccountAPatientChildID,
+					Stranger:  access.Actor{UserID: testsupport.AccountBID, RequestID: "req-2"},
+				}
+			},
+			Entry:       entry,
+			Fixture:     fixture,
+			DefaultSort: emergencycontact.Sorts(),
+			NoPatientSkip: "emergencycontact.Patient is a plain string FR-002 requires structurally " +
+				"(there is no pointer to omit it with), so a body naming no patient does not decode at all",
+			SearchIndex: func(t *testing.T, k kind.Kind, recordID string) (bool, string) {
+				t.Helper()
 
-	created, err := entry.Service.Create(t.Context(), owner, &api.EmergencyContactCreate{
-		Patient: patientID, Name: "Ngozi Okonkwo", Relationship: "spouse", Phone: "+1-555-0100",
+				title, found := contactSearchRowFor(t, instance, k, recordID)
+
+				return found, title
+			},
+		})
 	})
-	require.NoError(t, err)
-
-	listed, err := entry.Service.List(t.Context(), owner, records.Query{
-		PatientID: patientID, Sort: emergencycontact.Sorts(), Limit: 100,
-	})
-	require.NoError(t, err)
-
-	var found bool
-	for _, item := range listed.Items {
-		if item.ID == created.ID {
-			found = true
-		}
-	}
-	require.True(t, found, "the created contact is not in its own patient's list")
-
-	found2, err := entry.Service.Get(t.Context(), owner, created.ID)
-	require.NoError(t, err)
-	require.Equal(t, created.ID, found2.ID)
-
-	updated, err := entry.Service.Update(t.Context(), owner, created.ID, created.Version,
-		&api.EmergencyContactPatch{})
-	require.NoError(t, err)
-
-	require.NoError(t, entry.Service.Delete(t.Context(), owner, created.ID, updated.Version))
-
-	_, err = entry.Service.Get(t.Context(), owner, created.ID)
-	require.Error(t, err)
 }
 
 func contactEntryFor(t *testing.T, instance *apitest.Instance) records.Entry {
@@ -131,4 +111,15 @@ func contactEntryFor(t *testing.T, instance *apitest.Instance) records.Entry {
 	require.NoError(t, err)
 
 	return entry
+}
+
+func contactSearchRowFor(t *testing.T, instance *apitest.Instance, k kind.Kind, recordID string) (title string, found bool) {
+	t.Helper()
+
+	require.NotNil(t, instance.Search, "the instance has no search repository wired")
+
+	row, found, err := instance.Search.Find(context.Background(), k, recordID)
+	require.NoError(t, err)
+
+	return row.Title, found
 }

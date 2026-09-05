@@ -21,8 +21,11 @@ type KindContractOptions struct {
 	Entry      records.Entry
 	Fixture    Fixture
 
-	// DefaultSort is what entry.Schema.Sorts[0] is expected to be.
-	DefaultSort domain.SortKey
+	// DefaultSort is what an absent `sort` resolves to: entry.Schema.Sorts[0]
+	// alone for a kind whose ordering is several single-field alternatives, or
+	// the whole of entry.Schema.DefaultSort for the kind whose ordering is one
+	// fixed compound (FR-051).
+	DefaultSort []domain.SortKey
 
 	// NoPatient builds a create body naming no patient, to prove FR-002's
 	// refusal. Required unless NoPatientSkip documents why a kind cannot
@@ -75,14 +78,14 @@ func RunKindContract(t *testing.T, opts KindContractOptions) {
 		// no cheap way to mint a fresh patient per case), so what listRecords
 		// OfKind owes here is that the record this case creates is IN the
 		// list, not that the list contains nothing else.
-		_, err := h.Service.List(t.Context(), h.Owner, records.Query{PatientID: h.PatientID, Sort: []domain.SortKey{opts.DefaultSort}, Limit: 100})
+		_, err := h.Service.List(t.Context(), h.Owner, records.Query{PatientID: h.PatientID, Sort: opts.DefaultSort, Limit: 100})
 		require.NoError(t, err, "listRecordsOfKind")
 
 		created, err := h.Service.Create(t.Context(), h.Owner, opts.Fixture.Minimal(h.PatientID))
 		require.NoError(t, err, "createRecord")
 		assert.Equal(t, opts.Entry.Kind, created.Kind)
 
-		listed, err := h.Service.List(t.Context(), h.Owner, records.Query{PatientID: h.PatientID, Sort: []domain.SortKey{opts.DefaultSort}, Limit: 100})
+		listed, err := h.Service.List(t.Context(), h.Owner, records.Query{PatientID: h.PatientID, Sort: opts.DefaultSort, Limit: 100})
 		require.NoError(t, err, "listRecordsOfKind")
 		assert.Truef(t, containsID(listed.Items, created.ID), "the created record was not in its own kind's list")
 
@@ -127,7 +130,13 @@ func RunKindContract(t *testing.T, opts KindContractOptions) {
 		t.Parallel()
 
 		require.NotEmpty(t, opts.Entry.Schema.Sorts)
-		assert.Equal(t, opts.DefaultSort, opts.Entry.Schema.Sorts[0])
+
+		expected := opts.Entry.Schema.DefaultSort
+		if len(expected) == 0 {
+			expected = []domain.SortKey{opts.Entry.Schema.Sorts[0]}
+		}
+
+		assert.Equal(t, expected, opts.DefaultSort)
 	})
 
 	t.Run("the owner reaches the record and a stranger cannot", func(t *testing.T) {
