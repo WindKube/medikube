@@ -22,7 +22,6 @@ func wiring(t *testing.T, h harness) medication.Wiring {
 	return medication.Wiring{
 		Repository: h.repository,
 		Authorizer: h.authorizer,
-		Auditor:    h.auditor,
 		Codec:      medicationtest.NewCodec(),
 		Schema:     medicationtest.Shapes(),
 		Views:      recordstest.Views{},
@@ -87,7 +86,6 @@ func TestRegisterRefusesAnIncompleteWiring(t *testing.T) {
 		remove func(*medication.Wiring)
 	}{
 		{name: "no repository", remove: func(w *medication.Wiring) { w.Repository = nil }},
-		{name: "no auditor", remove: func(w *medication.Wiring) { w.Auditor = nil }},
 		{name: "no codec", remove: func(w *medication.Wiring) { w.Codec = nil }},
 		{name: "no views", remove: func(w *medication.Wiring) { w.Views = nil }},
 		{name: "no authorizer", remove: func(w *medication.Wiring) { w.Authorizer = nil }},
@@ -132,7 +130,7 @@ func TestTheAdapterCarriesAPageThroughUnchanged(t *testing.T) {
 		h.store(t, name)
 	}
 
-	page, err := adapter.List(t.Context(), actor(), records.Query{Limit: 2, Count: true})
+	page, err := adapter.List(t.Context(), actor(), records.Query{PatientID: medicationtest.PatientID, Limit: 2, Count: true})
 	require.NoError(t, err)
 
 	require.Len(t, page.Items, 2)
@@ -162,7 +160,8 @@ func TestTheAdapterNarrowsByThePublishedParameter(t *testing.T) {
 	adapter := newAdapter(t, h)
 
 	page, err := adapter.List(t.Context(), actor(), records.Query{
-		Filters: map[string][]string{medication.FilterStatus: {string(clinical.TherapyStatusStopped)}},
+		PatientID: medicationtest.PatientID,
+		Filters:   map[string][]string{medication.FilterStatus: {string(clinical.TherapyStatusStopped)}},
 	})
 	require.NoError(t, err)
 	assert.Empty(t, page.Items)
@@ -172,7 +171,8 @@ func TestTheAdapterNarrowsByThePublishedParameter(t *testing.T) {
 		h.repository.LastQuery().Statuses)
 
 	_, err = adapter.List(t.Context(), actor(), records.Query{
-		Filters: map[string][]string{medication.FilterStatus: {"lapsed"}},
+		PatientID: medicationtest.PatientID,
+		Filters:   map[string][]string{medication.FilterStatus: {"lapsed"}},
 	})
 
 	var invalid *domain.ValidationError
@@ -188,7 +188,7 @@ func TestTheAdapterDecodesThroughTheCodec(t *testing.T) {
 	h := newHarness(t)
 	adapter := newAdapter(t, h)
 
-	created, err := adapter.Create(t.Context(), actor(), &medicationtest.Create{Name: "Amoxicillin", Dosage: "500 mg"})
+	created, err := adapter.Create(t.Context(), actor(), &medicationtest.Create{Patient: medicationtest.PatientID, Name: "Amoxicillin", Dosage: "500 mg"})
 	require.NoError(t, err)
 
 	detail, isDetail := created.Body.(*medicationtest.Detail)
@@ -242,7 +242,7 @@ func TestTheStreamFilterAdmitsAChangeAndRefusesAnEventThatNamesNothing(t *testin
 
 	filter := medication.StreamFilter{}
 
-	assert.True(t, filter.Streams("somerecord0001", medicationtest.OwnerID))
-	assert.False(t, filter.Streams("", medicationtest.OwnerID), "an event naming no record was admitted")
-	assert.False(t, filter.Streams("somerecord0001", ""), "an event naming no owner was admitted")
+	assert.True(t, filter.Streams("somerecord0001", medicationtest.PatientID))
+	assert.False(t, filter.Streams("", medicationtest.PatientID), "an event naming no record was admitted")
+	assert.False(t, filter.Streams("somerecord0001", ""), "an event naming no patient was admitted")
 }

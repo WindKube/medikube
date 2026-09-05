@@ -52,7 +52,7 @@ var scenarioTests = map[string]string{
 	"US2-S11": "medikube/internal/web/api.TestEveryUnusableRecoveryLinkIsAnsweredTheSameWay",
 
 	"US3-S1": "medikube/internal/web/api.TestEveryNotFoundOnTheRecordSurfaceIsTheSameResponse",
-	"US3-S2": "medikube/internal/service/medication.TestARefusalWritesOneAccessDeniedRowNamingTheIdentityAsAddressed",
+	"US3-S2": "medikube/internal/service/access.TestPatientRefusesAStrangerAsANotFoundAndAuditsIt",
 	"US3-S3": "medikube/internal/web/api.TestEveryRouteTheTableDoesNotPublishRefusesAnAnonymousCaller",
 	"US3-S4": "medikube/internal/web/api.TestNoPocketBaseBrowsingSurfaceAnswersAnOrdinaryAccount",
 	"US3-S5": "medikube/internal/testsupport/phileak.TestNothingAPersonRecordedReachesADiagnosticSink",

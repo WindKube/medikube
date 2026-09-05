@@ -9,6 +9,7 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
+	"medikube/internal/testsupport"
 	"medikube/internal/testsupport/seed"
 	"medikube/internal/web/views/records"
 )
@@ -51,7 +52,7 @@ func everyFieldFilledIn(t *testing.T) clinical.Medication {
 
 	return clinical.Medication{
 		ID:              seed.SingleDayID,
-		OwnerID:         seed.AccountAID,
+		PatientID:       testsupport.AccountAPatientSelfID,
 		Name:            "Atorvastatin",
 		AlternativeName: "Lipitor",
 		Type:            clinical.MedicationTypePrescription,

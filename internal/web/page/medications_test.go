@@ -10,12 +10,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
+	"medikube/internal/domain/person"
 	"medikube/internal/httproute"
 	"medikube/internal/testsupport"
 	"medikube/internal/testsupport/seed"
@@ -135,16 +138,18 @@ func TestEachRecordPageRendersTheLandmarkItsRouteDeclares(t *testing.T) {
 func TestTheListPageShowsEverythingTheAccountOwnsAndNothingElse(t *testing.T) {
 	t.Parallel()
 
-	_, _, body := newBrowser(t).get(pageRoutes(t)[page.OpMedicationListPage].Path)
+	browser := newBrowser(t)
+	_, _, body := browser.get(pageRoutes(t)[page.OpMedicationListPage].Path +
+		"?patient=" + testsupport.AccountAPatientSelfID)
 
 	for _, medication := range seed.Medications() {
-		switch medication.OwnerID {
-		case seed.AccountAID:
+		switch medication.PatientID {
+		case testsupport.AccountAPatientSelfID:
 			assert.Contains(t, body, html.EscapeString(medication.Name),
-				"the owner's list is missing %s", medication.ID)
-		case seed.AccountBID:
+				"the patient's list is missing %s", medication.ID)
+		case testsupport.AccountBPatientSelfID:
 			assert.NotContains(t, body, html.EscapeString(medication.Name),
-				"another account's %s is on this list", medication.ID)
+				"another patient's %s is on this list", medication.ID)
 		}
 	}
 }
@@ -156,8 +161,10 @@ func TestTheListPageShowsEverythingTheAccountOwnsAndNothingElse(t *testing.T) {
 func TestAnAccountWithNothingRecordedStillGetsTheLandmark(t *testing.T) {
 	t.Parallel()
 
-	_, _, body := newBrowser(t).as(testsupport.AccountCEmail).
-		get(pageRoutes(t)[page.OpMedicationListPage].Path)
+	browser := newBrowser(t).as(testsupport.AccountCEmail)
+	patientID := selfRecordPatientID(t, browser, testsupport.AccountCID)
+
+	_, _, body := browser.get(pageRoutes(t)[page.OpMedicationListPage].Path + "?patient=" + patientID)
 
 	region := strings.Index(body, attribute("id", ids.RecordList(kind.Medication)))
 	empty := strings.Index(body, attribute("id", ids.RecordEmpty(kind.Medication)))
@@ -241,6 +248,48 @@ var streamBeats = regexp.MustCompile(`stream_beat: &#39;[^&]*&#39;`)
 // byte for byte, which is the whole of FR-033.
 func volatile(body string) string {
 	return streamBeats.ReplaceAllString(requestIDs.ReplaceAllString(body, ""), "")
+}
+
+// selfRecordPatientID is the id of the patient FR-005's automatic
+// provisioning attributed to an account, looked up at test time rather than
+// hardcoded: Account C carries no patient in the static seed table (that is
+// the point of it, data-model.md §9), so the only way to a patient id for it
+// is the self-record the provisioning migration or hook actually wrote.
+//
+// The committed fixture never exercises that provisioning itself: it is built
+// by migrating a blank instance and only then seeding it, so a migration-time
+// backfill never sees the accounts the seed goes on to create, and the
+// registration-time hook is a different story's (US1's) work landing in a
+// separate worktree. Rather than let this test's assertion about the record
+// list's empty-state landmark depend on either of those, it provisions the
+// same shape of row directly — which is exactly what FR-005 says one of those
+// two mechanisms would have written.
+func selfRecordPatientID(t *testing.T, b *browser, ownerID string) string {
+	t.Helper()
+
+	var row struct {
+		ID string `db:"id"`
+	}
+
+	err := b.app.RecordQuery("patients").
+		Select("id").
+		AndWhere(dbx.HashExp{"owner": ownerID, "is_self_record": true}).
+		Limit(1).
+		One(&row)
+	if err == nil {
+		return row.ID
+	}
+
+	collection, err := b.app.FindCollectionByNameOrId("patients")
+	require.NoError(t, err)
+
+	record := core.NewRecord(collection)
+	record.Set("owner", ownerID)
+	record.Set("is_self_record", true)
+	record.Set("relationship_to_owner", string(person.RelationshipSelf))
+	require.NoError(t, b.app.Save(record), "provisioning a self-record for %s", ownerID)
+
+	return record.Id
 }
 
 func seeded(t *testing.T, id string) clinical.Medication {
@@ -359,13 +408,14 @@ func TestTheListPageNarrowsByEveryParameterTheAPIPublishes(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			status, _, body := newBrowser(t).get(list + "?" + testCase.query)
+			status, _, body := newBrowser(t).get(
+				list + "?patient=" + testsupport.AccountAPatientSelfID + "&" + testCase.query)
 			require.Equal(t, http.StatusOK, status)
 
 			var expected []string
 
 			for _, medication := range seed.Medications() {
-				if medication.OwnerID == seed.AccountAID && testCase.keeps(medication) {
+				if medication.PatientID == testsupport.AccountAPatientSelfID && testCase.keeps(medication) {
 					expected = append(expected, medication.ID)
 				}
 			}
@@ -387,7 +437,7 @@ func TestTheListPageCarriesTheAddressOfItsNextPage(t *testing.T) {
 	browser := newBrowser(t)
 
 	seen := map[string]bool{}
-	address := list + "?limit=1"
+	address := list + "?patient=" + testsupport.AccountAPatientSelfID + "&limit=1"
 
 	for page := 1; page <= 3; page++ {
 		status, _, body := browser.get(address)
@@ -413,7 +463,7 @@ func TestTheLastPageOffersNoWayOn(t *testing.T) {
 	t.Parallel()
 
 	_, _, body := newBrowser(t).as(testsupport.AccountBEmail).
-		get(pageRoutes(t)[page.OpMedicationListPage].Path)
+		get(pageRoutes(t)[page.OpMedicationListPage].Path + "?patient=" + testsupport.AccountBPatientSelfID)
 
 	require.Len(t, recordRows(body), 3, "the fixture no longer gives account B a list that fits on one page")
 	assert.Empty(t, nextLink(t, body), "a complete list offered a next page")
@@ -483,8 +533,13 @@ func TestThePageAndTheJSONAnswerTheSameQuestion(t *testing.T) {
 		t.Run("?"+query, func(t *testing.T) {
 			t.Parallel()
 
-			pageStatus, _, body := browser.get(list + "?" + query)
-			jsonStatus, items := browser.list(collection + "?" + query)
+			scoped := "patient=" + testsupport.AccountAPatientSelfID
+			if query != "" {
+				scoped += "&" + query
+			}
+
+			pageStatus, _, body := browser.get(list + "?" + scoped)
+			jsonStatus, items := browser.list(collection + "?" + scoped)
 
 			require.Equal(t, jsonStatus, pageStatus,
 				"the page and the JSON disagree about whether %q is a valid request", query)

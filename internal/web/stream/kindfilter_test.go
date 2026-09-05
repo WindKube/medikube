@@ -55,8 +55,8 @@ func TestASelectedKindIsStreamedAndAnUnselectedOneIsNot(t *testing.T) {
 	// The unselected kind first, then the selected one. Once the second frame
 	// has arrived the first event has provably been through the loop, so
 	// "nothing was sent for it" is a fact rather than a wait.
-	rig.publish(realtime.Event{Kind: recordstest.Kind, RecordID: seeded[recordstest.Kind], OwnerID: recordstest.OwnerID})
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: seeded[kind.Medication], OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: recordstest.Kind, RecordID: seeded[recordstest.Kind], PatientID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: seeded[kind.Medication], PatientID: recordstest.OwnerID})
 
 	frame := rig.next()
 	assert.Equal(t, rowSelector(kind.Medication, seeded[kind.Medication]), frame.selector(),
@@ -72,8 +72,8 @@ func TestAnAbsentKindParameterSubscribesToEveryRegisteredKind(t *testing.T) {
 
 	rig.drainHeartbeat()
 
-	rig.publish(realtime.Event{Kind: recordstest.Kind, RecordID: seeded[recordstest.Kind], OwnerID: recordstest.OwnerID})
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: seeded[kind.Medication], OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: recordstest.Kind, RecordID: seeded[recordstest.Kind], PatientID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: seeded[kind.Medication], PatientID: recordstest.OwnerID})
 
 	assert.Equal(t, rowSelector(recordstest.Kind, seeded[recordstest.Kind]), rig.next().selector())
 	assert.Equal(t, rowSelector(kind.Medication, seeded[kind.Medication]), rig.next().selector())
@@ -90,8 +90,8 @@ func TestSeveralSelectedKindsAreAllStreamed(t *testing.T) {
 
 	rig.drainHeartbeat()
 
-	rig.publish(realtime.Event{Kind: recordstest.Kind, RecordID: seeded[recordstest.Kind], OwnerID: recordstest.OwnerID})
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: seeded[kind.Medication], OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: recordstest.Kind, RecordID: seeded[recordstest.Kind], PatientID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: seeded[kind.Medication], PatientID: recordstest.OwnerID})
 
 	assert.Equal(t, rowSelector(recordstest.Kind, seeded[recordstest.Kind]), rig.next().selector())
 	assert.Equal(t, rowSelector(kind.Medication, seeded[kind.Medication]), rig.next().selector())

@@ -297,6 +297,29 @@ func storedVersion(t *testing.T, c *caller, id string) string {
 	return store.Version(record)
 }
 
+// newPatientFor is one minimal patient owned by the given account, for a test
+// that needs a real patient id to scope a request by. Account C carries no
+// patient at all in the static seed table (data-model.md §9's deliberate
+// "nothing recorded" account), and the repoint migration's provisioning only
+// ever reaches accounts that existed before it ran — the fixture's migrations
+// run before its accounts are seeded — so no self-record is ever minted for
+// Account C in this fixture, and a test that needs one for it makes its own.
+func newPatientFor(t *testing.T, c *caller, ownerID string) string {
+	t.Helper()
+
+	collection, err := c.app.FindCollectionByNameOrId("patients")
+	require.NoError(t, err)
+
+	record := core.NewRecord(collection)
+	record.Set("owner", ownerID)
+	record.Set("first_name", "Test")
+	record.Set("last_name", "Patient")
+
+	require.NoError(t, c.app.Save(record))
+
+	return record.Id
+}
+
 // storedCount is every medication in the instance, both accounts. A refused
 // write that stored a row for the WRONG account would be invisible to a count
 // scoped to the caller, which is the point of not scoping it.
@@ -309,8 +332,8 @@ func storedCount(t *testing.T, c *caller) int {
 	return len(rows)
 }
 
-// storedCountOf is one account's rows.
-func storedCountOf(t *testing.T, c *caller, ownerID string) int {
+// storedCountOf is one patient's rows.
+func storedCountOf(t *testing.T, c *caller, patientID string) int {
 	t.Helper()
 
 	rows, err := c.app.FindAllRecords(kind.Medication.Collection())
@@ -319,7 +342,7 @@ func storedCountOf(t *testing.T, c *caller, ownerID string) int {
 	owned := 0
 
 	for _, row := range rows {
-		if row.GetString("owner") == ownerID {
+		if row.GetString("patient") == patientID {
 			owned++
 		}
 	}

@@ -85,8 +85,8 @@ var wired = map[string]func(t *testing.T, registry *records.Registry, entry reco
 	records.ConsumerAuthorizer: func(t *testing.T, _ *records.Registry, entry records.Entry) {
 		require.NotNil(t, entry.Authorizer)
 
-		grant, err := entry.Authorizer.Record(context.Background(),
-			access.Actor{UserID: recordstest.OwnerID}, kind.Medication, "r1", access.PermView)
+		grant, err := entry.Authorizer.Patient(context.Background(),
+			access.Actor{UserID: recordstest.OwnerID}, "r1", access.PermView)
 		require.NoError(t, err)
 		assert.True(t, grant.Allows(access.PermView))
 	},

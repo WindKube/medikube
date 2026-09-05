@@ -37,6 +37,7 @@ func TestAFailingOperationInsideATransactionRollsBackCompletely(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "rollback@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
 	require.Zero(t, countMedications(t, app))
 
@@ -49,9 +50,9 @@ func TestAFailingOperationInsideATransactionRollsBackCompletely(t *testing.T) {
 		for _, name := range []string{"Amoxicillin", "Ibuprofen", "Metformin"} {
 			record := core.NewRecord(collection)
 			if mapErr := MedicationToRecord(record, clinical.Medication{
-				OwnerID: owner.Id,
-				Name:    name,
-				Status:  clinical.TherapyStatusActive,
+				PatientID: patient.Id,
+				Name:      name,
+				Status:    clinical.TherapyStatusActive,
 			}); mapErr != nil {
 				return mapErr
 			}
@@ -79,6 +80,7 @@ func TestASucceedingTransactionCommitsEverythingInIt(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "commit@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
 	require.NoError(t, RunInTransaction(app, func(txApp core.App) error {
 		collection, findErr := txApp.FindCollectionByNameOrId(kind.Medication.Collection())
@@ -87,9 +89,9 @@ func TestASucceedingTransactionCommitsEverythingInIt(t *testing.T) {
 		for _, name := range []string{"Amoxicillin", "Ibuprofen"} {
 			record := core.NewRecord(collection)
 			require.NoError(t, MedicationToRecord(record, clinical.Medication{
-				OwnerID: owner.Id,
-				Name:    name,
-				Status:  clinical.TherapyStatusActive,
+				PatientID: patient.Id,
+				Name:      name,
+				Status:    clinical.TherapyStatusActive,
 			}))
 			require.NoError(t, txApp.Save(record))
 		}
@@ -135,6 +137,7 @@ func TestAFailingTransactionFiresNoAfterSuccessHookAndAFailingOneFiresTheError(t
 
 			app := newTestApp(t)
 			owner := seedUser(t, app, "hooks@example.test")
+			patient := seedPatient(t, app, owner.Id)
 
 			var (
 				mu             sync.Mutex
@@ -183,9 +186,9 @@ func TestAFailingTransactionFiresNoAfterSuccessHookAndAFailingOneFiresTheError(t
 
 				record := core.NewRecord(collection)
 				require.NoError(t, MedicationToRecord(record, clinical.Medication{
-					OwnerID: owner.Id,
-					Name:    "Amoxicillin",
-					Status:  clinical.TherapyStatusActive,
+					PatientID: patient.Id,
+					Name:      "Amoxicillin",
+					Status:    clinical.TherapyStatusActive,
 				}))
 				require.NoError(t, txApp.Save(record))
 
@@ -231,6 +234,7 @@ func TestAFailingTransactionSendsNothingToARealtimeSubscriber(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "realtime@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
 	// This is what binds the nine realtime handlers, including the
 	// record-create broadcast (apis/base.go:49 -> apis/realtime.go:40).
@@ -287,9 +291,9 @@ func TestAFailingTransactionSendsNothingToARealtimeSubscriber(t *testing.T) {
 
 		record := core.NewRecord(collection)
 		if mapErr := MedicationToRecord(record, clinical.Medication{
-			OwnerID: owner.Id,
-			Name:    name,
-			Status:  clinical.TherapyStatusActive,
+			PatientID: patient.Id,
+			Name:      name,
+			Status:    clinical.TherapyStatusActive,
 		}); mapErr != nil {
 			return mapErr
 		}
@@ -338,6 +342,7 @@ func TestANestedTransactionJoinsTheOuterOne(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "nested@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
 	err := RunInTransaction(app, func(outer core.App) error {
 		collection, findErr := outer.FindCollectionByNameOrId(kind.Medication.Collection())
@@ -345,9 +350,9 @@ func TestANestedTransactionJoinsTheOuterOne(t *testing.T) {
 
 		record := core.NewRecord(collection)
 		require.NoError(t, MedicationToRecord(record, clinical.Medication{
-			OwnerID: owner.Id,
-			Name:    "Amoxicillin",
-			Status:  clinical.TherapyStatusActive,
+			PatientID: patient.Id,
+			Name:      "Amoxicillin",
+			Status:    clinical.TherapyStatusActive,
 		}))
 		require.NoError(t, outer.Save(record))
 
@@ -381,6 +386,7 @@ func TestTheOuterAppCannotSeeInsideTheTransaction(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "escape@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
 	err := RunInTransaction(app, func(txApp core.App) error {
 		collection, findErr := txApp.FindCollectionByNameOrId(kind.Medication.Collection())
@@ -388,9 +394,9 @@ func TestTheOuterAppCannotSeeInsideTheTransaction(t *testing.T) {
 
 		record := core.NewRecord(collection)
 		require.NoError(t, MedicationToRecord(record, clinical.Medication{
-			OwnerID: owner.Id,
-			Name:    "Amoxicillin",
-			Status:  clinical.TherapyStatusActive,
+			PatientID: patient.Id,
+			Name:      "Amoxicillin",
+			Status:    clinical.TherapyStatusActive,
 		}))
 		require.NoError(t, txApp.Save(record))
 

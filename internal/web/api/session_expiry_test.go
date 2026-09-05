@@ -136,7 +136,7 @@ func TestEndingASessionRefusesItAtOnceRatherThanAtItsExpiry(t *testing.T) {
 // browser can: no Authorization header anywhere, because a plain navigation
 // cannot set one.
 func byCookie(c *caller, token string) response {
-	return c.anonymous().do(http.MethodGet, collectionURL(), "",
+	return c.anonymous().do(http.MethodGet, meURL, "",
 		map[string]string{"Cookie": web.SessionCookieName + "=" + token})
 }
 
@@ -147,7 +147,7 @@ func byHeader(c *caller, token string) response {
 		headers["Authorization"] = token
 	}
 
-	return c.anonymous().do(http.MethodGet, collectionURL(), "", headers)
+	return c.anonymous().do(http.MethodGet, meURL, "", headers)
 }
 
 func mustToken(t *testing.T, record *core.Record) string {

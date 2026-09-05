@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"medikube/internal/httproute"
+	"medikube/internal/testsupport"
 )
 
 // medicationsListPath is the route table's own address for P4, read back
@@ -80,7 +81,7 @@ func TestTheCurrentPageIsMarkedAriaCurrent(t *testing.T) {
 	rig := newBrowser(t)
 	medications := medicationsListPath(t)
 
-	_, _, body := rig.get(medications)
+	_, _, body := rig.get(medications + "?patient=" + testsupport.AccountAPatientSelfID)
 	nav := navMarkup(t, body)
 
 	assert.Containsf(t, nav, fmt.Sprintf("href=%q aria-current=\"page\"", medications),

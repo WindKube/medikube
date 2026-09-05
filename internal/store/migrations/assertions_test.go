@@ -15,6 +15,7 @@ import (
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/identity"
 	"medikube/internal/domain/kind"
+	"medikube/internal/domain/person"
 )
 
 // T075, T022. data-model §4 and phase 002's §7 relationship map, read off the
@@ -23,10 +24,6 @@ import (
 // the symptoms range from a medication that outlives the account that owned it
 // (FR-014, SC-012) to a patient's deletion silently deleting the account that
 // holds it (data-model §4).
-//
-// medications.patient is not here: research D-13's repoint is a later phase's
-// migration, not this one's, and asserting a field that does not exist yet
-// would pass for the wrong reason.
 func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 	t.Parallel()
 
@@ -47,9 +44,19 @@ func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 		consequence string
 	}{
 		{
-			relation:    relationRule{collection: kind.Medication.Collection(), field: medicationFieldOwner, required: true, cascadeDelete: true},
-			target:      users.Id,
-			consequence: "deleting an account must delete every medication row it owns, and a row without an owner is unreachable",
+			relation:    relationRule{collection: kind.Medication.Collection(), field: medicationFieldPatient, required: true, cascadeDelete: true},
+			target:      patients.Id,
+			consequence: "deleting a patient must delete every medication row filed against them, and a row without a patient is unreachable (research D-13)",
+		},
+		{
+			relation:    relationRule{collection: kind.Medication.Collection(), field: medicationFieldPractitioner, required: false, cascadeDelete: false},
+			target:      practitioners.Id,
+			consequence: "deleting a practitioner must unset a medication's prescriber reference, not delete the medication",
+		},
+		{
+			relation:    relationRule{collection: kind.Medication.Collection(), field: medicationFieldPharmacy, required: false, cascadeDelete: false},
+			target:      facilities.Id,
+			consequence: "deleting a facility must unset a medication's pharmacy reference, not delete the medication",
 		},
 		{
 			relation:    relationRule{collection: auditEventsCollection, field: auditFieldActor, required: false, cascadeDelete: false},
@@ -130,10 +137,16 @@ func TestDeletingAnAccountDeletesItsMedicationsAndOutlivesItsAuditTrail(t *testi
 
 	user := newUser(t, app, "amara@example.test")
 
+	patient := newRecord(t, app, patientsCollection, map[string]any{
+		patientFieldOwner:               user.Id,
+		patientFieldIsSelfRecord:        true,
+		patientFieldRelationshipToOwner: string(person.RelationshipSelf),
+	})
+
 	medication := newRecord(t, app, kind.Medication.Collection(), map[string]any{
-		medicationFieldOwner:  user.Id,
-		medicationFieldName:   "Amoxicillin",
-		medicationFieldStatus: string(clinical.TherapyStatusActive),
+		medicationFieldPatient: patient.Id,
+		medicationFieldName:    "Amoxicillin",
+		medicationFieldStatus:  string(clinical.TherapyStatusActive),
 	})
 
 	event := newRecord(t, app, auditEventsCollection, map[string]any{
@@ -148,7 +161,7 @@ func TestDeletingAnAccountDeletesItsMedicationsAndOutlivesItsAuditTrail(t *testi
 
 	require.NoError(t, app.Delete(user))
 
-	orphans, err := app.CountRecords(kind.Medication.Collection(), dbx.HashExp{medicationFieldOwner: user.Id})
+	orphans, err := app.CountRecords(kind.Medication.Collection(), dbx.HashExp{medicationFieldPatient: patient.Id})
 	require.NoError(t, err)
 	assert.EqualValues(t, 0, orphans, "SC-012: a deleted account leaves no medication behind")
 
@@ -296,7 +309,7 @@ func TestAssertRelationsRefusesAFlippedBoolean(t *testing.T) {
 			collection, err := app.FindCollectionByNameOrId(kind.Medication.Collection())
 			require.NoError(t, err)
 
-			relation, err := relationField(collection, medicationFieldOwner)
+			relation, err := relationField(collection, medicationFieldPatient)
 			require.NoError(t, err)
 			testCase.flip(relation)
 			require.NoError(t, app.Save(collection))
@@ -304,7 +317,7 @@ func TestAssertRelationsRefusesAFlippedBoolean(t *testing.T) {
 			err = AssertRelations(app)
 			require.Error(t, err)
 			assert.ErrorIs(t, err, ErrRelationMismatch)
-			assert.Contains(t, err.Error(), medicationFieldOwner)
+			assert.Contains(t, err.Error(), medicationFieldPatient)
 		})
 	}
 }

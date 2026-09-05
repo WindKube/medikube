@@ -41,17 +41,17 @@ func TestAWriteOnOneAccountReachesNoOtherAccountsStream(t *testing.T) {
 	amara := medikube.token(t, testsupport.AccountAEmail)
 	boris := medikube.token(t, testsupport.AccountBEmail)
 
-	watchingA := medikube.open(t, amara, "")
-	watchingB := medikube.open(t, boris, "")
+	watchingA := medikube.open(t, amara, "?patient="+testsupport.AccountAPatientSelfID)
+	watchingB := medikube.open(t, boris, "?patient="+testsupport.AccountBPatientSelfID)
 
 	require.Equal(t, 200, watchingA.Response.StatusCode)
 	require.Equal(t, 200, watchingB.Response.StatusCode)
 
 	// The write under test, on Amara's account.
-	hidden, _ := medikube.create(t, amara, "Amoxicillin")
+	hidden, _ := medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
 
 	// The barrier, on Boris's own account. Boris must receive this one.
-	barrier, _ := medikube.create(t, boris, "Ibuprofen")
+	barrier, _ := medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ibuprofen")
 
 	seenByB := watchingB.nextPatch(patchDeadline)
 	require.Equal(t, "#"+ids.RecordRow(kind.Medication, barrier), seenByB.selector(),
@@ -80,14 +80,14 @@ func TestADeletionOnOneAccountReachesNoOtherAccountsStream(t *testing.T) {
 	amara := medikube.token(t, testsupport.AccountAEmail)
 	boris := medikube.token(t, testsupport.AccountBEmail)
 
-	doomed, etag := medikube.create(t, amara, "Amoxicillin")
+	doomed, etag := medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
 
-	watchingA := medikube.open(t, amara, "")
-	watchingB := medikube.open(t, boris, "")
+	watchingA := medikube.open(t, amara, "?patient="+testsupport.AccountAPatientSelfID)
+	watchingB := medikube.open(t, boris, "?patient="+testsupport.AccountBPatientSelfID)
 
 	medikube.remove(t, amara, doomed, etag)
 
-	barrier, _ := medikube.create(t, boris, "Ibuprofen")
+	barrier, _ := medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ibuprofen")
 
 	seenByB := watchingB.nextPatch(patchDeadline)
 	require.Equal(t, "#"+ids.RecordRow(kind.Medication, barrier), seenByB.selector(),
@@ -123,19 +123,19 @@ func TestAPassiveSubscriberIsRefusedBeforeTheServiceAndAccusedOfNothing(t *testi
 	amara := medikube.token(t, testsupport.AccountAEmail)
 	boris := medikube.token(t, testsupport.AccountBEmail)
 
-	watchingB := medikube.open(t, boris, "")
+	watchingB := medikube.open(t, boris, "?patient="+testsupport.AccountBPatientSelfID)
 	require.Equal(t, 200, watchingB.Response.StatusCode)
 
 	before := len(denials(t, medikube, testsupport.AccountBID))
 
 	// Three writes on Amara's account, each of which the hub fans out to Boris.
 	for _, name := range []string{"Amoxicillin", "Bisoprolol", "Ciclosporin"} {
-		_, _ = medikube.create(t, amara, name)
+		_, _ = medikube.create(t, amara, testsupport.AccountAPatientSelfID, name)
 	}
 
 	// The barrier: once Boris has received his own record, all three of Amara's
 	// have been through his loop.
-	barrier, _ := medikube.create(t, boris, "Ibuprofen")
+	barrier, _ := medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ibuprofen")
 
 	seen := watchingB.nextPatch(patchDeadline)
 	require.Equal(t, "#"+ids.RecordRow(kind.Medication, barrier), seen.selector(),
@@ -175,13 +175,13 @@ func TestTheStreamCarriesNoRecordContentItDidNotRenderForThisSubscriber(t *testi
 	amara := medikube.token(t, testsupport.AccountAEmail)
 	boris := medikube.token(t, testsupport.AccountBEmail)
 
-	watching := medikube.open(t, boris, "")
+	watching := medikube.open(t, boris, "?patient="+testsupport.AccountBPatientSelfID)
 
 	const secret = "Amoxicillin"
 
-	_, _ = medikube.create(t, amara, secret)
+	_, _ = medikube.create(t, amara, testsupport.AccountAPatientSelfID, secret)
 
-	barrier, _ := medikube.create(t, boris, "Ibuprofen")
+	barrier, _ := medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ibuprofen")
 
 	require.Equal(t, "#"+ids.RecordRow(kind.Medication, barrier), watching.nextPatch(patchDeadline).selector())
 
@@ -216,7 +216,7 @@ func TestTheOpenStreamCarriesTheContractsHeaders(t *testing.T) {
 
 	medikube := serve(t, fastHeartbeat())
 
-	watching := medikube.open(t, medikube.token(t, testsupport.AccountAEmail), "")
+	watching := medikube.open(t, medikube.token(t, testsupport.AccountAEmail), "?patient="+testsupport.AccountAPatientSelfID)
 
 	require.Equal(t, 200, watching.Response.StatusCode)
 

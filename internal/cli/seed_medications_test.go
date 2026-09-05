@@ -40,9 +40,11 @@ func TestTheSeededMedicationSetIsTheMixedSetTheContractsDescribe(t *testing.T) {
 	medications := seed.Medications()
 	require.NotEmpty(t, medications, "the seed writes no %s rows at all", kind.Medication.Collection())
 
+	owners := patientOwners()
+
 	byOwner := make(map[string][]clinical.Medication)
 	for _, medication := range medications {
-		byOwner[medication.OwnerID] = append(byOwner[medication.OwnerID], medication)
+		byOwner[owners[medication.PatientID]] = append(byOwner[owners[medication.PatientID]], medication)
 	}
 
 	t.Run("the counts are the ones every test is pinned to", func(t *testing.T) {
@@ -79,8 +81,8 @@ func TestTheSeededMedicationSetIsTheMixedSetTheContractsDescribe(t *testing.T) {
 		owned := make(map[string]string, len(medications))
 		for _, medication := range medications {
 			previous, duplicate := owned[medication.ID]
-			require.Falsef(t, duplicate, "%s is seeded twice, for %s and %s", medication.ID, previous, medication.OwnerID)
-			owned[medication.ID] = medication.OwnerID
+			require.Falsef(t, duplicate, "%s is seeded twice, for %s and %s", medication.ID, previous, medication.PatientID)
+			owned[medication.ID] = medication.PatientID
 		}
 	})
 
@@ -136,6 +138,35 @@ func TestTheSeededMedicationSetIsTheMixedSetTheContractsDescribe(t *testing.T) {
 	})
 }
 
+// patientOwners maps every seeded patient to the account that owns it. A
+// medication names a patient and not an account (research D-13), so every
+// assertion in this file that is stated per account reaches the account
+// through the patient a row belongs to.
+func patientOwners() map[string]string {
+	owners := make(map[string]string)
+	for _, patient := range seed.Patients() {
+		owners[patient.ID] = patient.OwnerID
+	}
+
+	return owners
+}
+
+// patientsOf is every patient id data-model §9 seeds for one account, boxed
+// for dbx.HashExp: only []interface{} gets its IN-clause treatment
+// (dbx/expression.go's HashExp.Build) — a []string falls through to the
+// single-value branch and dbx refuses to bind a slice as one parameter.
+func patientsOf(accountID string) []interface{} {
+	var ids []interface{}
+
+	for _, patient := range seed.Patients() {
+		if patient.OwnerID == accountID {
+			ids = append(ids, patient.ID)
+		}
+	}
+
+	return ids
+}
+
 // optionalsEmpty reports whether every field FR-014 leaves optional is unset.
 // Name and Status are absent from the check because they are the two the
 // partial row does carry.
@@ -166,7 +197,7 @@ func TestSeedWritesTheMixedSetIntoTheDatabase(t *testing.T) {
 		{testsupport.AccountBID, testsupport.AccountBMedicationCount},
 		{testsupport.AccountCID, testsupport.AccountCMedicationCount},
 	} {
-		owned, err := app.CountRecords(kind.Medication.Collection(), dbx.HashExp{"owner": account.id})
+		owned, err := app.CountRecords(kind.Medication.Collection(), dbx.HashExp{"patient": patientsOf(account.id)})
 		require.NoError(t, err)
 		assert.Equalf(t, int64(account.count), owned, "%s holds a different number of records than the seed table declares", account.id)
 	}

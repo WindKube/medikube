@@ -19,8 +19,8 @@ func TestTheInMemoryRepositoryPassesTheContract(t *testing.T) {
 
 	medicationtest.RunRepositoryContract(t, func(*testing.T) (medication.Repository, medicationtest.Accounts) {
 		return medicationtest.NewRepository(), medicationtest.Accounts{
-			Owner:    medicationtest.OwnerID,
-			Stranger: medicationtest.StrangerID,
+			Patient:         medicationtest.PatientID,
+			StrangerPatient: medicationtest.StrangerPatientID,
 		}
 	})
 }

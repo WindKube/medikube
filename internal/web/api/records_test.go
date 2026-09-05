@@ -70,7 +70,8 @@ func TestTheRecordFamilyAnswersEveryDocumentedShape(t *testing.T) {
 			withAuth: true,
 			build: func(headers map[string]string) tests.ApiScenario {
 				return tests.ApiScenario{
-					Method: http.MethodGet, URL: crossKindURL() + "?limit=2", Headers: headers,
+					Method: http.MethodGet,
+					URL:    crossKindURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&limit=2", Headers: headers,
 					ExpectedStatus: http.StatusOK,
 					ExpectedContent: []string{
 						`"items":[`,
@@ -85,7 +86,10 @@ func TestTheRecordFamilyAnswersEveryDocumentedShape(t *testing.T) {
 			withAuth: true,
 			build: func(headers map[string]string) tests.ApiScenario {
 				return tests.ApiScenario{
-					Method: http.MethodGet, URL: collectionURL() + "?limit=2&count=true", Headers: headers,
+					Method: http.MethodGet,
+					URL: collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID +
+						"&limit=2&count=true",
+					Headers:        headers,
 					ExpectedStatus: http.StatusOK,
 					ExpectedContent: []string{
 						`"items":[`,
@@ -114,7 +118,8 @@ func TestTheRecordFamilyAnswersEveryDocumentedShape(t *testing.T) {
 			withAuth: true,
 			build: func(headers map[string]string) tests.ApiScenario {
 				return tests.ApiScenario{
-					Method: http.MethodGet, URL: collectionURL() + "?sort=owner", Headers: headers,
+					Method: http.MethodGet,
+					URL:    collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&sort=owner", Headers: headers,
 					ExpectedStatus: http.StatusUnprocessableEntity,
 					ExpectedContent: []string{
 						`"code":"` + domain.CodeValidationFailed + `"`,
@@ -129,7 +134,8 @@ func TestTheRecordFamilyAnswersEveryDocumentedShape(t *testing.T) {
 			withAuth: true,
 			build: func(headers map[string]string) tests.ApiScenario {
 				return tests.ApiScenario{
-					Method: http.MethodGet, URL: collectionURL() + "?limit=1000", Headers: headers,
+					Method: http.MethodGet,
+					URL:    collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&limit=1000", Headers: headers,
 					ExpectedStatus:  http.StatusUnprocessableEntity,
 					ExpectedContent: []string{`"field":"` + web.ParamLimit + `"`},
 				}
@@ -140,7 +146,10 @@ func TestTheRecordFamilyAnswersEveryDocumentedShape(t *testing.T) {
 			withAuth: true,
 			build: func(headers map[string]string) tests.ApiScenario {
 				return tests.ApiScenario{
-					Method: http.MethodGet, URL: collectionURL() + "?cursor=not-a-cursor", Headers: headers,
+					Method: http.MethodGet,
+					URL: collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID +
+						"&cursor=not-a-cursor",
+					Headers:         headers,
 					ExpectedStatus:  http.StatusBadRequest,
 					ExpectedContent: []string{`"code":"` + web.CodeInvalidCursor + `"`},
 				}
@@ -152,7 +161,8 @@ func TestTheRecordFamilyAnswersEveryDocumentedShape(t *testing.T) {
 			build: func(headers map[string]string) tests.ApiScenario {
 				return tests.ApiScenario{
 					Method: http.MethodPost, URL: collectionURL(), Headers: headers,
-					Body:           strings.NewReader(`{"name":"Amoxicillin","dosage":"500 mg"}`),
+					Body: strings.NewReader(`{"patient":"` + testsupport.AccountAPatientSelfID +
+						`","name":"Amoxicillin","dosage":"500 mg"}`),
 					ExpectedStatus: http.StatusCreated,
 					ExpectedContent: []string{
 						`"kind":"` + kind.Medication.Enum() + `"`,
@@ -168,7 +178,8 @@ func TestTheRecordFamilyAnswersEveryDocumentedShape(t *testing.T) {
 			build: func(headers map[string]string) tests.ApiScenario {
 				return tests.ApiScenario{
 					Method: http.MethodPost, URL: collectionURL(), Headers: headers,
-					Body:           strings.NewReader(`{"name":"Amoxicillin","owner":"` + testsupport.AccountBID + `"}`),
+					Body: strings.NewReader(`{"patient":"` + testsupport.AccountAPatientSelfID +
+						`","name":"Amoxicillin","owner":"` + testsupport.AccountBID + `"}`),
 					ExpectedStatus: http.StatusUnprocessableEntity,
 					ExpectedContent: []string{
 						`"field":"owner"`,

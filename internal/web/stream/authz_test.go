@@ -43,7 +43,7 @@ func TestTheCheckpointIsConsultedOncePerEventAndNotOncePerStream(t *testing.T) {
 	const events = 4
 
 	for range events {
-		rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, OwnerID: recordstest.OwnerID})
+		rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, PatientID: recordstest.OwnerID})
 		require.Equal(t, "datastar-patch-elements", rig.next().Event)
 	}
 
@@ -55,33 +55,37 @@ func TestTheCheckpointIsConsultedOncePerEventAndNotOncePerStream(t *testing.T) {
 
 	for index, call := range consultations {
 		assert.Equalf(t, recordstest.OwnerID, call.Actor, "check %d was made for somebody else", index)
-		assert.Equalf(t, kind.Medication, call.Kind, "check %d named the wrong kind", index)
-		assert.Equalf(t, id, call.Record, "check %d named the wrong record", index)
+		assert.Equalf(t, recordstest.OwnerID, call.PatientID, "check %d named the wrong patient", index)
 		assert.Equalf(t, access.PermView, call.Need, "check %d asked for the wrong permission", index)
 	}
 }
 
 // A refusal is zero frames. Not an empty patch, not a removal: a removal names
 // a record id, and naming one is the disclosure FR-033 closes.
+//
+// Authorization is patient-level (research D-13): a stream is opened for one
+// patient, so a refusal is refused for every one of that patient's records and
+// not for one record while a sibling stays visible.
 func TestARefusedEventProducesNoFrameAtAll(t *testing.T) {
 	t.Parallel()
 
 	rig := newRig(t)
 
 	refused := seeded(t, rig)
-	allowed := seeded(t, rig)
 
-	rig.authorizer.deny(refused)
+	rig.authorizer.deny(recordstest.OwnerID)
 
 	rig.drainHeartbeat()
 
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: refused, OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: refused, PatientID: recordstest.OwnerID})
 
-	rig.silenceUntil(
-		realtime.Event{Kind: kind.Medication, RecordID: allowed, OwnerID: recordstest.OwnerID},
-		rowSelector(kind.Medication, allowed))
+	select {
+	case f := <-rig.frames:
+		t.Fatalf("a refused event produced a frame: %+v", f)
+	case <-time.After(200 * time.Millisecond):
+	}
 
-	require.Len(t, rig.authorizer.consultations(), 2,
+	require.Len(t, rig.authorizer.consultations(), 1,
 		"the refused event never reached the checkpoint, so this test would pass with the check removed")
 }
 
@@ -94,20 +98,22 @@ func TestLosingAccessMidStreamStopsThePatchesAndNotTheStream(t *testing.T) {
 	rig := newRig(t)
 
 	id := seeded(t, rig)
-	other := seeded(t, rig)
 
 	rig.drainHeartbeat()
 
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, PatientID: recordstest.OwnerID})
 	require.Equal(t, rowSelector(kind.Medication, id), rig.next().selector())
 
-	rig.authorizer.deny(id)
+	rig.authorizer.deny(recordstest.OwnerID)
 
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, OwnerID: recordstest.OwnerID})
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: other, OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, PatientID: recordstest.OwnerID})
 
-	assert.Equal(t, rowSelector(kind.Medication, other), rig.next().selector(),
-		"the stream sent a patch for a record the subscriber may no longer see")
+	select {
+	case f := <-rig.frames:
+		t.Fatalf("a patch was sent for a patient the subscriber may no longer see: %+v", f)
+	case <-time.After(200 * time.Millisecond):
+	}
+
 	assert.NoError(t, rig.failure(), "losing access closed the stream instead of quietly stopping the patches")
 }
 
@@ -127,7 +133,7 @@ func TestACheckpointThatFailsEndsTheStreamRatherThanPatchingAnyway(t *testing.T)
 	broken := errors.New("the checkpoint could not answer")
 	rig.authorizer.failWith(broken)
 
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, PatientID: recordstest.OwnerID})
 
 	select {
 	case _, open := <-rig.frames:
@@ -151,7 +157,7 @@ func TestTheKindsOwnFilterCanKeepAnEventOffEveryStream(t *testing.T) {
 
 	rig.drainHeartbeat()
 
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, PatientID: recordstest.OwnerID})
 
 	select {
 	case f := <-rig.frames:
@@ -164,11 +170,12 @@ func TestTheKindsOwnFilterCanKeepAnEventOffEveryStream(t *testing.T) {
 		"an event the kind refused still reached the checkpoint")
 }
 
-// The removal path is owner-scoped, and that guard is load-bearing:
-// internal/service/access grants for an id that is not there (research D-20),
-// so without it a deletion on another account would put that account's record
-// id on this subscriber's wire.
-func TestARecordThatVanishedOnAnotherAccountProducesNoRemoval(t *testing.T) {
+// The removal path is patient-scoped, and that guard is load-bearing:
+// an event naming a patient other than the one this stream was opened for is
+// filtered before it reaches the checkpoint at all (step 0 of patch), so a
+// deletion on another patient's records never puts that patient's record id on
+// this subscriber's wire.
+func TestARecordThatVanishedOnAnotherPatientProducesNoRemoval(t *testing.T) {
 	t.Parallel()
 
 	rig := newRig(t)
@@ -177,10 +184,10 @@ func TestARecordThatVanishedOnAnotherAccountProducesNoRemoval(t *testing.T) {
 
 	rig.drainHeartbeat()
 
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: "mkstranger000001", OwnerID: "mkacctsomebody01"})
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: mine, OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: "mkstranger000001", PatientID: "mkacctsomebody01"})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: mine, PatientID: recordstest.OwnerID})
 
 	frame := rig.next()
 	assert.Equal(t, rowSelector(kind.Medication, mine), frame.selector(),
-		"a removal naming another account's record id reached this subscriber")
+		"a removal naming another patient's record id reached this subscriber")
 }

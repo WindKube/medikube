@@ -24,7 +24,8 @@ import (
 
 // fourViolationsAtOnce breaks four different rules, chosen so that no two share
 // a code: a required member, two vocabularies and the cross-field date rule.
-const fourViolationsAtOnce = `{
+var fourViolationsAtOnce = `{
+  "patient": "` + testsupport.AccountAPatientSelfID + `",
   "name": "   ",
   "type": "homeopathic",
   "started_on": "2025-06-10",
@@ -63,7 +64,7 @@ func TestABlankNameAndAnEndBeforeTheStartAreTwoEntriesInOneResponse(t *testing.T
 	caller := newCaller(t)
 
 	answer := caller.post(collectionURL(),
-		`{"name":"","dosage":"500 mg","started_on":"2025-06-10","ended_on":"2025-06-01"}`)
+		`{"patient":"`+testsupport.AccountAPatientSelfID+`","name":"","dosage":"500 mg","started_on":"2025-06-10","ended_on":"2025-06-01"}`)
 	require.Equal(t, http.StatusUnprocessableEntity, answer.Status, answer.Body)
 
 	assert.Equal(t, [][2]string{
@@ -86,6 +87,7 @@ func TestNoRefusalCarriesWhatWasTyped(t *testing.T) {
 	note := strings.Repeat("private-", 800)
 
 	answer := caller.post(collectionURL(), `{
+	  "patient": "`+testsupport.AccountAPatientSelfID+`",
 	  "name": "`+secret+`",
 	  "indication": "`+reason+`",
 	  "notes": "`+note+`",
@@ -111,6 +113,7 @@ func TestEveryFreeTextMaximumIsReportedAgainstItsOwnField(t *testing.T) {
 	tooLong := strings.Repeat("x", 5001)
 
 	answer := caller.post(collectionURL(), `{
+	  "patient": "`+testsupport.AccountAPatientSelfID+`",
 	  "name": "`+tooLong+`",
 	  "alternative_name": "`+tooLong+`",
 	  "dosage": "`+tooLong+`",
@@ -142,7 +145,8 @@ func TestBothMalformedDatesAreReportedTogether(t *testing.T) {
 
 	caller := newCaller(t)
 
-	answer := caller.post(collectionURL(), `{"name":"Amoxicillin","started_on":"2025-02-30","ended_on":"01/03/2025"}`)
+	answer := caller.post(collectionURL(),
+		`{"patient":"`+testsupport.AccountAPatientSelfID+`","name":"Amoxicillin","started_on":"2025-02-30","ended_on":"01/03/2025"}`)
 
 	require.Equal(t, http.StatusUnprocessableEntity, answer.Status, answer.Body)
 	assert.Equal(t, [][2]string{

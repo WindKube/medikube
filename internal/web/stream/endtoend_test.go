@@ -44,8 +44,8 @@ func TestAWriteReachesASecondOpenViewWithinFiveSeconds(t *testing.T) {
 
 	// Two open views on one account: the browser tab that makes the change and
 	// the one that has to learn about it.
-	acting := medikube.open(t, amara, "")
-	watching := medikube.open(t, amara, "")
+	acting := medikube.open(t, amara, "?patient="+testsupport.AccountAPatientSelfID)
+	watching := medikube.open(t, amara, "?patient="+testsupport.AccountAPatientSelfID)
 
 	require.Equal(t, http.StatusOK, acting.Response.StatusCode)
 	require.Equal(t, http.StatusOK, watching.Response.StatusCode)
@@ -54,7 +54,7 @@ func TestAWriteReachesASecondOpenViewWithinFiveSeconds(t *testing.T) {
 
 	started := time.Now()
 
-	created, _ := medikube.create(t, amara, name)
+	created, _ := medikube.create(t, amara, testsupport.AccountAPatientSelfID, name)
 
 	seen := watching.nextPatch(sc007)
 	elapsed := time.Since(started)
@@ -80,9 +80,9 @@ func TestAChangeAndADeletionBothReachASecondOpenView(t *testing.T) {
 
 	amara := medikube.token(t, testsupport.AccountAEmail)
 
-	created, etag := medikube.create(t, amara, "Amoxicillin")
+	created, etag := medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
 
-	watching := medikube.open(t, amara, "")
+	watching := medikube.open(t, amara, "?patient="+testsupport.AccountAPatientSelfID)
 	require.Equal(t, http.StatusOK, watching.Response.StatusCode)
 
 	const renamed = "Ibuprofen"
@@ -115,7 +115,7 @@ func TestAChangeCommittedWhileTheStreamIsOpeningIsNotLost(t *testing.T) {
 
 	amara := medikube.token(t, testsupport.AccountAEmail)
 
-	watching := medikube.open(t, amara, "")
+	watching := medikube.open(t, amara, "?patient="+testsupport.AccountAPatientSelfID)
 	require.Equal(t, http.StatusOK, watching.Response.StatusCode)
 
 	// Several writes in a row, faster than the subscriber drains them. The hub
@@ -125,7 +125,7 @@ func TestAChangeCommittedWhileTheStreamIsOpeningIsNotLost(t *testing.T) {
 	wanted := make([]string, 0, writes)
 
 	for range writes {
-		id, _ := medikube.create(t, amara, "Amoxicillin")
+		id, _ := medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
 		wanted = append(wanted, "#"+ids.RecordRow(kind.Medication, id))
 	}
 

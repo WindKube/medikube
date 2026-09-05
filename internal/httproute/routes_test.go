@@ -139,7 +139,10 @@ func TestTheTableCarriesTheElevenPages(t *testing.T) {
 		{"loginPage", "/login", httproute.AuthPublic, `form[name="Sign in"]`, "/login"},
 		{"registerPage", "/register", httproute.AuthPublic, `form[name="Create account"]`, "/register"},
 		{"overviewPage", "/", httproute.AuthUser, `region[name="Overview"]`, "/"},
-		{"medicationListPage", "/" + segment, httproute.AuthUser, `region[name="Medications"]`, "/" + segment},
+		{
+			"medicationListPage", "/" + segment, httproute.AuthUser, `region[name="Medications"]`,
+			"/" + segment + "?patient=" + seed.AccountAPatientSelfID,
+		},
 		{
 			"medicationDetailPage", "/" + segment + "/{id}", httproute.AuthUser,
 			`article[name="Medication"]`, "/" + segment + "/" + seed.NameOnlyID,

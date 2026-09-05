@@ -34,17 +34,22 @@ const (
 	strangerEmail = "stranger@example.test"
 )
 
-// harness is one instance, one repository and two accounts.
+// harness is one instance, one repository and two patients.
 //
 // A new one per test rather than one shared: the contract's ordering
 // assertions are written against a repository holding only what that case put
 // in it, and a shared instance would make every one of them depend on the order
 // the cases happen to run in.
+//
+// Patient and not owner (research D-13): the repository narrows a list by the
+// patient a medication names, and Get/Update/Delete are unscoped by design —
+// the service resolves and authorizes the patient from the row itself, so the
+// scoping this package still owns is List's alone.
 type harness struct {
-	app      *tests.TestApp
-	repo     *pbmedication.Repo
-	owner    string
-	stranger string
+	app             *tests.TestApp
+	repo            *pbmedication.Repo
+	patient         string
+	strangerPatient string
 }
 
 func newHarness(t *testing.T) harness {
@@ -63,18 +68,19 @@ func newHarness(t *testing.T) harness {
 	repo, err := pbmedication.New(app, codec)
 	require.NoError(t, err)
 
+	owner := seedAccount(t, app, ownerEmail)
+	stranger := seedAccount(t, app, strangerEmail)
+
 	return harness{
-		app:      app,
-		repo:     repo,
-		owner:    seedAccount(t, app, ownerEmail),
-		stranger: seedAccount(t, app, strangerEmail),
+		app:             app,
+		repo:            repo,
+		patient:         seedPatient(t, app, owner),
+		strangerPatient: seedPatient(t, app, stranger),
 	}
 }
 
 // seedAccount writes one account with every column the profile migration made
-// required. A medication cannot be stored without an owner that exists: the
-// column is a relation with a cascade, so a row pointing at nobody is refused
-// by the schema before it is refused by anything asserted here.
+// required.
 func seedAccount(t *testing.T, app core.App, email string) string {
 	t.Helper()
 
@@ -96,8 +102,28 @@ func seedAccount(t *testing.T, app core.App, email string) string {
 	return record.Id
 }
 
-func (h harness) draft(owner, name string) clinical.Medication {
-	return clinical.Medication{OwnerID: owner, Name: name, Status: clinical.TherapyStatusActive}
+// seedPatient writes one minimal patient. A medication cannot be stored
+// without a patient that exists: `patient` is a required relation
+// (research D-13), so a row pointing at nobody is refused by the schema
+// before it is refused by anything asserted here.
+func seedPatient(t *testing.T, app core.App, ownerID string) string {
+	t.Helper()
+
+	collection, err := app.FindCollectionByNameOrId("patients")
+	require.NoError(t, err)
+
+	record := core.NewRecord(collection)
+	record.Set("owner", ownerID)
+	record.Set("first_name", "Test")
+	record.Set("last_name", "Patient")
+
+	require.NoError(t, app.Save(record))
+
+	return record.Id
+}
+
+func (h harness) draft(patientID, name string) clinical.Medication {
+	return clinical.Medication{PatientID: patientID, Name: name, Status: clinical.TherapyStatusActive}
 }
 
 func (h harness) create(t *testing.T, ctx context.Context, entity clinical.Medication) clinical.Medication {
@@ -171,7 +197,7 @@ func (h harness) traverse(
 	for page := 1; ; page++ {
 		require.LessOrEqual(t, page, 200, "the traversal is not terminating")
 
-		got, err := h.repo.List(ctx, h.owner, query)
+		got, err := h.repo.List(ctx, h.patient, query)
 		require.NoError(t, err)
 
 		if query.Limit > 0 {
@@ -215,7 +241,7 @@ func duplicates(ids []string) []string {
 
 // T140. The PocketBase repository passes the same suite the in-memory fake
 // passes, which is the whole of Principle II: two implementations, one
-// contract. A property asserted against either alone — owner scoping, the
+// contract. A property asserted against either alone — patient scoping, the
 // version check, where an absent date sorts — is a property of that
 // implementation and not of the seam.
 func TestThePocketBaseRepositoryPassesTheSameContractTheFakeDoes(t *testing.T) {
@@ -226,7 +252,7 @@ func TestThePocketBaseRepositoryPassesTheSameContractTheFakeDoes(t *testing.T) {
 
 		h := newHarness(t)
 
-		return h.repo, medicationtest.Accounts{Owner: h.owner, Stranger: h.stranger}
+		return h.repo, medicationtest.Accounts{Patient: h.patient, StrangerPatient: h.strangerPatient}
 	})
 }
 
@@ -254,7 +280,7 @@ func TestKeysetPagingOverAThousandRowsNeitherRepeatsNorSkipsWhileTheListChanges(
 	drafts := make([]clinical.Medication, 0, rows)
 
 	for i := range rows {
-		row := h.draft(h.owner, fmt.Sprintf("Medicine %03d", i%nameCycle))
+		row := h.draft(h.patient, fmt.Sprintf("Medicine %03d", i%nameCycle))
 
 		// Every seventh row has no start date, so the traversal crosses from
 		// the dated rows into the undated tail and back out of it under both
@@ -291,14 +317,14 @@ func TestKeysetPagingOverAThousandRowsNeitherRepeatsNorSkipsWhileTheListChanges(
 		future, err := domain.NewDate(2099, time.January, 1)
 		require.NoError(t, err)
 
-		ahead := h.draft(h.owner, "Zafirlukast")
+		ahead := h.draft(h.patient, "Zafirlukast")
 		ahead.StartedOn = future
 		insertedID = h.create(t, ctx, ahead).ID
 
 		// And one that was already served disappears, which is the other half
 		// of contracts/records.md's "inserts and deletes rows between pages".
 		first := got.Items[0]
-		require.NoError(t, h.repo.Delete(ctx, h.owner, first.ID, first.Version))
+		require.NoError(t, h.repo.Delete(ctx, first.ID, first.Version))
 		deletedID = first.ID
 	})
 
@@ -340,7 +366,7 @@ func TestPagingCrossesTheAbsentDateBoundaryInBothDirections(t *testing.T) {
 	drafts := make([]clinical.Medication, 0, dated+undated)
 
 	for i := range dated {
-		row := h.draft(h.owner, fmt.Sprintf("Dated %02d", i))
+		row := h.draft(h.patient, fmt.Sprintf("Dated %02d", i))
 
 		started, err := domain.NewDate(2026, time.January+time.Month(i/28), 1+i%28)
 		require.NoError(t, err)
@@ -350,7 +376,7 @@ func TestPagingCrossesTheAbsentDateBoundaryInBothDirections(t *testing.T) {
 	}
 
 	for i := range undated {
-		drafts = append(drafts, h.draft(h.owner, fmt.Sprintf("Undated %02d", i)))
+		drafts = append(drafts, h.draft(h.patient, fmt.Sprintf("Undated %02d", i)))
 	}
 
 	seeded := h.seedBulk(t, drafts)
@@ -422,7 +448,7 @@ func TestEveryPublishedOrderingPagesTheSameSequenceTwice(t *testing.T) {
 	for i := range rows {
 		// Four rows share every name and four share every start date, so the
 		// tiebreaker decides rather than merely being present.
-		row := h.draft(h.owner, fmt.Sprintf("Medicine %02d", i%10))
+		row := h.draft(h.patient, fmt.Sprintf("Medicine %02d", i%10))
 
 		if i%5 != 0 {
 			started, err := domain.NewDate(2026, time.March, 1+i%10)
@@ -451,70 +477,70 @@ func TestEveryPublishedOrderingPagesTheSameSequenceTwice(t *testing.T) {
 	}
 }
 
-// The `q` term is an OR across two columns and the owner scope is a separate
+// The `q` term is an OR across two columns and the patient scope is a separate
 // conjunct outside it. This is what happens if the scope ever stops being one:
 // dropped, moved inside the disjunction, or made conditional on the search
-// being absent, one person's medications are served to another and every other
-// assertion in this file still passes.
+// being absent, one patient's medications are served to another and every
+// other assertion in this file still passes.
 //
-// It does not catch a disjunction merely *widened* to include the owner — that
-// leaves the scope in place as its own term, and it is refused at build time
-// anyway, which internal/store's TestATermMaySpanOnlyTheColumnsDeclaredSearchable
+// It does not catch a disjunction merely *widened* to include the patient —
+// that leaves the scope in place as its own term, and it is refused at build
+// time anyway, which internal/store's TestATermMaySpanOnlyTheColumnsDeclaredSearchable
 // is the assertion for. The two together are the guarantee: the shape cannot be
 // built, and if the scope goes missing by any other route this fails.
-func TestASearchNeverReachesPastTheOwner(t *testing.T) {
+func TestASearchNeverReachesPastThePatient(t *testing.T) {
 	t.Parallel()
 
 	h := newHarness(t)
 	ctx := t.Context()
 
-	mine := h.create(t, ctx, h.draft(h.owner, "Salbutamol"))
+	mine := h.create(t, ctx, h.draft(h.patient, "Salbutamol"))
 
-	theirs := h.draft(h.stranger, "Salbutamol")
+	theirs := h.draft(h.strangerPatient, "Salbutamol")
 	theirsStored, err := h.repo.Create(ctx, theirs)
 	require.NoError(t, err)
 
-	page, err := h.repo.List(ctx, h.owner, medication.Query{Search: "salbuta"})
+	page, err := h.repo.List(ctx, h.patient, medication.Query{Search: "salbuta"})
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{mine.ID}, pageIDs(page))
 	assert.NotContains(t, pageIDs(page), theirsStored.ID,
-		"the search reached past the owner scope into another account's records")
+		"the search reached past the patient scope into another patient's records")
 
-	// The same term against the owner's own account id, which is the value the
-	// scope compares against and the one an OR that swallowed the owner
-	// predicate would match on.
-	byOwnerID, err := h.repo.List(ctx, h.stranger, medication.Query{Search: h.owner})
+	// The same term against the patient's own id, which is the value the scope
+	// compares against and the one an OR that swallowed the patient predicate
+	// would match on.
+	byPatientID, err := h.repo.List(ctx, h.strangerPatient, medication.Query{Search: h.patient})
 	require.NoError(t, err)
 
-	assert.Empty(t, pageIDs(byOwnerID), "an account id searched as text matched rows")
+	assert.Empty(t, pageIDs(byPatientID), "a patient id searched as text matched rows")
 }
 
-// A cursor is sealed against the query it continues, and the owner is part of
-// that query. A boundary minted for one account and replayed against another is
-// not a boundary this instance issued.
-func TestACursorMintedForAnotherOwnerIsRefused(t *testing.T) {
+// A cursor is sealed against the query it continues, and the patient is part
+// of that query. A boundary minted for one patient and replayed against
+// another is not a boundary this instance issued.
+func TestACursorMintedForAnotherPatientIsRefused(t *testing.T) {
 	t.Parallel()
 
 	h := newHarness(t)
 	ctx := t.Context()
 
 	for i := range 3 {
-		h.create(t, ctx, h.draft(h.owner, fmt.Sprintf("Medicine %d", i)))
-		h.create(t, ctx, h.draft(h.stranger, fmt.Sprintf("Medicine %d", i)))
+		h.create(t, ctx, h.draft(h.patient, fmt.Sprintf("Medicine %d", i)))
+		h.create(t, ctx, h.draft(h.strangerPatient, fmt.Sprintf("Medicine %d", i)))
 	}
 
 	query := medication.Query{Sort: []domain.SortKey{{Field: medication.FieldName}}, Limit: 2}
 
-	page, err := h.repo.List(ctx, h.owner, query)
+	page, err := h.repo.List(ctx, h.patient, query)
 	require.NoError(t, err)
 	require.NotNil(t, page.NextCursor, "the fixture is too small to produce a boundary")
 
 	replayed := query
 	replayed.Cursor = *page.NextCursor
 
-	_, err = h.repo.List(ctx, h.stranger, replayed)
-	require.Error(t, err, "one account's boundary continued another account's list")
+	_, err = h.repo.List(ctx, h.strangerPatient, replayed)
+	require.Error(t, err, "one patient's boundary continued another patient's list")
 	assert.ErrorIs(t, err, store.ErrInvalidCursor)
 }
 
@@ -527,10 +553,10 @@ func TestTheWildcardsInASearchTermAreLiteral(t *testing.T) {
 	h := newHarness(t)
 	ctx := t.Context()
 
-	literal := h.create(t, ctx, h.draft(h.owner, "Hydrocortisone 1% cream"))
-	h.create(t, ctx, h.draft(h.owner, "Paracetamol"))
+	literal := h.create(t, ctx, h.draft(h.patient, "Hydrocortisone 1% cream"))
+	h.create(t, ctx, h.draft(h.patient, "Paracetamol"))
 
-	page, err := h.repo.List(ctx, h.owner, medication.Query{Search: "1%"})
+	page, err := h.repo.List(ctx, h.patient, medication.Query{Search: "1%"})
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{literal.ID}, pageIDs(page))
@@ -564,7 +590,7 @@ func TestAnOrderingTheResourceDoesNotPublishIsRefused(t *testing.T) {
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err := h.repo.List(t.Context(), h.owner, testCase.query)
+			_, err := h.repo.List(t.Context(), h.patient, testCase.query)
 			assert.Error(t, err)
 		})
 	}
@@ -601,7 +627,7 @@ func TestACancelledContextStopsEveryOperation(t *testing.T) {
 
 	h := newHarness(t)
 
-	stored := h.create(t, t.Context(), h.draft(h.owner, "Amoxicillin"))
+	stored := h.create(t, t.Context(), h.draft(h.patient, "Amoxicillin"))
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
@@ -611,17 +637,17 @@ func TestACancelledContextStopsEveryOperation(t *testing.T) {
 		call func() error
 	}{
 		{"list", func() error {
-			_, err := h.repo.List(ctx, h.owner, medication.Query{})
+			_, err := h.repo.List(ctx, h.patient, medication.Query{})
 
 			return err
 		}},
 		{"get", func() error {
-			_, err := h.repo.Get(ctx, h.owner, stored.ID)
+			_, err := h.repo.Get(ctx, stored.ID)
 
 			return err
 		}},
 		{"create", func() error {
-			_, err := h.repo.Create(ctx, h.draft(h.owner, "Bisoprolol"))
+			_, err := h.repo.Create(ctx, h.draft(h.patient, "Bisoprolol"))
 
 			return err
 		}},
@@ -633,7 +659,7 @@ func TestACancelledContextStopsEveryOperation(t *testing.T) {
 			return err
 		}},
 		{"delete", func() error {
-			return h.repo.Delete(ctx, h.owner, stored.ID, stored.Version)
+			return h.repo.Delete(ctx, stored.ID, stored.Version)
 		}},
 	}
 
@@ -645,71 +671,42 @@ func TestACancelledContextStopsEveryOperation(t *testing.T) {
 
 	// And nothing was written for any of it. The row is untouched and it is
 	// still the only one.
-	page, err := h.repo.List(t.Context(), h.owner, medication.Query{})
+	page, err := h.repo.List(t.Context(), h.patient, medication.Query{})
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{stored.ID}, pageIDs(page))
 
-	read, err := h.repo.Get(t.Context(), h.owner, stored.ID)
+	read, err := h.repo.Get(t.Context(), stored.ID)
 	require.NoError(t, err)
 	assert.Empty(t, read.Dosage, "a write on a cancelled context reached the database")
 }
 
-// The second of MediKube's two independent refusals, tested with the first one
-// absent from the path entirely.
+// The list scoping with no checkpoint in the path.
 //
 // The service authorizes above this and the checkpoint is not wired into this
-// file at all, so every call below is what a repository sees when the
-// checkpoint has granted unconditionally — which is exactly the state the tree
-// was in while internal/service/access had no tests: a stranger's read was
-// stopped here and only here, and nothing said so.
+// file at all, so this is what a repository sees when the checkpoint has
+// granted unconditionally — which is exactly the state the tree was in while
+// internal/service/access had no tests: a stranger's list was scoped here and
+// only here, and nothing said so.
 //
-// The contract suite asserts the same scoping against both implementations.
-// This is the same property named as a layer rather than as a contract clause,
-// so that "the store predicate is gone" fails a test that is about the store
-// predicate, and it addresses one row through all four operations so the
-// predicate cannot be dropped from one of them alone.
-func TestTheRepositoryRefusesAStrangerWithNoCheckpointInThePath(t *testing.T) {
+// Get, Update and Delete are unscoped by design at this layer (research D-13):
+// the repository resolves nothing about who may reach a row by id, and the
+// service is what fetches, authorizes against the row's own patient, and only
+// then proceeds. That is covered by internal/service/medication's own tests
+// and by internal/service/access's, not here.
+func TestListScopesNarrowlyByPatientWithNoCheckpointInThePath(t *testing.T) {
 	t.Parallel()
 
 	h := newHarness(t)
 	ctx := t.Context()
 
-	theirs := h.create(t, ctx, h.draft(h.owner, "Amoxicillin"))
+	h.create(t, ctx, h.draft(h.patient, "Amoxicillin"))
 
-	t.Run("get", func(t *testing.T) {
-		_, err := h.repo.Get(ctx, h.stranger, theirs.ID)
+	page, err := h.repo.List(ctx, h.strangerPatient, medication.Query{})
+	require.NoError(t, err)
+	assert.Empty(t, pageIDs(page), "a stranger patient's list carried another patient's rows")
 
-		assert.ErrorIs(t, err, domain.ErrNotFound, "a stranger read a row that is not theirs")
-	})
-
-	t.Run("update", func(t *testing.T) {
-		hijacked := theirs
-		hijacked.OwnerID = h.stranger
-		hijacked.Dosage = "500 mg"
-
-		_, err := h.repo.Update(ctx, hijacked, theirs.Version)
-
-		assert.ErrorIs(t, err, domain.ErrNotFound, "a stranger changed a row that is not theirs")
-	})
-
-	t.Run("delete", func(t *testing.T) {
-		err := h.repo.Delete(ctx, h.stranger, theirs.ID, theirs.Version)
-
-		assert.ErrorIs(t, err, domain.ErrNotFound, "a stranger deleted a row that is not theirs")
-	})
-
-	t.Run("list", func(t *testing.T) {
-		page, err := h.repo.List(ctx, h.stranger, medication.Query{})
-
-		require.NoError(t, err)
-		assert.Empty(t, pageIDs(page), "a stranger's list carried another account's rows")
-	})
-
-	// The control. Two of the refusals above destroy the subject when they do
-	// not refuse, so a green that proves nothing looks identical to a green
-	// that proves everything without this.
-	read, err := h.repo.Get(ctx, h.owner, theirs.ID)
-	require.NoError(t, err, "the owner cannot reach their own row, so the refusals above were not about ownership")
-	assert.Empty(t, read.Dosage, "the stranger's update reached the row")
+	mine, err := h.repo.List(ctx, h.patient, medication.Query{})
+	require.NoError(t, err)
+	assert.Len(t, mine.Items, 1, "the patient's own list did not carry their own row")
 }

@@ -155,8 +155,8 @@ func TestTheStreamEmitsOnlyTheTwoDatastarEventNames(t *testing.T) {
 		&recordstest.Create{Name: "Amoxicillin"})
 	require.NoError(t, err)
 
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: created.ID, OwnerID: recordstest.OwnerID})
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: "mkgone0000000001", OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: created.ID, PatientID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: "mkgone0000000001", PatientID: recordstest.OwnerID})
 
 	seen := make(map[string]int)
 
@@ -193,7 +193,7 @@ func TestAChangeIsPatchedByTheRowsOwnID(t *testing.T) {
 		&recordstest.Create{Name: "Amoxicillin"})
 	require.NoError(t, err)
 
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: created.ID, OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: created.ID, PatientID: recordstest.OwnerID})
 
 	// The first frame is the immediate heartbeat: a page opened at the wrong
 	// moment must not sit for a whole interval with no $stream_beat at all.
@@ -215,7 +215,7 @@ func TestARecordThatIsGoneIsRemovedFromTheRowItOccupied(t *testing.T) {
 
 	require.Equal(t, "datastar-patch-signals", rig.next().Event)
 
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: "mkgone0000000001", OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: "mkgone0000000001", PatientID: recordstest.OwnerID})
 
 	removal := rig.next()
 	assert.Equal(t, "datastar-patch-elements", removal.Event)

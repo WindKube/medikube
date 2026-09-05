@@ -53,7 +53,7 @@ type bulk struct {
 func newBulk(tb testing.TB, rows int) *bulk {
 	tb.Helper()
 
-	instance := apitest.NewPopulated(tb, testsupport.AccountAID, rows)
+	instance := apitest.NewPopulated(tb, testsupport.AccountAPatientSelfID, rows)
 
 	return &bulk{
 		tb:      tb,
@@ -67,7 +67,10 @@ func newBulk(tb testing.TB, rows int) *bulk {
 func (b *bulk) page(limit int, cursor string) (listDTO, time.Duration) {
 	b.tb.Helper()
 
-	query := url.Values{web.ParamLimit: {strconv.Itoa(limit)}}
+	query := url.Values{
+		web.ParamLimit: {strconv.Itoa(limit)},
+		"patient":      {testsupport.AccountAPatientSelfID},
+	}
 	if cursor != "" {
 		query.Set(web.ParamCursor, cursor)
 	}

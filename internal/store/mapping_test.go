@@ -28,8 +28,9 @@ func TestAMedicationRoundTripsThroughARecordAndTheDatabase(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "owner@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
-	original := sampleMedication(t, owner.Id)
+	original := sampleMedication(t, patient.Id)
 	saved := seedMedication(t, app, original)
 
 	reloaded, err := app.FindRecordById(kind.Medication.Collection(), saved.Id)
@@ -39,7 +40,7 @@ func TestAMedicationRoundTripsThroughARecordAndTheDatabase(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, saved.Id, got.ID)
-	assert.Equal(t, original.OwnerID, got.OwnerID)
+	assert.Equal(t, original.PatientID, got.PatientID)
 	assert.Equal(t, original.Name, got.Name)
 	assert.Equal(t, original.AlternativeName, got.AlternativeName)
 	assert.Equal(t, original.Type, got.Type)
@@ -73,11 +74,12 @@ func TestTheAbsentDateStaysAbsentInBothDirections(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "absent@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
 	bare := clinical.Medication{
-		OwnerID: owner.Id,
-		Name:    "Paracetamol",
-		Status:  clinical.TherapyStatusActive,
+		PatientID: patient.Id,
+		Name:      "Paracetamol",
+		Status:    clinical.TherapyStatusActive,
 	}
 
 	saved := seedMedication(t, app, bare)
@@ -108,6 +110,7 @@ func TestACalendarDateIsStoredAsMidnightUTCOnTheDayItNames(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "dates@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
 	cases := []struct {
 		date   string
@@ -127,7 +130,7 @@ func TestACalendarDateIsStoredAsMidnightUTCOnTheDayItNames(t *testing.T) {
 			t.Parallel()
 
 			saved := seedMedication(t, app, clinical.Medication{
-				OwnerID:   owner.Id,
+				PatientID: patient.Id,
 				Name:      "Ibuprofen",
 				Status:    clinical.TherapyStatusActive,
 				StartedOn: mustDate(t, testCase.date),
@@ -160,9 +163,10 @@ func TestADateColumnCarryingATimeOfDayIsRefusedRatherThanTruncated(t *testing.T)
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "corrupt@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
 	saved := seedMedication(t, app, clinical.Medication{
-		OwnerID:   owner.Id,
+		PatientID: patient.Id,
 		Name:      "Metformin",
 		Status:    clinical.TherapyStatusActive,
 		StartedOn: mustDate(t, "2026-03-01"),
@@ -331,8 +335,9 @@ func TestTheVersionIsDerivedFromUpdatedAndIsALegalETagToken(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "version@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
-	saved := seedMedication(t, app, sampleMedication(t, owner.Id))
+	saved := seedMedication(t, app, sampleMedication(t, patient.Id))
 
 	first := Version(saved)
 	require.NotEmpty(t, first)
@@ -395,8 +400,9 @@ func TestAMapperRefusesARecordFromAnotherCollection(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "wrong@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
-	medication := seedMedication(t, app, sampleMedication(t, owner.Id))
+	medication := seedMedication(t, app, sampleMedication(t, patient.Id))
 
 	auditRecords, err := app.FindCollectionByNameOrId(auditCollection)
 	require.NoError(t, err)

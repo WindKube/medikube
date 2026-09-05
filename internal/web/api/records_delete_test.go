@@ -40,11 +40,11 @@ func TestADeletionRemovesTheRowFromStoredData(t *testing.T) {
 	_, err := caller.stored(target)
 	require.Error(t, err, "the row is still in the database, so the deletion was a filter and not a deletion")
 
-	assert.Equal(t, testsupport.AccountAMedicationCount-1, storedCountOf(t, caller, testsupport.AccountAID))
+	assert.Equal(t, testsupport.AccountAMedicationCount-1, storedCountOf(t, caller, testsupport.AccountAPatientSelfID))
 
 	// And nothing else moved: a deletion that cascaded or filtered would show
 	// up here and nowhere else.
-	assert.Equal(t, testsupport.AccountBMedicationCount, storedCountOf(t, caller, testsupport.AccountBID))
+	assert.Equal(t, testsupport.AccountBMedicationCount, storedCountOf(t, caller, testsupport.AccountBPatientSelfID))
 }
 
 // TestADeletedRecordIsGoneFromEveryReadingOfIt is the second half: a survivor
@@ -63,7 +63,7 @@ func TestADeletedRecordIsGoneFromEveryReadingOfIt(t *testing.T) {
 
 	assert.Equal(t, http.StatusNotFound, caller.get(recordURL(target)).Status)
 
-	listed := caller.get(collectionURL() + "?limit=100")
+	listed := caller.get(collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&limit=100")
 	require.Equal(t, http.StatusOK, listed.Status, listed.Body)
 	assert.NotContains(t, idsOf(listed.list(t)), target)
 	assert.Len(t, listed.list(t).Items, testsupport.AccountAMedicationCount-1)

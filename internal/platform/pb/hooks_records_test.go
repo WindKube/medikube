@@ -39,10 +39,10 @@ import (
 
 var errDeliberateRollback = errors.New("deliberate rollback")
 
-// streamOwnerID is not a fixture id. There is no fixture here: the collection
+// streamPatientID is not a fixture id. There is no fixture here: the collection
 // is created three lines above the record, so the owner is a value this file
 // invents for a schema this file invents.
-const streamOwnerID = "mkstreamowner001"
+const streamPatientID = "mkstreamowner001"
 
 // unpublishedCollection stands in for every collection that is not a registered
 // kind — audit_events in the real instance, which is itself a collection and
@@ -98,7 +98,7 @@ func streaming(t *testing.T) (*tests.TestApp, *recorder) {
 
 	for _, name := range []string{kind.Medication.Collection(), unpublishedCollection} {
 		collection := core.NewBaseCollection(name)
-		collection.Fields.Add(&core.TextField{Name: store.MedicationOwner})
+		collection.Fields.Add(&core.TextField{Name: store.MedicationPatient})
 		collection.Fields.Add(&core.TextField{Name: "name"})
 		require.NoError(t, app.Save(collection))
 	}
@@ -120,7 +120,7 @@ func newRow(t *testing.T, app core.App, collection, name string) *core.Record {
 	require.NoError(t, err)
 
 	record := core.NewRecord(found)
-	record.Set(store.MedicationOwner, streamOwnerID)
+	record.Set(store.MedicationPatient, streamPatientID)
 	record.Set("name", name)
 
 	return record
@@ -213,7 +213,7 @@ func TestARolledBackTransactionPublishesNothingAndACommittedOnePublishesOnce(t *
 			assert.Equal(t, 0, errorful)
 			assert.Equal(t, kind.Medication, events[0].Kind)
 			assert.Equal(t, written, events[0].RecordID)
-			assert.Equal(t, streamOwnerID, events[0].OwnerID)
+			assert.Equal(t, streamPatientID, events[0].PatientID)
 		})
 	}
 }
@@ -240,7 +240,7 @@ func TestEveryCommittedWritePublishesItsKindIDAndOwner(t *testing.T) {
 	for index, event := range events {
 		assert.Equalf(t, kind.Medication, event.Kind, "event %d", index)
 		assert.Equalf(t, record.Id, event.RecordID, "event %d", index)
-		assert.Equalf(t, streamOwnerID, event.OwnerID,
+		assert.Equalf(t, streamPatientID, event.PatientID,
 			"event %d carries no owner, so every removal for it would be suppressed", index)
 	}
 }
@@ -260,7 +260,7 @@ func TestTheEventCarriesIdentifiersAndNothingElse(t *testing.T) {
 		names = append(names, field.Name)
 	}
 
-	assert.ElementsMatch(t, []string{"Kind", "RecordID", "OwnerID"}, names,
+	assert.ElementsMatch(t, []string{"Kind", "RecordID", "PatientID"}, names,
 		"realtime.Event grew a field: the hub publishes ids, never bodies, and a body here would have to be "+
 			"authorised at publish time by the one participant that does not know who is listening")
 }
@@ -340,7 +340,7 @@ func TestACommittedWriteReachesARealSubscriber(t *testing.T) {
 	case event := <-events:
 		assert.Equal(t, record.Id, event.RecordID)
 		assert.Equal(t, kind.Medication, event.Kind)
-		assert.Equal(t, streamOwnerID, event.OwnerID)
+		assert.Equal(t, streamPatientID, event.PatientID)
 	case <-time.After(5 * time.Second):
 		t.Fatal("a committed write never reached the subscriber")
 	}

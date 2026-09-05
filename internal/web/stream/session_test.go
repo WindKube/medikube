@@ -61,12 +61,12 @@ func TestARevokedSessionReceivesNothingMoreAndTheStreamEnds(t *testing.T) {
 
 	// The control: this session was working a moment ago, so what stops it
 	// below is the revocation and not a broken pipeline.
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, PatientID: recordstest.OwnerID})
 	require.Equal(t, rowSelector(kind.Medication, id), rig.next().selector())
 
 	rig.sessions.end()
 
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, PatientID: recordstest.OwnerID})
 
 	rig.ended()
 
@@ -127,7 +127,7 @@ func TestAnIdentityCheckThatCouldNotBeMadeEndsTheStreamAndIsReported(t *testing.
 	broken := errors.New("the session could not be re-checked")
 	rig.sessions.failWith(broken)
 
-	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, OwnerID: recordstest.OwnerID})
+	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: id, PatientID: recordstest.OwnerID})
 
 	rig.ended()
 
