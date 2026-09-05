@@ -101,6 +101,9 @@ func LateralityLabel(value clinical.Laterality) string {
 	return label(string(value), lateralityLabels[value])
 }
 
+// SeverityLabel and ConditionStatusLabel are declared once, in allergy.go —
+// injury shares both vocabularies rather than redeclaring their maps.
+
 // InjuryTypeOptions and the three below it walk the domain's own published
 // slices, mirroring MedicationTypeOptions.
 func InjuryTypeOptions(selected clinical.InjuryType) []Option {
@@ -132,6 +135,10 @@ func LateralityOptions(selected clinical.Laterality) []Option {
 
 	return options
 }
+
+// SeverityOptions and ConditionStatusOptions are declared once, in
+// allergy.go — injury shares both option builders rather than redeclaring
+// them.
 
 // InjuryLinks are the URLs one injury's views address, mirroring
 // MedicationLinks.
