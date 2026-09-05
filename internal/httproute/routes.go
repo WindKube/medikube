@@ -614,6 +614,8 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "One measurement set, only the values recorded and bmi when both height and weight are present.",
 			Landmark: `article[name="Measurement set"]`, SmokeURL: "/" + kind.Vitals.Segment() + "/" + seed.VitalsOne,
+		},
+		{
 			OpID: "encounterListPage", Method: http.MethodGet, Path: encounterList,
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "The encounter list, with its empty state inside the landmark rather than instead of it.",

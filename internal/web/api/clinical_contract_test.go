@@ -146,7 +146,7 @@ func runClinicalContract(
 			},
 			Entry:       entry,
 			Fixture:     fixture,
-			DefaultSort: sort[0],
+			DefaultSort: []domain.SortKey{sort[0]},
 			NoPatientSkip: k.Segment() + ".Patient is a plain string FR-002 requires structurally " +
 				"(there is no pointer to omit it with), so a body naming no patient does not decode at all",
 			SearchIndex: func(t *testing.T, k kind.Kind, recordID string) (bool, string) {

@@ -72,9 +72,9 @@ func treatmentsUp(app core.App) error {
 		return fmt.Errorf("finding %s: %w", kind.Encounter.Collection(), err)
 	}
 
-	equipment, err := app.FindCollectionByNameOrId(equipmentCollection)
+	equipment, err := app.FindCollectionByNameOrId(kind.Equipment.Collection())
 	if err != nil {
-		return fmt.Errorf("finding %s: %w", equipmentCollection, err)
+		return fmt.Errorf("finding %s: %w", kind.Equipment.Collection(), err)
 	}
 
 	tags, err := app.FindCollectionByNameOrId(TagsCollection)

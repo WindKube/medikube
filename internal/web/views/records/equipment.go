@@ -15,7 +15,6 @@ const (
 	FieldServiceDueOn = "service_due_on"
 	FieldInstructions = "instructions"
 	FieldSupplier     = "supplier"
-	FieldPractitioner = "practitioner"
 )
 
 var equipmentFields = []string{
@@ -45,7 +44,6 @@ func init() {
 	fieldLabels[FieldServiceDueOn] = "Service due"
 	fieldLabels[FieldInstructions] = "Instructions"
 	fieldLabels[FieldSupplier] = "Supplier"
-	fieldLabels[FieldPractitioner] = "Prescribing practitioner"
 }
 
 var equipmentTypeLabels = map[clinical.EquipmentType]string{
