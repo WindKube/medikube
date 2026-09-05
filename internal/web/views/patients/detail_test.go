@@ -8,6 +8,7 @@ import (
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/identity"
+	"medikube/internal/domain/kind"
 	"medikube/internal/domain/person"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/patients"
@@ -28,6 +29,44 @@ func TestTheDetailRendersItsLandmark(t *testing.T) {
 	region := tree.One(t, viewstest.Region(patientChartArticle))
 	assert.Equal(t, ids.PatientDetail(patient.ID), viewstest.Attr(region, "id"))
 	assert.NotEmpty(t, viewstest.Elements(region))
+}
+
+// FR-030, US4-2, SC-013: the landmark is present in both the populated and
+// the entirely empty case, and @EmptyState renders inside it rather than
+// instead of it — the assertion T097's smoke gate depends on.
+func TestTheDetailLandmarkHoldsBothThePopulatedAndTheEmptyChart(t *testing.T) {
+	t.Parallel()
+
+	patient := selfRecord(t)
+
+	t.Run("populated", func(t *testing.T) {
+		t.Parallel()
+
+		props := patients.PatientDetailProps{
+			Patient:      patient,
+			Tiles:        []patients.ChartTile{{Label: "Medications", Href: "/" + kind.Medication.Segment() + "?patient=" + patient.ID, Count: 3}},
+			TotalRecords: 3,
+		}
+
+		tree := viewstest.Render(t, patients.PatientDetail(props), "div")
+
+		region := tree.One(t, viewstest.Region(patientChartArticle))
+		assert.Contains(t, viewstest.Text(region), "Medications")
+		assert.Contains(t, viewstest.Text(region), "3")
+	})
+
+	t.Run("entirely empty", func(t *testing.T) {
+		t.Parallel()
+
+		props := patients.PatientDetailProps{Patient: patient}
+		require.True(t, props.Empty())
+
+		tree := viewstest.Render(t, patients.PatientDetail(props), "div")
+
+		region := tree.One(t, viewstest.Region(patientChartArticle))
+		assert.NotEmpty(t, viewstest.Elements(region))
+		assert.Contains(t, viewstest.Text(region), "Nothing recorded yet")
+	})
 }
 
 // FR-030, US1-6: an absent detail renders as absent, never as "0" or a blank
