@@ -302,6 +302,25 @@ export const fixtures = {
   listPath: `/${segment}`,
   detailPath: (id: string) => `/${segment}/${id}`,
 
+  // US1's three other kinds (T059): one seeded row each, addressed the same
+  // way medication's own listPath/detailPath are — off the kind table's
+  // segment, never spelled here.
+  allergy: {
+    listPath: `/${segmentOf('Allergy')}`,
+    detailPath: (id: string) => `/${segmentOf('Allergy')}/${id}`,
+    seededID: goString(identifiers, fixturesGo, 'CriticalAllergyID'),
+  },
+  condition: {
+    listPath: `/${segmentOf('Condition')}`,
+    detailPath: (id: string) => `/${segmentOf('Condition')}/${id}`,
+    seededID: goString(identifiers, fixturesGo, 'ResolvedConditionID'),
+  },
+  emergencyContact: {
+    listPath: `/${segmentOf('EmergencyContact')}`,
+    detailPath: (id: string) => `/${segmentOf('EmergencyContact')}/${id}`,
+    seededID: goString(identifiers, fixturesGo, 'PrimaryContactID'),
+  },
+
   // P8's address for a link that actually works, as opposed to
   // pages.resetPassword.path, which is the route's deliberately dead smoke
   // token. The pattern and the name of its placeholder are both read back —
