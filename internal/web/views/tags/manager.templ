@@ -1,0 +1,227 @@
+package tags
+
+import (
+	"strconv"
+
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
+
+const (
+	managerLandmark  = "Tags"
+	managerEmptyTitle = "Nothing recorded yet"
+	managerEmptyBody  = "Add the first one and it will be listed here."
+	addTagLabel       = "Add a tag"
+	renameTagLabel    = "Rename"
+	deleteTagLabel    = "Delete"
+	deleteConfirmTitle = "Delete this tag?"
+	deleteConfirmLabel = "Delete permanently"
+	deleteConfirmCancel = "Keep it"
+)
+
+// EditSignal is the per-row rename-form visibility signal, exported so a
+// form-patch response (internal/web/page/tag_forms.go) can hide the form it
+// just saved the same way the row that opened it did.
+func EditSignal(id string) string   { return "_editing_" + safeSignal(id) }
+func deleteSignal(id string) string { return "_deleting_" + safeSignal(id) }
+
+func safeSignal(id string) string {
+	out := make([]byte, 0, len(id))
+	for _, r := range id {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			out = append(out, byte(r))
+			continue
+		}
+		out = append(out, '_')
+	}
+	return string(out)
+}
+
+func deleteConsequence(usage int) string {
+	switch usage {
+	case 0:
+		return "This is permanent and cannot be undone. No record carries this tag."
+	case 1:
+		return "This is permanent and cannot be undone. One record carries this tag; it keeps its own record, with the tag removed."
+	default:
+		return "This is permanent and cannot be undone. " + strconv.Itoa(usage) +
+			" records carry this tag; every one keeps its own record, with the tag removed."
+	}
+}
+
+// Manager is contracts/pages.md's /tags landmark: create, rename, recolour,
+// delete, with usage counts and a delete confirmation that states how many
+// records carry the tag before it may be confirmed (FR-066, US7-4).
+templ Manager(props ManagerProps) {
+	<section
+		id={ ids.DirectoryList(Segment) }
+		aria-label={ managerLandmark }
+		class="flex flex-col"
+	>
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<h1
+				id={ ids.DirectoryListHeading(Segment) }
+				tabindex="-1"
+				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ managerLandmark }</h1>
+		</div>
+		if len(props.Tags) == 0 {
+			<div class="mt-6">
+				@components.EmptyState(components.EmptyStateProps{
+					ID:    ids.DirectoryEmpty(Segment),
+					Title: managerEmptyTitle,
+					Body:  managerEmptyBody,
+				})
+			</div>
+		} else {
+			<ul id={ ids.DirectoryRows(Segment) } class="mt-4 flex flex-col gap-3">
+				for _, t := range props.Tags {
+					@Row(t)
+				}
+			</ul>
+		}
+		@components.Pagination(components.PaginationProps{
+			ID:       ids.DirectoryPager(Segment),
+			NextHref: props.NextHref,
+		})
+		<div class="mt-8 max-w-md">
+			@Form(FormProps{
+				FormID:   ids.DirectoryForm(Segment, ""),
+				New:      true,
+				OnSubmit: "@post(" + jsQuote(props.CreateHref) + ")",
+				Tag:      TagView{},
+				Errors:   components.NewFieldErrors(nil),
+			})
+		</div>
+	</section>
+}
+
+// Row is one tag: its name badge, its usage count, and the rename/delete
+// controls each toggling their own inline panel — never navigating away,
+// because a tag has no detail page.
+templ Row(t TagView) {
+	<li
+		id={ ids.DirectoryRow(Segment, t.ID) }
+		data-signals={ "{" + EditSignal(t.ID) + ": false, " + deleteSignal(t.ID) + ": false}" }
+		class="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+	>
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<div class="flex items-center gap-2">
+				<span
+					aria-hidden="true"
+					style={ "background-color:" + t.Color }
+					class="inline-block h-3 w-3 rounded-full"
+				></span>
+				<span class="font-medium text-slate-900 dark:text-slate-100">{ t.Name }</span>
+				<span class="text-sm text-slate-500 dark:text-slate-400">{ strconv.Itoa(t.UsageCount) + " record(s)" }</span>
+			</div>
+			<div class="flex flex-wrap gap-2">
+				<button
+					type="button"
+					data-on:click={ "$" + EditSignal(t.ID) + " = !$" + EditSignal(t.ID) }
+					class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+				>{ renameTagLabel }</button>
+				<button
+					type="button"
+					data-on:click={ "$" + deleteSignal(t.ID) + " = true" }
+					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
+				>{ deleteTagLabel }</button>
+			</div>
+		</div>
+		<div data-show={ "$" + EditSignal(t.ID) } class="mt-3">
+			@Form(FormProps{
+				FormID:   ids.DirectoryForm(Segment, t.ID),
+				New:      false,
+				OnSubmit: "@patch(" + jsQuote(t.Links.Record) + ")",
+				CancelOn: "$" + EditSignal(t.ID) + " = false",
+				Tag:      t,
+				Errors:   components.NewFieldErrors(nil),
+			})
+		</div>
+		<div
+			id={ ids.DirectoryConfirm(Segment, t.ID) }
+			aria-label="Confirm delete"
+			data-show={ "$" + deleteSignal(t.ID) }
+			class="mt-3 rounded-lg border border-rose-300 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950"
+		>
+			<h2 class="text-base font-semibold text-rose-900 dark:text-rose-100">{ deleteConfirmTitle }</h2>
+			<p class="mt-1 text-sm font-medium text-rose-900 dark:text-rose-100">{ t.Name }</p>
+			<p class="mt-2 max-w-prose text-sm text-rose-800 dark:text-rose-200">{ deleteConsequence(t.UsageCount) }</p>
+			<div class="mt-4 flex flex-wrap gap-3">
+				<button
+					type="button"
+					data-on:click={ "@delete(" + jsQuote(t.Links.Record) + ")" }
+					class="inline-flex items-center rounded-md bg-rose-700 px-3 py-2 text-sm font-medium text-white hover:bg-rose-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"
+				>{ deleteConfirmLabel }</button>
+				<button
+					type="button"
+					data-on:click={ "$" + deleteSignal(t.ID) + " = false" }
+					class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+				>{ deleteConfirmCancel }</button>
+			</div>
+		</div>
+	</li>
+}
+
+// Form is both the create form and the rename form (FormProps.New picks
+// which). Color is a plain text field rather than <input type=color>: the
+// contract's value is a literal `#rrggbb` string and the native colour
+// picker would round-trip it through a different serialisation.
+templ Form(props FormProps) {
+	<form
+		id={ props.FormID }
+		aria-label={ props.Label() }
+		data-on:submit__prevent={ props.OnSubmit }
+		class="flex flex-col gap-4"
+	>
+		<div>
+			<label for={ ids.Field(props.FormID, FieldName) } class="block text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
+			<input
+				id={ ids.Field(props.FormID, FieldName) }
+				name={ FieldName }
+				type="text"
+				required?={ true }
+				value={ props.Tag.Value(FieldName) }
+				data-bind={ FieldName }
+				if props.Errors.Has(FieldName) {
+					aria-invalid="true"
+					aria-describedby={ ids.FieldError(props.FormID, FieldName) }
+				}
+				class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+			/>
+			@components.FieldError(ids.FieldError(props.FormID, FieldName), props.Errors.Messages(FieldName))
+		</div>
+		<div>
+			<label for={ ids.Field(props.FormID, FieldColor) } class="block text-sm font-medium text-slate-700 dark:text-slate-300">Colour</label>
+			<input
+				id={ ids.Field(props.FormID, FieldColor) }
+				name={ FieldColor }
+				type="text"
+				placeholder="#aa3311"
+				value={ props.Tag.Value(FieldColor) }
+				data-bind={ FieldColor }
+				if props.Errors.Has(FieldColor) {
+					aria-invalid="true"
+					aria-describedby={ ids.FieldError(props.FormID, FieldColor) }
+				}
+				class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+			/>
+			@components.FieldError(ids.FieldError(props.FormID, FieldColor), props.Errors.Messages(FieldColor))
+		</div>
+		<div class="flex flex-wrap gap-3">
+			<button
+				type="submit"
+				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ props.SubmitLabel() }</button>
+			if props.CancelOn != "" {
+				<button
+					type="button"
+					data-on:click={ props.CancelOn }
+					class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+				>Cancel</button>
+			}
+		</div>
+	</form>
+}
+
+func jsQuote(value string) string { return strconv.Quote(value) }

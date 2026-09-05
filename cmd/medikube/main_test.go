@@ -31,6 +31,7 @@ import (
 	"medikube/internal/platform/pb"
 	"medikube/internal/realtime"
 	"medikube/internal/records"
+	tagsvc "medikube/internal/service/tag"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
 )
@@ -384,6 +385,7 @@ func TestTheCompositionRootWiresEveryRouteMediKubeServes(t *testing.T) {
 		func() (*records.Handler, error) { return nil, nil },
 		records.NewRegistry(),
 		func() (directoryServices, error) { return directoryServices{}, nil },
+		func() (*tagsvc.Service, error) { return nil, nil },
 		realtime.New(),
 		obs.NewMetrics(),
 		&obs.Tracing{},

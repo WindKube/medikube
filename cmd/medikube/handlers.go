@@ -35,6 +35,7 @@ import (
 	"medikube/internal/service/procedure"
 	searchsvc "medikube/internal/service/search"
 	"medikube/internal/service/symptom"
+	tagsvc "medikube/internal/service/tag"
 	"medikube/internal/service/treatment"
 	"medikube/internal/service/vitals"
 	"medikube/internal/store"
@@ -56,6 +57,7 @@ import (
 	procedurestore "medikube/internal/store/procedure"
 	searchstore "medikube/internal/store/search"
 	symptomstore "medikube/internal/store/symptom"
+	tagstore "medikube/internal/store/tag"
 	treatmentstore "medikube/internal/store/treatment"
 	vitalsstore "medikube/internal/store/vitals"
 	"medikube/internal/web"
@@ -79,6 +81,7 @@ func operations(
 	resolve api.Resolve,
 	registry *records.Registry,
 	resolveDirectory func() (directoryServices, error),
+	tagResolve api.TagResolve,
 	hub *realtime.Hub,
 	measurements *obs.Metrics,
 	tracing *obs.Tracing,
@@ -269,6 +272,29 @@ func operations(
 
 	maps.Copy(table, practitionerPages)
 	maps.Copy(table, facilityPages)
+
+	// contracts/tags.md, US7: the account's own tag vocabulary. tagResolve
+	// is recordFamily's own resolver — the tag service comes out of the same
+	// registerKinds call that wires the tag checker into the registry, so it
+	// is not built again here.
+	tagForms, err := page.NewTagForms(tagResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	tagOps, err := api.TagHandlers(api.TagDeps{Resolve: tagResolve, Forms: tagForms})
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, tagOps)
+
+	tagPages, err := page.TagHandlers(tagResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, tagPages)
 
 	// The two embedded assets every page's head links. Neither needs the
 	// application: they are compiled into the binary, so they are wired here
@@ -535,76 +561,126 @@ func patientFamily(
 // The boot gate calls it before the instance serves anything, so a
 // registration that cannot be built is a boot failure and not a 500 on
 // somebody's first request.
-func recordFamily(app core.App, registry *records.Registry, hub *realtime.Hub) api.Resolve {
-	return sync.OnceValues(func() (*records.Handler, error) {
-		if err := registerKinds(app, registry, hub); err != nil {
-			return nil, err
+// The tag service comes out of the same sync.OnceValues as the handler,
+// rather than a second call to registerKinds: registerKinds wires the tag
+// checker into the registry before any kind registers (FR-064), and calling
+// it twice would build a second tag service the checker never sees.
+func recordFamily(app core.App, registry *records.Registry, hub *realtime.Hub) (api.Resolve, api.TagResolve) {
+	type registered struct {
+		handler *records.Handler
+		tags    *tagsvc.Service
+	}
+
+	once := sync.OnceValues(func() (registered, error) {
+		tags, err := registerKinds(app, registry, hub)
+		if err != nil {
+			return registered{}, err
 		}
 
-		return records.NewHandler(registry), nil
+		return registered{handler: records.NewHandler(registry), tags: tags}, nil
 	})
+
+	resolve := func() (*records.Handler, error) {
+		result, err := once()
+
+		return result.handler, err
+	}
+
+	tagResolve := func() (*tagsvc.Service, error) {
+		result, err := once()
+
+		return result.tags, err
+	}
+
+	return resolve, tagResolve
 }
 
 // registerKinds is the extension point phases 002 through 006 add a kind to.
 // One call per kind, seven consumers wired by it, and no route.
-func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) error {
+func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) (*tagsvc.Service, error) {
 	secret, err := store.CursorSecret(app, "")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	cursors, err := store.NewCursorCodec(secret)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	owners, err := store.NewOwners(app)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	trail, err := auditstore.New(app)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	patientOwners, err := store.NewPatientOwners(app)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	authorizer, err := accessservice.New(owners, accessservice.WithPatients(patientOwners, auditor))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	views, err := page.NewMedicationViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	repository, err := medicationstore.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	searchRepo, err := searchstore.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	indexer, err := searchsvc.NewIndexer(searchRepo)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	registry.SetIndexer(indexer)
 	registry.SetSearchReader(searchRepo)
+
+	// The tag checker is wired before any kind registers: Registry.add wraps
+	// each kind's Service in the decorator that validates a Patch's tag ids
+	// against it (FR-064), so a kind registered before this line would carry
+	// no such check. taggables is a closure over the registry rather than a
+	// fixed list because the registry is not fully populated yet — every
+	// kind below still has to register — and by the time usage_count's own
+	// query runs, it will be.
+	tagRepository, err := tagstore.New(app, cursors, func() []string {
+		var collections []string
+		for _, k := range registry.Kinds() {
+			collections = append(collections, k.Collection())
+		}
+
+		return collections
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	tagService, err := tagsvc.New(tagRepository, tagRepository, tagRepository, tagsvc.DefaultAuthorizer, auditor)
+	if err != nil {
+		return nil, err
+	}
+
+	registry.SetTagChecker(tagService)
 
 	if medicationRegisterErr := medication.Register(registry, medication.Wiring{
 		Repository:   repository,
@@ -615,17 +691,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.MedicationSearchFields,
 		Basis:        api.MedicationBasis,
 	}); medicationRegisterErr != nil {
-		return medicationRegisterErr
+		return nil, medicationRegisterErr
 	}
 
 	insuranceViews, err := page.NewInsuranceViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	insuranceRepository, err := insurancestore.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = insurance.Register(registry, insurance.Wiring{
@@ -638,17 +714,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Basis:        api.InsuranceBasis,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	equipmentViews, err := page.NewEquipmentViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	equipmentRepository, err := equipmentstore.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = equipment.Register(registry, equipment.Wiring{
@@ -660,17 +736,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.EquipmentSearchFields,
 		Basis:        api.EquipmentBasis,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	allergyViews, err := page.NewAllergyViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	allergyRepo, err := allergystore.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = kinds.RegisterAllergy(registry, kinds.AllergyWiring{
@@ -682,17 +758,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.AllergySearchFields,
 		Basis:        api.AllergyBasis,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	conditionViews, err := page.NewConditionViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	conditionRepo, err := conditionstore.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = kinds.RegisterCondition(registry, kinds.ConditionWiring{
@@ -704,17 +780,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.ConditionSearchFields,
 		Basis:        api.ConditionBasis,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	emergencyContactViews, err := page.NewEmergencyContactViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	emergencyContactRepo, err := emergencycontactstore.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = kinds.RegisterEmergencyContact(registry, kinds.EmergencyContactWiring{
@@ -726,17 +802,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.EmergencyContactSearchFields,
 		Basis:        api.EmergencyContactBasis,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	immunizationRepo, err := storeimmunization.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	immunizationViews, err := page.NewImmunizationViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = kinds.Register(registry, kinds.Wiring{
@@ -748,17 +824,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.ImmunizationSearchFields,
 		Basis:        api.ImmunizationBasis,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	injuryRepo, err := storeinjury.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	injuryViews, err := page.NewInjuryViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = kinds.RegisterInjury(registry, kinds.InjuryWiring{
@@ -770,22 +846,22 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.InjurySearchFields,
 		Basis:        api.InjuryBasis,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	identityRepo, err := storeidentity.NewRepository(app)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	identityAuth, err := storeidentity.NewAuthenticator(app)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	mailer, err := pb.NewMailer(app)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	identityService, err := serviceidentity.New(serviceidentity.Config{
@@ -796,17 +872,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Clock:         serviceidentity.SystemClock{},
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	symptomViews, err := page.NewSymptomViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	symptomRepo, err := symptomstore.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if symptomRegisterErr := symptom.Register(registry, symptom.Wiring{
@@ -818,17 +894,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.SymptomSearchFields,
 		Basis:        api.SymptomBasis,
 	}); symptomRegisterErr != nil {
-		return symptomRegisterErr
+		return nil, symptomRegisterErr
 	}
 
 	vitalsViews, err := page.NewVitalsViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	vitalsRepo, err := vitalsstore.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if vitalsRegisterErr := vitals.Register(registry, vitals.Wiring{
@@ -841,17 +917,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.VitalsSearchFields,
 		Basis:        api.VitalsBasis,
 	}); vitalsRegisterErr != nil {
-		return vitalsRegisterErr
+		return nil, vitalsRegisterErr
 	}
 
 	encounterViews, err := page.NewEncounterViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	encounterRepo, err := encounterstore.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = encounter.Register(registry, encounter.Wiring{
@@ -863,17 +939,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.EncounterSearchFields,
 		Basis:        api.EncounterBasis,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	procedureViews, err := page.NewProcedureViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	procedureRepo, err := procedurestore.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = procedure.Register(registry, procedure.Wiring{
@@ -885,17 +961,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.ProcedureSearchFields,
 		Basis:        api.ProcedureBasis,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	treatmentViews, err := page.NewTreatmentViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	treatmentRepo, err := treatmentstore.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = treatment.Register(registry, treatment.Wiring{
@@ -907,17 +983,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.TreatmentSearchFields,
 		Basis:        api.TreatmentBasis,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	familyMemberViews, err := page.NewFamilyMemberViews()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	familyMemberRepo, err := familymemberstore.New(app, cursors)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if familyMemberRegisterErr := familymember.Register(registry, familymember.Wiring{
@@ -929,7 +1005,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.FamilyMemberSearchFields,
 		Basis:        api.FamilyMemberBasis,
 	}); familyMemberRegisterErr != nil {
-		return familyMemberRegisterErr
+		return nil, familyMemberRegisterErr
 	}
 
 	// FR-036's three rows, written by the post-commit hooks and by no handler
@@ -941,7 +1017,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Actor:   web.ActorFrom,
 		Request: obs.CorrelationID,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Patients are not a kind.Kind (research D-05), so their rows are bound
@@ -951,7 +1027,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Actor:   web.ActorFrom,
 		Request: obs.CorrelationID,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	// FR-036's sign-in rows, from OnRecordAuthRequest and never from a handler
@@ -962,13 +1038,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Trail:   auditor,
 		Request: obs.CorrelationID,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
 	// contracts/streams.md's publisher, bound to the same three post-commit
 	// hooks and to the same kinds: a live view of a kind this build does not
 	// serve is a live view of nothing.
-	return pb.BindRecordStream(app, pb.RecordStream{Hub: hub, Kinds: registry.Kinds()})
+	if err := pb.BindRecordStream(app, pb.RecordStream{Hub: hub, Kinds: registry.Kinds()}); err != nil {
+		return nil, err
+	}
+
+	return tagService, nil
 }
 
 // directoryServices is the two services practitioners.md and facilities.md's
@@ -1063,6 +1143,8 @@ func directoryOperations() []string {
 		api.OpUpdateFacility, api.OpDeleteFacility,
 		page.OpPractitionerListPage, page.OpPractitionerDetailPage,
 		page.OpFacilityListPage, page.OpFacilityDetailPage,
+		api.OpListTags, api.OpCreateTag, api.OpUpdateTag, api.OpDeleteTag,
+		page.OpTagsPage,
 	}
 }
 

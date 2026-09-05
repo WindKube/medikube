@@ -674,6 +674,64 @@ func operationDocs() map[string]operationDoc {
 			notes:       "References from a practitioner's facility and a medication's pharmacy are unset, not cascaded (research D-06).",
 		},
 
+		// contracts/tags.md
+		"listTags": {
+			successStatus: http.StatusOK,
+			successNote:   "A page of the account's own tags, each with its derived usage_count.",
+			errors: []int{
+				http.StatusBadRequest,
+				http.StatusUnauthorized,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			query: []param{
+				stringParam("q", "Case-insensitive prefix/substring match over name — the autocomplete every tag picker types against."),
+				stringParam("sort", "name (default) or -usage."),
+				limitParam(), cursorParam(), countParam(),
+			},
+			ownerScoped: true,
+			notes:       "Another account's tags are neither listed nor addressable (FR-062, US7-5): there is no parameter by which a caller can name an owner.",
+		},
+		"createTag": {
+			successStatus:  http.StatusCreated,
+			successNote:    "The created tag.",
+			successHeaders: []string{"Location"},
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusConflict,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			ownerScoped: true,
+			notes:       "409 conflict, code duplicate_name, when a tag with the same name ignoring letter case already exists for this account (FR-063, US7-2).",
+		},
+		"updateTag": {
+			successStatus: http.StatusOK,
+			successNote:   "The updated tag.",
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusConflict,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			ownerScoped: true,
+			notes: "A rename is one row update: every record carrying the tag follows automatically, because the tag is a relation and not a " +
+				"copied string (FR-065, SC-007). There is deliberately no If-Match here: a tag is not a clinical record and FR-005's " +
+				"concurrency rule is scoped to records (contracts/tags.md §3).",
+		},
+		"deleteTag": {
+			successStatus: http.StatusNoContent,
+			successNote:   "The tag is permanently gone.",
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusInternalServerError,
+			},
+			ownerScoped: true,
+			notes:       "PocketBase's own relation cleanup removes the tag from every referencing record; no record is destroyed (FR-066, US7-4).",
+		},
+
 		// contracts/README.md, "Documented PocketBase-native paths that stay public"
 		"nativeAdminUI":                   nativeDoc("It ships in production, hardened: mandatory superuser MFA, mandatory IP allowlist, every session audited."),
 		"nativeSuperuserAuthWithPassword": nativeDoc("The admin UI's own authentication."),

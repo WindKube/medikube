@@ -91,8 +91,14 @@ func TestTheTableCarriesTheTwentyNineDocumentedOperations(t *testing.T) {
 		{"getFacility", http.MethodGet, "/api/v1/facilities/{id}", httproute.KindAPI, httproute.AuthUser},
 		{"updateFacility", http.MethodPatch, "/api/v1/facilities/{id}", httproute.KindAPI, httproute.AuthUser},
 		{"deleteFacility", http.MethodDelete, "/api/v1/facilities/{id}", httproute.KindAPI, httproute.AuthUser},
+		// contracts/tags.md (phase 003, US7): the account's own tag
+		// vocabulary, four operations, added beside the counts above.
+		{"listTags", http.MethodGet, "/api/v1/tags", httproute.KindAPI, httproute.AuthUser},
+		{"createTag", http.MethodPost, "/api/v1/tags", httproute.KindAPI, httproute.AuthUser},
+		{"updateTag", http.MethodPatch, "/api/v1/tags/{id}", httproute.KindAPI, httproute.AuthUser},
+		{"deleteTag", http.MethodDelete, "/api/v1/tags/{id}", httproute.KindAPI, httproute.AuthUser},
 	}
-	require.Len(t, want, 42)
+	require.Len(t, want, 46)
 
 	byOpID := inventoryByOpID(t)
 
@@ -300,8 +306,9 @@ func TestTheTableCarriesTheFortyOnePages(t *testing.T) {
 			"familyHistoryDetailPage", "/" + kind.FamilyMember.Segment() + "/{id}", httproute.AuthUser,
 			`article[name="Relative"]`, "/" + kind.FamilyMember.Segment() + "/" + seed.FamilyMemberGrandmotherID,
 		},
+		{"tagsPage", "/tags", httproute.AuthUser, `region[name="Tags"]`, "/tags"},
 	}
-	require.Len(t, want, 41)
+	require.Len(t, want, 42)
 
 	byOpID := inventoryByOpID(t)
 

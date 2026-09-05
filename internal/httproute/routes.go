@@ -139,12 +139,13 @@ func Inventory() *Registry {
 // contracts/pages.md's nine pages, and the PocketBase-native paths that stay
 // reachable.
 func table() []Route {
-	routes := make([]Route, 0, 42)
+	routes := make([]Route, 0, 46)
 	routes = append(routes, authRoutes()...)
 	routes = append(routes, accountRoutes()...)
 	routes = append(routes, recordRoutes()...)
 	routes = append(routes, patientRoutes()...)
 	routes = append(routes, directoryRoutes()...)
+	routes = append(routes, tagRoutes()...)
 	routes = append(routes, healthRoutes()...)
 	routes = append(routes, pageRoutes()...)
 	routes = append(routes, patientPageRoutes()...)
@@ -688,6 +689,12 @@ func pageRoutes() []Route {
 			Landmark: `article[name="Facility"]`, SmokeURL: "/facilities/" + seed.AccountAFacilityPracticeID,
 		},
 		{
+			OpID: "tagsPage", Method: http.MethodGet, Path: "/tags",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "contracts/pages.md: the tag manager — create, rename, recolour, delete, with usage counts and a delete confirmation naming how many records carry the tag.",
+			Landmark: `region[name="Tags"]`, SmokeURL: "/tags",
+		},
+		{
 			OpID: "settingsPage", Method: http.MethodGet, Path: settingsPath,
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "Display name, preferences, address confirmation and the danger zone.",
@@ -880,6 +887,37 @@ func directoryRoutes() []Route {
 			OpID: "deleteFacility", Method: http.MethodDelete, Path: oneFacility,
 			Kind: KindAPI, Auth: AuthUser,
 			Summary: "Delete a facility. If-Match is required. Every referencing record survives with the reference cleared.",
+		},
+	}
+}
+
+// contracts/tags.md. Tags belong to the account, not to a patient, and are
+// not a kind.Kind: they are what a record's `tags` relation points at, the
+// same reasoning directoryRoutes documents for practitioners and facilities.
+func tagRoutes() []Route {
+	tags := apiBase + "/tags"
+	oneTag := tags + "/{id}"
+
+	return []Route{
+		{
+			OpID: "listTags", Method: http.MethodGet, Path: tags,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "The account's own tags, cursor-paginated, with each tag's derived usage_count. Also the autocomplete every tag picker types against.",
+		},
+		{
+			OpID: "createTag", Method: http.MethodPost, Path: tags,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Add a tag to the account's own vocabulary. 409 duplicate_name on a case-insensitive collision.",
+		},
+		{
+			OpID: "updateTag", Method: http.MethodPatch, Path: oneTag,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Rename or recolour a tag. One row update: every carrier follows with no second write. No If-Match — a tag is not a clinical record.",
+		},
+		{
+			OpID: "deleteTag", Method: http.MethodDelete, Path: oneTag,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Delete a tag. Every referencing record survives with the tag removed; none is destroyed.",
 		},
 	}
 }
