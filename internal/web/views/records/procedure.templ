@@ -1,0 +1,232 @@
+package records
+
+import (
+	"medikube/internal/domain/kind"
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
+
+const (
+	proceduresTitle     = "Procedures"
+	procedureCreate     = "Record a procedure"
+	procedureEmptyTitle = "Nothing recorded yet"
+	procedureEmptyBody  = "Record the first one and it will be listed here, with everything you noted about it."
+)
+
+templ ProcedureList(props ProcedureListProps) {
+	<section id={ ids.RecordList(kind.Procedure) } aria-label={ proceduresTitle } class="flex flex-col">
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<h1
+				id={ ids.RecordListHeading(kind.Procedure) }
+				tabindex="-1"
+				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ proceduresTitle }</h1>
+			if props.CreateHref != "" {
+				<a
+					href={ props.CreateHref }
+					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+				>{ procedureCreate }</a>
+			}
+		</div>
+		if len(props.Procedures) == 0 {
+			<div class="mt-6">
+				@components.EmptyState(components.EmptyStateProps{
+					ID:          ids.RecordEmpty(kind.Procedure),
+					Title:       procedureEmptyTitle,
+					Body:        procedureEmptyBody,
+					ActionHref:  props.CreateHref,
+					ActionLabel: procedureCreate,
+				})
+			</div>
+		} else {
+			<div class="mt-4 overflow-x-auto">
+				<table class="w-full border-collapse text-left text-sm">
+					<thead>
+						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldName) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldStatus) }</th>
+							<th scope="col" class="pb-2 font-medium">{ FieldLabel(FieldOccurredOn) }</th>
+						</tr>
+					</thead>
+					<tbody id={ ids.RecordRows(kind.Procedure) }>
+						for _, p := range props.Procedures {
+							@ProcedureRow(p)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		@components.Pagination(components.PaginationProps{
+			ID:           ids.RecordPager(kind.Procedure),
+			PreviousHref: props.PreviousHref,
+			NextHref:     props.NextHref,
+		})
+	</section>
+}
+
+templ ProcedureRow(p ProcedureView) {
+	<tr id={ ids.RecordRow(kind.Procedure, p.ID) } data-status={ p.StatusVal } class="border-b border-slate-200 last:border-b-0 dark:border-slate-800">
+		<th scope="row" class="py-3 pr-4 text-left align-top font-medium">
+			<a
+				href={ p.Links.Detail }
+				class="text-teal-800 underline underline-offset-2 hover:text-teal-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-teal-300 dark:hover:text-teal-200"
+			>{ p.Name }</a>
+		</th>
+		<td class="py-3 pr-4 align-top">
+			<span class="sr-only">{ FieldLabel(FieldStatus) }</span>
+			<span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200">{ p.Status }</span>
+		</td>
+		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
+			if p.OccurredOn != "" {
+				<span class="sr-only">{ FieldLabel(FieldOccurredOn) }</span>
+				<time datetime={ p.OccurredOn }>{ p.OccurredOn }</time>
+			}
+		</td>
+	</tr>
+}
+
+templ ProcedureDetail(props ProcedureDetailProps) {
+	<article
+		id={ ids.RecordDetail(kind.Procedure, props.Procedure.ID) }
+		aria-label="Procedure"
+		data-signals={ "{_confirming_delete: false, _etag: " + jsLiteral(props.Procedure.Version) + "}" }
+		data-status={ props.Procedure.StatusVal }
+		class="flex flex-col"
+	>
+		<header class="flex flex-wrap items-start justify-between gap-3">
+			<h1
+				id={ ids.RecordDetailHeading(kind.Procedure, props.Procedure.ID) }
+				tabindex="-1"
+				class="break-words text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ props.Procedure.Name }</h1>
+			<div class="flex flex-wrap gap-2">
+				if props.Procedure.Links.Edit != "" {
+					<a
+						href={ props.Procedure.Links.Edit }
+						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+					>Edit</a>
+				}
+				<button
+					type="button"
+					data-on:click="$_confirming_delete = true"
+					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
+				>Delete</button>
+			</div>
+		</header>
+		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+			for _, entry := range props.Procedure.Entries() {
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				@detailValue(entry)
+			}
+		</dl>
+		@components.Confirm(components.ConfirmProps{
+			ID:           ids.RecordConfirm(kind.Procedure, props.Procedure.ID),
+			Signal:       "_confirming_delete",
+			Title:        "Delete this procedure?",
+			Subject:      props.Procedure.Name,
+			Consequence:  "This is permanent. There is no recycle bin and no undo.",
+			ConfirmLabel: "Delete permanently",
+			ConfirmOn:    procedureDeleteExpression(props.Procedure),
+			CancelLabel:  "Keep it",
+		})
+	</article>
+}
+
+templ ProcedureForm(props ProcedureFormProps) {
+	<form
+		id={ props.FormID }
+		aria-label={ props.Label() }
+		data-on:submit__prevent={ props.OnSubmit }
+		class="flex max-w-2xl flex-col gap-5"
+	>
+		if props.Notice != "" {
+			<p role="alert" class="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{ props.Notice }</p>
+		}
+		<input type="hidden" name="patient" data-bind="patient" value={ props.Procedure.PatientID }/>
+		@procedureTextControl(props, FieldName, "text", true)
+		@procedureSelectControl(props, FieldType, props.Procedure.TypeOptions())
+		@procedureTextControl(props, FieldCode, "text", false)
+		@procedureTextareaControl(props, FieldDescription)
+		@procedureTextControl(props, FieldOccurredOn, "date", true)
+		@procedureSelectControl(props, FieldStatus, props.Procedure.StatusOptions())
+		@procedureSelectControl(props, FieldOutcome, props.Procedure.OutcomeOptions())
+		@procedureSelectControl(props, FieldSetting, props.Procedure.SettingOptions())
+		@procedureTextareaControl(props, FieldComplications)
+		@procedureTextControl(props, FieldDurationMin, "number", false)
+		@procedureSelectControl(props, FieldAnesthesia, props.Procedure.AnesthesiaOptions())
+		@procedureTextareaControl(props, FieldAnesthesiaNote)
+		@procedureTextareaControl(props, FieldNotes)
+		<div class="flex flex-wrap items-center gap-3">
+			<button
+				type="submit"
+				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ props.SubmitLabel() }</button>
+			if props.CancelHref != "" {
+				<a
+					href={ props.CancelHref }
+					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
+				>Cancel</a>
+			}
+		</div>
+	</form>
+}
+
+templ procedureTextControl(props ProcedureFormProps, field, inputType string, required bool) {
+	<div class="flex flex-col">
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<input
+			id={ ids.Field(props.FormID, field) }
+			name={ field }
+			type={ inputType }
+			value={ props.Procedure.Value(field) }
+			data-bind={ field }
+			required?={ required }
+			if props.Errors.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(props.FormID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		/>
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+	</div>
+}
+
+templ procedureSelectControl(props ProcedureFormProps, field string, options []Option) {
+	<div class="flex flex-col">
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<select
+			id={ ids.Field(props.FormID, field) }
+			name={ field }
+			data-bind={ field }
+			if props.Errors.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(props.FormID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		>
+			<option value="" selected?={ props.Procedure.Value(field) == "" }>Not recorded</option>
+			for _, option := range options {
+				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+			}
+		</select>
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+	</div>
+}
+
+templ procedureTextareaControl(props ProcedureFormProps, field string) {
+	<div class="flex flex-col">
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<textarea
+			id={ ids.Field(props.FormID, field) }
+			name={ field }
+			rows="4"
+			data-bind={ field }
+			if props.Errors.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(props.FormID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		>{ props.Procedure.Value(field) }</textarea>
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+	</div>
+}

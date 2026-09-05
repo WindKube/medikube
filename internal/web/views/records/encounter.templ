@@ -1,0 +1,229 @@
+package records
+
+import (
+	"medikube/internal/domain/kind"
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
+
+const (
+	encountersTitle  = "Encounters"
+	encounterCreate  = "Record an encounter"
+	encounterEmptyTitle = "Nothing recorded yet"
+	encounterEmptyBody  = "Record the first one and it will be listed here, with everything you noted about it."
+)
+
+templ EncounterList(props EncounterListProps) {
+	<section id={ ids.RecordList(kind.Encounter) } aria-label={ encountersTitle } class="flex flex-col">
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<h1
+				id={ ids.RecordListHeading(kind.Encounter) }
+				tabindex="-1"
+				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ encountersTitle }</h1>
+			if props.CreateHref != "" {
+				<a
+					href={ props.CreateHref }
+					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+				>{ encounterCreate }</a>
+			}
+		</div>
+		if len(props.Encounters) == 0 {
+			<div class="mt-6">
+				@components.EmptyState(components.EmptyStateProps{
+					ID:          ids.RecordEmpty(kind.Encounter),
+					Title:       encounterEmptyTitle,
+					Body:        encounterEmptyBody,
+					ActionHref:  props.CreateHref,
+					ActionLabel: encounterCreate,
+				})
+			</div>
+		} else {
+			<div class="mt-4 overflow-x-auto">
+				<table class="w-full border-collapse text-left text-sm">
+					<thead>
+						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldReason) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldVisitType) }</th>
+							<th scope="col" class="pb-2 font-medium">{ FieldLabel(FieldOccurredOn) }</th>
+						</tr>
+					</thead>
+					<tbody id={ ids.RecordRows(kind.Encounter) }>
+						for _, e := range props.Encounters {
+							@EncounterRow(e)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		@components.Pagination(components.PaginationProps{
+			ID:           ids.RecordPager(kind.Encounter),
+			PreviousHref: props.PreviousHref,
+			NextHref:     props.NextHref,
+		})
+	</section>
+}
+
+templ EncounterRow(e EncounterView) {
+	<tr id={ ids.RecordRow(kind.Encounter, e.ID) } class="border-b border-slate-200 last:border-b-0 dark:border-slate-800">
+		<th scope="row" class="py-3 pr-4 text-left align-top font-medium">
+			<a
+				href={ e.Links.Detail }
+				class="text-teal-800 underline underline-offset-2 hover:text-teal-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-teal-300 dark:hover:text-teal-200"
+			>{ e.Reason }</a>
+		</th>
+		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
+			if e.VisitType != "" {
+				<span class="sr-only">{ FieldLabel(FieldVisitType) }</span>
+				{ e.VisitType }
+			}
+		</td>
+		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
+			if e.OccurredOn != "" {
+				<span class="sr-only">{ FieldLabel(FieldOccurredOn) }</span>
+				<time datetime={ e.OccurredOn }>{ e.OccurredOn }</time>
+			}
+		</td>
+	</tr>
+}
+
+templ EncounterDetail(props EncounterDetailProps) {
+	<article
+		id={ ids.RecordDetail(kind.Encounter, props.Encounter.ID) }
+		aria-label="Encounter"
+		data-signals={ "{_confirming_delete: false, _etag: " + jsLiteral(props.Encounter.Version) + "}" }
+		class="flex flex-col"
+	>
+		<header class="flex flex-wrap items-start justify-between gap-3">
+			<h1
+				id={ ids.RecordDetailHeading(kind.Encounter, props.Encounter.ID) }
+				tabindex="-1"
+				class="break-words text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ props.Encounter.Reason }</h1>
+			<div class="flex flex-wrap gap-2">
+				if props.Encounter.Links.Edit != "" {
+					<a
+						href={ props.Encounter.Links.Edit }
+						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+					>Edit</a>
+				}
+				<button
+					type="button"
+					data-on:click="$_confirming_delete = true"
+					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
+				>Delete</button>
+			</div>
+		</header>
+		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+			for _, entry := range props.Encounter.Entries() {
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				@detailValue(entry)
+			}
+		</dl>
+		@components.Confirm(components.ConfirmProps{
+			ID:           ids.RecordConfirm(kind.Encounter, props.Encounter.ID),
+			Signal:       "_confirming_delete",
+			Title:        "Delete this encounter?",
+			Subject:      props.Encounter.Reason,
+			Consequence:  "This is permanent. There is no recycle bin and no undo.",
+			ConfirmLabel: "Delete permanently",
+			ConfirmOn:    encounterDeleteExpression(props.Encounter),
+			CancelLabel:  "Keep it",
+		})
+	</article>
+}
+
+templ EncounterForm(props EncounterFormProps) {
+	<form
+		id={ props.FormID }
+		aria-label={ props.Label() }
+		data-on:submit__prevent={ props.OnSubmit }
+		class="flex max-w-2xl flex-col gap-5"
+	>
+		if props.Notice != "" {
+			<p role="alert" class="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{ props.Notice }</p>
+		}
+		<input type="hidden" name="patient" data-bind="patient" value={ props.Encounter.PatientID }/>
+		@encounterTextControl(props, FieldReason, "text", true)
+		@encounterTextControl(props, FieldOccurredOn, "date", true)
+		@encounterSelectControl(props, FieldVisitType, props.Encounter.VisitTypeOptions())
+		@encounterSelectControl(props, FieldPriority, props.Encounter.PriorityOptions())
+		@encounterTextareaControl(props, FieldAssessment)
+		@encounterTextareaControl(props, FieldPlan)
+		@encounterTextareaControl(props, FieldFollowUp)
+		@encounterTextControl(props, FieldDurationMin, "number", false)
+		@encounterTextareaControl(props, FieldNotes)
+		<div class="flex flex-wrap items-center gap-3">
+			<button
+				type="submit"
+				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ props.SubmitLabel() }</button>
+			if props.CancelHref != "" {
+				<a
+					href={ props.CancelHref }
+					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
+				>Cancel</a>
+			}
+		</div>
+	</form>
+}
+
+templ encounterTextControl(props EncounterFormProps, field, inputType string, required bool) {
+	<div class="flex flex-col">
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<input
+			id={ ids.Field(props.FormID, field) }
+			name={ field }
+			type={ inputType }
+			value={ props.Encounter.Value(field) }
+			data-bind={ field }
+			required?={ required }
+			if props.Errors.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(props.FormID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		/>
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+	</div>
+}
+
+templ encounterSelectControl(props EncounterFormProps, field string, options []Option) {
+	<div class="flex flex-col">
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<select
+			id={ ids.Field(props.FormID, field) }
+			name={ field }
+			data-bind={ field }
+			if props.Errors.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(props.FormID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		>
+			<option value="" selected?={ props.Encounter.Value(field) == "" }>Not recorded</option>
+			for _, option := range options {
+				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+			}
+		</select>
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+	</div>
+}
+
+templ encounterTextareaControl(props EncounterFormProps, field string) {
+	<div class="flex flex-col">
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<textarea
+			id={ ids.Field(props.FormID, field) }
+			name={ field }
+			rows="4"
+			data-bind={ field }
+			if props.Errors.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(props.FormID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		>{ props.Encounter.Value(field) }</textarea>
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+	</div>
+}
