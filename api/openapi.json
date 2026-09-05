@@ -66,7 +66,9 @@
             "insurance": "#/components/schemas/Record_insurance",
             "medication": "#/components/schemas/Record_medications",
             "procedure": "#/components/schemas/Record_procedures",
-            "treatment": "#/components/schemas/Record_treatments"
+            "symptom": "#/components/schemas/Record_symptoms",
+            "treatment": "#/components/schemas/Record_treatments",
+            "vitals": "#/components/schemas/Record_vitals"
           },
           "propertyName": "kind"
         },
@@ -81,7 +83,19 @@
             "$ref": "#/components/schemas/Record_conditions"
           },
           {
-            "$ref": "#/components/schemas/Record_emergency-contacts"
+            "$ref": "#/components/schemas/Record_encounters"
+          },
+          {
+            "$ref": "#/components/schemas/Record_procedures"
+          },
+          {
+            "$ref": "#/components/schemas/Record_treatments"
+          },
+          {
+            "$ref": "#/components/schemas/Record_symptoms"
+          },
+          {
+            "$ref": "#/components/schemas/Record_vitals"
           },
           {
             "$ref": "#/components/schemas/Record_immunizations"
@@ -96,13 +110,7 @@
             "$ref": "#/components/schemas/Record_equipment"
           },
           {
-            "$ref": "#/components/schemas/Record_encounters"
-          },
-          {
-            "$ref": "#/components/schemas/Record_procedures"
-          },
-          {
-            "$ref": "#/components/schemas/Record_treatments"
+            "$ref": "#/components/schemas/Record_emergency-contacts"
           }
         ]
       },
@@ -118,7 +126,19 @@
             "$ref": "#/components/schemas/RecordCreate_conditions"
           },
           {
-            "$ref": "#/components/schemas/RecordCreate_emergency-contacts"
+            "$ref": "#/components/schemas/RecordCreate_encounters"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_procedures"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_treatments"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_symptoms"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_vitals"
           },
           {
             "$ref": "#/components/schemas/RecordCreate_immunizations"
@@ -133,13 +153,7 @@
             "$ref": "#/components/schemas/RecordCreate_equipment"
           },
           {
-            "$ref": "#/components/schemas/RecordCreate_encounters"
-          },
-          {
-            "$ref": "#/components/schemas/RecordCreate_procedures"
-          },
-          {
-            "$ref": "#/components/schemas/RecordCreate_treatments"
+            "$ref": "#/components/schemas/RecordCreate_emergency-contacts"
           }
         ]
       },
@@ -678,6 +692,66 @@
         ],
         "type": "object"
       },
+      "RecordCreate_symptoms": {
+        "additionalProperties": false,
+        "properties": {
+          "body_site": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "duration_minutes": {
+            "type": "integer"
+          },
+          "impact": {
+            "type": "string"
+          },
+          "is_chronic": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "occurred_at": {
+            "type": "string"
+          },
+          "pain_scale": {
+            "type": "integer"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "relief_methods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "resolved_at": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "triggers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "occurred_at",
+          "patient",
+          "severity"
+        ],
+        "type": "object"
+      },
       "RecordCreate_treatments": {
         "additionalProperties": false,
         "properties": {
@@ -745,6 +819,64 @@
         ],
         "type": "object"
       },
+      "RecordCreate_vitals": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "type": "string"
+          },
+          "diastolic_mmhg": {
+            "type": "number"
+          },
+          "glucose_context": {
+            "type": "string"
+          },
+          "glucose_mmol_l": {
+            "type": "number"
+          },
+          "hba1c_pct": {
+            "type": "number"
+          },
+          "heart_rate_bpm": {
+            "type": "number"
+          },
+          "height_cm": {
+            "type": "number"
+          },
+          "pain_scale": {
+            "type": "number"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "recorded_at": {
+            "type": "string"
+          },
+          "respiratory_rate_bpm": {
+            "type": "number"
+          },
+          "spo2_pct": {
+            "type": "number"
+          },
+          "systolic_mmhg": {
+            "type": "number"
+          },
+          "temperature_c": {
+            "type": "number"
+          },
+          "weight_kg": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "patient",
+          "recorded_at"
+        ],
+        "type": "object"
+      },
       "RecordPatch": {
         "oneOf": [
           {
@@ -757,7 +889,19 @@
             "$ref": "#/components/schemas/RecordPatch_conditions"
           },
           {
-            "$ref": "#/components/schemas/RecordPatch_emergency-contacts"
+            "$ref": "#/components/schemas/RecordPatch_encounters"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_procedures"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_treatments"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_symptoms"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_vitals"
           },
           {
             "$ref": "#/components/schemas/RecordPatch_immunizations"
@@ -772,13 +916,7 @@
             "$ref": "#/components/schemas/RecordPatch_equipment"
           },
           {
-            "$ref": "#/components/schemas/RecordPatch_encounters"
-          },
-          {
-            "$ref": "#/components/schemas/RecordPatch_procedures"
-          },
-          {
-            "$ref": "#/components/schemas/RecordPatch_treatments"
+            "$ref": "#/components/schemas/RecordPatch_emergency-contacts"
           }
         ]
       },
@@ -1283,6 +1421,66 @@
         },
         "type": "object"
       },
+      "RecordPatch_symptoms": {
+        "additionalProperties": false,
+        "properties": {
+          "body_site": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "duration_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "impact": {
+            "type": "string"
+          },
+          "is_chronic": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "occurred_at": {
+            "type": "string"
+          },
+          "pain_scale": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "relief_methods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "resolved_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "triggers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
       "RecordPatch_treatments": {
         "additionalProperties": false,
         "properties": {
@@ -1349,6 +1547,90 @@
         },
         "type": "object"
       },
+      "RecordPatch_vitals": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "type": "string"
+          },
+          "diastolic_mmhg": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "glucose_context": {
+            "type": "string"
+          },
+          "glucose_mmol_l": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "hba1c_pct": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "heart_rate_bpm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "height_cm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "pain_scale": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "recorded_at": {
+            "type": "string"
+          },
+          "respiratory_rate_bpm": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "spo2_pct": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "systolic_mmhg": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "temperature_c": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "weight_kg": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "RecordSummary": {
         "discriminator": {
           "mapping": {
@@ -1362,7 +1644,9 @@
             "insurance": "#/components/schemas/RecordSummary_insurance",
             "medication": "#/components/schemas/RecordSummary_medications",
             "procedure": "#/components/schemas/RecordSummary_procedures",
-            "treatment": "#/components/schemas/RecordSummary_treatments"
+            "symptom": "#/components/schemas/RecordSummary_symptoms",
+            "treatment": "#/components/schemas/RecordSummary_treatments",
+            "vitals": "#/components/schemas/RecordSummary_vitals"
           },
           "propertyName": "kind"
         },
@@ -1377,7 +1661,19 @@
             "$ref": "#/components/schemas/RecordSummary_conditions"
           },
           {
-            "$ref": "#/components/schemas/RecordSummary_emergency-contacts"
+            "$ref": "#/components/schemas/RecordSummary_encounters"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_procedures"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_treatments"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_symptoms"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_vitals"
           },
           {
             "$ref": "#/components/schemas/RecordSummary_immunizations"
@@ -1392,13 +1688,7 @@
             "$ref": "#/components/schemas/RecordSummary_equipment"
           },
           {
-            "$ref": "#/components/schemas/RecordSummary_encounters"
-          },
-          {
-            "$ref": "#/components/schemas/RecordSummary_procedures"
-          },
-          {
-            "$ref": "#/components/schemas/RecordSummary_treatments"
+            "$ref": "#/components/schemas/RecordSummary_emergency-contacts"
           }
         ]
       },
@@ -1861,6 +2151,52 @@
         ],
         "type": "object"
       },
+      "RecordSummary_symptoms": {
+        "additionalProperties": false,
+        "properties": {
+          "episode_count": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "symptom"
+            ],
+            "type": "string"
+          },
+          "last_occurred_at": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "occurred_at": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "episode_count",
+          "id",
+          "kind",
+          "last_occurred_at",
+          "name",
+          "occurred_at",
+          "severity",
+          "updated_at"
+        ],
+        "type": "object"
+      },
       "RecordSummary_treatments": {
         "additionalProperties": false,
         "properties": {
@@ -1894,6 +2230,69 @@
           "kind",
           "name",
           "started_on",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "RecordSummary_vitals": {
+        "additionalProperties": false,
+        "properties": {
+          "bmi": {
+            "type": "number"
+          },
+          "diastolic_mmhg": {
+            "type": "number"
+          },
+          "glucose_mmol_l": {
+            "type": "number"
+          },
+          "hba1c_pct": {
+            "type": "number"
+          },
+          "heart_rate_bpm": {
+            "type": "number"
+          },
+          "height_cm": {
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "vitals"
+            ],
+            "type": "string"
+          },
+          "pain_scale": {
+            "type": "number"
+          },
+          "recorded_at": {
+            "type": "string"
+          },
+          "respiratory_rate_bpm": {
+            "type": "number"
+          },
+          "spo2_pct": {
+            "type": "number"
+          },
+          "systolic_mmhg": {
+            "type": "number"
+          },
+          "temperature_c": {
+            "type": "number"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "weight_kg": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "recorded_at",
           "updated_at"
         ],
         "type": "object"
@@ -2753,6 +3152,96 @@
         ],
         "type": "object"
       },
+      "Record_symptoms": {
+        "additionalProperties": false,
+        "properties": {
+          "body_site": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "duration_minutes": {
+            "type": "integer"
+          },
+          "episode_count": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "impact": {
+            "type": "string"
+          },
+          "is_chronic": {
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "symptom"
+            ],
+            "type": "string"
+          },
+          "last_occurred_at": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "occurred_at": {
+            "type": "string"
+          },
+          "pain_scale": {
+            "type": "integer"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "relief_methods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "resolved_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "triggers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "episode_count",
+          "id",
+          "is_chronic",
+          "kind",
+          "last_occurred_at",
+          "name",
+          "occurred_at",
+          "patient",
+          "relief_methods",
+          "resolved_at",
+          "severity",
+          "triggers",
+          "updated_at"
+        ],
+        "type": "object"
+      },
       "Record_treatments": {
         "additionalProperties": false,
         "properties": {
@@ -2845,6 +3334,105 @@
           "name",
           "patient",
           "started_on",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "Record_vitals": {
+        "additionalProperties": false,
+        "properties": {
+          "bmi": {
+            "type": "number"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "device": {
+            "type": "string"
+          },
+          "diastolic_mmhg": {
+            "type": "number"
+          },
+          "display": {
+            "additionalProperties": false,
+            "properties": {
+              "height": {
+                "type": "string"
+              },
+              "unit_system": {
+                "type": "string"
+              },
+              "weight": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "unit_system"
+            ],
+            "type": "object"
+          },
+          "glucose_context": {
+            "type": "string"
+          },
+          "glucose_mmol_l": {
+            "type": "number"
+          },
+          "hba1c_pct": {
+            "type": "number"
+          },
+          "heart_rate_bpm": {
+            "type": "number"
+          },
+          "height_cm": {
+            "type": "number"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "vitals"
+            ],
+            "type": "string"
+          },
+          "pain_scale": {
+            "type": "number"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "recorded_at": {
+            "type": "string"
+          },
+          "respiratory_rate_bpm": {
+            "type": "number"
+          },
+          "spo2_pct": {
+            "type": "number"
+          },
+          "systolic_mmhg": {
+            "type": "number"
+          },
+          "temperature_c": {
+            "type": "number"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "weight_kg": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "created_at",
+          "display",
+          "id",
+          "kind",
+          "patient",
+          "recorded_at",
           "updated_at"
         ],
         "type": "object"
@@ -5382,14 +5970,16 @@
                 "medications",
                 "allergies",
                 "conditions",
-                "emergency-contacts",
+                "encounters",
+                "procedures",
+                "treatments",
+                "symptoms",
+                "vitals",
                 "immunizations",
                 "injuries",
                 "insurance",
                 "equipment",
-                "encounters",
-                "procedures",
-                "treatments"
+                "emergency-contacts"
               ],
               "type": "string"
             }
@@ -5528,14 +6118,16 @@
                 "medications",
                 "allergies",
                 "conditions",
-                "emergency-contacts",
+                "encounters",
+                "procedures",
+                "treatments",
+                "symptoms",
+                "vitals",
                 "immunizations",
                 "injuries",
                 "insurance",
                 "equipment",
-                "encounters",
-                "procedures",
-                "treatments"
+                "emergency-contacts"
               ],
               "type": "string"
             }
@@ -5640,14 +6232,16 @@
                 "medications",
                 "allergies",
                 "conditions",
-                "emergency-contacts",
+                "encounters",
+                "procedures",
+                "treatments",
+                "symptoms",
+                "vitals",
                 "immunizations",
                 "injuries",
                 "insurance",
                 "equipment",
-                "encounters",
-                "procedures",
-                "treatments"
+                "emergency-contacts"
               ],
               "type": "string"
             }
@@ -5747,14 +6341,16 @@
                 "medications",
                 "allergies",
                 "conditions",
-                "emergency-contacts",
+                "encounters",
+                "procedures",
+                "treatments",
+                "symptoms",
+                "vitals",
                 "immunizations",
                 "injuries",
                 "insurance",
                 "equipment",
-                "encounters",
-                "procedures",
-                "treatments"
+                "emergency-contacts"
               ],
               "type": "string"
             }
@@ -5840,14 +6436,16 @@
                 "medications",
                 "allergies",
                 "conditions",
-                "emergency-contacts",
+                "encounters",
+                "procedures",
+                "treatments",
+                "symptoms",
+                "vitals",
                 "immunizations",
                 "injuries",
                 "insurance",
                 "equipment",
-                "encounters",
-                "procedures",
-                "treatments"
+                "emergency-contacts"
               ],
               "type": "string"
             }

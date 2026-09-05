@@ -161,6 +161,51 @@ func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 			consequence: "deleting a practitioner must unset a measurement set's reference to it, not delete the measurement set",
 		},
 		{
+			relation:    relationRule{collection: kind.Encounter.Collection(), field: encounterFieldPatient, required: true, cascadeDelete: true},
+			target:      patients.Id,
+			consequence: "deleting a patient must delete every encounter filed against them, and a row without a patient is unreachable",
+		},
+		{
+			relation:    relationRule{collection: kind.Encounter.Collection(), field: encounterFieldPractitioner, required: false, cascadeDelete: false},
+			target:      practitioners.Id,
+			consequence: "deleting a practitioner must unset an encounter's reference to it, not delete the encounter",
+		},
+		{
+			relation:    relationRule{collection: kind.Encounter.Collection(), field: encounterFieldFacility, required: false, cascadeDelete: false},
+			target:      facilities.Id,
+			consequence: "deleting a facility must unset an encounter's reference to it, not delete the encounter",
+		},
+		{
+			relation:    relationRule{collection: kind.Procedure.Collection(), field: procedureFieldPatient, required: true, cascadeDelete: true},
+			target:      patients.Id,
+			consequence: "deleting a patient must delete every procedure filed against them, and a row without a patient is unreachable",
+		},
+		{
+			relation:    relationRule{collection: kind.Procedure.Collection(), field: procedureFieldPractitioner, required: false, cascadeDelete: false},
+			target:      practitioners.Id,
+			consequence: "deleting a practitioner must unset a procedure's reference to it, not delete the procedure",
+		},
+		{
+			relation:    relationRule{collection: kind.Procedure.Collection(), field: procedureFieldFacility, required: false, cascadeDelete: false},
+			target:      facilities.Id,
+			consequence: "deleting a facility must unset a procedure's reference to it, not delete the procedure",
+		},
+		{
+			relation:    relationRule{collection: kind.Treatment.Collection(), field: treatmentFieldPatient, required: true, cascadeDelete: true},
+			target:      patients.Id,
+			consequence: "deleting a patient must delete every treatment filed against them, and a row without a patient is unreachable",
+		},
+		{
+			relation:    relationRule{collection: kind.Treatment.Collection(), field: treatmentFieldPractitioner, required: false, cascadeDelete: false},
+			target:      practitioners.Id,
+			consequence: "deleting a practitioner must unset a treatment's reference to it, not delete the treatment",
+		},
+		{
+			relation:    relationRule{collection: kind.Treatment.Collection(), field: treatmentFieldFacility, required: false, cascadeDelete: false},
+			target:      facilities.Id,
+			consequence: "deleting a facility must unset a treatment's reference to it, not delete the treatment",
+		},
+		{
 			relation:    relationRule{collection: kind.Encounter.Collection(), field: careFieldCondition, required: false, cascadeDelete: false},
 			target:      conditions.Id,
 			consequence: "deleting a condition must unset an encounter's reference to it, not delete the encounter",

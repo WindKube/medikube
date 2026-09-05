@@ -9,6 +9,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/records"
 	"medikube/internal/records/recordstest"
+	"medikube/internal/web/api"
 )
 
 // expectedKinds is every kind this build's registry is expected to carry a
@@ -68,5 +69,18 @@ func TestEveryExpectedKindHasACompleteRegistration(t *testing.T) {
 
 			recordstest.AssertRegistrationComplete(t, entry)
 		})
+	}
+}
+
+func TestEveryExpectedKindIsDocumentedInTheOpenAPIInput(t *testing.T) {
+	t.Parallel()
+
+	documented := map[string]bool{}
+	for _, k := range api.OpenAPIKinds() {
+		documented[k.Enum] = true
+	}
+
+	for _, k := range expectedKinds {
+		require.True(t, documented[k.Enum()], "%s has no OpenAPI DTO set", k)
 	}
 }
