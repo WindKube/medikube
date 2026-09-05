@@ -36,12 +36,12 @@ func Symptoms() []clinical.Symptom {
 		{
 			ID: SymptomHeadacheOne, PatientID: accountAPatientSelfID,
 			Name: "Headache", Severity: clinical.SeverityMild,
-			OccurredAt: mustInstant("2025-06-01T08:00:00Z"),
+			OccurredAt: mustInstant("2025-05-31T08:00:00Z"),
 		},
 		{
 			ID: SymptomHeadacheTwo, PatientID: accountAPatientSelfID,
 			Name: "Headache", Severity: clinical.SeverityModerate,
-			OccurredAt:      mustInstant("2025-06-10T09:30:00Z"),
+			OccurredAt:      mustInstant("2025-06-11T09:30:00Z"),
 			DurationMinutes: intPtr(45),
 		},
 		{
@@ -52,7 +52,7 @@ func Symptoms() []clinical.Symptom {
 		{
 			ID: SymptomHeadacheFour, PatientID: accountAPatientSelfID,
 			Name: "HEADACHE", Severity: clinical.SeveritySevere,
-			OccurredAt: mustInstant("2025-07-15T14:00:00Z"),
+			OccurredAt: mustInstant("2025-07-16T14:00:00Z"),
 			PainScale:  intPtr(8),
 			IsChronic:  true,
 			Status:     clinical.ConditionStatusActive,
@@ -114,7 +114,7 @@ func Vitals() []clinical.Vitals {
 }
 
 const (
-	columnSeverity        = "severity"
+	columnSymptomSeverity = "severity"
 	columnOccurredAt      = "occurred_at"
 	columnDurationMinutes = "duration_minutes"
 	columnPainScale       = "pain_scale"
@@ -144,7 +144,7 @@ func applySymptoms(app core.App) error {
 	}
 
 	if err := requireColumns(collection,
-		columnPatient, columnName, columnSeverity, columnOccurredAt,
+		columnPatient, columnName, columnSymptomSeverity, columnOccurredAt,
 		columnDurationMinutes, columnPainScale, columnIsChronic, columnStatus,
 	); err != nil {
 		return err
@@ -162,7 +162,7 @@ func applySymptoms(app core.App) error {
 
 		record.Set(columnPatient, symptom.PatientID)
 		record.Set(columnName, symptom.Name)
-		record.Set(columnSeverity, string(symptom.Severity))
+		record.Set(columnSymptomSeverity, string(symptom.Severity))
 		record.Set(columnOccurredAt, symptom.OccurredAt.String())
 		record.Set(columnDurationMinutes, symptom.DurationMinutes)
 		record.Set(columnPainScale, symptom.PainScale)

@@ -940,7 +940,7 @@ func injuriesOfKind() string      { return "/api/v1/records/" + kind.Injury.Segm
 
 func immunizationPageOfKind() string { return "/" + kind.Immunization.Segment() }
 func injuryPageOfKind() string       { return "/" + kind.Injury.Segment() }
-func symptomsOfKind() string { return "/api/v1/records/" + kind.Symptom.Segment() }
+func symptomsOfKind() string         { return "/api/v1/records/" + kind.Symptom.Segment() }
 
 func symptomAddress(id string) string { return symptomsOfKind() + "/" + id }
 
@@ -1468,6 +1468,8 @@ func driveEquipment(c *client) {
 	c.doWith(http.MethodPatch, recordAddr, jsonBody(c.t, api.EquipmentPatch{Serial: ptr(EquipmentSerial)}),
 		map[string]string{"If-Match": etag})
 	c.doWith(http.MethodDelete, recordAddr, "", map[string]string{"If-Match": etag})
+}
+
 // sentinelSymptom plants the free-text sentinel a symptom episode carries.
 func sentinelSymptom(patientID string) api.SymptomCreate {
 	return api.SymptomCreate{

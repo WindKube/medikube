@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"net/http"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -256,6 +257,18 @@ var queryLanguageParameters = map[string]string{
 	"$autoCancel": "false",
 }
 
+// nextCursor matches a list answer's opaque pagination token.
+var nextCursor = regexp.MustCompile(`"next_cursor":"[^"]*"`)
+
+// withoutNextCursor masks a list answer's next_cursor member. It is sealed
+// with a random nonce (internal/store/cursor.go), so two otherwise identical
+// answers mint two different tokens for the same boundary, and comparing them
+// literally would fail for a reason that has nothing to do with whether a
+// PocketBase query parameter was honoured.
+func withoutNextCursor(body string) string {
+	return nextCursor.ReplaceAllString(body, `"next_cursor":""`)
+}
+
 // recordIDFor is the seeded id a route's plain `{id}` fetch must answer 200
 // for. Every route's {id} lives in a different collection — a medication's,
 // a practitioner's, a facility's — and testsupport.NameOnlyMedicationID is
@@ -348,7 +361,7 @@ func TestNoPublishedRouteHonoursPocketBasesQueryLanguage(t *testing.T) {
 				}
 
 				assert.Equalf(t, http.StatusOK, answer.Status, "%s?%s: %s", route.OpID, name, answer.Body)
-				assert.Equalf(t, withoutOwnCorrelationID(plain), withoutOwnCorrelationID(answer),
+				assert.Equalf(t, withoutNextCursor(withoutOwnCorrelationID(plain)), withoutNextCursor(withoutOwnCorrelationID(answer)),
 					"%s answered %s differently, so it reads PocketBase's %s and MediKube publishes no such parameter",
 					route.OpID, name, name)
 

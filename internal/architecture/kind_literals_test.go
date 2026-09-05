@@ -54,13 +54,13 @@ var kindLiteralExempt = map[string]string{
 	// shape: an error message, a zerolog field name or a struct member that
 	// says "equipment" or "insurance" because that is what the thing is
 	// called, not because it hardcodes a route or a collection.
-	"internal/domain/clinical/equipment.go":                "false positive: equipmentIDField says what the log field is",
-	"internal/domain/clinical/equipment_test.go":           "false positive, asserting the same field name",
-	"internal/domain/clinical/insurance.go":                "false positive: insuranceIDField says what the log field is",
-	"internal/domain/clinical/insurance_test.go":           "false positive, asserting the same field name",
-	"internal/domain/clinical/insurancecoverage.go":        "false positive: coverage.Validate's field-error messages name insurance's own coverage/contact fields in prose",
-	"internal/domain/clinical/insurancecoverage_test.go":   "false positive, asserting the same messages",
-	"internal/httproute/routes.go":                         "false positive: the two kinds' route summaries and landmark names say what the page is about in prose",
+	"internal/domain/clinical/equipment.go":              "false positive: equipmentIDField says what the log field is",
+	"internal/domain/clinical/equipment_test.go":         "false positive, asserting the same field name",
+	"internal/domain/clinical/insurance.go":              "false positive: insuranceIDField says what the log field is",
+	"internal/domain/clinical/insurance_test.go":         "false positive, asserting the same field name",
+	"internal/domain/clinical/insurancecoverage.go":      "false positive: coverage.Validate's field-error messages name insurance's own coverage/contact fields in prose",
+	"internal/domain/clinical/insurancecoverage_test.go": "false positive, asserting the same messages",
+	"internal/httproute/routes.go":                       "false positive: the two kinds' route summaries and landmark names say what the page is about in prose",
 	"internal/service/access/exhaustive_test.go": "false positive: the checkpoint-package exemption reasons name " +
 		"equipment's, insurance's and vitals's own test packages in prose",
 	"internal/service/equipment/adapter.go":                "false positive: wiring-error messages and the audit inventory summary name the kind in prose",
