@@ -81,7 +81,7 @@ test.describe('the active-patient switcher', () => {
     });
 
     await switchTo(page, target.id);
-    await expect(page.getByText(targetName)).toBeVisible();
+    await expect(page.getByRole('link', { name: targetName })).toBeVisible();
 
     // Screen 2: the patient's own detail page.
     await page.goto(patientDetailPath(target.id));
@@ -91,14 +91,14 @@ test.describe('the active-patient switcher', () => {
     // query parameter this test supplied, is what scopes it.
     await page.goto('/medications');
     await expect(page).toHaveURL(new RegExp(`patient=${target.id}`));
-    await expect(page.getByText(targetName)).toBeVisible();
+    await expect(page.getByRole('link', { name: targetName })).toBeVisible();
 
     // Reload and the choice is still there — SC-002's second sentence,
     // "at both viewports" (this spec runs once per project, per
     // playwright.config.ts, exactly like smoke.spec.ts).
     await page.reload();
     await expect(page.getByRole('combobox', { name: 'Active patient' })).toHaveValue(target.id);
-    await expect(page.getByText(targetName)).toBeVisible();
+    await expect(page.getByRole('link', { name: targetName })).toBeVisible();
   });
 
   test('reaches any of twenty-five people in one switch, with a median under one second (SC-002)', async ({ page }) => {
@@ -115,7 +115,7 @@ test.describe('the active-patient switcher', () => {
 
       const started = Date.now();
       await switchTo(page, target.id);
-      await expect(page.getByText(targetName)).toBeVisible();
+      await expect(page.getByRole('link', { name: targetName })).toBeVisible();
       samples.push(Date.now() - started);
     }
 
