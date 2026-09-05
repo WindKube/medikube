@@ -43,6 +43,7 @@ func TestMedicationsCarriesExactlyTheColumnsDataModelDeclares(t *testing.T) {
 		medicationFieldPatient,
 		medicationFieldPractitioner,
 		medicationFieldPharmacy,
+		medicationFieldTags,
 	}
 
 	assert.Equal(t, expected, collection.Fields.FieldNames())
@@ -64,7 +65,7 @@ func TestMedicationsCarriesExactlyTheColumnsDataModelDeclares(t *testing.T) {
 	// here early is a phase reaching backwards rather than a typo. owner is
 	// deliberately absent too, in the other direction: research D-13's
 	// medications-repoint migration removes it.
-	for _, absent := range []string{medicationFieldOwner, "tags", "deleted_at", "reminder_enabled"} {
+	for _, absent := range []string{medicationFieldOwner, "deleted_at", "reminder_enabled"} {
 		assert.Nilf(t, collection.Fields.GetByName(absent), "%s belongs to a different phase", absent)
 	}
 }

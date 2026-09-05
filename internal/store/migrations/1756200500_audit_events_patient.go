@@ -12,6 +12,14 @@ const auditFieldPatient = "patient"
 
 const auditPatientTimeIndex = "idx_audit_patient_time"
 
+// phase2AuditTargetKinds is phase1AuditTargetKinds plus phase 002's
+// practitioner and facility — the twenty-five values this migration's era
+// actually declared. Frozen the same way phase1AuditTargetKinds is: reading
+// audit.TargetKinds() live here would pick up phase 003's later additions too,
+// which is exactly the reversibility bug a frozen era-snapshot exists to
+// avoid (constitution Principle IX).
+var phase2AuditTargetKinds = append(append([]string{}, phase1AuditTargetKinds...), "practitioner", "facility")
+
 func init() {
 	register(auditEventsPatientUp, auditEventsPatientDown)
 }
@@ -48,7 +56,7 @@ func auditEventsPatientUp(app core.App) error {
 	if !ok {
 		return fmt.Errorf("%s.%s is not a select field", auditEventsCollection, auditFieldTargetKind)
 	}
-	targetKind.Values = enumValues(audit.TargetKinds())
+	targetKind.Values = phase2AuditTargetKinds
 
 	// FR-029, SC-004. `id DESC` so phase 006's keyset reader stays index-only.
 	audits.AddIndex(auditPatientTimeIndex, false,

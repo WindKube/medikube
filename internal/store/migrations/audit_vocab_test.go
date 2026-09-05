@@ -37,7 +37,7 @@ func TestAuditEventVocabularyIsExactlyWhatDataModelDeclares(t *testing.T) {
 	}{
 		{field: auditFieldActorKind, expected: enumValues(audit.ActorKinds()), count: 4},
 		{field: auditFieldAction, expected: enumValues(audit.Actions()), count: 21},
-		{field: auditFieldTargetKind, expected: enumValues(audit.TargetKinds()), count: 25},
+		{field: auditFieldTargetKind, expected: enumValues(audit.TargetKinds()), count: 27},
 	}
 
 	for _, testCase := range cases {
