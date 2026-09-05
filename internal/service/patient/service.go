@@ -36,11 +36,19 @@ type Service struct {
 	repository Repository
 	photos     PhotoStore
 	authorizer Authorizer
+	pointer    ActivePatientStore
+	auditor    Auditor
 }
 
 // New refuses an incomplete service rather than returning one (mirrors
 // internal/service/medication.New).
-func New(repository Repository, photos PhotoStore, authorizer Authorizer) (*Service, error) {
+func New(
+	repository Repository,
+	photos PhotoStore,
+	authorizer Authorizer,
+	pointer ActivePatientStore,
+	auditor Auditor,
+) (*Service, error) {
 	var missing []string
 
 	if repository == nil {
@@ -55,11 +63,25 @@ func New(repository Repository, photos PhotoStore, authorizer Authorizer) (*Serv
 		missing = append(missing, "authorizer")
 	}
 
+	if pointer == nil {
+		missing = append(missing, "active-patient pointer")
+	}
+
+	if auditor == nil {
+		missing = append(missing, "auditor")
+	}
+
 	if len(missing) > 0 {
 		return nil, fmt.Errorf("patient: the service is wired with no %s", joinWords(missing))
 	}
 
-	return &Service{repository: repository, photos: photos, authorizer: authorizer}, nil
+	return &Service{
+		repository: repository,
+		photos:     photos,
+		authorizer: authorizer,
+		pointer:    pointer,
+		auditor:    auditor,
+	}, nil
 }
 
 // List is the actor's own patients, one page at a time (FR-010).

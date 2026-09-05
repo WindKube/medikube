@@ -11,6 +11,7 @@ import (
 	"medikube/internal/domain/access"
 	"medikube/internal/httproute"
 	"medikube/internal/records"
+	"medikube/internal/service/patient"
 	"medikube/internal/web"
 )
 
@@ -164,9 +165,14 @@ func (h *accountHandlers) update(e *core.RequestEvent, actor access.Actor) error
 		return err
 	}
 
+	activePatient, ownedCount, err := h.activePatient(e.Request.Context(), actor)
+	if err != nil {
+		return err
+	}
+
 	e.Response.Header().Set("Cache-Control", accountCacheControl)
 
-	return web.WriteJSON(e, http.StatusOK, NewMe(user, counts))
+	return web.WriteJSON(e, http.StatusOK, NewMe(user, counts, activePatient, ownedCount))
 }
 
 // changePassword replaces the credential and re-issues the caller's own session
@@ -233,5 +239,51 @@ func (h *accountHandlers) me(e *core.RequestEvent, actor access.Actor) (Me, erro
 		return Me{}, err
 	}
 
-	return NewMe(user, counts), nil
+	activePatient, ownedCount, err := h.activePatient(e.Request.Context(), actor)
+	if err != nil {
+		return Me{}, err
+	}
+
+	return NewMe(user, counts, activePatient, ownedCount), nil
+}
+
+// activePatient answers contracts/active-patient.md's amendment to getMe: the
+// person in view, resolved (and auto-selected, FR-018) through the same
+// checkpoint every read of a patient passes, and how many the account owns.
+func (h *accountHandlers) activePatient(ctx context.Context, actor access.Actor) (*PatientSummary, int, error) {
+	return resolveActivePatient(ctx, actor, h.deps.Patients)
+}
+
+// resolveActivePatient is shared by getMe and by the account body a
+// registration or a sign-in answers with (auth.go's render): both amend the
+// same wire shape, and a resolver written twice is two places one of them
+// could disagree with FR-018's auto-selection.
+func resolveActivePatient(ctx context.Context, actor access.Actor, resolve PatientResolve) (*PatientSummary, int, error) {
+	svc, err := resolve()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	resolved, err := svc.ResolveActivePatient(ctx, actor)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	page, err := svc.List(ctx, actor, patient.Query{Limit: 1, Count: true})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var ownedCount int
+	if page.Total != nil {
+		ownedCount = *page.Total
+	}
+
+	if resolved == nil {
+		return nil, ownedCount, nil
+	}
+
+	summary := NewPatientSummary(*resolved, nil)
+
+	return &summary, ownedCount, nil
 }

@@ -39,7 +39,7 @@ const medicationListTitle = "Medications"
 // A page that reached the router without a Landmark or a SmokeURL cannot be
 // registered at all — httproute.Handle panics on either — so wiring these two
 // is also what takes them off the 501 stub list.
-func Handlers(resolve api.Resolve) (httproute.Handlers, error) {
+func Handlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
 	links, err := newMedicationLinks()
 	if err != nil {
 		return nil, err
@@ -49,7 +49,11 @@ func Handlers(resolve api.Resolve) (httproute.Handlers, error) {
 		return nil, api.ErrNoRecords
 	}
 
-	pages := &medicationPages{resolve: resolve, links: links, views: MedicationViews{links: links}}
+	if patients == nil {
+		return nil, api.ErrNoPatients
+	}
+
+	pages := &medicationPages{resolve: resolve, patients: patients, links: links, views: MedicationViews{links: links}}
 
 	return httproute.Handlers{
 		OpMedicationListPage:   web.WithActor(pages.list),
@@ -151,6 +155,10 @@ func (v MedicationViews) view(record recordfamily.Record) views.MedicationView {
 		medication = detailEntity(record, *body)
 	case *api.MedicationSummary:
 		medication = summaryEntity(record, *body)
+	case *api.MedicationCreate:
+		// The blank create form (FR-025): nothing recorded yet but the
+		// patient it will be filed against, fixed at render time.
+		medication.PatientID = body.Patient
 	}
 
 	return views.NewMedicationView(medication, v.links.of(medication.ID))
@@ -172,6 +180,7 @@ func summaryEntity(record recordfamily.Record, summary api.MedicationSummary) cl
 func detailEntity(record recordfamily.Record, detail api.Medication) clinical.Medication {
 	medication := summaryEntity(record, detail.MedicationSummary)
 
+	medication.PatientID = detail.Patient
 	medication.AlternativeName = detail.AlternativeName
 	medication.Type = clinical.MedicationType(detail.Type)
 	medication.Route = clinical.MedicationRoute(detail.Route)
@@ -185,17 +194,27 @@ func detailEntity(record recordfamily.Record, detail api.Medication) clinical.Me
 }
 
 type medicationPages struct {
-	resolve api.Resolve
-	links   medicationLinks
-	views   MedicationViews
+	resolve  api.Resolve
+	patients api.PatientResolve
+	links    medicationLinks
+	views    MedicationViews
 }
 
 // list renders P4. The rows come through the same generic handler the API
 // serves, so a page and its JSON cannot disagree about what the account owns.
+//
+// A bare /medications (no `?patient=`) 303s to the person in view, or to
+// /patients when there is none (FR-016, contracts/active-patient.md) — the
+// page layer's own resolution, never a fallback inside the API's 400
+// `patient_required`.
 func (p *medicationPages) list(e *core.RequestEvent, actor access.Actor) error {
 	handler, err := p.session(actor)
 	if err != nil {
 		return err
+	}
+
+	if e.Request.URL.Query().Get(api.ParamPatient) == "" {
+		return p.redirectToActivePatient(e, actor)
 	}
 
 	entry, err := handler.Dispatch(kind.Medication.Segment())
@@ -214,11 +233,67 @@ func (p *medicationPages) list(e *core.RequestEvent, actor access.Actor) error {
 	}
 
 	blank := recordfamily.Record{Kind: kind.Medication}
+	blank.Body = &api.MedicationCreate{Patient: query.PatientID}
 
-	return p.render(e, medicationListTitle, sequence{
+	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
+	if err != nil {
+		return err
+	}
+
+	return p.render(e, actor, medicationListTitle, sequence{
+		context,
 		p.views.ListOfPage(listing, nextPageHref(e, listing)),
 		entry.Views.Form(blank, nil),
 	})
+}
+
+// redirectToActivePatient is FR-016's page-layer fallback: the person in
+// view, resolved and auto-selected exactly as getMe resolves it (FR-018), or
+// /patients when there is nobody to redirect to.
+func (p *medicationPages) redirectToActivePatient(e *core.RequestEvent, actor access.Actor) error {
+	svc, err := p.patients()
+	if err != nil {
+		return err
+	}
+
+	active, err := svc.ResolveActivePatient(e.Request.Context(), actor)
+	if err != nil {
+		return err
+	}
+
+	if active == nil {
+		return e.Redirect(http.StatusSeeOther, p.links.patientsPage)
+	}
+
+	next := *e.Request.URL
+	values := next.Query()
+	values.Set(api.ParamPatient, active.ID)
+	next.RawQuery = values.Encode()
+
+	return e.Redirect(http.StatusSeeOther, next.RequestURI())
+}
+
+// patientContext renders FR-019's naming for the list and the form both:
+// which patient's medications this screen is for.
+func (p *medicationPages) patientContext(ctx context.Context, actor access.Actor, patientID string) (recordfamily.Renderer, error) {
+	if patientID == "" {
+		return shell.PatientContextHeader(shell.PatientContextProps{}), nil
+	}
+
+	svc, err := p.patients()
+	if err != nil {
+		return nil, err
+	}
+
+	found, err := svc.Get(ctx, actor, patientID)
+	if err != nil {
+		return nil, err
+	}
+
+	return shell.PatientContextHeader(shell.PatientContextProps{
+		Name: found.FirstName + " " + found.LastName,
+		Href: "/patients/" + found.ID,
+	}), nil
 }
 
 // nextPageHref is this same list one page further on: the address that was
@@ -262,7 +337,18 @@ func (p *medicationPages) detail(e *core.RequestEvent, actor access.Actor) error
 		return web.OwnerScoped(err)
 	}
 
-	return p.render(e, p.views.view(found).Name, sequence{
+	patientID := ""
+	if detail, ok := found.Body.(*api.Medication); ok {
+		patientID = detail.Patient
+	}
+
+	context, err := p.patientContext(e.Request.Context(), actor, patientID)
+	if err != nil {
+		return err
+	}
+
+	return p.render(e, actor, p.views.view(found).Name, sequence{
+		context,
 		entry.Views.Detail(found),
 		entry.Views.Form(found, nil),
 	})
@@ -283,8 +369,14 @@ func (p *medicationPages) session(actor access.Actor) (*recordfamily.Handler, er
 	return p.resolve()
 }
 
-func (p *medicationPages) render(e *core.RequestEvent, title string, main sequence) error {
-	return RenderPage(e, http.StatusOK, title, NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
+func (p *medicationPages) render(e *core.RequestEvent, actor access.Actor, title string, main sequence) error {
+	switcher, err := patientSwitcherProps(e.Request.Context(), actor, p.patients)
+	if err != nil {
+		return err
+	}
+
+	return RenderPage(e, http.StatusOK, title,
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path), Switcher: switcher}, main)
 }
 
 // pageCacheControl keeps a rendered medication list out of every shared cache
@@ -317,6 +409,7 @@ type medicationLinks struct {
 	listPage     string
 	detailPage   string
 	settingsPage string
+	patientsPage string
 	record       string
 	collection   string
 }
@@ -326,6 +419,7 @@ func newMedicationLinks() (medicationLinks, error) {
 		OpMedicationListPage:   "",
 		OpMedicationDetailPage: "",
 		OpSettingsPage:         "",
+		OpPatientListPage:      "",
 		api.OpGetRecord:        "",
 		api.OpCreateRecord:     "",
 	})
@@ -339,6 +433,7 @@ func newMedicationLinks() (medicationLinks, error) {
 		listPage:     paths[OpMedicationListPage],
 		detailPage:   paths[OpMedicationDetailPage],
 		settingsPage: paths[OpSettingsPage],
+		patientsPage: paths[OpPatientListPage],
 		record:       strings.ReplaceAll(paths[api.OpGetRecord], "{"+api.PathKind+"}", segment),
 		collection:   strings.ReplaceAll(paths[api.OpCreateRecord], "{"+api.PathKind+"}", segment),
 	}, nil

@@ -76,6 +76,10 @@ type Deps struct {
 	// that wires no patient stack at all (a test harness exercising only
 	// auth) still boots; register skips provisioning rather than panicking.
 	SelfRecord SelfRecordFunc
+
+	// Patients resolves the patient stack getMe/updateMe and
+	// setActivePatient need (contracts/active-patient.md).
+	Patients PatientResolve
 }
 
 type authHandlers struct {
@@ -130,6 +134,10 @@ func (d Deps) validate() error {
 
 	if d.Mail == nil {
 		missing = append(missing, "a way to tell whether this instance can send mail")
+	}
+
+	if d.Patients == nil {
+		missing = append(missing, "a patient stack")
 	}
 
 	if len(missing) == 0 {
@@ -384,7 +392,16 @@ func (h *authHandlers) render(e *core.RequestEvent, actor access.Actor, user dom
 		return Me{}, err
 	}
 
-	return NewMe(user, counts), nil
+	activePatient, ownedCount, err := resolveActivePatient(e.Request.Context(), access.Actor{
+		UserID:    user.ID,
+		Role:      user.Role,
+		RequestID: actor.RequestID,
+	}, h.deps.Patients)
+	if err != nil {
+		return Me{}, err
+	}
+
+	return NewMe(user, counts, activePatient, ownedCount), nil
 }
 
 // refused maps the identity service's two own conditions onto the published

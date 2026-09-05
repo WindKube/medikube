@@ -1,0 +1,23 @@
+package shell
+
+// PatientContextProps is one line: whose records this screen shows.
+type PatientContextProps struct {
+	Name string
+	Href string
+}
+
+// PatientContextHeader names the patient inside #main (FR-019, SC-003):
+// every screen that shows person-specific information says, in the region
+// itself and not only in the shell switcher, whose it is.
+templ PatientContextHeader(props PatientContextProps) {
+	if props.Name != "" {
+		<p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+			Viewing
+			if props.Href != "" {
+				<a href={ templ.SafeURL(props.Href) } class="font-medium text-slate-900 underline underline-offset-2 dark:text-slate-100">{ props.Name }</a>
+			} else {
+				<span class="font-medium text-slate-900 dark:text-slate-100">{ props.Name }</span>
+			}
+		</p>
+	}
+}

@@ -43,7 +43,7 @@ func newService(t *testing.T) (*patient.Service, *patienttest.Repository, *patie
 	authorizer := patienttest.NewAuthorizer(repo, auditor)
 	photos := patienttest.NewPhotoStore(15<<20, []string{"image/jpeg", "image/png", "image/webp"})
 
-	svc, err := patient.New(repo, photos, authorizer)
+	svc, err := patient.New(repo, photos, authorizer, patienttest.NewActivePatientStore(), auditor)
 	require.NoError(t, err)
 
 	return svc, repo, auditor

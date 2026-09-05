@@ -1506,6 +1506,63 @@
         "summary": "Change the display name or the preferences."
       }
     },
+    "/api/v1/me/active-patient": {
+      "put": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nThe target is authorized before the pointer is written, so another account's patient is 404 and the pointer is left unchanged. Never consulted for authorization (FR-015): changing the selection grants nothing.",
+        "operationId": "setActivePatient",
+        "responses": {
+          "200": {
+            "description": "The newly active patient, or null when the pointer was cleared."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`not_found`. On owner-scoped data this is also the answer for a record belonging to somebody else, byte-identical apart from `request_id` to an id that never existed (FR-033)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`validation_failed`, with every offending member reported at once in `fields[]`. An unknown or unexpected member is reported with the field code `unknown_field`."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Set or clear the person in view. Authorized against the target before the pointer is written."
+      }
+    },
     "/api/v1/me/password": {
       "put": {
         "description": "Authorization: requires a session.\n\nA wrong current password is 422 on that member rather than 401: the caller is authenticated, the password is what failed.",

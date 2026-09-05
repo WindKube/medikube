@@ -53,6 +53,12 @@ type DocumentProps struct {
 
 	Nav []NavLink
 
+	// Switcher is FR-014's shell control, nil on the signed-out surface. It
+	// is a rendered component rather than PatientSwitcherProps directly, so a
+	// page that has none to offer can leave it nil rather than build one with
+	// no options.
+	Switcher templ.Component
+
 	// ThemeClass is D-36's class on <html>: "dark", "light" or "" — resolved
 	// server-side, before the first byte, from the account's stored
 	// preference (shell.ThemeClass). Empty is a legitimate value and not a

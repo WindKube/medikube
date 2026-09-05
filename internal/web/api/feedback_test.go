@@ -28,6 +28,7 @@ var dataChangingJSONOnly = map[string]string{
 	"updateMe":                 "contracts/account.md: answers the JSON envelope",
 	"deleteMe":                 "contracts/account.md: answers the JSON envelope",
 	"changePassword":           "contracts/account.md: answers the JSON envelope",
+	"setActivePatient":         "contracts/active-patient.md: answers the JSON envelope; a Datastar @put's own feedback is the re-rendered switcher, not a toast",
 	"createRecord":             "contracts/records.md: answers the JSON envelope; live feedback is the SSE stream",
 	"updateRecord":             "contracts/records.md: answers the JSON envelope; live feedback is the SSE stream",
 	"deleteRecord":             "contracts/records.md: answers the JSON envelope; live feedback is the SSE stream",

@@ -30,6 +30,14 @@ const photoPartName = "photo"
 // defaultPhotoSize is contracts/patient-photo.md's documented default.
 const defaultPhotoSize = "100x100t"
 
+// PatientPhotoURL mirrors patients.go's own photoURL closure: the client
+// appends its own ?size=. The shell's PatientSwitcher (FR-014, which shows
+// the person in view by name AND photograph) needs the same address and gets
+// it from here rather than a second, driftable copy of the path.
+func PatientPhotoURL(id string) string {
+	return "/api/v1/patients/" + id + "/photo"
+}
+
 // PhotoServer is the storage seam this file streams bytes through, after the
 // service has authorized the request. It never sees an actor: authorization
 // already happened, and this is a resolved key and an io.Copy

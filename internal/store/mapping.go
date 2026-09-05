@@ -102,6 +102,13 @@ const (
 	userFieldDateFormat = "date_format"
 	userFieldTheme      = "theme"
 	userFieldDisabledAt = "disabled_at"
+
+	// userFieldActivePatient is FR-013's own column, added by phase 002's
+	// migration. It is read and written through UserActivePatientID and
+	// SetUserActivePatientID directly, never through UserFromRecord/
+	// UserToRecord: it is not part of identity.User's profile and carries no
+	// audited-together relationship with the other seven columns.
+	userFieldActivePatient = "active_patient"
 )
 
 // data-model §6's amended and re-anchored columns. `owner` is gone; `patient`
@@ -370,6 +377,20 @@ func UserToRecord(record *core.Record, user identity.User) error {
 	return nil
 }
 
+// UserActivePatientID reads users.active_patient. The empty string is
+// unset — a RelationField with MaxSelect 1 stores at most one id, never a
+// sentinel of its own.
+func UserActivePatientID(record *core.Record) string {
+	return record.GetString(userFieldActivePatient)
+}
+
+// SetUserActivePatientID writes users.active_patient. patientID "" clears
+// it (research D-08: the pointer is presentation only, and clearing it is an
+// ordinary value of the same column, not a second operation).
+func SetUserActivePatientID(record *core.Record, patientID string) {
+	record.Set(userFieldActivePatient, patientID)
+}
+
 func AuditEventFromRecord(record *core.Record) (audit.Event, error) {
 	if err := expectCollection(record, auditCollection); err != nil {
 		return audit.Event{}, err
@@ -439,7 +460,7 @@ func AssertMappedFields(app core.App) error {
 			fieldID, fieldCreated, fieldUpdated,
 			userFieldEmail, userFieldVerified, userFieldName, userFieldRole,
 			userFieldUnitSystem, userFieldLocale, userFieldDateFormat,
-			userFieldTheme, userFieldDisabledAt,
+			userFieldTheme, userFieldDisabledAt, userFieldActivePatient,
 		},
 		kind.Medication.Collection(): {
 			fieldID, fieldCreated, fieldUpdated,

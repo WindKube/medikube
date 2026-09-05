@@ -6,6 +6,7 @@ import (
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
+	"medikube/internal/domain/audit"
 	"medikube/internal/domain/person"
 )
 
@@ -104,4 +105,23 @@ type PhotoStore interface {
 // which authorizes against a kind and audits the refusal itself.
 type Authorizer interface {
 	Patient(ctx context.Context, actor access.Actor, patientID string, need access.Permission) (access.Grant, error)
+}
+
+// ActivePatientStore is the users.active_patient column (contracts/active-
+// patient.md), a seam of its own rather than a Repository method: it reaches
+// past the patient row into the account that points at it, which Repository's
+// five owner-scoped methods never do.
+type ActivePatientStore interface {
+	// ActivePatient answers the pointer, or "" when it is unset.
+	ActivePatient(ctx context.Context, userID string) (string, error)
+
+	// SetActivePatient writes the pointer. patientID "" clears it.
+	SetActivePatient(ctx context.Context, userID, patientID string) error
+}
+
+// Auditor writes the trail. This package reaches it for exactly one thing:
+// FR-045's switch_patient row, mirroring
+// internal/service/practitioner.Auditor.
+type Auditor interface {
+	Record(ctx context.Context, event audit.Event) error
 }

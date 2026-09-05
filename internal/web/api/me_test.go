@@ -51,6 +51,47 @@ func TestTheAccountBehindTheSessionIsReadBackWhole(t *testing.T) {
 	assert.Empty(t, answer.Header.Get("ETag"), "an account carries no version to write back against")
 }
 
+// T093/contracts/active-patient.md's amendment to GET /api/v1/me: the person
+// in view (seeded at the account's own self-record, testsupport/seed's
+// applyActivePatients) and how many the account owns.
+func TestTheAccountReadsBackTheActivePatientAndOwnedCount(t *testing.T) {
+	t.Parallel()
+
+	instance := newRig(t)
+
+	answer := instance.as(testsupport.AccountAEmail).get(meURL)
+	require.Equal(t, http.StatusOK, answer.Status, answer.Body)
+
+	me := answer.me(t)
+	require.NotNil(t, me.ActivePatient, "the seeded account has a self-record but none is reported active")
+	assert.Equal(t, testsupport.AccountAPatientSelfID, me.ActivePatient.ID)
+	assert.Equal(t, 3, me.Patients.OwnedCount, "account A owns three seeded patients")
+}
+
+// T093: active_patient is read-only from this side. MePatch has no member
+// for it, so a caller naming it is refused by shape before any handler runs
+// — the same enforcement FR-012 already relies on for role and
+// email_confirmed.
+func TestPatchingTheAccountRejectsActivePatientAsAnUnknownField(t *testing.T) {
+	t.Parallel()
+
+	instance := newRig(t)
+
+	answer := instance.as(testsupport.AccountAEmail).
+		do(http.MethodPatch, meURL, body("active_patient", quoted(testsupport.AccountAPatientChildID)), nil)
+
+	require.Equal(t, http.StatusUnprocessableEntity, answer.Status, answer.Body)
+
+	envelope := answer.envelope(t)
+	require.Len(t, envelope.Error.Fields, 1)
+	assert.Equal(t, "active_patient", envelope.Error.Fields[0].Field)
+	assert.Equal(t, "unknown_field", envelope.Error.Fields[0].Code)
+
+	record := instance.stored(t, testsupport.AccountAEmail)
+	assert.Equal(t, testsupport.AccountAPatientSelfID, store.UserActivePatientID(record),
+		"a refused patch changed the pointer anyway")
+}
+
 func TestReadingTheAccountWithoutASessionIsRefused(t *testing.T) {
 	t.Parallel()
 

@@ -208,6 +208,12 @@ type meDTO struct {
 	Theme          string         `json:"theme"`
 	CreatedAt      string         `json:"created_at"`
 	Counts         map[string]int `json:"counts"`
+	ActivePatient  *struct {
+		ID string `json:"id"`
+	} `json:"active_patient"`
+	Patients struct {
+		OwnedCount int `json:"owned_count"`
+	} `json:"patients"`
 }
 
 type sessionDTO struct {

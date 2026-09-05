@@ -263,6 +263,10 @@ type MedicationLinks struct {
 type MedicationView struct {
 	ID string
 
+	// PatientID is FR-025's fixed target: rendered into the create form's
+	// hidden field at page-render time and never re-read after (US3-6).
+	PatientID string
+
 	Name            string
 	AlternativeName string
 	Type            string
@@ -295,6 +299,7 @@ type MedicationView struct {
 func NewMedicationView(medication clinical.Medication, links MedicationLinks) MedicationView {
 	return MedicationView{
 		ID:              medication.ID,
+		PatientID:       medication.PatientID,
 		Name:            medication.Name,
 		AlternativeName: medication.AlternativeName,
 		Type:            MedicationTypeLabel(medication.Type),

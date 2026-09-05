@@ -306,6 +306,39 @@ func (a *Authorizer) deny(ctx context.Context, actor access.Actor, patientID str
 	})
 }
 
+// ActivePatientStore is the in-memory patient.ActivePatientStore: one
+// pointer per account, mirroring users.active_patient.
+type ActivePatientStore struct {
+	mu      sync.Mutex
+	pointer map[string]string
+}
+
+func NewActivePatientStore() *ActivePatientStore {
+	return &ActivePatientStore{pointer: make(map[string]string)}
+}
+
+func (s *ActivePatientStore) ActivePatient(_ context.Context, userID string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.pointer[userID], nil
+}
+
+func (s *ActivePatientStore) SetActivePatient(_ context.Context, userID, patientID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if patientID == "" {
+		delete(s.pointer, userID)
+
+		return nil
+	}
+
+	s.pointer[userID] = patientID
+
+	return nil
+}
+
 // Auditor is the in-memory recorder every unit test can inspect.
 type Auditor struct {
 	mu     sync.Mutex

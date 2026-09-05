@@ -52,6 +52,7 @@ func TestTheTableCarriesTheTwentyNineDocumentedOperations(t *testing.T) {
 		{"updateMe", http.MethodPatch, "/api/v1/me", httproute.KindAPI, httproute.AuthUser},
 		{"deleteMe", http.MethodDelete, "/api/v1/me", httproute.KindAPI, httproute.AuthUser},
 		{"changePassword", http.MethodPut, "/api/v1/me/password", httproute.KindAPI, httproute.AuthUser},
+		{"setActivePatient", http.MethodPut, "/api/v1/me/active-patient", httproute.KindAPI, httproute.AuthUser},
 		{"listRecords", http.MethodGet, "/api/v1/records", httproute.KindAPI, httproute.AuthUser},
 		{"listRecordsOfKind", http.MethodGet, "/api/v1/records/{kind}", httproute.KindAPI, httproute.AuthUser},
 		{"createRecord", http.MethodPost, "/api/v1/records/{kind}", httproute.KindAPI, httproute.AuthUser},
@@ -87,7 +88,7 @@ func TestTheTableCarriesTheTwentyNineDocumentedOperations(t *testing.T) {
 		{"updateFacility", http.MethodPatch, "/api/v1/facilities/{id}", httproute.KindAPI, httproute.AuthUser},
 		{"deleteFacility", http.MethodDelete, "/api/v1/facilities/{id}", httproute.KindAPI, httproute.AuthUser},
 	}
-	require.Len(t, want, 39)
+	require.Len(t, want, 40)
 
 	byOpID := inventoryByOpID(t)
 
