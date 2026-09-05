@@ -49,6 +49,7 @@ func anonymousParameters(recordID string) map[string]string {
 		"{kind}":       kind.Medication.Segment(),
 		"{id}":         recordID,
 		"{recordId}":   recordID,
+		"{patientId}":  testsupport.AccountAPatientSelfID,
 		"{collection}": kind.Medication.Collection(),
 		"{token}":      "not-a-token-this-instance-ever-issued",
 		"{filename}":   "attachment.pdf",

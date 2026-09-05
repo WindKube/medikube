@@ -44,6 +44,13 @@ var contractInventory = []string{
 	"confirmPasswordReset",
 	"requestEmailVerification",
 	"confirmEmailVerification",
+	"listPatients",
+	"createPatient",
+	"getPatient",
+	"updatePatient",
+	"putPatientPhoto",
+	"getPatientPhoto",
+	"deletePatientPhoto",
 }
 
 // The operations that resolve an id or a kind out of the stored data. For these
@@ -57,6 +64,13 @@ var ownerScoped = []string{
 	"updateRecord",
 	"deleteRecord",
 	"streamRecords",
+	"listPatients",
+	"createPatient",
+	"getPatient",
+	"updatePatient",
+	"putPatientPhoto",
+	"getPatientPhoto",
+	"deletePatientPhoto",
 }
 
 func TestTheDocumentDeclaresOpenAPI31(t *testing.T) {
@@ -97,7 +111,7 @@ func TestGenerateRefusesADocumentWithNoVersion(t *testing.T) {
 func TestTheAPIOperationsAreExactlyTheContractInventory(t *testing.T) {
 	t.Parallel()
 
-	require.Len(t, contractInventory, 22, "contracts/README.md's inventory is 22 operations")
+	require.Len(t, contractInventory, 29, "contracts/README.md's inventory plus 002-patient-core's patient operations is 29 operations")
 
 	loaded := roundTrip(t, generate(t, twoKindInput()))
 	documented := operationsByID(t, loaded)
@@ -128,7 +142,7 @@ func TestEveryOperationIDIsUnique(t *testing.T) {
 
 	loaded := roundTrip(t, generate(t, twoKindInput()))
 
-	assert.Len(t, operationsByID(t, loaded), 33)
+	assert.Len(t, operationsByID(t, loaded), 40)
 }
 
 func TestEveryOperationCarriesItsAuthorizationRule(t *testing.T) {

@@ -31,6 +31,10 @@ var dataChangingJSONOnly = map[string]string{
 	"createRecord":             "contracts/records.md: answers the JSON envelope; live feedback is the SSE stream",
 	"updateRecord":             "contracts/records.md: answers the JSON envelope; live feedback is the SSE stream",
 	"deleteRecord":             "contracts/records.md: answers the JSON envelope; live feedback is the SSE stream",
+	"createPatient":            "contracts/patients.md: answers the JSON envelope",
+	"updatePatient":            "contracts/patients.md: answers the JSON envelope",
+	"putPatientPhoto":          "contracts/patient-photo.md: answers the JSON envelope",
+	"deletePatientPhoto":       "contracts/patient-photo.md: answers the JSON envelope",
 }
 
 func TestEveryDataChangingRouteIsAccountedForByFeedback(t *testing.T) {
