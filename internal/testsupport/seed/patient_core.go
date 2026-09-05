@@ -11,14 +11,13 @@ import (
 	"medikube/internal/domain/person"
 )
 
-// The phase 002 identifiers, data-model §9's cast. Account C carries none: an
-// account with no patients is what proves FR-005's automatic self-record
-// provisioning is the application's doing and not the seed's.
+// The phase 002 identifiers, data-model §9's cast.
 const (
 	AccountAPatientSelfID   = "mkpatamara00001"
 	AccountAPatientChildID  = "mkpatamara00002"
 	AccountAPatientParentID = "mkpatamara00003"
 	AccountBPatientSelfID   = "mkpatboris00001"
+	AccountCPatientSelfID   = "mkpatchidi00001"
 
 	AccountAPractitionerID = "mkprcamara00001"
 	AccountBPractitionerID = "mkprcboris00001"
@@ -127,6 +126,12 @@ func Patients() []person.Patient {
 			FirstName: "Boris", LastName: "Novak",
 			BirthDate:           mustDate(1990, time.July, 22),
 			Sex:                 person.SexMale,
+			RelationshipToOwner: person.RelationshipSelf,
+			IsSelfRecord:        true,
+		},
+		{
+			ID: AccountCPatientSelfID, OwnerID: AccountCID,
+			FirstName: "Chidi", LastName: "Eze",
 			RelationshipToOwner: person.RelationshipSelf,
 			IsSelfRecord:        true,
 		},
@@ -270,6 +275,7 @@ func applyActivePatients(app core.App) error {
 	for accountID, patientID := range map[string]string{
 		AccountAID: AccountAPatientSelfID,
 		AccountBID: AccountBPatientSelfID,
+		AccountCID: AccountCPatientSelfID,
 	} {
 		record, err := app.FindRecordById(collection, accountID)
 		if err != nil {

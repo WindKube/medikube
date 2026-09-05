@@ -119,7 +119,7 @@ func TestEveryPhase002FixtureIdentifierNamesASeededRecord(t *testing.T) {
 	}
 
 	patients := []string{
-		AccountAPatientSelfID, AccountAPatientChildID, AccountAPatientParentID, AccountBPatientSelfID,
+		AccountAPatientSelfID, AccountAPatientChildID, AccountAPatientParentID, AccountBPatientSelfID, AccountCPatientSelfID,
 	}
 	for _, id := range patients {
 		_, err := app.FindRecordById("patients", id)
@@ -129,6 +129,7 @@ func TestEveryPhase002FixtureIdentifierNamesASeededRecord(t *testing.T) {
 	for accountID, patientID := range map[string]string{
 		AccountAID: AccountAPatientSelfID,
 		AccountBID: AccountBPatientSelfID,
+		AccountCID: AccountCPatientSelfID,
 	} {
 		record, err := app.FindRecordById(usersCollection, accountID)
 		require.NoError(t, err)
