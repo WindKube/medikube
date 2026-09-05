@@ -328,7 +328,10 @@ func TestASortOutsideTheKindsAllowlistIsRefused(t *testing.T) {
 
 // The same rule for the kind's named query parameters. PocketBase's filter DSL
 // never reaches the wire, so a parameter outside the declared vocabulary is a
-// caller guessing at one.
+// caller guessing at one — and, per contracts/records-clinical.md §1, that is
+// 400 bad_request rather than a rejected field on a form: naming the
+// parameter back would disclose nothing a caller who already knows the
+// kind's vocabulary did not have.
 func TestAFilterOutsideTheKindsVocabularyIsRefused(t *testing.T) {
 	t.Parallel()
 
@@ -338,12 +341,10 @@ func TestAFilterOutsideTheKindsVocabularyIsRefused(t *testing.T) {
 		records.Query{Filters: map[string][]string{"owner": {"someone-else"}}})
 
 	require.Error(t, err)
+	assert.ErrorIs(t, err, domain.ErrBadRequest)
 
 	var invalid *domain.ValidationError
-	require.ErrorAs(t, err, &invalid)
-	require.Len(t, invalid.Fields, 1)
-	assert.Equal(t, "owner", invalid.Fields[0].Field)
-	assert.Equal(t, domain.CodeInvalidValue, invalid.Fields[0].Code)
+	assert.False(t, errors.As(err, &invalid))
 }
 
 // The cross-kind list. With one selected kind it is the kind's own list, cursor

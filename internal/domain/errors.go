@@ -42,6 +42,14 @@ var (
 	// rather than wrapping it: that message also embeds the uploaded
 	// filename.
 	ErrTooLarge = errors.New("payload too large")
+
+	// ErrBadRequest is a malformed request that is not a field-by-field
+	// validation failure: an unknown query parameter, or a value outside a
+	// declared filter's allowed set (contracts/records-clinical.md §1). It
+	// carries no field name, unlike ValidationError, because naming the
+	// parameter discloses nothing a caller who already knows the kind's
+	// vocabulary did not have.
+	ErrBadRequest = errors.New("bad request")
 )
 
 // Sentinels returns every sentinel the domain defines, so the error mapper's
@@ -60,5 +68,6 @@ func Sentinels() []error {
 		ErrRateLimited,
 		ErrUnsupportedMedia,
 		ErrTooLarge,
+		ErrBadRequest,
 	}
 }

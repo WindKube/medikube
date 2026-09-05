@@ -139,8 +139,17 @@ func (a *Adapter) detail(medication clinical.Medication) records.Record {
 }
 
 func (a *Adapter) record(medication clinical.Medication, body any) records.Record {
-	return records.Record{ID: medication.ID, Kind: kind.Medication, Version: medication.Version, Body: body}
+	return records.Record{
+		ID:        medication.ID,
+		Kind:      kind.Medication,
+		PatientID: medication.PatientID,
+		Version:   medication.Version,
+		Body:      body,
+	}
 }
+
+// SeedFixtureID is the fixture `medikube seed` builds for this kind.
+const SeedFixtureID = "medication-01"
 
 // statuses converts the `?status=` values without judging them. An unpublished
 // value is refused by the service against its own vocabulary, so that the
@@ -197,6 +206,13 @@ type Wiring struct {
 	Schema records.Schema
 
 	Views records.Views
+
+	// SearchFields and Basis read the wire DTO Views already renders — the
+	// same value Record.Body carries — and are internal/web/api's, not this
+	// package's: this package does not know the DTO type exists (research
+	// D-11 and this file's own doc comment on Codec).
+	SearchFields func(any) (title, body string)
+	Basis        func(any, records.Criteria) []string
 }
 
 // Register wires medications into the record registry.
@@ -222,7 +238,13 @@ func Register(registry *records.Registry, wiring Wiring) error {
 
 	schema := wiring.Schema
 	schema.Sorts = Sorts()
-	schema.Filters = []string{FilterStatus}
+	schema.Filters = map[string]records.FilterSpec{
+		FilterStatus: {
+			Name:    FilterStatus,
+			Kind:    records.FilterEnum,
+			Allowed: therapyStatusStrings(),
+		},
+	}
 
 	return registry.Register(records.Registration{
 		Kind:       kind.Medication,
@@ -236,5 +258,22 @@ func Register(registry *records.Registry, wiring Wiring) error {
 			Title:   "Medications",
 			Summary: "Every course of therapy the person recorded: what it is, how much, how often, and whether it is still being taken.",
 		},
+		SearchFields:  wiring.SearchFields,
+		Basis:         wiring.Basis,
+		SeedFixtureID: SeedFixtureID,
 	})
+}
+
+// therapyStatusStrings is the vocabulary FilterStatus is checked against,
+// converted once so the registry's generic filter check never imports
+// clinical.
+func therapyStatusStrings() []string {
+	statuses := clinical.TherapyStatuses()
+	values := make([]string, 0, len(statuses))
+
+	for _, status := range statuses {
+		values = append(values, string(status))
+	}
+
+	return values
 }

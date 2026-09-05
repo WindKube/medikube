@@ -209,6 +209,8 @@ func Classify(err error) (int, string) {
 		return http.StatusUnsupportedMediaType, CodeUnsupportedMediaType
 	case errors.Is(err, domain.ErrTooLarge):
 		return http.StatusRequestEntityTooLarge, CodePayloadTooLarge
+	case errors.Is(err, domain.ErrBadRequest):
+		return http.StatusBadRequest, CodeBadRequest
 	}
 
 	var apiErr *router.ApiError

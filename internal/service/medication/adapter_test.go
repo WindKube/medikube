@@ -20,11 +20,13 @@ func wiring(t *testing.T, h harness) medication.Wiring {
 	t.Helper()
 
 	return medication.Wiring{
-		Repository: h.repository,
-		Authorizer: h.authorizer,
-		Codec:      medicationtest.NewCodec(),
-		Schema:     medicationtest.Shapes(),
-		Views:      recordstest.Views{},
+		Repository:   h.repository,
+		Authorizer:   h.authorizer,
+		Codec:        medicationtest.NewCodec(),
+		Schema:       medicationtest.Shapes(),
+		Views:        recordstest.Views{},
+		SearchFields: func(any) (string, string) { return "", "" },
+		Basis:        func(any, records.Criteria) []string { return nil },
 	}
 }
 
@@ -71,7 +73,17 @@ func TestRegisterWiresEveryConsumer(t *testing.T) {
 	// The vocabulary the service enforces and the vocabulary OpenAPI publishes
 	// are one list, filled in by Register and not by the caller.
 	assert.Equal(t, medication.Sorts(), entry.Schema.Sorts)
-	assert.Equal(t, []string{medication.FilterStatus}, entry.Schema.Filters)
+	require.Contains(t, entry.Schema.Filters, medication.FilterStatus)
+	assert.Equal(t, records.FilterEnum, entry.Schema.Filters[medication.FilterStatus].Kind)
+
+	statuses := clinical.TherapyStatuses()
+	allowed := make([]string, 0, len(statuses))
+
+	for _, status := range statuses {
+		allowed = append(allowed, string(status))
+	}
+
+	assert.ElementsMatch(t, allowed, entry.Schema.Filters[medication.FilterStatus].Allowed)
 	assert.Equal(t, medication.Sorts()[0], entry.Schema.Sorts[0], "the published default ordering moved")
 }
 

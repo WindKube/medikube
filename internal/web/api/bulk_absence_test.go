@@ -332,11 +332,16 @@ func TestNoPublishedRouteHonoursPocketBasesQueryLanguage(t *testing.T) {
 			t.Run(route.OpID+"?"+name, func(t *testing.T) {
 				answer := owner.get(url + joinQuery(url) + name + "=" + urlValue(queryLanguageParameters[name]))
 
-				if answer.Status == http.StatusUnprocessableEntity {
+				if answer.Status == http.StatusUnprocessableEntity || answer.Status == http.StatusBadRequest {
 					// Refused by name, which is the other acceptable outcome:
 					// contracts/README.md refuses an unpublished `sort` rather
-					// than ignoring it, because a silently dropped narrowing
-					// produces a list that looks right and is not.
+					// than ignoring it, and contracts/records-clinical.md §1
+					// refuses an unpublished filter parameter the same way —
+					// 400 bad_request rather than 422, because naming the
+					// parameter back discloses nothing a caller who already
+					// knows the kind's vocabulary did not have. Either way a
+					// silently dropped narrowing produces a list that looks
+					// right and is not.
 					assertDisclosesNothing(t, route.OpID+"?"+name, answer.Body)
 
 					return
@@ -507,7 +512,14 @@ func TestNoSingleRequestExtractsMoreThanAPage(t *testing.T) {
 				answer := owner.get(url + patientQuery + attempt)
 
 				if answer.Status != http.StatusOK {
-					assert.Equal(t, http.StatusUnprocessableEntity, answer.Status, answer.Body)
+					// perPage, page and skipTotal are PocketBase's own list
+					// parameters and not MediKube's: on listRecordsOfKind they
+					// are refused by contracts/records-clinical.md §1's
+					// unpublished-parameter rule (400) rather than by the
+					// limit check (422); on the cross-kind list, which has no
+					// filter vocabulary at all, they reach nobody and the
+					// limit check is what refuses -1/0/too-large.
+					assert.Containsf(t, []int{http.StatusUnprocessableEntity, http.StatusBadRequest}, answer.Status, answer.Body)
 
 					return
 				}

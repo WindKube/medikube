@@ -6,7 +6,6 @@ import (
 	json "encoding/json/v2"
 	"errors"
 	"fmt"
-	"maps"
 	"slices"
 
 	"medikube/internal/domain"
@@ -256,11 +255,13 @@ func (h *Handler) selection(selected []kind.Kind) ([]Entry, error) {
 	return entries, nil
 }
 
-// resolveQuery applies the kind's declared vocabulary. Both refusals are
-// contract: a sort outside the allowlist is 422 invalid_value and never
-// silently ignored, because a silently ignored sort produces a list that looks
-// right and is not; and a filter outside the kind's named parameters is a
-// caller guessing at PocketBase's filter DSL, which never reaches the wire.
+// resolveQuery applies the kind's declared vocabulary. A sort outside the
+// allowlist is 422 invalid_value and never silently ignored, because a
+// silently ignored sort produces a list that looks right and is not. A filter
+// outside the kind's named parameters, or a value outside its declared
+// vocabulary, is 400 bad_request (contracts/records-clinical.md §1) — a
+// caller guessing at PocketBase's filter DSL, which never reaches the wire,
+// and not a rejected field on a form.
 func resolveQuery(entry Entry, query Query) (Query, error) {
 	var invalid domain.ValidationError
 
@@ -274,19 +275,16 @@ func resolveQuery(entry Entry, query Query) (Query, error) {
 		}
 	}
 
-	// Sorted, so two requests carrying the same two unknown parameters produce
-	// the same body: a response whose field order depends on a map range is a
-	// flaky assertion in somebody else's test.
-	for _, name := range slices.Sorted(maps.Keys(query.Filters)) {
-		if !slices.Contains(entry.Schema.Filters, name) {
-			invalid.Add(name, domain.CodeInvalidValue, "the parameter is not one this kind publishes")
-		}
-	}
-
 	if err := invalid.OrNil(); err != nil {
 		return Query{}, err
 	}
 
+	resolved, err := checkFilters(entry.Schema.Filters, query.Filters)
+	if err != nil {
+		return Query{}, err
+	}
+
+	query.Filters = resolved
 	query.Kinds = []kind.Kind{entry.Kind}
 
 	return query, nil
