@@ -179,6 +179,11 @@ func applyEncounters(app core.App) error {
 		if err := app.Save(record); err != nil {
 			return fmt.Errorf("seeding %s: %w", encounter.ID, err)
 		}
+
+		if err := IndexRecord(app, kind.Encounter, encounter.ID, encounter.PatientID,
+			encounter.Reason, encounter.Assessment, encounter.OccurredOn); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -230,6 +235,11 @@ func applyProcedures(app core.App) error {
 		if err := app.Save(record); err != nil {
 			return fmt.Errorf("seeding %s: %w", procedure.ID, err)
 		}
+
+		if err := IndexRecord(app, kind.Procedure, procedure.ID, procedure.PatientID,
+			procedure.Name, procedure.Description, procedure.OccurredOn); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -280,6 +290,11 @@ func applyTreatments(app core.App) error {
 
 		if err := app.Save(record); err != nil {
 			return fmt.Errorf("seeding %s: %w", treatment.ID, err)
+		}
+
+		if err := IndexRecord(app, kind.Treatment, treatment.ID, treatment.PatientID,
+			treatment.Name, treatment.Description, treatment.StartedOn); err != nil {
+			return err
 		}
 	}
 
