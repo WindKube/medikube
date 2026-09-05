@@ -361,22 +361,22 @@ without it.
 
 ### Tests for User Story 7 ⚠️ write first, confirm red
 
-- [ ] T151 [P] [US7] Failing tests in `internal/domain/tag/tag_test.go`: name 1..40, `color` matches `^#[0-9a-fA-F]{6}$`, and name comparison is case-insensitive
-- [ ] T152 [P] [US7] Failing tests in `internal/service/tag/service_test.go`: creating `"Cardiology"` after `"cardiology"` is `409 duplicate_name` (FR-063, US7-2); a rename is a single row update that no carrier loses (FR-065); `usage_count` is derived across all fourteen kinds and is correct after a carrier is deleted (FR-068); another account's tags are neither listed nor addressable (FR-062, US7-5)
-- [ ] T153 [P] [US7] Failing repository tests in `internal/store/tag/repo_test.go` against a `tests.NewTestApp`: the unique index on `(owner, LOWER(name))` is enforced at the storage layer too, and deleting a tag removes it from every referencing record while destroying none (FR-066, SC-007)
-- [ ] T154 [P] [US7] Failing scale test in `internal/store/tag/rename_scale_test.go` (build tag `scale`): a tag carried by 500 records across ≥8 kinds is renamed in one action; 100% show the new name and 0 lose it; deletion removes it from 100% and destroys 0 records (SC-007)
-- [ ] T155 [P] [US7] Failing HTTP scenarios in `internal/web/api/tags_http_test.go` covering all four operations and every test in `contracts/tags.md` §6, including that `PATCH`/`DELETE` on another account's tag is `404` identical to a non-existent id
-- [ ] T156 [P] [US7] Failing tests in `internal/store/filter_tags_test.go`: `?tags=a,b&match=any` returns records carrying either; `match=all` returns only records carrying both; both work on every registered kind (FR-067)
-- [ ] T157 [P] [US7] Failing templ render tests in `internal/web/views/tags/manager_templ_test.go` and `picker_templ_test.go`: the delete confirmation states how many records carry the tag **before** confirming (FR-066, US7-4); the picker offers matching tags as the user types with their usage counts (FR-068)
-- [ ] T158 [P] [US7] Failing PHI test in `internal/testsupport/phileak/tag_test.go` proving a tag name reaches no log line, span, metric label or audit row (FR-085, FR-086, SC-011)
+- [x] T151 [P] [US7] Failing tests in `internal/domain/tag/tag_test.go`: name 1..40, `color` matches `^#[0-9a-fA-F]{6}$`, and name comparison is case-insensitive
+- [x] T152 [P] [US7] Failing tests in `internal/service/tag/service_test.go`: creating `"Cardiology"` after `"cardiology"` is `409 duplicate_name` (FR-063, US7-2); a rename is a single row update that no carrier loses (FR-065); `usage_count` is derived across all fourteen kinds and is correct after a carrier is deleted (FR-068); another account's tags are neither listed nor addressable (FR-062, US7-5)
+- [x] T153 [P] [US7] Failing repository tests in `internal/store/tag/repo_test.go` against a `tests.NewTestApp`: the unique index on `(owner, LOWER(name))` is enforced at the storage layer too, and deleting a tag removes it from every referencing record while destroying none (FR-066, SC-007)
+- [x] T154 [P] [US7] Failing scale test in `internal/store/tag/rename_scale_test.go` (build tag `scale`): a tag carried by 500 records across ≥8 kinds is renamed in one action; 100% show the new name and 0 lose it; deletion removes it from 100% and destroys 0 records (SC-007)
+- [x] T155 [P] [US7] Failing HTTP scenarios in `internal/web/api/tags_http_test.go` covering all four operations and every test in `contracts/tags.md` §6, including that `PATCH`/`DELETE` on another account's tag is `404` identical to a non-existent id
+- [x] T156 [P] [US7] Failing tests in `internal/store/filter_tags_test.go`: `?tags=a,b&match=any` returns records carrying either; `match=all` returns only records carrying both; both work on every registered kind (FR-067)
+- [x] T157 [P] [US7] Failing templ render tests in `internal/web/views/tags/manager_templ_test.go` and `picker_templ_test.go`: the delete confirmation states how many records carry the tag **before** confirming (FR-066, US7-4); the picker offers matching tags as the user types with their usage counts (FR-068)
+- [x] T158 [P] [US7] Failing PHI test in `internal/testsupport/phileak/tag_test.go` proving a tag name reaches no log line, span, metric label or audit row (FR-085, FR-086, SC-011)
 
 ### Implementation for User Story 7
 
-- [ ] T159 [P] [US7] Implement `internal/domain/tag/tag.go` and `internal/service/tag/{service.go,ports.go,usage.go}` + `internal/service/tag/tagtest/fake.go`
-- [ ] T160 [P] [US7] Implement `internal/store/tag/{repo.go,usage.go,mapper.go}` — `usage_count` as a derived count across the registry's kinds, never a stored column (FR-090)
-- [ ] T161 [US7] Implement the four operations in `internal/web/api/tags.go` and register them in `internal/httproute` with operation ids `listTags`, `createTag`, `updateTag`, `deleteTag`; add the `tags` field with replace-set semantics and owner validation to every kind's `Patch` codec via `internal/records/register.go`, so any number of tags may be applied to a record of any kind (FR-064)
-- [ ] T162 [US7] Implement `internal/web/views/tags/manager.templ`, `picker.templ` and the `/tags` page handler in `internal/web/page/tags.go` with landmark `region[name="Tags"]`
-- [ ] T163 [US7] Extend `internal/cli/seed.go` with three tags applied across ≥8 kinds; add `e2e/specs/tags.spec.ts` covering `/tags` at both viewports plus the rename and delete-confirmation flows; regenerate and commit `api/openapi.json`
+- [x] T159 [P] [US7] Implement `internal/domain/tag/tag.go` and `internal/service/tag/{service.go,ports.go,usage.go}` + `internal/service/tag/tagtest/fake.go`
+- [x] T160 [P] [US7] Implement `internal/store/tag/{repo.go,usage.go,mapper.go}` — `usage_count` as a derived count across the registry's kinds, never a stored column (FR-090)
+- [x] T161 [US7] Implement the four operations in `internal/web/api/tags.go` and register them in `internal/httproute` with operation ids `listTags`, `createTag`, `updateTag`, `deleteTag`; add the `tags` field with replace-set semantics and owner validation to every kind's `Patch` codec via `internal/records/register.go`, so any number of tags may be applied to a record of any kind (FR-064)
+- [x] T162 [US7] Implement `internal/web/views/tags/manager.templ`, `picker.templ` and the `/tags` page handler in `internal/web/page/tags.go` with landmark `region[name="Tags"]`
+- [x] T163 [US7] Extend `internal/cli/seed.go` with three tags applied across ≥8 kinds; add `e2e/specs/tags.spec.ts` covering `/tags` at both viewports plus the rename and delete-confirmation flows; regenerate and commit `api/openapi.json`
 
 **Checkpoint**: US1–US7 demonstrable.
 
