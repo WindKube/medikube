@@ -487,6 +487,33 @@ func pageRoutes() []Route {
 			Landmark: `article[name="Medication"]`, SmokeURL: list + "/" + seed.NameOnlyID,
 		},
 		{
+			// The smoke URL points at the account whose /immunizations is
+			// seeded empty on purpose (T116, contracts/pages.md §5): the
+			// empty-state path needs a gate that actually reaches it.
+			OpID: "immunizationListPage", Method: http.MethodGet, Path: "/" + kind.Immunization.Segment(),
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "The record list, with its empty state inside the landmark rather than instead of it.",
+			Landmark: `region[name="Vaccinations"]`, SmokeURL: "/" + kind.Immunization.Segment() + "?patient=" + seed.AccountCPatientSelfID,
+		},
+		{
+			OpID: "immunizationDetailPage", Method: http.MethodGet, Path: "/" + kind.Immunization.Segment() + "/{id}",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "One record, every value it holds and the time it last changed.",
+			Landmark: `article[name="Vaccination"]`, SmokeURL: "/" + kind.Immunization.Segment() + "/" + seed.ImmunizationSampleID,
+		},
+		{
+			OpID: "injuryListPage", Method: http.MethodGet, Path: "/" + kind.Injury.Segment(),
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "The record list, with its empty state inside the landmark rather than instead of it.",
+			Landmark: `region[name="Injuries"]`, SmokeURL: "/" + kind.Injury.Segment() + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			OpID: "injuryDetailPage", Method: http.MethodGet, Path: "/" + kind.Injury.Segment() + "/{id}",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "One record, every value it holds and the time it last changed.",
+			Landmark: `article[name="Injury"]`, SmokeURL: "/" + kind.Injury.Segment() + "/mkinjamara00001",
+		},
+		{
 			OpID: "practitionerListPage", Method: http.MethodGet, Path: "/practitioners",
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "contracts/pages.md P3: the account's practitioner directory.",
