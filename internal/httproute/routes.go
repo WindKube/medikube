@@ -449,10 +449,13 @@ func pageRoutes() []Route {
 			Landmark: `region[name="Overview"]`, SmokeURL: "/",
 		},
 		{
+			// The smoke URL names a patient (research D-13, FR-015): every
+			// list over patient-scoped data requires `?patient=`, and the
+			// seeded self-record is what the gate has standing to open.
 			OpID: "medicationListPage", Method: http.MethodGet, Path: list,
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "The record list, with its empty state inside the landmark rather than instead of it.",
-			Landmark: `region[name="Medications"]`, SmokeURL: list,
+			Landmark: `region[name="Medications"]`, SmokeURL: list + "?patient=" + seed.AccountAPatientSelfID,
 		},
 		{
 			// The smoke URL is the seeded partial-data row: a name, a state

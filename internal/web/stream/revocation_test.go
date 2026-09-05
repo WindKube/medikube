@@ -60,7 +60,7 @@ func revoke(t *testing.T, medikube *instance, email string) {
 // write commits one medication without going through the API, which is what a
 // revoked caller can no longer do. The post-commit hook publishes it to the hub
 // exactly as an API write would, so the stream is offered the same event.
-func write(t *testing.T, medikube *instance, ownerID, name string) string {
+func write(t *testing.T, medikube *instance, patientID, name string) string {
 	t.Helper()
 
 	collection, err := medikube.App.FindCollectionByNameOrId(kind.Medication.Collection())
@@ -68,9 +68,9 @@ func write(t *testing.T, medikube *instance, ownerID, name string) string {
 
 	record := core.NewRecord(collection)
 	require.NoError(t, store.MedicationToRecord(record, clinical.Medication{
-		OwnerID: ownerID,
-		Name:    name,
-		Status:  clinical.TherapyStatusActive,
+		PatientID: patientID,
+		Name:      name,
+		Status:    clinical.TherapyStatusActive,
 	}))
 	require.NoError(t, medikube.App.Save(record))
 
@@ -133,12 +133,12 @@ func TestARevokedSessionReceivesNothingMoreAndItsOpenStreamCloses(t *testing.T) 
 
 	amara := medikube.token(t, testsupport.AccountAEmail)
 
-	watching := medikube.open(t, amara, "")
+	watching := medikube.open(t, amara, "?patient="+testsupport.AccountAPatientSelfID)
 	require.Equal(t, http.StatusOK, watching.Response.StatusCode)
 
 	// The control. Without it a stream that was broken from the start would
 	// pass every assertion below.
-	before, _ := medikube.create(t, amara, "Amoxicillin")
+	before, _ := medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
 	require.Equal(t, "#"+ids.RecordRow(kind.Medication, before), watching.nextPatch(patchDeadline).selector(),
 		"the stream was not working before the revocation, so what follows proves nothing")
 
@@ -150,7 +150,7 @@ func TestARevokedSessionReceivesNothingMoreAndItsOpenStreamCloses(t *testing.T) 
 		medikube.get(t, amara, "/api/v1/records/"+kind.Medication.Segment()),
 		"the session was not actually revoked")
 
-	after := write(t, medikube, testsupport.AccountAID, "Bisoprolol")
+	after := write(t, medikube, testsupport.AccountAPatientSelfID, "Bisoprolol")
 
 	delivered, ended := watching.closed(endOfStream)
 
@@ -180,8 +180,8 @@ func TestRevokingOneAccountsSessionLeavesAnotherAccountsStreamAlone(t *testing.T
 	amara := medikube.token(t, testsupport.AccountAEmail)
 	boris := medikube.token(t, testsupport.AccountBEmail)
 
-	watchingA := medikube.open(t, amara, "")
-	watchingB := medikube.open(t, boris, "")
+	watchingA := medikube.open(t, amara, "?patient="+testsupport.AccountAPatientSelfID)
+	watchingB := medikube.open(t, boris, "?patient="+testsupport.AccountBPatientSelfID)
 	require.Equal(t, http.StatusOK, watchingA.Response.StatusCode)
 	require.Equal(t, http.StatusOK, watchingB.Response.StatusCode)
 
@@ -191,7 +191,7 @@ func TestRevokingOneAccountsSessionLeavesAnotherAccountsStreamAlone(t *testing.T
 	assert.True(t, endedA, "the revoked account's stream stayed open")
 
 	// Boris's own write, after Amara's revocation, still reaches Boris.
-	created, _ := medikube.create(t, boris, "Ciclosporin")
+	created, _ := medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ciclosporin")
 
 	assert.Equal(t, "#"+ids.RecordRow(kind.Medication, created), watchingB.nextPatch(patchDeadline).selector(),
 		"revoking one account's session closed another account's stream")
@@ -209,10 +209,10 @@ func TestASessionOpenedAfterTheRevocationStreamsNormally(t *testing.T) {
 
 	fresh := medikube.token(t, testsupport.AccountAEmail)
 
-	watching := medikube.open(t, fresh, "")
+	watching := medikube.open(t, fresh, "?patient="+testsupport.AccountAPatientSelfID)
 	require.Equal(t, http.StatusOK, watching.Response.StatusCode)
 
-	created, _ := medikube.create(t, fresh, "Dexamethasone")
+	created, _ := medikube.create(t, fresh, testsupport.AccountAPatientSelfID, "Dexamethasone")
 
 	assert.Equal(t, "#"+ids.RecordRow(kind.Medication, created), watching.nextPatch(patchDeadline).selector())
 }
@@ -232,7 +232,7 @@ func TestARevokedStreamClosesOnAnAccountNothingIsWrittenTo(t *testing.T) {
 
 	amara := medikube.token(t, testsupport.AccountAEmail)
 
-	watching := medikube.open(t, amara, "")
+	watching := medikube.open(t, amara, "?patient="+testsupport.AccountAPatientSelfID)
 	require.Equal(t, http.StatusOK, watching.Response.StatusCode)
 
 	require.True(t, watching.next(patchDeadline).isHeartbeat(), "a stream must open with a heartbeat")
@@ -255,7 +255,7 @@ func TestAStreamEndsWhenItsIdentityCanNoLongerBeReChecked(t *testing.T) {
 
 	amara := medikube.token(t, testsupport.AccountAEmail)
 
-	watching := medikube.open(t, amara, "")
+	watching := medikube.open(t, amara, "?patient="+testsupport.AccountAPatientSelfID)
 	require.Equal(t, http.StatusOK, watching.Response.StatusCode)
 
 	// Deleting the account is the same question with a different answer: there

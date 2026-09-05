@@ -150,12 +150,12 @@ func New(t testing.TB, options ...Option) *Instance {
 // Before, and that ordering is the point: the audit hooks are bound by Wire, so
 // a bulk seed that ran after it would write one audit row per fixture row —
 // which is both slow and a trail full of writes nobody made.
-func NewPopulated(t testing.TB, ownerID string, count int, options ...Option) *Instance {
+func NewPopulated(t testing.TB, patientID string, count int, options ...Option) *Instance {
 	t.Helper()
 
 	app := testsupport.NewApp(t)
 
-	require.NoError(t, Populate(app, ownerID, count), "seeding %d rows of %s", count, kind.Medication)
+	require.NoError(t, Populate(app, patientID, count), "seeding %d rows of %s", count, kind.Medication)
 
 	instance, err := Wire(app, options...)
 	require.NoError(t, err, "wiring a MediKube instance")
@@ -174,7 +174,7 @@ var epoch = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
 // the start date walks backwards a day at a time, so an ordering assertion over
 // a large list has something to be wrong about. The status cycles through the
 // published set for the same reason.
-func Populate(app core.App, ownerID string, count int) error {
+func Populate(app core.App, patientID string, count int) error {
 	collection, err := app.FindCollectionByNameOrId(kind.Medication.Collection())
 	if err != nil {
 		return fmt.Errorf("apitest: reading %s: %w", kind.Medication, err)
@@ -194,7 +194,7 @@ func Populate(app core.App, ownerID string, count int) error {
 			}
 
 			if err := store.MedicationToRecord(record, clinical.Medication{
-				OwnerID:   ownerID,
+				PatientID: patientID,
 				Name:      fmt.Sprintf("Bulk %06d", index),
 				Status:    statuses[index%len(statuses)],
 				StartedOn: started,
@@ -467,11 +467,6 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient
 		return nil, nil, nil, err
 	}
 
-	authorizer, err := accessservice.New(owners)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
 	trail, err := auditstore.New(app)
 	if err != nil {
 		return nil, nil, nil, err
@@ -486,6 +481,16 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient
 		return nil, nil, nil, err
 	}
 
+	patientRepo, err := patientstore.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	authorizer, err := accessservice.New(owners, accessservice.WithPatients(patientRepo, auditor))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	views, err := page.NewMedicationViews()
 	if err != nil {
 		return nil, nil, nil, err
@@ -496,7 +501,6 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient
 	if registerErr := medication.Register(registry, medication.Wiring{
 		Repository: repository,
 		Authorizer: authorizer,
-		Auditor:    auditor,
 		Codec:      api.MedicationCodec{},
 		Schema:     api.MedicationSchema(),
 		Views:      views,
@@ -564,22 +568,12 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient
 		return nil, nil, nil, patientAuditErr
 	}
 
-	patientRepo, err := patientstore.New(app, codec)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	patientAuthorizer, err := accessservice.New(owners, accessservice.WithPatients(patientRepo, auditor))
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
 	photos, err := patientstore.NewPhotoStore(app, []string{"100x100t", "400x400f"})
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	patientService, err := patient.New(patientRepo, photos, patientAuthorizer)
+	patientService, err := patient.New(patientRepo, photos, authorizer)
 	if err != nil {
 		return nil, nil, nil, err
 	}

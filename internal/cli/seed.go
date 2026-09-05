@@ -126,10 +126,19 @@ func seedAccounts(app core.App) ([]SeedAccount, error) {
 // medicationCounts is the fixture's own shape, counted from the table rather
 // than declared a second time. An account the fixture gives no rows to is
 // absent from the map and reports zero, which is account C and is deliberate.
+//
+// A medication names a patient and not an account (research D-13), so the
+// count an operator reads per account is reached through the patient each
+// medication belongs to.
 func medicationCounts() map[string]int {
+	owners := make(map[string]string, len(seed.Patients()))
+	for _, patient := range seed.Patients() {
+		owners[patient.ID] = patient.OwnerID
+	}
+
 	counts := make(map[string]int)
 	for _, medication := range seed.Medications() {
-		counts[medication.OwnerID]++
+		counts[owners[medication.PatientID]]++
 	}
 
 	return counts

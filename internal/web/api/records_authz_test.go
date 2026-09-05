@@ -102,28 +102,24 @@ func TestEveryRecordOperationIsOwnerScoped(t *testing.T) {
 		VolatileHeaders: []string{"X-Request-Id"},
 		Cases: []testsupport.OwnershipCase{
 			{
-				Name:             "list every kind",
-				Method:           http.MethodGet,
-				Path:             crossKindURL() + "?limit=100",
-				StrangerIsolated: true,
-				Secrets:          secrets,
+				Name:    "list every kind",
+				Method:  http.MethodGet,
+				Path:    crossKindURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&limit=100",
+				Secrets: secrets,
 			},
 			{
-				Name:             "list one kind",
-				Method:           http.MethodGet,
-				Path:             collectionURL() + "?limit=100",
-				StrangerIsolated: true,
-				Secrets:          secrets,
+				Name:    "list one kind",
+				Method:  http.MethodGet,
+				Path:    collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&limit=100",
+				Secrets: secrets,
 			},
 			{
-				Name:             "record a medication",
-				Method:           http.MethodPost,
-				Path:             collectionURL(),
-				Body:             `{"name":"Amoxicillin"}`,
-				OwnerStatus:      http.StatusCreated,
-				StrangerStatus:   http.StatusCreated,
-				StrangerIsolated: true,
-				Secrets:          secrets,
+				Name:        "record a medication",
+				Method:      http.MethodPost,
+				Path:        collectionURL(),
+				Body:        `{"patient":"` + testsupport.AccountAPatientSelfID + `","name":"Amoxicillin"}`,
+				OwnerStatus: http.StatusCreated,
+				Secrets:     secrets,
 			},
 			{
 				Name:        "read one",
@@ -210,9 +206,11 @@ func TestAStrangersListHoldsOnlyTheirOwnRows(t *testing.T) {
 	stranger := owner.as(testsupport.AccountBEmail)
 	empty := owner.as(testsupport.AccountCEmail)
 
-	mine := owner.get(collectionURL() + "?limit=100")
-	theirs := stranger.get(collectionURL() + "?limit=100")
-	none := empty.get(collectionURL() + "?limit=100")
+	emptyPatient := newPatientFor(t, owner, testsupport.AccountCID)
+
+	mine := owner.get(collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&limit=100")
+	theirs := stranger.get(collectionURL() + "?patient=" + testsupport.AccountBPatientSelfID + "&limit=100")
+	none := empty.get(collectionURL() + "?patient=" + emptyPatient + "&limit=100")
 
 	require.Equal(t, http.StatusOK, theirs.Status, theirs.Body)
 
@@ -235,13 +233,14 @@ func TestACreateIsAttributedToTheCallerAndNotToTheBody(t *testing.T) {
 	owner := newCaller(t)
 	stranger := owner.as(testsupport.AccountBEmail)
 
-	created := stranger.post(collectionURL(), `{"name":"Amoxicillin"}`)
+	created := stranger.post(collectionURL(),
+		`{"patient":"`+testsupport.AccountBPatientSelfID+`","name":"Amoxicillin"}`)
 	require.Equal(t, http.StatusCreated, created.Status, created.Body)
 
 	record, err := owner.stored(created.medication(t).ID)
 	require.NoError(t, err)
 
-	assert.Equal(t, testsupport.AccountBID, record.GetString("owner"))
+	assert.Equal(t, testsupport.AccountBPatientSelfID, record.GetString("patient"))
 
 	// And the owner cannot see it, which is the same statement read from the
 	// other side.

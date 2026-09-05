@@ -41,14 +41,14 @@ const (
 	AccountCName = "Chidi Eze"
 )
 
-// Phase 002's cast (data-model §9). Account C carries no patients at all —
-// that is what proves FR-005's automatic self-record provisioning is the
-// application's doing and not the seed's.
+// Phase 002's cast (data-model §9). Every account has its self-record, as the
+// repoint migration guarantees for accounts that predate the phase.
 const (
 	AccountAPatientSelfID   = "mkpatamara00001"
 	AccountAPatientChildID  = "mkpatamara00002"
 	AccountAPatientParentID = "mkpatamara00003"
 	AccountBPatientSelfID   = "mkpatboris00001"
+	AccountCPatientSelfID   = "mkpatchidi00001"
 
 	AccountAPractitionerID = "mkprcamara00001"
 	AccountBPractitionerID = "mkprcboris00001"

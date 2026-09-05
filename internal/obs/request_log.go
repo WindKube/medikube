@@ -134,6 +134,18 @@ func CorrelationID(ctx context.Context) string {
 	return id
 }
 
+// WithCorrelationID stamps ctx with an id CorrelationID can read back.
+//
+// It exists for the one caller outside RequestLogger that must make several
+// writes agree on one id: research D-13/D-14's medication-repoint migration
+// mints a run id once and threads it through every self-record it provisions,
+// so every audit row the backfill produces — and the migration's own log lines
+// — carry the same handle despite there being no HTTP request behind any of
+// them.
+func WithCorrelationID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, correlationKey{}, id)
+}
+
 // record writes the single line for one handled request.
 //
 // Every field is either a bounded value or an opaque id. The URL is reduced to

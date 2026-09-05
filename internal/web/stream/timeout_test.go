@@ -56,7 +56,7 @@ func TestAStreamSurvivesTheFiveMinuteWriteTimeout(t *testing.T) {
 
 	medikube := &instance{Instance: wired, base: server.URL}
 
-	watching := medikube.open(t, medikube.token(t, testsupport.AccountAEmail), "")
+	watching := medikube.open(t, medikube.token(t, testsupport.AccountAEmail), "?patient="+testsupport.AccountAPatientSelfID)
 	require.Equal(t, http.StatusOK, watching.Response.StatusCode)
 
 	started := time.Now()

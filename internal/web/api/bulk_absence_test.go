@@ -272,7 +272,7 @@ func TestNoPublishedRouteHonoursPocketBasesQueryLanguage(t *testing.T) {
 	// a broadened query has something to reach.
 	stranger := owner.as(testsupport.AccountBEmail)
 
-	strangerIDs := idsOf(stranger.get(collectionURL() + "?limit=100").list(t))
+	strangerIDs := idsOf(stranger.get(collectionURL() + "?patient=" + testsupport.AccountBPatientSelfID + "&limit=100").list(t))
 	require.NotEmpty(t, strangerIDs, "the other account owns nothing, so a broadened answer would have nothing in it")
 
 	var routes, probes int
@@ -292,6 +292,13 @@ func TestNoPublishedRouteHonoursPocketBasesQueryLanguage(t *testing.T) {
 
 		url := bind(t, route.Path, anonymousParameters(testsupport.NameOnlyMedicationID))
 
+		// listRecords and listRecordsOfKind are the two routes
+		// contracts/medications-rescope.md requires a `?patient=` on; every
+		// other signed-in GET route is unaffected by the rescope.
+		if route.OpID == "listRecords" || route.OpID == "listRecordsOfKind" {
+			url += "?patient=" + testsupport.AccountAPatientSelfID
+		}
+
 		plain := owner.get(url)
 		require.Equalf(t, http.StatusOK, plain.Status, "%s: %s", route.OpID, plain.Body)
 
@@ -308,7 +315,7 @@ func TestNoPublishedRouteHonoursPocketBasesQueryLanguage(t *testing.T) {
 			probes++
 
 			t.Run(route.OpID+"?"+name, func(t *testing.T) {
-				answer := owner.get(url + "?" + name + "=" + urlValue(queryLanguageParameters[name]))
+				answer := owner.get(url + joinQuery(url) + name + "=" + urlValue(queryLanguageParameters[name]))
 
 				if answer.Status == http.StatusUnprocessableEntity {
 					// Refused by name, which is the other acceptable outcome:
@@ -371,10 +378,10 @@ func TestTheSearchTermIsAValueAndNeverAnExpression(t *testing.T) {
 	owner := newCaller(t)
 	stranger := owner.as(testsupport.AccountBEmail)
 
-	strangerIDs := idsOf(stranger.get(collectionURL() + "?limit=100").list(t))
+	strangerIDs := idsOf(stranger.get(collectionURL() + "?patient=" + testsupport.AccountBPatientSelfID + "&limit=100").list(t))
 	require.NotEmpty(t, strangerIDs)
 
-	everything := owner.get(collectionURL() + "?limit=100").list(t)
+	everything := owner.get(collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&limit=100").list(t)
 	require.Len(t, everything.Items, testsupport.AccountAMedicationCount)
 
 	probes := []searchProbe{
@@ -391,7 +398,8 @@ func TestTheSearchTermIsAValueAndNeverAnExpression(t *testing.T) {
 
 	for _, probe := range probes {
 		t.Run(probe.name, func(t *testing.T) {
-			answer := owner.get(collectionURL() + "?limit=100&" + web.ParamSearch + "=" + urlValue(probe.term))
+			answer := owner.get(collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID +
+				"&limit=100&" + web.ParamSearch + "=" + urlValue(probe.term))
 
 			require.Equal(t, http.StatusOK, answer.Status, answer.Body)
 
@@ -436,7 +444,7 @@ func TestNoSingleRequestExtractsMoreThanAPage(t *testing.T) {
 
 	const bulk = 300
 
-	instance := apitest.NewPopulated(t, testsupport.AccountAID, bulk)
+	instance := apitest.NewPopulated(t, testsupport.AccountAPatientSelfID, bulk)
 
 	owner := &caller{
 		t:       t,
@@ -447,22 +455,24 @@ func TestNoSingleRequestExtractsMoreThanAPage(t *testing.T) {
 
 	require.Greater(t, bulk, 2*web.MaxLimit, "the account does not hold enough rows for a ceiling to be reached")
 
+	patientQuery := "?patient=" + testsupport.AccountAPatientSelfID
+
 	t.Run("the default page is the published default", func(t *testing.T) {
-		answer := owner.get(collectionURL())
+		answer := owner.get(collectionURL() + patientQuery)
 
 		require.Equal(t, http.StatusOK, answer.Status, answer.Body)
 		assert.Len(t, answer.list(t).Items, web.DefaultLimit)
 	})
 
 	t.Run("the ceiling is the published ceiling", func(t *testing.T) {
-		answer := owner.get(collectionURL() + "?limit=" + itoa(web.MaxLimit))
+		answer := owner.get(collectionURL() + patientQuery + "&limit=" + itoa(web.MaxLimit))
 
 		require.Equal(t, http.StatusOK, answer.Status, answer.Body)
 		assert.Len(t, answer.list(t).Items, web.MaxLimit)
 	})
 
 	t.Run("one above it is refused rather than quietly reduced", func(t *testing.T) {
-		answer := owner.get(collectionURL() + "?limit=" + itoa(web.MaxLimit+1))
+		answer := owner.get(collectionURL() + patientQuery + "&limit=" + itoa(web.MaxLimit+1))
 
 		assert.Equal(t, http.StatusUnprocessableEntity, answer.Status, answer.Body)
 	})
@@ -470,16 +480,16 @@ func TestNoSingleRequestExtractsMoreThanAPage(t *testing.T) {
 	// The ways a caller would try to get round it, on both list routes.
 	for _, url := range []string{collectionURL(), crossKindURL()} {
 		for _, attempt := range []string{
-			"?limit=100000",
-			"?limit=-1",
-			"?limit=0",
-			"?perPage=1000",
-			"?limit=" + itoa(web.MaxLimit) + "&perPage=1000",
-			"?limit=" + itoa(web.MaxLimit) + "&page=1&skipTotal=1",
-			"?limit=" + itoa(web.MaxLimit) + "," + itoa(bulk),
+			"&limit=100000",
+			"&limit=-1",
+			"&limit=0",
+			"&perPage=1000",
+			"&limit=" + itoa(web.MaxLimit) + "&perPage=1000",
+			"&limit=" + itoa(web.MaxLimit) + "&page=1&skipTotal=1",
+			"&limit=" + itoa(web.MaxLimit) + "," + itoa(bulk),
 		} {
 			t.Run(url+attempt, func(t *testing.T) {
-				answer := owner.get(url + attempt)
+				answer := owner.get(url + patientQuery + attempt)
 
 				if answer.Status != http.StatusOK {
 					assert.Equal(t, http.StatusUnprocessableEntity, answer.Status, answer.Body)
@@ -519,6 +529,17 @@ func bodyFor(method string) string {
 	}
 
 	return `{}`
+}
+
+// joinQuery is "?" for a URL with no query string yet and "&" for one that
+// already carries one — listRecords and listRecordsOfKind's required
+// `?patient=` above being the case that already carries one.
+func joinQuery(url string) string {
+	if strings.Contains(url, "?") {
+		return "&"
+	}
+
+	return "?"
 }
 
 // urlValue escapes one query parameter value.

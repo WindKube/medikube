@@ -104,9 +104,12 @@ const (
 	userFieldDisabledAt = "disabled_at"
 )
 
-// data-model §2's thirteen columns.
+// data-model §6's amended and re-anchored columns. `owner` is gone; `patient`
+// is the new anchor and `practitioner`/`pharmacy` are phase 002's additions.
 const (
-	medicationFieldOwner           = "owner"
+	medicationFieldPatient         = "patient"
+	medicationFieldPractitioner    = "practitioner"
+	medicationFieldPharmacy        = "pharmacy"
 	medicationFieldName            = "name"
 	medicationFieldAlternativeName = "alternative_name"
 	medicationFieldType            = "type"
@@ -271,7 +274,9 @@ func MedicationFromRecord(record *core.Record) (clinical.Medication, error) {
 
 	return clinical.Medication{
 		ID:              record.Id,
-		OwnerID:         record.GetString(medicationFieldOwner),
+		PatientID:       record.GetString(medicationFieldPatient),
+		PractitionerID:  record.GetString(medicationFieldPractitioner),
+		PharmacyID:      record.GetString(medicationFieldPharmacy),
 		Name:            record.GetString(medicationFieldName),
 		AlternativeName: record.GetString(medicationFieldAlternativeName),
 		Type:            clinical.MedicationType(record.GetString(medicationFieldType)),
@@ -292,7 +297,7 @@ func MedicationFromRecord(record *core.Record) (clinical.Medication, error) {
 
 // MedicationToRecord writes the entity's columns onto the record.
 //
-// It writes the owner, and it is the only place that does: OwnerID is
+// It writes the patient, and it is the only place that does: PatientID is
 // server-set and absent from every request DTO, so a create path that forgot it
 // hits the column's Required rather than storing a medication nobody can reach.
 // It does not write id, created, updated or version — PocketBase owns all four.
@@ -301,7 +306,9 @@ func MedicationToRecord(record *core.Record, medication clinical.Medication) err
 		return err
 	}
 
-	record.Set(medicationFieldOwner, medication.OwnerID)
+	record.Set(medicationFieldPatient, medication.PatientID)
+	record.Set(medicationFieldPractitioner, medication.PractitionerID)
+	record.Set(medicationFieldPharmacy, medication.PharmacyID)
 	record.Set(medicationFieldName, medication.Name)
 	record.Set(medicationFieldAlternativeName, medication.AlternativeName)
 	record.Set(medicationFieldType, string(medication.Type))
@@ -436,7 +443,8 @@ func AssertMappedFields(app core.App) error {
 		},
 		kind.Medication.Collection(): {
 			fieldID, fieldCreated, fieldUpdated,
-			medicationFieldOwner, medicationFieldName, medicationFieldAlternativeName,
+			medicationFieldPatient, medicationFieldPractitioner, medicationFieldPharmacy,
+			medicationFieldName, medicationFieldAlternativeName,
 			medicationFieldType, medicationFieldDosage, medicationFieldFrequency,
 			medicationFieldRoute, medicationFieldIndication, medicationFieldStartedOn,
 			medicationFieldEndedOn, medicationFieldStatus, medicationFieldSideEffects,

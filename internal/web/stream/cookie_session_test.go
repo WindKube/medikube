@@ -38,7 +38,7 @@ func TestAStreamOpenedWithNothingButACookieRunsAndEndsWithItsSession(t *testing.
 	require.Equal(t, http.StatusOK, watching.Response.StatusCode,
 		"a stream authenticated the way every browser authenticates was refused")
 
-	created, _ := medikube.create(t, amara, "Amoxicillin")
+	created, _ := medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
 
 	require.Equal(t, "#"+ids.RecordRow(kind.Medication, created), watching.nextPatch(patchDeadline).selector(),
 		"the cookie opened the stream but nothing was delivered on it")
@@ -72,7 +72,8 @@ func (i *instance) openWithCookie(t *testing.T, token string) *session {
 	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, i.base+streamPath, nil)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		i.base+streamPath+"?patient="+testsupport.AccountAPatientSelfID, nil)
 	require.NoError(t, err)
 
 	request.Header.Set("Accept", "text/event-stream")

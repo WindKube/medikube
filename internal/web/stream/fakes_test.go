@@ -74,6 +74,8 @@ type rig struct {
 type rigOptions struct {
 	actor     access.Actor
 	query     string
+	patient   string
+	noPatient bool
 	deny      bool
 	kinds     []kind.Kind
 	heartbeat time.Duration
@@ -101,12 +103,22 @@ func newRig(t *testing.T, options ...rigOption) *rig {
 
 	chosen := rigOptions{
 		actor:     actorOf(recordstest.OwnerID),
+		patient:   recordstest.OwnerID,
 		kinds:     []kind.Kind{kind.Medication},
 		heartbeat: time.Hour,
 	}
 
 	for _, option := range options {
 		option(&chosen)
+	}
+
+	if !chosen.noPatient {
+		separator := "?"
+		if strings.Contains(chosen.query, "?") {
+			separator = "&"
+		}
+
+		chosen.query += separator + "patient=" + chosen.patient
 	}
 
 	r := &rig{
@@ -267,23 +279,6 @@ func (r *rig) next() frame {
 	}
 }
 
-// silence asserts that nothing arrives before the barrier does.
-//
-// It takes a barrier rather than a duration because "wait and see" is the
-// flaky shape: a sleep long enough never to miss a frame is long enough to be
-// worth skipping, and one short enough to be quick misses the frame it was
-// looking for. The barrier is an event the stream MUST deliver, so once it has
-// arrived every event published before it has provably been through the loop.
-func (r *rig) silenceUntil(barrier realtime.Event, want string) {
-	r.t.Helper()
-
-	r.publish(barrier)
-
-	f := r.next()
-	require.Equalf(r.t, want, f.selector(),
-		"the barrier frame is not the one expected — an event that should have produced nothing produced this: %+v", f)
-}
-
 func (r *rig) publish(event realtime.Event) {
 	r.t.Helper()
 
@@ -338,10 +333,9 @@ func (h fakeHub) Subscribe(context.Context) <-chan realtime.Event { return h.eve
 
 // authCall is one consultation of the checkpoint.
 type authCall struct {
-	Actor  string
-	Kind   kind.Kind
-	Record string
-	Need   access.Permission
+	Actor     string
+	PatientID string
+	Need      access.Permission
 }
 
 // countingAuthorizer records every consultation, which is how "the handler
@@ -355,17 +349,16 @@ type countingAuthorizer struct {
 	denied map[string]bool
 }
 
-func (a *countingAuthorizer) Record(
+func (a *countingAuthorizer) Patient(
 	ctx context.Context,
 	actor access.Actor,
-	k kind.Kind,
-	recordID string,
+	patientID string,
 	need access.Permission,
 ) (access.Grant, error) {
 	a.mu.Lock()
-	a.calls = append(a.calls, authCall{Actor: actor.UserID, Kind: k, Record: recordID, Need: need})
+	a.calls = append(a.calls, authCall{Actor: actor.UserID, PatientID: patientID, Need: need})
 	failure := a.fail
-	refused := a.denied[recordID]
+	refused := a.denied[patientID]
 	a.mu.Unlock()
 
 	if failure != nil {
@@ -376,13 +369,13 @@ func (a *countingAuthorizer) Record(
 		return access.Grant{}, nil
 	}
 
-	return a.inner.Record(ctx, actor, k, recordID, need)
+	return a.inner.Patient(ctx, actor, patientID, need)
 }
 
 // deny and allow move the checkpoint's answer while the stream is open, which
 // is the only way to exercise "a subscriber who loses access mid-stream stops
 // receiving patches without the stream erroring".
-func (a *countingAuthorizer) deny(recordID string) {
+func (a *countingAuthorizer) deny(patientID string) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -390,7 +383,7 @@ func (a *countingAuthorizer) deny(recordID string) {
 		a.denied = make(map[string]bool)
 	}
 
-	a.denied[recordID] = true
+	a.denied[patientID] = true
 }
 
 func (a *countingAuthorizer) failWith(err error) {

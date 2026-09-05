@@ -61,7 +61,9 @@ type relationRule struct {
 // take the referencing row with them.
 func Relations() []relationRule {
 	return []relationRule{
-		{collection: kind.Medication.Collection(), field: medicationFieldOwner, required: true, cascadeDelete: true},
+		{collection: kind.Medication.Collection(), field: medicationFieldPatient, required: true, cascadeDelete: true},
+		{collection: kind.Medication.Collection(), field: medicationFieldPractitioner, required: false, cascadeDelete: false},
+		{collection: kind.Medication.Collection(), field: medicationFieldPharmacy, required: false, cascadeDelete: false},
 		{collection: auditEventsCollection, field: auditFieldActor, required: false, cascadeDelete: false},
 		{collection: facilitiesCollection, field: facilityFieldOwner, required: true, cascadeDelete: true},
 		{collection: practitionersCollection, field: practitionerFieldOwner, required: true, cascadeDelete: true},

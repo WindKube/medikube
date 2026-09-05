@@ -21,9 +21,11 @@ func TestMedicationsCarriesExactlyTheColumnsDataModelDeclares(t *testing.T) {
 
 	collection := medicationsSchema(t, newTestApp(t))
 
+	// owner sat second (research D-13's medications-repoint migration drops
+	// it); patient, practitioner and pharmacy are appended at the end, in the
+	// order that migration adds them.
 	expected := []string{
 		core.FieldNameId,
-		medicationFieldOwner,
 		medicationFieldName,
 		medicationFieldAlternativeName,
 		medicationFieldType,
@@ -38,6 +40,9 @@ func TestMedicationsCarriesExactlyTheColumnsDataModelDeclares(t *testing.T) {
 		medicationFieldNotes,
 		fieldCreated,
 		fieldUpdated,
+		medicationFieldPatient,
+		medicationFieldPractitioner,
+		medicationFieldPharmacy,
 	}
 
 	assert.Equal(t, expected, collection.Fields.FieldNames())
@@ -56,9 +61,11 @@ func TestMedicationsCarriesExactlyTheColumnsDataModelDeclares(t *testing.T) {
 	assert.True(t, updated.OnUpdate, "the ETag is derived from updated (research D-24)")
 
 	// Deliberately absent, each with the phase that adds it. A name appearing
-	// here early is a phase reaching backwards rather than a typo.
-	for _, absent := range []string{"patient", "practitioner", "pharmacy", "tags", "deleted_at", "reminder_enabled"} {
-		assert.Nilf(t, collection.Fields.GetByName(absent), "%s belongs to a later phase", absent)
+	// here early is a phase reaching backwards rather than a typo. owner is
+	// deliberately absent too, in the other direction: research D-13's
+	// medications-repoint migration removes it.
+	for _, absent := range []string{medicationFieldOwner, "tags", "deleted_at", "reminder_enabled"} {
+		assert.Nilf(t, collection.Fields.GetByName(absent), "%s belongs to a different phase", absent)
 	}
 }
 
@@ -99,10 +106,11 @@ func TestMedicationEnumColumnsCarryTheDomainVocabularies(t *testing.T) {
 	}
 }
 
-// The five indexes of data-model §2. Each of the three that backs one of
-// FR-022's orderings ends in id, because the keyset cursor's tiebreaker is
-// always the id (research D-25) — without it, two medications started on the
-// same day page unstably, which is what FR-023 forbids.
+// The four indexes of data-model §8, as research D-13's medications-repoint
+// migration leaves them. The one that backs FR-022's default ordering ends in
+// id, because the keyset cursor's tiebreaker is always the id (research
+// D-25) — without it, two medications started on the same day page unstably,
+// which is what FR-023 forbids.
 func TestMedicationIndexesEndInTheCursorTiebreaker(t *testing.T) {
 	t.Parallel()
 
@@ -115,11 +123,10 @@ func TestMedicationIndexesEndInTheCursorTiebreaker(t *testing.T) {
 		columns   string
 		tiebroken bool
 	}{
-		{index: "idx_" + name + "_owner", columns: "(owner)"},
-		{index: "idx_" + name + "_owner_start", columns: "(owner, started_on DESC, id DESC)", tiebroken: true},
-		{index: "idx_" + name + "_owner_name", columns: "(owner, LOWER(name), id DESC)", tiebroken: true},
-		{index: "idx_" + name + "_owner_upd", columns: "(owner, updated DESC, id DESC)", tiebroken: true},
-		{index: "idx_" + name + "_owner_status", columns: "(owner, status)"},
+		{index: "idx_" + name + "_patient", columns: "(patient)"},
+		{index: "idx_" + name + "_patient_start", columns: "(patient, started_on DESC, id DESC)", tiebroken: true},
+		{index: "idx_" + name + "_practitioner", columns: "(practitioner)"},
+		{index: "idx_" + name + "_pharmacy", columns: "(pharmacy)"},
 	}
 
 	require.Len(t, collection.Indexes, len(cases))

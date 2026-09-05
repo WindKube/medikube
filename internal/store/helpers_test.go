@@ -80,6 +80,26 @@ func seedUser(t *testing.T, app core.App, email string) *core.Record {
 	return record
 }
 
+// seedPatient creates one minimal patient owned by the given account. It
+// exists because a medication is patient-owned (research D-13) and the
+// `patient` relation refuses a row that does not exist, so every medication
+// this package seeds needs one of these under it first.
+func seedPatient(t *testing.T, app core.App, ownerID string) *core.Record {
+	t.Helper()
+
+	collection, err := app.FindCollectionByNameOrId("patients")
+	require.NoError(t, err)
+
+	record := core.NewRecord(collection)
+	record.Set("owner", ownerID)
+	record.Set("first_name", "Test")
+	record.Set("last_name", "Patient")
+
+	require.NoError(t, app.Save(record))
+
+	return record
+}
+
 // seedMedication writes one row through the mapper under test, so every query
 // test is reading rows the mapper produced rather than rows hand-assembled to
 // suit the assertion.
@@ -107,11 +127,11 @@ func mustDate(t *testing.T, text string) domain.Date {
 
 // sampleMedication is a complete entity: every column populated, so a mapper
 // that dropped one is caught by the round trip rather than by a later phase.
-func sampleMedication(t *testing.T, ownerID string) clinical.Medication {
+func sampleMedication(t *testing.T, patientID string) clinical.Medication {
 	t.Helper()
 
 	return clinical.Medication{
-		OwnerID:         ownerID,
+		PatientID:       patientID,
 		Name:            "Amoxicillin",
 		AlternativeName: "Amoxil",
 		Type:            clinical.MedicationTypePrescription,

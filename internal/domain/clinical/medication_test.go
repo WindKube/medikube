@@ -19,8 +19,8 @@ import (
 // and FR-038 keeps all of it out of the operational record. This is an
 // allowlist by name, so a field added later is redacted by default.
 var loggableMedicationFields = map[string]bool{
-	"ID":      true,
-	"OwnerID": true,
+	"ID":        true,
+	"PatientID": true,
 }
 
 // Recognisable values for the field types a Medication is built from. A date
@@ -139,14 +139,14 @@ func TestTheMedicationLogLineIsExactlyItsTwoIdentifiers(t *testing.T) {
 	t.Parallel()
 
 	line := renderLogLine(t, Medication{
-		ID:      "med0000000001",
-		OwnerID: "usr0000000001",
-		Name:    "Levothyroxine",
-		Dosage:  "75 mcg",
-		Notes:   "take on an empty stomach",
+		ID:        "med0000000001",
+		PatientID: "mkpat0000001",
+		Name:      "Levothyroxine",
+		Dosage:    "75 mcg",
+		Notes:     "take on an empty stomach",
 	})
 
-	assert.JSONEq(t, `{"medication_id":"med0000000001","owner_id":"usr0000000001"}`, line)
+	assert.JSONEq(t, `{"medication_id":"med0000000001","patient_id":"mkpat0000001"}`, line)
 }
 
 // The three fields FR-038 names in so many words, asserted by their values and
@@ -156,7 +156,7 @@ func TestTheNameTheDoseAndTheNotesNeverReachTheLogStream(t *testing.T) {
 
 	medication := Medication{
 		ID:              "med0000000002",
-		OwnerID:         "usr0000000002",
+		PatientID:       "mkpat0000002",
 		Name:            "Sertraline",
 		AlternativeName: "Zoloft",
 		Dosage:          "50 mg",

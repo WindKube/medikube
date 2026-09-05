@@ -22,6 +22,9 @@ import (
 const (
 	MemberID              = "id"
 	MemberKind            = "kind"
+	MemberPatient         = "patient"
+	MemberPractitioner    = "practitioner"
+	MemberPharmacy        = "pharmacy"
 	MemberName            = "name"
 	MemberAlternativeName = "alternative_name"
 	MemberType            = "type"
@@ -44,6 +47,7 @@ const (
 // carrying a date refusal and a rule refusal reads in the order the person
 // filled the form in rather than in the order the code happened to look.
 var medicationMembers = []string{
+	MemberPatient,
 	MemberName,
 	MemberAlternativeName,
 	MemberType,
@@ -56,6 +60,8 @@ var medicationMembers = []string{
 	MemberStatus,
 	MemberSideEffects,
 	MemberNotes,
+	MemberPractitioner,
+	MemberPharmacy,
 }
 
 // timestampLayout is FR-020's instant on the wire: RFC3339 in UTC, one
@@ -88,6 +94,10 @@ type MedicationSummary struct {
 type Medication struct {
 	MedicationSummary
 
+	Patient      string `json:"patient"`
+	Practitioner string `json:"practitioner,omitempty"`
+	Pharmacy     string `json:"pharmacy,omitempty"`
+
 	AlternativeName string  `json:"alternative_name,omitempty"`
 	Type            string  `json:"type,omitempty"`
 	Route           string  `json:"route,omitempty"`
@@ -103,8 +113,12 @@ type Medication struct {
 // runtime check: unknown members are rejected by the decoder, so a body that
 // nominates an owner is refused before any handler decides anything.
 //
-// FR-015: a name alone is sufficient. Everything else is optional.
+// FR-015: a name alone is sufficient beyond the patient. `Patient` is required
+// (FR-021, US2-3): an absent or empty one is a 422 naming the field, not a
+// fallback to anybody's active patient. `Practitioner` and `Pharmacy` are
+// phase 002's optional attributions (US5).
 type MedicationCreate struct {
+	Patient         string  `json:"patient"`
 	Name            string  `json:"name"`
 	AlternativeName string  `json:"alternative_name,omitempty"`
 	Type            string  `json:"type,omitempty"`
@@ -117,6 +131,8 @@ type MedicationCreate struct {
 	Status          string  `json:"status,omitempty"`
 	SideEffects     string  `json:"side_effects,omitempty"`
 	Notes           string  `json:"notes,omitempty"`
+	Practitioner    *string `json:"practitioner,omitempty"`
+	Pharmacy        *string `json:"pharmacy,omitempty"`
 }
 
 // MedicationPatch is the partial update. Only supplied members change.
@@ -148,6 +164,12 @@ type MedicationPatch struct {
 	Status      *string `json:"status,omitempty"`
 	SideEffects *string `json:"side_effects,omitempty"`
 	Notes       *string `json:"notes,omitempty"`
+
+	// Practitioner and Pharmacy, phase 002's additions. There is deliberately
+	// no Patient field here (contracts/medications-rescope.md): re-attribution
+	// is refused by DTO shape rather than a runtime check.
+	Practitioner *string `json:"practitioner,omitempty"`
+	Pharmacy     *string `json:"pharmacy,omitempty"`
 }
 
 // ErrWrongBodyType is a decoded body that is not the type this kind minted.
@@ -206,6 +228,9 @@ func (c MedicationCodec) Detail(m clinical.Medication) any {
 
 	return &Medication{
 		MedicationSummary: *summary,
+		Patient:           m.PatientID,
+		Practitioner:      m.PractitionerID,
+		Pharmacy:          m.PharmacyID,
 		AlternativeName:   m.AlternativeName,
 		Type:              string(m.Type),
 		Route:             string(m.Route),
@@ -239,6 +264,7 @@ func (MedicationCodec) Draft(body any) (clinical.Medication, error) {
 	}
 
 	return clinical.Medication{
+		PatientID:       create.Patient,
 		Name:            create.Name,
 		AlternativeName: create.AlternativeName,
 		Type:            clinical.MedicationType(create.Type),
@@ -251,7 +277,20 @@ func (MedicationCodec) Draft(body any) (clinical.Medication, error) {
 		Status:          clinical.TherapyStatus(create.Status),
 		SideEffects:     create.SideEffects,
 		Notes:           create.Notes,
+		PractitionerID:  deref(create.Practitioner),
+		PharmacyID:      deref(create.Pharmacy),
 	}, nil
+}
+
+// deref reads an optional string member, or the empty string when it was not
+// supplied. Create carries no notion of "clear this" — there is nothing yet to
+// clear — so an absent pointer and an empty string mean the same thing here.
+func deref(value *string) string {
+	if value == nil {
+		return ""
+	}
+
+	return *value
 }
 
 // Patch reads an update body.
@@ -281,6 +320,8 @@ func (MedicationCodec) Patch(body any) (medication.Patch, error) {
 		Status:          convert[clinical.TherapyStatus](incoming.Status),
 		SideEffects:     incoming.SideEffects,
 		Notes:           incoming.Notes,
+		Practitioner:    incoming.Practitioner,
+		Pharmacy:        incoming.Pharmacy,
 	}
 
 	if err := orderedRefusal(&invalid); err != nil {

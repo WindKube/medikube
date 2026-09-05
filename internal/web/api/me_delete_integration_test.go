@@ -69,15 +69,33 @@ func newDeletionRig(t *testing.T) deletionRig {
 	return deletionRig{app: app, service: accounts}
 }
 
+// medicationsOf is one account's medication rows, counted through the patient
+// it now files against (research D-13): medications.owner is gone, so
+// "this account's rows" is "rows filed against a patient this account owns".
 func (r deletionRig) medicationsOf(t *testing.T, ownerID string) int {
 	t.Helper()
+
+	owners, err := store.NewPatientOwners(r.app)
+	require.NoError(t, err)
+
+	patientIDs, err := owners.PatientsOfOwner(t.Context(), ownerID)
+	require.NoError(t, err)
+
+	if len(patientIDs) == 0 {
+		return 0
+	}
+
+	ids := make([]interface{}, len(patientIDs))
+	for i, id := range patientIDs {
+		ids[i] = id
+	}
 
 	var total int
 
 	require.NoError(t, r.app.DB().
 		Select("count(*)").
 		From(kind.Medication.Collection()).
-		Where(dbx.HashExp{"owner": ownerID}).
+		Where(dbx.HashExp{"patient": ids}).
 		Row(&total))
 
 	return total

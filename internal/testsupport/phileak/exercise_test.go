@@ -903,6 +903,29 @@ func recordsOfKind() string { return "/api/v1/records/" + kind.Medication.Segmen
 
 func recordAddress(id string) string { return recordsOfKind() + "/" + id }
 
+// sentinelPatientFor plants one minimal patient for the given account,
+// directly against the database: the registration-time hook that provisions a
+// self-record automatically (FR-005) is a different story's work, so an
+// account minted in this exercise has none, and a medication sentinel needs a
+// patient to be filed against.
+func sentinelPatientFor(c *client, email string) string {
+	c.t.Helper()
+
+	owner, err := c.instance.App.FindAuthRecordByEmail("users", email)
+	require.NoError(c.t, err, "finding the sentinel account %s", email)
+
+	collection, err := c.instance.App.FindCollectionByNameOrId("patients")
+	require.NoError(c.t, err)
+
+	record := core.NewRecord(collection)
+	record.Set("owner", owner.Id)
+	record.Set("first_name", "Sentinel")
+	record.Set("last_name", "Patient")
+	require.NoError(c.t, c.instance.App.Save(record), "planting the sentinel patient for %s", email)
+
+	return record.Id
+}
+
 func pageOfKind() string { return "/" + kind.Medication.Segment() }
 
 // drive walks the whole inventory.
@@ -1042,11 +1065,12 @@ func jsonBody(t testing.TB, value any) string {
 // sentinelMedication is the record every sentinel that belongs to a person is
 // planted in. Every optional member is filled: an unfilled one is a column no
 // sink could have leaked.
-func sentinelMedication() api.MedicationCreate {
+func sentinelMedication(patientID string) api.MedicationCreate {
 	started := "2024-03-15"
 	ended := "2024-09-30"
 
 	return api.MedicationCreate{
+		Patient:         patientID,
 		Name:            MedicationName,
 		AlternativeName: AlternativeName,
 		Dosage:          Dosage,
@@ -1071,9 +1095,11 @@ func driveRecords(c *client) {
 
 	// Opened before the write, because the whole question about a live stream
 	// is what it publishes when something changes underneath it.
-	streamed := c.openStream(1200 * time.Millisecond)
+	patientID := testsupport.AccountAPatientSelfID
 
-	created := c.do(http.MethodPost, recordsOfKind(), jsonBody(c.t, sentinelMedication()))
+	streamed := c.openStream(1200*time.Millisecond, patientID)
+
+	created := c.do(http.MethodPost, recordsOfKind(), jsonBody(c.t, sentinelMedication(patientID)))
 	require.Equal(c.t, http.StatusCreated, created.Status,
 		"the sentinel record was not created, so every read below reads nothing: %s", created.Body)
 
@@ -1088,12 +1114,12 @@ func driveRecords(c *client) {
 
 	// The lists, narrowed and unnarrowed, and the two refusals a query string
 	// can produce.
-	c.do(http.MethodGet, recordsOfKind(), "")
-	c.do(http.MethodGet, recordsOfKind()+"?status="+string(clinical.TherapyStatusActive)+"&limit=5", "")
-	c.do(http.MethodGet, recordsOfKind()+"?status="+SearchTerm, "")
-	c.do(http.MethodGet, recordsOfKind()+"?cursor="+SearchTerm, "")
-	c.do(http.MethodGet, "/api/v1/records?kind="+kind.Medication.Segment()+"&limit=3", "")
-	c.do(http.MethodGet, "/api/v1/records?from="+SearchTerm, "")
+	c.do(http.MethodGet, recordsOfKind()+"?patient="+patientID, "")
+	c.do(http.MethodGet, recordsOfKind()+"?patient="+patientID+"&status="+string(clinical.TherapyStatusActive)+"&limit=5", "")
+	c.do(http.MethodGet, recordsOfKind()+"?patient="+patientID+"&status="+SearchTerm, "")
+	c.do(http.MethodGet, recordsOfKind()+"?patient="+patientID+"&cursor="+SearchTerm, "")
+	c.do(http.MethodGet, "/api/v1/records?patient="+patientID+"&kind="+kind.Medication.Segment()+"&limit=3", "")
+	c.do(http.MethodGet, "/api/v1/records?patient="+patientID+"&from="+SearchTerm, "")
 
 	// A stranger asking for it, and an id nobody has ever held. FR-033 says
 	// the two answers are the same bytes; this suite asks the narrower
@@ -1149,12 +1175,13 @@ func decodedID(t testing.TB, body string) string {
 // The window is a bound and never a threshold: nothing is asserted about what
 // arrives, only that the route was served and that whatever it wrote went
 // through the same sinks as everything else.
-func (c *client) openStream(window time.Duration) <-chan struct{} {
+func (c *client) openStream(window time.Duration, patientID string) <-chan struct{} {
 	done := make(chan struct{})
 
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(c.t.Context()), window)
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, c.base+"/api/v1/streams/records", nil)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		c.base+"/api/v1/streams/records?patient="+patientID, nil)
 	require.NoError(c.t, err)
 
 	request.Header.Set("Accept", "text/event-stream")
@@ -1317,7 +1344,13 @@ func driveAccountLifecycle(c *client) {
 
 	// A record of this account's own, so that the deletion below has a cascade
 	// to perform rather than an empty account to remove.
-	c.do(http.MethodPost, recordsOfKind(), jsonBody(c.t, sentinelMedication()))
+	//
+	// The registration hook that provisions a self-record automatically
+	// (FR-005) is a different story's work; a sentinel account minted here has
+	// none, so one is planted directly to give the medication below a patient
+	// to be filed against.
+	patientID := sentinelPatientFor(c, AccountEmail)
+	c.do(http.MethodPost, recordsOfKind(), jsonBody(c.t, sentinelMedication(patientID)))
 
 	// The wrong current password first: a refusal here is where a password
 	// would be written down if anything wrote one down.

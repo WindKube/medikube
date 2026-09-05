@@ -21,6 +21,7 @@ import (
 // everyField is a create that fills in all twelve recorded members, so that the
 // comparison against stored data has something to disagree about in each.
 const everyField = `{
+  "patient": "` + testsupport.AccountAPatientSelfID + `",
   "name": "Amoxicillin",
   "alternative_name": "Amoxil",
   "type": "prescription",
@@ -90,9 +91,9 @@ func TestTheCreatedRepresentationIsWhatWasStored(t *testing.T) {
 	assert.Equal(t, stored.SideEffects, created.SideEffects)
 	assert.Equal(t, stored.Notes, created.Notes)
 
-	// FR-032, and the one that matters: the body named no owner and could not
-	// have, and the row belongs to the account that sent it.
-	assert.Equal(t, testsupport.AccountAID, record.GetString("owner"))
+	// FR-032, and the one that matters: the row is filed against the patient
+	// the body named, and that patient belongs to the account that sent it.
+	assert.Equal(t, testsupport.AccountAPatientSelfID, record.GetString("patient"))
 	assert.Equal(t, kind.Medication.Enum(), created.Kind)
 }
 
@@ -101,7 +102,7 @@ func TestANameAloneIsSufficientAndEverythingElseIsOptional(t *testing.T) {
 
 	caller := newCaller(t)
 
-	answer := caller.post(collectionURL(), `{"name":"Paracetamol"}`)
+	answer := caller.post(collectionURL(), `{"patient":"`+testsupport.AccountAPatientSelfID+`","name":"Paracetamol"}`)
 	require.Equal(t, http.StatusCreated, answer.Status, answer.Body)
 
 	created := answer.medication(t)
@@ -125,7 +126,7 @@ func TestACreateWithoutANameIsRefusedAndStoresNothing(t *testing.T) {
 
 	before := storedCount(t, caller)
 
-	answer := caller.post(collectionURL(), `{"dosage":"500 mg"}`)
+	answer := caller.post(collectionURL(), `{"patient":"`+testsupport.AccountAPatientSelfID+`","dosage":"500 mg"}`)
 
 	require.Equal(t, http.StatusUnprocessableEntity, answer.Status, answer.Body)
 	assert.Contains(t, answer.envelope(t).fieldCodes(), [2]string{"name", domain.CodeRequired})

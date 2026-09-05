@@ -45,6 +45,22 @@ const (
 	ParamTo   = "to"
 )
 
+// ParamPatient is `?patient=`, required on every list over patient-scoped data
+// (contracts/medications-rescope.md, FR-015). There is no fallback to the
+// caller's own active patient here: every request names its patient.
+const ParamPatient = "patient"
+
+// requiredPatient reads `?patient=`, refusing its absence before anything else
+// runs.
+func requiredPatient(e *core.RequestEvent) (string, error) {
+	patientID := e.Request.URL.Query().Get(ParamPatient)
+	if patientID == "" {
+		return "", web.ErrPatientRequired
+	}
+
+	return patientID, nil
+}
+
 // recordCacheControl is what a clinical record is served with. `private` keeps
 // it out of every shared cache and `no-store` keeps it off disk: the response
 // body is somebody's medication list, and a validator-based revalidation policy
@@ -135,6 +151,11 @@ func (h *recordHandlers) list(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
+	patientID, err := requiredPatient(e)
+	if err != nil {
+		return err
+	}
+
 	params, err := web.ListQuery(e, nil)
 	if err != nil {
 		return err
@@ -146,11 +167,12 @@ func (h *recordHandlers) list(e *core.RequestEvent, actor access.Actor) error {
 	}
 
 	page, err := handler.List(e.Request.Context(), actor, records.Query{
-		Kinds:  selected,
-		Sort:   params.Sort,
-		Limit:  params.Limit,
-		Cursor: params.Cursor,
-		Count:  params.Count,
+		Kinds:     selected,
+		PatientID: patientID,
+		Sort:      params.Sort,
+		Limit:     params.Limit,
+		Cursor:    params.Cursor,
+		Count:     params.Count,
 	})
 	if err != nil {
 		return web.OwnerScoped(err)
@@ -199,18 +221,24 @@ func (h *recordHandlers) listOfKind(e *core.RequestEvent, actor access.Actor) er
 // looks right and is not — the same reason contracts/records.md refuses to
 // ignore an unpublished `sort` — and a second spelling is how it came about.
 func KindQuery(e *core.RequestEvent, entry records.Entry) (records.Query, error) {
+	patientID, err := requiredPatient(e)
+	if err != nil {
+		return records.Query{}, err
+	}
+
 	params, err := web.ListQuery(e, entry.Schema.Sorts)
 	if err != nil {
 		return records.Query{}, err
 	}
 
 	return records.Query{
-		Search:  params.Search,
-		Filters: filters(e, entry.Schema.Filters),
-		Sort:    params.Sort,
-		Limit:   params.Limit,
-		Cursor:  params.Cursor,
-		Count:   params.Count,
+		PatientID: patientID,
+		Search:    params.Search,
+		Filters:   filters(e, entry.Schema.Filters),
+		Sort:      params.Sort,
+		Limit:     params.Limit,
+		Cursor:    params.Cursor,
+		Count:     params.Count,
 	}, nil
 }
 

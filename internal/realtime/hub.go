@@ -15,7 +15,7 @@ import (
 // publish time who may see it, which is the authorizer's decision made in the
 // wrong place by the one participant that does not know who is listening. With
 // only identifiers on the wire, every subscriber's handler re-runs
-// access.Authorizer.Record for its own viewer and re-fetches, so a person who
+// access.Authorizer.Patient for its own viewer and re-fetches, so a person who
 // lost access mid-stream simply stops receiving patches.
 //
 // It carries no action either, and that is deliberate rather than an omission:
@@ -24,9 +24,9 @@ import (
 // row removal. An action field would be a second source of truth for something
 // the fetch already answers, and the fetch is the one that cannot lie.
 type Event struct {
-	Kind     kind.Kind
-	RecordID string
-	OwnerID  string
+	Kind      kind.Kind
+	RecordID  string
+	PatientID string
 }
 
 // SubscriberBuffer is how far behind a subscriber may fall before it is

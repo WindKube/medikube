@@ -93,6 +93,9 @@ func BindRecordAudit(app core.App, config RecordAudit) error {
 	return nil
 }
 
+// The hook ids of the patients audit, namespaced apart from the kind-based
+// ones above: "patients" is not a kind.Kind (research D-05), so it cannot go
+// through BindRecordAudit's registry-derived collection list.
 func bind(
 	on *hook.TaggedHook[*core.RecordEvent],
 	id string,

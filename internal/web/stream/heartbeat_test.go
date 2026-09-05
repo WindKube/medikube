@@ -49,7 +49,7 @@ func TestAHeartbeatCarriesAnRFC3339StreamBeat(t *testing.T) {
 
 	medikube := serve(t, apitestHeartbeat(interval))
 
-	watching := medikube.open(t, medikube.token(t, testsupport.AccountAEmail), "")
+	watching := medikube.open(t, medikube.token(t, testsupport.AccountAEmail), "?patient="+testsupport.AccountAPatientSelfID)
 	require.Equal(t, http.StatusOK, watching.Response.StatusCode)
 
 	// Three, because two intervals is the smallest sample that has a gap to
@@ -94,7 +94,7 @@ func TestAStreamOpensWithAHeartbeatRatherThanWithSilence(t *testing.T) {
 
 	medikube := serve(t, apitestHeartbeat(time.Hour))
 
-	watching := medikube.open(t, medikube.token(t, testsupport.AccountAEmail), "")
+	watching := medikube.open(t, medikube.token(t, testsupport.AccountAEmail), "?patient="+testsupport.AccountAPatientSelfID)
 
 	first := watching.next(5 * time.Second)
 	assert.True(t, first.isHeartbeat(), "the first frame on an idle stream was %q", first.Event)
@@ -108,7 +108,7 @@ func TestThePageComparesTheHeartbeatAgainstTheStalenessThreshold(t *testing.T) {
 
 	medikube := serve(t)
 
-	body := medikube.page(t, medikube.token(t, testsupport.AccountAEmail), "/"+kind.Medication.Segment())
+	body := medikube.page(t, medikube.token(t, testsupport.AccountAEmail), "/"+kind.Medication.Segment()+"?patient="+testsupport.AccountAPatientSelfID)
 
 	assert.Containsf(t, body, shell.StreamPollAttribute()+"=",
 		"the page carries no %s, so nothing re-checks the beat", shell.StreamPollAttribute())
@@ -148,7 +148,7 @@ func TestTheStalenessDetectorUsesNoDatastarProAttribute(t *testing.T) {
 
 	medikube := serve(t)
 
-	body := medikube.page(t, medikube.token(t, testsupport.AccountAEmail), "/"+kind.Medication.Segment())
+	body := medikube.page(t, medikube.token(t, testsupport.AccountAEmail), "/"+kind.Medication.Segment()+"?patient="+testsupport.AccountAPatientSelfID)
 
 	for _, pro := range []string{"data-persist", "data-match-media", "data-on-raf", "data-query-string"} {
 		assert.NotContainsf(t, body, pro, "%s is a Datastar Pro attribute and the vendored runtime registers no plugin for it", pro)

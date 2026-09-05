@@ -11,6 +11,7 @@ import (
 	"medikube/internal/platform/pb"
 	serviceaudit "medikube/internal/service/audit"
 	serviceidentity "medikube/internal/service/identity"
+	"medikube/internal/store"
 	storeaudit "medikube/internal/store/audit"
 	storeidentity "medikube/internal/store/identity"
 	"medikube/internal/web"
@@ -100,7 +101,12 @@ func NewAccounts(app core.App, cfg AccountsConfig) (*Accounts, error) {
 		return nil, err
 	}
 
-	counts, err := NewCounter(cfg.Resolve)
+	patientOwners, err := store.NewPatientOwners(app)
+	if err != nil {
+		return nil, err
+	}
+
+	counts, err := NewCounter(cfg.Resolve, patientOwners.PatientsOfOwner)
 	if err != nil {
 		return nil, err
 	}

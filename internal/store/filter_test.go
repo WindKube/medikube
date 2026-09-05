@@ -44,8 +44,8 @@ func TestTheBuilderProducesTheExpectedSQLAndBoundParameters(t *testing.T) {
 	}{
 		{
 			name:       "owner scope alone",
-			query:      Query{Conditions: []Condition{Equal(medicationFieldOwner, "owner123")}},
-			wantWhere:  "([[owner]] = {:mk0})",
+			query:      Query{Conditions: []Condition{Equal(medicationFieldPatient, "owner123")}},
+			wantWhere:  "([[patient]] = {:mk0})",
 			wantParams: dbx.Params{"mk0": "owner123"},
 			wantOrder:  []string{"[[id]] DESC"},
 			wantLimit:  DefaultLimit,
@@ -53,10 +53,10 @@ func TestTheBuilderProducesTheExpectedSQLAndBoundParameters(t *testing.T) {
 		{
 			name: "narrowed by state, which is FR-022's second half",
 			query: Query{Conditions: []Condition{
-				Equal(medicationFieldOwner, "owner123"),
+				Equal(medicationFieldPatient, "owner123"),
 				Equal(medicationFieldStatus, string(clinical.TherapyStatusActive)),
 			}},
-			wantWhere:  "([[owner]] = {:mk0}) AND ([[status]] = {:mk1})",
+			wantWhere:  "([[patient]] = {:mk0}) AND ([[status]] = {:mk1})",
 			wantParams: dbx.Params{"mk0": "owner123", "mk1": "active"},
 			wantOrder:  []string{"[[id]] DESC"},
 			wantLimit:  DefaultLimit,
@@ -92,11 +92,11 @@ func TestTheBuilderProducesTheExpectedSQLAndBoundParameters(t *testing.T) {
 		{
 			name: "most recently started, which is FR-022's first ordering",
 			query: Query{
-				Conditions: []Condition{Equal(medicationFieldOwner, "owner123")},
+				Conditions: []Condition{Equal(medicationFieldPatient, "owner123")},
 				Sort:       []domain.SortKey{{Field: medicationFieldStartedOn, Desc: true}},
 				Limit:      10,
 			},
-			wantWhere:  "([[owner]] = {:mk0})",
+			wantWhere:  "([[patient]] = {:mk0})",
 			wantParams: dbx.Params{"mk0": "owner123"},
 			wantOrder:  []string{"[[started_on]] DESC", "[[id]] DESC"},
 			wantLimit:  10,
@@ -329,13 +329,14 @@ func TestEveryDeclaredColumnsGoValueIsWhatSQLiteComputesForIt(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "columns@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
 	schema := MedicationSchema()
 
 	// Names picked so a case-folding disagreement shows up: a Turkish dotted
 	// capital I folds to two code points in Go and not at all in SQLite.
 	for _, name := range []string{"Amoxicillin", "IBUPROFEN", "İnsulin", "リン酸コデイン", "50% off"} {
-		medication := sampleMedication(t, owner.Id)
+		medication := sampleMedication(t, patient.Id)
 		medication.Name = name
 		seedMedication(t, app, medication)
 	}
@@ -380,6 +381,7 @@ func TestPagingFromAKeysetBoundaryNeitherRepeatsNorSkipsWhenARowIsInserted(t *te
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "paging@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
 	schema := MedicationSchema()
 	ordering := []domain.SortKey{{Field: medicationFieldStartedOn, Desc: true}}
@@ -394,7 +396,7 @@ func TestPagingFromAKeysetBoundaryNeitherRepeatsNorSkipsWhenARowIsInserted(t *te
 		{"Enalapril", "2026-03-03"},
 		{"Furosemide", "2026-03-02"},
 	} {
-		medication := sampleMedication(t, owner.Id)
+		medication := sampleMedication(t, patient.Id)
 		medication.Name = seed.name
 		medication.StartedOn = mustDate(t, seed.started)
 		medication.EndedOn = domain.Date{}
@@ -405,7 +407,7 @@ func TestPagingFromAKeysetBoundaryNeitherRepeatsNorSkipsWhenARowIsInserted(t *te
 		t.Helper()
 
 		built, err := schema.Build(Query{
-			Conditions: []Condition{Equal(medicationFieldOwner, owner.Id)},
+			Conditions: []Condition{Equal(medicationFieldPatient, patient.Id)},
 			Sort:       ordering,
 			After:      after,
 			Limit:      2,
@@ -443,7 +445,7 @@ func TestPagingFromAKeysetBoundaryNeitherRepeatsNorSkipsWhenARowIsInserted(t *te
 
 	// The concurrent insert, deliberately above the boundary: a newer start
 	// date than anything already read, which is where an offset loses a row.
-	inserted := sampleMedication(t, owner.Id)
+	inserted := sampleMedication(t, patient.Id)
 	inserted.Name = "Zopiclone"
 	inserted.StartedOn = mustDate(t, "2026-03-09")
 	inserted.EndedOn = domain.Date{}
@@ -494,12 +496,13 @@ func TestPagingIsStableAcrossATieInTheSortColumn(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "ties@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
 	schema := MedicationSchema()
 	ordering := []domain.SortKey{{Field: medicationFieldStartedOn, Desc: true}}
 
 	for _, name := range []string{"Amoxicillin", "Bisoprolol", "Ciclosporin", "Dapagliflozin"} {
-		medication := sampleMedication(t, owner.Id)
+		medication := sampleMedication(t, patient.Id)
 		medication.Name = name
 		medication.StartedOn = mustDate(t, "2026-03-04")
 		medication.EndedOn = domain.Date{}
@@ -511,7 +514,7 @@ func TestPagingIsStableAcrossATieInTheSortColumn(t *testing.T) {
 
 	for range 6 {
 		built, err := schema.Build(Query{
-			Conditions: []Condition{Equal(medicationFieldOwner, owner.Id)},
+			Conditions: []Condition{Equal(medicationFieldPatient, patient.Id)},
 			Sort:       ordering,
 			After:      cursor,
 			Limit:      1,
@@ -565,7 +568,7 @@ func TestTheQueryableColumnsAreExactlyTheOnesTheRequirementsName(t *testing.T) {
 
 	assert.Equal(t, []string{
 		fieldID,
-		medicationFieldOwner,
+		medicationFieldPatient,
 		medicationFieldName,
 		// contracts/records.md defines `?q=` as a substring over the name and
 		// the alternative name, so the second column is one FR-022 names.
@@ -1044,20 +1047,22 @@ func TestTheBuiltQueryRunsAndNarrowsTheWayItSaysItDoes(t *testing.T) {
 	app := newTestApp(t)
 	owner := seedUser(t, app, "narrow@example.test")
 	stranger := seedUser(t, app, "stranger@example.test")
+	patient := seedPatient(t, app, owner.Id)
+	strangerPatient := seedPatient(t, app, stranger.Id)
 
 	for _, seed := range []struct {
-		ownerID string
-		name    string
-		status  clinical.TherapyStatus
+		patientID string
+		name      string
+		status    clinical.TherapyStatus
 	}{
-		{owner.Id, "Amoxicillin", clinical.TherapyStatusActive},
-		{owner.Id, "AMOXICILLIN clavulanate", clinical.TherapyStatusActive},
-		{owner.Id, "Bisoprolol", clinical.TherapyStatusStopped},
-		{owner.Id, "50% dextrose", clinical.TherapyStatusActive},
-		{owner.Id, "dextrose 5", clinical.TherapyStatusActive},
-		{stranger.Id, "Amoxicillin", clinical.TherapyStatusActive},
+		{patient.Id, "Amoxicillin", clinical.TherapyStatusActive},
+		{patient.Id, "AMOXICILLIN clavulanate", clinical.TherapyStatusActive},
+		{patient.Id, "Bisoprolol", clinical.TherapyStatusStopped},
+		{patient.Id, "50% dextrose", clinical.TherapyStatusActive},
+		{patient.Id, "dextrose 5", clinical.TherapyStatusActive},
+		{strangerPatient.Id, "Amoxicillin", clinical.TherapyStatusActive},
 	} {
-		medication := sampleMedication(t, seed.ownerID)
+		medication := sampleMedication(t, seed.patientID)
 		medication.Name = seed.name
 		medication.Status = seed.status
 		seedMedication(t, app, medication)
@@ -1090,7 +1095,7 @@ func TestTheBuiltQueryRunsAndNarrowsTheWayItSaysItDoes(t *testing.T) {
 		{
 			name: "the owner scope, which is the only thing between two people's records",
 			query: Query{
-				Conditions: []Condition{Equal(medicationFieldOwner, owner.Id)},
+				Conditions: []Condition{Equal(medicationFieldPatient, patient.Id)},
 				Sort:       []domain.SortKey{{Field: medicationFieldName}},
 			},
 			want: []string{"50% dextrose", "Amoxicillin", "AMOXICILLIN clavulanate", "Bisoprolol", "dextrose 5"},
@@ -1099,7 +1104,7 @@ func TestTheBuiltQueryRunsAndNarrowsTheWayItSaysItDoes(t *testing.T) {
 			name: "narrowed by state",
 			query: Query{
 				Conditions: []Condition{
-					Equal(medicationFieldOwner, owner.Id),
+					Equal(medicationFieldPatient, patient.Id),
 					Equal(medicationFieldStatus, string(clinical.TherapyStatusStopped)),
 				},
 			},
@@ -1109,7 +1114,7 @@ func TestTheBuiltQueryRunsAndNarrowsTheWayItSaysItDoes(t *testing.T) {
 			name: "one of several states",
 			query: Query{
 				Conditions: []Condition{
-					Equal(medicationFieldOwner, owner.Id),
+					Equal(medicationFieldPatient, patient.Id),
 					OneOf(medicationFieldStatus, string(clinical.TherapyStatusStopped), string(clinical.TherapyStatusCompleted)),
 				},
 			},
@@ -1119,7 +1124,7 @@ func TestTheBuiltQueryRunsAndNarrowsTheWayItSaysItDoes(t *testing.T) {
 			name: "a text match, which folds ASCII case because SQLite's LIKE does",
 			query: Query{
 				Conditions: []Condition{
-					Equal(medicationFieldOwner, owner.Id),
+					Equal(medicationFieldPatient, patient.Id),
 					Contains(medicationFieldName, "amox"),
 				},
 				Sort: []domain.SortKey{{Field: medicationFieldName}},
@@ -1132,7 +1137,7 @@ func TestTheBuiltQueryRunsAndNarrowsTheWayItSaysItDoes(t *testing.T) {
 			name: "a text match containing a per-cent sign",
 			query: Query{
 				Conditions: []Condition{
-					Equal(medicationFieldOwner, owner.Id),
+					Equal(medicationFieldPatient, patient.Id),
 					Contains(medicationFieldName, "50%"),
 				},
 			},
@@ -1142,7 +1147,7 @@ func TestTheBuiltQueryRunsAndNarrowsTheWayItSaysItDoes(t *testing.T) {
 			name: "a text match containing an underscore, the other wildcard",
 			query: Query{
 				Conditions: []Condition{
-					Equal(medicationFieldOwner, owner.Id),
+					Equal(medicationFieldPatient, patient.Id),
 					Contains(medicationFieldName, "e_5"),
 				},
 			},
@@ -1171,7 +1176,7 @@ func TestASearchTermSpansTheColumnsItNamesAndIsStillOneTerm(t *testing.T) {
 	t.Parallel()
 
 	built, err := MedicationSchema().Build(Query{Conditions: []Condition{
-		Equal(medicationFieldOwner, "owner123"),
+		Equal(medicationFieldPatient, "owner123"),
 		ContainsAny("salbuta", medicationFieldName, medicationFieldAlternativeName),
 	}})
 	require.NoError(t, err)
@@ -1180,7 +1185,7 @@ func TestASearchTermSpansTheColumnsItNamesAndIsStillOneTerm(t *testing.T) {
 	require.NotNil(t, built.Where)
 
 	assert.Equal(t,
-		`([[owner]] = {:mk0}) AND (LOWER([[name]]) LIKE {:mk1} ESCAPE '\' OR LOWER([[alternative_name]]) LIKE {:mk1} ESCAPE '\')`,
+		`([[patient]] = {:mk0}) AND (LOWER([[name]]) LIKE {:mk1} ESCAPE '\' OR LOWER([[alternative_name]]) LIKE {:mk1} ESCAPE '\')`,
 		built.Where.Build(nil, params))
 	assert.Equal(t, dbx.Params{"mk0": "owner123", "mk1": "%salbuta%"}, params)
 }
@@ -1204,7 +1209,7 @@ func TestATermMaySpanOnlyTheColumnsDeclaredSearchable(t *testing.T) {
 	}{
 		{
 			name:      "the owner column, which is the scope and never a search",
-			condition: ContainsAny("x", medicationFieldName, medicationFieldOwner),
+			condition: ContainsAny("x", medicationFieldName, medicationFieldPatient),
 		},
 		{
 			name:      "a column that is declared and is not free text",
@@ -1216,7 +1221,7 @@ func TestATermMaySpanOnlyTheColumnsDeclaredSearchable(t *testing.T) {
 		},
 		{
 			name:      "an equality widened into a disjunction",
-			condition: Condition{Columns: []string{medicationFieldName, medicationFieldOwner}, Op: OpEqual, Values: []string{"x"}},
+			condition: Condition{Columns: []string{medicationFieldName, medicationFieldPatient}, Op: OpEqual, Values: []string{"x"}},
 		},
 	}
 
@@ -1256,7 +1261,8 @@ func TestAColumnDeclaredFilterOnlyIsNoOrderingAndNoBoundary(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "filteronly@example.test")
-	record := seedMedication(t, app, sampleMedication(t, owner.Id))
+	patient := seedPatient(t, app, owner.Id)
+	record := seedMedication(t, app, sampleMedication(t, patient.Id))
 
 	_, err = schema.Boundary(record, ordering)
 	assert.ErrorIs(t, err, ErrUnknownColumn, "a boundary was minted on a column nothing may order by")
@@ -1315,10 +1321,11 @@ func TestTheBoundaryValueIsReadThroughTheOrderingItBelongsTo(t *testing.T) {
 
 	app := newTestApp(t)
 	owner := seedUser(t, app, "boundary@example.test")
+	patient := seedPatient(t, app, owner.Id)
 
-	dated := seedMedication(t, app, sampleMedication(t, owner.Id))
+	dated := seedMedication(t, app, sampleMedication(t, patient.Id))
 
-	absent := sampleMedication(t, owner.Id)
+	absent := sampleMedication(t, patient.Id)
 	absent.Name = "Undated"
 	absent.StartedOn = domain.Date{}
 	absent.EndedOn = domain.Date{}

@@ -44,6 +44,22 @@ func TestTheCommittedFixtureIsExactlyWhatTheSeedWrites(t *testing.T) {
 			"and commit %s", regenEnv, FixtureDir())
 }
 
+// patientsOfAccount is every patient id data-model §9 seeds for one account,
+// boxed for dbx.HashExp: only []interface{} gets its IN-clause treatment
+// (dbx/expression.go's HashExp.Build) — a []string falls through to the
+// single-value branch and dbx refuses to bind a slice as one parameter.
+func patientsOfAccount(accountID string) []interface{} {
+	var ids []interface{}
+
+	for _, patient := range seed.Patients() {
+		if patient.OwnerID == accountID {
+			ids = append(ids, patient.ID)
+		}
+	}
+
+	return ids
+}
+
 func TestEveryExportedFixtureIdentifierNamesASeededRecord(t *testing.T) {
 	t.Parallel()
 
@@ -75,7 +91,7 @@ func TestEveryExportedFixtureIdentifierNamesASeededRecord(t *testing.T) {
 				"%s is in the other confirmation state (FR-075, T222)", account.email)
 
 			owned, err := app.CountRecords(kind.Medication.Collection(),
-				dbx.HashExp{"owner": account.id})
+				dbx.HashExp{"patient": patientsOfAccount(account.id)})
 			require.NoError(t, err)
 			assert.Equal(t, int64(account.medications), owned,
 				"%s holds a different number of records than the constants say", account.email)
@@ -103,7 +119,7 @@ func TestEveryPhase002FixtureIdentifierNamesASeededRecord(t *testing.T) {
 	}
 
 	patients := []string{
-		AccountAPatientSelfID, AccountAPatientChildID, AccountAPatientParentID, AccountBPatientSelfID,
+		AccountAPatientSelfID, AccountAPatientChildID, AccountAPatientParentID, AccountBPatientSelfID, AccountCPatientSelfID,
 	}
 	for _, id := range patients {
 		_, err := app.FindRecordById("patients", id)
@@ -113,6 +129,7 @@ func TestEveryPhase002FixtureIdentifierNamesASeededRecord(t *testing.T) {
 	for accountID, patientID := range map[string]string{
 		AccountAID: AccountAPatientSelfID,
 		AccountBID: AccountBPatientSelfID,
+		AccountCID: AccountCPatientSelfID,
 	} {
 		record, err := app.FindRecordById(usersCollection, accountID)
 		require.NoError(t, err)

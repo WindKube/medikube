@@ -12,9 +12,7 @@ import (
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
-	"medikube/internal/domain/audit"
 	"medikube/internal/domain/clinical"
-	"medikube/internal/domain/kind"
 	"medikube/internal/service/medication"
 	"medikube/internal/service/medication/medicationtest"
 )
@@ -29,7 +27,6 @@ type harness struct {
 	service    *medication.Service
 	repository *medicationtest.Repository
 	authorizer *medicationtest.Authorizer
-	auditor    *medicationtest.Auditor
 }
 
 func newHarness(t *testing.T) harness {
@@ -37,21 +34,20 @@ func newHarness(t *testing.T) harness {
 
 	repository := medicationtest.NewRepository()
 	authorizer := medicationtest.NewAuthorizer(medicationtest.OwnerID)
-	auditor := medicationtest.NewAuditor()
 
-	service, err := medication.New(repository, authorizer, auditor)
+	service, err := medication.New(repository, authorizer)
 	require.NoError(t, err)
 
-	return harness{service: service, repository: repository, authorizer: authorizer, auditor: auditor}
+	return harness{service: service, repository: repository, authorizer: authorizer}
 }
 
 func (h harness) store(t *testing.T, name string) clinical.Medication {
 	t.Helper()
 
 	stored, err := h.repository.Create(t.Context(), clinical.Medication{
-		OwnerID: medicationtest.OwnerID,
-		Name:    name,
-		Status:  clinical.TherapyStatusActive,
+		PatientID: medicationtest.PatientID,
+		Name:      name,
+		Status:    clinical.TherapyStatusActive,
 	})
 	require.NoError(t, err)
 
@@ -84,41 +80,44 @@ func TestEveryMethodAuthorizesBeforeItReachesTheStore(t *testing.T) {
 			t.Parallel()
 
 			refused := newHarness(t)
+			stored := refused.store(t, "Amoxicillin")
 			refused.authorizer.Refuse(domain.ErrNotFound)
 
-			results := call(t, refused.service, method)
+			results := call(t, refused.service, method, stored)
 
 			assert.Positive(t, refused.authorizer.Calls(),
 				"%s never consulted the authorization checkpoint", method.Name)
-			assert.Empty(t, refused.repository.Calls(),
-				"%s reached the store after the checkpoint refused: %v", method.Name, refused.repository.Calls())
+			assert.Empty(t, refused.repository.Writes(),
+				"%s reached the store after the checkpoint refused: %v", method.Name, refused.repository.Writes())
 			assert.ErrorIs(t, errorOf(t, results), domain.ErrNotFound,
 				"%s answered a refusal as something other than a miss", method.Name)
 
-			denials := refused.auditor.Events()
-			require.Len(t, denials, 1, "%s wrote %d audit rows for one refusal", method.Name, len(denials))
-			assert.Equal(t, audit.ActionAccessDenied, denials[0].Action)
-
 			granted := newHarness(t)
-			_ = call(t, granted.service, method)
+			storedForGrant := granted.store(t, "Amoxicillin")
+			_ = call(t, granted.service, method, storedForGrant)
 
 			assert.Positive(t, granted.authorizer.Calls(),
 				"%s never consulted the authorization checkpoint", method.Name)
-			assert.Equal(t, kind.Medication, granted.authorizer.LastKind(),
-				"%s authorized against another kind's records", method.Name)
 		})
 	}
 }
 
-// call invokes a method with a context, an actor and the zero value of
-// everything else. The zero values are the point: a zero id and an empty patch
-// are refused by validation, and validation runs after the checkpoint — so a
-// method that reached them at all has already passed the assertion above.
-func call(t *testing.T, service *medication.Service, method reflect.Method) []reflect.Value {
+// call invokes a method with a context, an actor, and arguments built from an
+// already-stored medication.
+//
+// Get, Update and Delete resolve the patient from the row itself
+// (contracts/medications-rescope.md's fetch-then-authorize design), so the row
+// named has to exist for the checkpoint to be reached at all — a zero id would
+// be refused by the repository before the checkpoint ever saw it. A stored
+// record supplies the id (and, where a second string parameter exists, the
+// version) so every method reaches the checkpoint the same way.
+func call(t *testing.T, service *medication.Service, method reflect.Method, stored clinical.Medication) []reflect.Value {
 	t.Helper()
 
 	args := make([]reflect.Value, 0, method.Type.NumIn())
 	args = append(args, reflect.ValueOf(service))
+
+	strings := 0
 
 	for i := 1; i < method.Type.NumIn(); i++ {
 		switch in := method.Type.In(i); {
@@ -126,6 +125,17 @@ func call(t *testing.T, service *medication.Service, method reflect.Method) []re
 			args = append(args, reflect.ValueOf(t.Context()))
 		case in == reflect.TypeOf(access.Actor{}):
 			args = append(args, reflect.ValueOf(actor()))
+		case in == reflect.TypeOf(""):
+			strings++
+			if strings == 1 {
+				args = append(args, reflect.ValueOf(stored.ID))
+			} else {
+				args = append(args, reflect.ValueOf(stored.Version))
+			}
+		case in == reflect.TypeOf(medication.Query{}):
+			args = append(args, reflect.ValueOf(medication.Query{PatientID: stored.PatientID}))
+		case in == reflect.TypeOf(clinical.Medication{}):
+			args = append(args, reflect.ValueOf(clinical.Medication{PatientID: stored.PatientID, Name: "Amoxicillin"}))
 		default:
 			args = append(args, reflect.New(in).Elem())
 		}
@@ -151,45 +161,6 @@ func errorOf(t *testing.T, results []reflect.Value) error {
 	require.True(t, ok)
 
 	return err
-}
-
-func TestARefusalWritesOneAccessDeniedRowNamingTheIdentityAsAddressed(t *testing.T) {
-	t.Parallel()
-
-	h := newHarness(t)
-	h.authorizer.Refuse(domain.ErrNotFound)
-
-	_, err := h.service.Get(t.Context(), actor(), "somebodyelses1")
-	require.ErrorIs(t, err, domain.ErrNotFound)
-
-	events := h.auditor.Events()
-	require.Len(t, events, 1)
-
-	event := events[0]
-	assert.Equal(t, audit.ActionAccessDenied, event.Action)
-	assert.Equal(t, audit.ActorKindUser, event.ActorKind)
-	assert.Equal(t, audit.TargetKindMedication, event.TargetKind)
-	assert.Equal(t, "somebodyelses1", event.TargetID, "the row records the id as it was addressed")
-	assert.Equal(t, medicationtest.OwnerID, event.ActorID)
-	assert.Equal(t, requestID, event.RequestID)
-	assert.WithinDuration(t, time.Now(), event.OccurredAt, time.Minute)
-	assert.NoError(t, event.Validate(), "the row the service builds is one the store would refuse")
-}
-
-// TestAGenuineMissWritesNoAuditRow is the distinction research D-20 introduces
-// the action for: a refusal is somebody reaching for a record that is not
-// theirs, and a miss is a record that is not there. The checkpoint is what
-// tells them apart, so the audit row is written where the checkpoint refuses
-// and nowhere else.
-func TestAGenuineMissWritesNoAuditRow(t *testing.T) {
-	t.Parallel()
-
-	h := newHarness(t)
-
-	_, err := h.service.Get(t.Context(), actor(), "nosuchrecord01")
-
-	require.ErrorIs(t, err, domain.ErrNotFound)
-	assert.Empty(t, h.auditor.Events(), "a record that never existed is not an access denial")
 }
 
 // TestAGrantThatDoesNotCoverTheNeedIsARefusal. An authorizer that answers
@@ -223,7 +194,10 @@ func TestAGrantThatDoesNotCoverTheNeedIsARefusal(t *testing.T) {
 			name:    "create with view",
 			granted: access.PermView,
 			call: func(t *testing.T, h harness, _ clinical.Medication) error {
-				_, err := h.service.Create(t.Context(), actor(), clinical.Medication{Name: "Amoxicillin"})
+				_, err := h.service.Create(t.Context(), actor(), clinical.Medication{
+					PatientID: medicationtest.PatientID,
+					Name:      "Amoxicillin",
+				})
 
 				return err
 			},
@@ -240,42 +214,41 @@ func TestAGrantThatDoesNotCoverTheNeedIsARefusal(t *testing.T) {
 
 			assert.ErrorIs(t, err, domain.ErrNotFound)
 			assert.Empty(t, h.repository.Writes(), "the store was written to on a grant that did not cover the need")
-			assert.Len(t, h.auditor.Events(), 1)
 		})
 	}
 }
 
 // TestAFailingCheckpointIsNotADenial. A checkpoint that could not answer has
 // not refused anybody: answering 404 would tell a caller the record is not
-// theirs on the strength of a database being down, and the audit trail would
-// fill with denials nobody attempted.
+// theirs on the strength of a database being down.
 func TestAFailingCheckpointIsNotADenial(t *testing.T) {
 	t.Parallel()
 
 	broken := errors.New("the checkpoint could not be reached")
 
 	h := newHarness(t)
+	stored := h.store(t, "Amoxicillin")
 	h.authorizer.Refuse(broken)
 
-	_, err := h.service.Get(t.Context(), actor(), "somerecord0001")
+	_, err := h.service.Get(t.Context(), actor(), stored.ID)
 
 	require.ErrorIs(t, err, broken)
 	assert.NotErrorIs(t, err, domain.ErrNotFound)
-	assert.Empty(t, h.auditor.Events())
-	assert.Empty(t, h.repository.Calls())
+	assert.Empty(t, h.repository.Writes())
 }
 
-// TestCreateAttributesTheRecordToTheActor is FR-032 at the last place it can
-// be enforced. The write DTO has no owner member, so this cannot arrive over
-// HTTP — and this is the assertion that keeps it true for the next caller.
-func TestCreateAttributesTheRecordToTheActor(t *testing.T) {
+// TestCreateIgnoresCallerSuppliedIdentity is FR-032 at the last place it can be
+// enforced: the write DTO has no identity or version members, so this cannot
+// arrive over HTTP, and this is the assertion that keeps it true for the next
+// caller.
+func TestCreateIgnoresCallerSuppliedIdentity(t *testing.T) {
 	t.Parallel()
 
 	h := newHarness(t)
 
 	created, err := h.service.Create(t.Context(), actor(), clinical.Medication{
 		ID:        "chosenbycaller",
-		OwnerID:   medicationtest.StrangerID,
+		PatientID: medicationtest.PatientID,
 		Name:      "Amoxicillin",
 		Status:    clinical.TherapyStatusActive,
 		CreatedAt: time.Unix(0, 0),
@@ -284,10 +257,27 @@ func TestCreateAttributesTheRecordToTheActor(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	assert.Equal(t, medicationtest.OwnerID, created.OwnerID, "the body chose the owner")
 	assert.NotEqual(t, "chosenbycaller", created.ID, "the body chose the identity")
 	assert.NotEqual(t, "chosen-by-the-caller", created.Version, "the body chose the version")
 	assert.False(t, created.CreatedAt.Equal(time.Unix(0, 0)), "the body chose the creation time")
+}
+
+// TestCreateRefusesAnEmptyPatient is T075 and FR-021: a medication is filed
+// against a person, and there is no person to authorize against yet, so this
+// is a validation failure and never reaches the checkpoint.
+func TestCreateRefusesAnEmptyPatient(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+
+	_, err := h.service.Create(t.Context(), actor(), clinical.Medication{Name: "Amoxicillin"})
+
+	var invalid *domain.ValidationError
+	require.ErrorAs(t, err, &invalid)
+	require.Len(t, invalid.Fields, 1)
+	assert.Equal(t, medication.FieldPatient, invalid.Fields[0].Field)
+	assert.Equal(t, domain.CodeRequired, invalid.Fields[0].Code)
+	assert.Empty(t, h.authorizer.Calls(), "an empty patient never reaches the checkpoint")
 }
 
 // TestCreateDefaultsTheState is data-model §2's `default active`, applied here
@@ -298,7 +288,10 @@ func TestCreateDefaultsTheState(t *testing.T) {
 
 	h := newHarness(t)
 
-	created, err := h.service.Create(t.Context(), actor(), clinical.Medication{Name: "Amoxicillin"})
+	created, err := h.service.Create(t.Context(), actor(), clinical.Medication{
+		PatientID: medicationtest.PatientID,
+		Name:      "Amoxicillin",
+	})
 	require.NoError(t, err)
 
 	assert.Equal(t, clinical.TherapyStatusActive, created.Status)
@@ -317,6 +310,7 @@ func TestCreateReportsEveryViolationAtOnceAndStoresNothing(t *testing.T) {
 	h := newHarness(t)
 
 	_, err = h.service.Create(t.Context(), actor(), clinical.Medication{
+		PatientID: medicationtest.PatientID,
 		StartedOn: started,
 		EndedOn:   ended,
 		Type:      clinical.MedicationType("homeopathic"),
@@ -347,6 +341,7 @@ func TestUpdateChangesOnlyWhatWasSupplied(t *testing.T) {
 	h := newHarness(t)
 
 	created, err := h.service.Create(t.Context(), actor(), clinical.Medication{
+		PatientID:  medicationtest.PatientID,
 		Name:       "Amoxicillin",
 		Dosage:     "500 mg",
 		Indication: "a chest infection",
@@ -389,6 +384,7 @@ func TestUpdateValidatesTheResultAndStoresNothingWhenItIsInvalid(t *testing.T) {
 	h := newHarness(t)
 
 	created, err := h.service.Create(t.Context(), actor(), clinical.Medication{
+		PatientID: medicationtest.PatientID,
 		Name:      "Amoxicillin",
 		StartedOn: started,
 		Status:    clinical.TherapyStatusActive,
@@ -433,28 +429,28 @@ func TestDeleteCarriesTheVersionToTheStore(t *testing.T) {
 	assert.ErrorIs(t, err, domain.ErrVersionMismatch)
 }
 
-// TestListIsScopedToTheActor. The owner is read from the authenticated actor
-// and from nothing else — there is no parameter here a caller could name
-// somebody else's account in (FR-032).
-func TestListIsScopedToTheActor(t *testing.T) {
+// TestListIsScopedToTheRequestedPatient. The patient a list answers for is
+// read from the query and from nothing else — there is no fallback to the
+// actor's own record here (FR-015): every request names its patient.
+func TestListIsScopedToTheRequestedPatient(t *testing.T) {
 	t.Parallel()
 
 	h := newHarness(t)
 	h.store(t, "Amoxicillin")
 
 	_, err := h.repository.Create(t.Context(), clinical.Medication{
-		OwnerID: medicationtest.StrangerID,
-		Name:    "Bisoprolol",
-		Status:  clinical.TherapyStatusActive,
+		PatientID: medicationtest.StrangerPatientID,
+		Name:      "Bisoprolol",
+		Status:    clinical.TherapyStatusActive,
 	})
 	require.NoError(t, err)
 
-	page, err := h.service.List(t.Context(), actor(), medication.Query{})
+	page, err := h.service.List(t.Context(), actor(), medication.Query{PatientID: medicationtest.PatientID})
 	require.NoError(t, err)
 
 	require.Len(t, page.Items, 1)
-	assert.Equal(t, medicationtest.OwnerID, page.Items[0].OwnerID)
-	assert.Equal(t, medicationtest.OwnerID, h.repository.LastOwner())
+	assert.Equal(t, medicationtest.PatientID, page.Items[0].PatientID)
+	assert.Equal(t, medicationtest.PatientID, h.repository.LastPatient())
 }
 
 // TestListRefusesAVocabularyItDoesNotPublish. A silently ignored sort produces
@@ -511,7 +507,7 @@ func TestListDefaultsToThePublishedOrdering(t *testing.T) {
 	h := newHarness(t)
 	h.store(t, "Amoxicillin")
 
-	_, err := h.service.List(t.Context(), actor(), medication.Query{})
+	_, err := h.service.List(t.Context(), actor(), medication.Query{PatientID: medicationtest.PatientID})
 	require.NoError(t, err)
 
 	assert.Equal(t, medication.Sorts()[:1], h.repository.LastQuery().Sort)
@@ -525,43 +521,22 @@ func TestNewRefusesAnIncompleteService(t *testing.T) {
 
 	repository := medicationtest.NewRepository()
 	authorizer := medicationtest.NewAuthorizer(medicationtest.OwnerID)
-	auditor := medicationtest.NewAuditor()
 
 	for _, testCase := range []struct {
 		name       string
 		repository medication.Repository
 		authorizer medication.Authorizer
-		auditor    medication.Auditor
 	}{
-		{name: "no repository", authorizer: authorizer, auditor: auditor},
-		{name: "no authorizer", repository: repository, auditor: auditor},
-		{name: "no auditor", repository: repository, authorizer: authorizer},
+		{name: "no repository", authorizer: authorizer},
+		{name: "no authorizer", repository: repository},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			service, err := medication.New(testCase.repository, testCase.authorizer, testCase.auditor)
+			service, err := medication.New(testCase.repository, testCase.authorizer)
 
 			require.Error(t, err)
 			assert.Nil(t, service)
 		})
 	}
-}
-
-// TestAnUnrecordedRefusalIsStillARefusal. The audit write failing must not
-// change what the caller is told: a 500 where every other refusal is a 404 is
-// an oracle for "this record exists and is somebody else's".
-func TestAnUnrecordedRefusalIsStillARefusal(t *testing.T) {
-	t.Parallel()
-
-	unwritable := errors.New("the audit row could not be written")
-
-	h := newHarness(t)
-	h.authorizer.Refuse(domain.ErrNotFound)
-	h.auditor.Fail(unwritable)
-
-	_, err := h.service.Get(t.Context(), actor(), "somebodyelses1")
-
-	assert.ErrorIs(t, err, domain.ErrNotFound, "the caller was told something other than a miss")
-	assert.ErrorIs(t, err, unwritable, "the unwritten audit row was swallowed")
 }

@@ -61,7 +61,7 @@ func TestPublishingAfterASubscriberIsCancelledDeliversNothingAndDoesNotPanic(t *
 		synctest.Wait()
 
 		assert.NotPanics(t, func() {
-			hub.Publish(realtime.Event{RecordID: "rec_one", OwnerID: "acct_one"})
+			hub.Publish(realtime.Event{RecordID: "rec_one", PatientID: "acct_one"})
 		})
 
 		_, open := <-events
@@ -101,7 +101,7 @@ func TestShutdownIsIdempotentAndSilencesLaterPublishes(t *testing.T) {
 		hub.Shutdown()
 		assert.NotPanics(t, hub.Shutdown, "the container may shut down after a signal handler already did")
 		assert.NotPanics(t, func() {
-			hub.Publish(realtime.Event{RecordID: "rec_one", OwnerID: "acct_one"})
+			hub.Publish(realtime.Event{RecordID: "rec_one", PatientID: "acct_one"})
 		}, "a post-commit hook that outlives the hub must not take the process down with it")
 	})
 }
@@ -135,7 +135,7 @@ func TestAnOverrunSubscriptionLeavesNothingBehind(t *testing.T) {
 
 		events := hub.Subscribe(ctx)
 		for range realtime.SubscriberBuffer + 1 {
-			hub.Publish(realtime.Event{RecordID: "rec_one", OwnerID: "acct_one"})
+			hub.Publish(realtime.Event{RecordID: "rec_one", PatientID: "acct_one"})
 		}
 
 		require.Equal(t, 0, hub.Subscribers())

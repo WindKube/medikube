@@ -222,10 +222,10 @@ func (s *session) elementPatches() []frame {
 
 // create writes one medication through the API, which is the path a person
 // takes and therefore the one that has to reach a stream.
-func (i *instance) create(t *testing.T, token, name string) (string, string) {
+func (i *instance) create(t *testing.T, token, patientID, name string) (string, string) {
 	t.Helper()
 
-	body := strings.NewReader(`{"name":"` + name + `","status":"active"}`)
+	body := strings.NewReader(`{"patient":"` + patientID + `","name":"` + name + `","status":"active"}`)
 
 	request, err := http.NewRequestWithContext(t.Context(), http.MethodPost,
 		i.base+"/api/v1/records/"+kind.Medication.Segment(), body)

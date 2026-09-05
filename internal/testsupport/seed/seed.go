@@ -14,6 +14,17 @@ import (
 	"medikube/internal/domain/kind"
 )
 
+// The patients medications are attributed to. AccountAPatientSelfID and
+// AccountBPatientSelfID are Patients' own constants, redeclared here rather
+// than imported so this file has one dependency graph and not two — the seed
+// package's two files agree on ids by convention (fixtures_test.go is the
+// gate), the same way the account and password constants above do.
+const (
+	accountAPatientSelfID   = "mkpatamara00001"
+	accountAPatientParentID = "mkpatamara00003"
+	accountBPatientSelfID   = "mkpatboris00001"
+)
+
 // Password is the one credential every demo account shares. It is published in
 // quickstart.md, it clears FR-004's eight-character floor, and it is kept out of
 // production by the command that writes it rather than by being a secret.
@@ -91,14 +102,14 @@ func Accounts() []Account {
 func Medications() []clinical.Medication {
 	return []clinical.Medication{
 		{
-			ID: "mkmedamara00001", OwnerID: AccountAID,
+			ID: "mkmedamara00001", PatientID: accountAPatientSelfID,
 			Name: "Lisinopril", Type: clinical.MedicationTypePrescription,
 			Dosage: "10 mg", Frequency: "once daily", Route: clinical.MedicationRouteOral,
 			Indication: "blood pressure", StartedOn: date(2024, 3, 1),
 			Status: clinical.TherapyStatusActive,
 		},
 		{
-			ID: "mkmedamara00002", OwnerID: AccountAID,
+			ID: "mkmedamara00002", PatientID: accountAPatientSelfID,
 			Name: "Metformin", AlternativeName: "Glucophage",
 			Type:   clinical.MedicationTypePrescription,
 			Dosage: "500 mg", Frequency: "twice daily", Route: clinical.MedicationRouteOral,
@@ -107,12 +118,12 @@ func Medications() []clinical.Medication {
 			Notes:  "taken with food",
 		},
 		{
-			ID: NameOnlyID, OwnerID: AccountAID,
+			ID: NameOnlyID, PatientID: accountAPatientSelfID,
 			Name:   "Paracetamol",
 			Status: clinical.TherapyStatusActive,
 		},
 		{
-			ID: ScriptedNameID, OwnerID: AccountAID,
+			ID: ScriptedNameID, PatientID: accountAPatientSelfID,
 			// Arabic for "painkiller", then a tag, an ampersand and a quote.
 			Name:   "مسكن <b>alpha</b> & \"strong\"",
 			Type:   clinical.MedicationTypeOTC,
@@ -121,28 +132,28 @@ func Medications() []clinical.Medication {
 			Notes:  "<script>alert(1)</script>",
 		},
 		{
-			ID: SingleDayID, OwnerID: AccountAID,
+			ID: SingleDayID, PatientID: accountAPatientSelfID,
 			Name: "Dexamethasone", Type: clinical.MedicationTypePrescription,
 			Dosage: "8 mg", Route: clinical.MedicationRouteOral,
 			StartedOn: date(2025, 6, 2), EndedOn: date(2025, 6, 2),
 			Status: clinical.TherapyStatusCompleted,
 		},
 		{
-			ID: FutureStartID, OwnerID: AccountAID,
+			ID: FutureStartID, PatientID: accountAPatientSelfID,
 			Name: "Denosumab", Type: clinical.MedicationTypePrescription,
 			Dosage: "60 mg", Frequency: "every six months",
 			Route: clinical.MedicationRouteSubcutaneous, StartedOn: date(2099, 1, 1),
 			Status: clinical.TherapyStatusActive,
 		},
 		{
-			ID: "mkmedamara00007", OwnerID: AccountAID,
+			ID: "mkmedamara00007", PatientID: accountAPatientSelfID,
 			Name: "Ibuprofen", Type: clinical.MedicationTypeOTC,
 			Dosage: "400 mg", Frequency: "as needed", Route: clinical.MedicationRouteOral,
 			Indication: "back pain", StartedOn: date(2025, 1, 9),
 			Status: clinical.TherapyStatusOnHold,
 		},
 		{
-			ID: "mkmedamara00008", OwnerID: AccountAID,
+			ID: "mkmedamara00008", PatientID: accountAPatientSelfID,
 			Name: "Cholecalciferol", AlternativeName: "vitamin D3",
 			Type:   clinical.MedicationTypeSupplement,
 			Dosage: "2000 IU", Frequency: "once daily", Route: clinical.MedicationRouteOral,
@@ -150,7 +161,7 @@ func Medications() []clinical.Medication {
 			Status: clinical.TherapyStatusCompleted,
 		},
 		{
-			ID: "mkmedamara00009", OwnerID: AccountAID,
+			ID: "mkmedamara00009", PatientID: accountAPatientSelfID,
 			Name: "Valerian root", Type: clinical.MedicationTypeHerbal,
 			Dosage: "300 mg", Frequency: "at night", Route: clinical.MedicationRouteOral,
 			StartedOn: date(2024, 5, 20), EndedOn: date(2024, 8, 2),
@@ -158,7 +169,7 @@ func Medications() []clinical.Medication {
 			SideEffects: "drowsiness the following morning",
 		},
 		{
-			ID: "mkmedamara00010", OwnerID: AccountAID,
+			ID: "mkmedamara00010", PatientID: accountAPatientSelfID,
 			Name: "Iron sucrose", Type: clinical.MedicationTypePrescription,
 			Dosage: "200 mg", Route: clinical.MedicationRouteIntravenous,
 			Indication: "anaemia", StartedOn: date(2025, 2, 3),
@@ -166,35 +177,35 @@ func Medications() []clinical.Medication {
 			Notes:  "cancelled before the first infusion",
 		},
 		{
-			ID: "mkmedamara00011", OwnerID: AccountAID,
+			ID: "mkmedamara00011", PatientID: accountAPatientSelfID,
 			Name: "Hydrocortisone cream", Type: clinical.MedicationTypeOTC,
 			Dosage: "1%", Frequency: "twice daily", Route: clinical.MedicationRouteTopical,
 			Indication: "eczema", StartedOn: date(2025, 7, 18),
 			Status: clinical.TherapyStatusActive,
 		},
 		{
-			ID: "mkmedamara00012", OwnerID: AccountAID,
+			ID: "mkmedamara00012", PatientID: accountAPatientSelfID,
 			Name: "Magnesium citrate", Type: clinical.MedicationTypeSupplement,
 			Dosage: "150 mg", Frequency: "once daily", Route: clinical.MedicationRouteOral,
 			StartedOn: date(2025, 5, 5),
 			Status:    clinical.TherapyStatusActive,
 		},
 		{
-			ID: "mkmedboris00001", OwnerID: AccountBID,
+			ID: "mkmedboris00001", PatientID: accountBPatientSelfID,
 			Name: "Atorvastatin", Type: clinical.MedicationTypePrescription,
 			Dosage: "20 mg", Frequency: "once daily", Route: clinical.MedicationRouteOral,
 			Indication: "cholesterol", StartedOn: date(2024, 2, 12),
 			Status: clinical.TherapyStatusActive,
 		},
 		{
-			ID: "mkmedboris00002", OwnerID: AccountBID,
+			ID: "mkmedboris00002", PatientID: accountBPatientSelfID,
 			Name: "Loratadine", Type: clinical.MedicationTypeOTC,
 			Dosage: "10 mg", Frequency: "once daily", Route: clinical.MedicationRouteOral,
 			StartedOn: date(2025, 3, 1), EndedOn: date(2025, 5, 31),
 			Status: clinical.TherapyStatusCompleted,
 		},
 		{
-			ID: "mkmedboris00003", OwnerID: AccountBID,
+			ID: "mkmedboris00003", PatientID: accountBPatientSelfID,
 			Name: "Omega-3", Type: clinical.MedicationTypeSupplement,
 			Dosage: "1 g", Frequency: "once daily", Route: clinical.MedicationRouteOral,
 			StartedOn: date(2024, 9, 1), EndedOn: date(2025, 1, 15),
@@ -234,6 +245,9 @@ const (
 
 const (
 	columnOwner           = "owner"
+	columnPatient         = "patient"
+	columnPractitioner    = "practitioner"
+	columnPharmacy        = "pharmacy"
 	columnAlternativeName = "alternative_name"
 	columnType            = "type"
 	columnDosage          = "dosage"
@@ -264,10 +278,6 @@ func Apply(app core.App) error {
 			return err
 		}
 
-		if err := applyMedications(tx); err != nil {
-			return err
-		}
-
 		if err := applyFacilities(tx); err != nil {
 			return err
 		}
@@ -277,6 +287,13 @@ func Apply(app core.App) error {
 		}
 
 		if err := applyPatients(tx); err != nil {
+			return err
+		}
+
+		// Medications are patient-owned (research D-13): the patients they name
+		// have to exist first, or the relation this collection now requires
+		// would refuse every row.
+		if err := applyMedications(tx); err != nil {
 			return err
 		}
 
@@ -356,7 +373,7 @@ func applyMedications(app core.App) error {
 	}
 
 	if err := requireColumns(collection,
-		columnOwner, columnName, columnAlternativeName, columnType, columnDosage,
+		columnPatient, columnName, columnAlternativeName, columnType, columnDosage,
 		columnFrequency, columnRoute, columnIndication, columnStartedOn, columnEndedOn,
 		columnStatus, columnSideEffects, columnNotes,
 	); err != nil {
@@ -376,7 +393,7 @@ func applyMedications(app core.App) error {
 			return err
 		}
 
-		record.Set(columnOwner, medication.OwnerID)
+		record.Set(columnPatient, medication.PatientID)
 		record.Set(columnName, medication.Name)
 		record.Set(columnAlternativeName, medication.AlternativeName)
 		record.Set(columnType, string(medication.Type))

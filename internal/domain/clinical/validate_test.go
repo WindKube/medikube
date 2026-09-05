@@ -25,10 +25,10 @@ func mustDate(t *testing.T, text string) domain.Date {
 // case the seed and the render tests both exercise.
 func minimalMedication() Medication {
 	return Medication{
-		ID:      "med0000000001",
-		OwnerID: "usr0000000001",
-		Name:    "Levothyroxine",
-		Status:  TherapyStatusActive,
+		ID:        "med0000000001",
+		PatientID: "mkpat0000001",
+		Name:      "Levothyroxine",
+		Status:    TherapyStatusActive,
 	}
 }
 
@@ -364,7 +364,7 @@ func TestEveryViolationComesBackInOneError(t *testing.T) {
 
 	broken := Medication{
 		ID:              "med0000000001",
-		OwnerID:         "usr0000000001",
+		PatientID:       "mkpat0000001",
 		Name:            "   ",
 		AlternativeName: strings.Repeat("a", 201),
 		Type:            "vitamin",

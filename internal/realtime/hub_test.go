@@ -38,12 +38,12 @@ func TestTheEventCarriesIdentifiersAndNothingElse(t *testing.T) {
 		assert.Truef(t, field.IsExported(), "realtime.Event.%s is unexported, so a subscriber cannot read it", field.Name)
 	}
 
-	assert.ElementsMatch(t, []string{"Kind", "RecordID", "OwnerID"}, names,
-		"the hub's event is Kind, RecordID and OwnerID — contracts/streams.md declares exactly these three")
+	assert.ElementsMatch(t, []string{"Kind", "RecordID", "PatientID"}, names,
+		"the hub's event is Kind, RecordID and PatientID — contracts/streams.md declares exactly these three")
 }
 
-func medicationEvent(recordID, ownerID string) realtime.Event {
-	return realtime.Event{Kind: kind.Medication, RecordID: recordID, OwnerID: ownerID}
+func medicationEvent(recordID, patientID string) realtime.Event {
+	return realtime.Event{Kind: kind.Medication, RecordID: recordID, PatientID: patientID}
 }
 
 func TestAnEventReachesEverySubscriber(t *testing.T) {

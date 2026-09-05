@@ -45,6 +45,12 @@ const (
 	// — the body-limit middleware, a method mismatch — so that such a response
 	// still carries a code a client can switch on instead of an empty string.
 	CodeBadRequest = "bad_request"
+
+	// CodePatientRequired is phase 002's addition
+	// (contracts/medications-rescope.md): every list and stream over
+	// patient-scoped data requires `?patient=`, and an absent one is refused
+	// before the store is asked anything.
+	CodePatientRequired = "patient_required"
 )
 
 // StatusClientClosed is nginx's 499, which contracts/README.md's table names
@@ -86,6 +92,12 @@ var (
 	// ErrMailUnconfigured is a recovery message that cannot be sent because the
 	// instance has no outgoing mail (FR-076).
 	ErrMailUnconfigured = &Coded{Status: http.StatusServiceUnavailable, Code: CodeMailUnconfigured}
+
+	// ErrPatientRequired is contracts/medications-rescope.md's refusal for a
+	// list or stream over patient-scoped data with no `?patient=` (FR-015):
+	// every request names its patient, and there is no fallback to the
+	// caller's own active patient at this checkpoint.
+	ErrPatientRequired = &Coded{Status: http.StatusBadRequest, Code: CodePatientRequired}
 )
 
 // Coded is an error that names its own status and machine code, for the
@@ -256,6 +268,8 @@ func Message(code string) string {
 		return "that file is too large"
 	case CodeBadRequest:
 		return "the request could not be processed"
+	case CodePatientRequired:
+		return "name the patient this request is for"
 	}
 
 	return InternalMessage

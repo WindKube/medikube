@@ -34,7 +34,7 @@ func ownedByAccountA() []clinical.Medication {
 	var owned []clinical.Medication
 
 	for _, one := range seed.Medications() {
-		if one.OwnerID == seed.AccountAID {
+		if one.PatientID == testsupport.AccountAPatientSelfID {
 			owned = append(owned, one)
 		}
 	}
@@ -132,7 +132,7 @@ func TestEveryPublishedOrderingReturnsTheDocumentedSequence(t *testing.T) {
 
 	for _, sort := range publishedSorts() {
 		t.Run(sort, func(t *testing.T) {
-			answer := caller.get(collectionURL() + "?limit=100&sort=" + url.QueryEscape(sort))
+			answer := caller.get(collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&limit=100&sort=" + url.QueryEscape(sort))
 			require.Equal(t, http.StatusOK, answer.Status, answer.Body)
 
 			page := answer.list(t)
@@ -260,7 +260,7 @@ func TestTheDefaultOrderingIsTheOneTheContractNames(t *testing.T) {
 
 	caller := newCaller(t)
 
-	unstated := caller.get(collectionURL() + "?limit=100")
+	unstated := caller.get(collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&limit=100")
 	require.Equal(t, http.StatusOK, unstated.Status, unstated.Body)
 
 	assert.Equal(t, expectedOrder(medication.Sorts()[0].String()), idsOf(unstated.list(t)))
@@ -293,7 +293,7 @@ func TestTheStatusFilterNarrowsToExactlyTheStatesAsked(t *testing.T) {
 
 			require.NotEmpty(t, wanted, "the fixture holds nothing in %v, so the case asserts nothing", one.asked)
 
-			answer := caller.get(collectionURL() + "?limit=100&" + medication.FilterStatus + "=" + statusList(one.asked))
+			answer := caller.get(collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&limit=100&" + medication.FilterStatus + "=" + statusList(one.asked))
 			require.Equal(t, http.StatusOK, answer.Status, answer.Body)
 
 			got := idsOf(answer.list(t))
@@ -323,7 +323,7 @@ func TestAStateOutsideTheVocabularyIsRefusedRatherThanDropped(t *testing.T) {
 
 	caller := newCaller(t)
 
-	answer := caller.get(collectionURL() + "?" + medication.FilterStatus + "=discontinued")
+	answer := caller.get(collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&" + medication.FilterStatus + "=discontinued")
 
 	require.Equal(t, http.StatusUnprocessableEntity, answer.Status, answer.Body)
 	assert.Contains(t, answer.envelope(t).fieldCodes(), [2]string{medication.FilterStatus, "invalid_value"})
@@ -346,7 +346,7 @@ func TestTheSearchNarrowsOverBothNameColumns(t *testing.T) {
 
 	for _, one := range cases {
 		t.Run(one.name, func(t *testing.T) {
-			answer := caller.get(collectionURL() + "?limit=100&" + web.ParamSearch + "=" + url.QueryEscape(one.needle))
+			answer := caller.get(collectionURL() + "?patient=" + testsupport.AccountAPatientSelfID + "&limit=100&" + web.ParamSearch + "=" + url.QueryEscape(one.needle))
 			require.Equal(t, http.StatusOK, answer.Status, answer.Body)
 
 			assert.Equal(t, one.expected, emptyToNil(idsOf(answer.list(t))))
@@ -370,7 +370,7 @@ func TestATraversalRepeatsNothingAndSkipsNothing(t *testing.T) {
 
 	caller := newCaller(t)
 
-	forwards := traverse(t, caller, collectionURL()+"?limit=5")
+	forwards := traverse(t, caller, collectionURL()+"?patient="+testsupport.AccountAPatientSelfID+"&limit=5")
 
 	assert.Len(t, forwards, testsupport.AccountAMedicationCount)
 	assert.Equal(t, expectedOrder(medication.Sorts()[0].String()), forwards)
@@ -379,7 +379,7 @@ func TestATraversalRepeatsNothingAndSkipsNothing(t *testing.T) {
 	// the ordering is what a caller reverses — so this is the traversal a page
 	// makes when somebody clicks the other sort arrow, and it must reach every
 	// row the first one did.
-	backwards := traverse(t, caller, collectionURL()+"?limit=5&sort="+url.QueryEscape(medication.Sorts()[1].String()))
+	backwards := traverse(t, caller, collectionURL()+"?patient="+testsupport.AccountAPatientSelfID+"&limit=5&sort="+url.QueryEscape(medication.Sorts()[1].String()))
 
 	assert.ElementsMatch(t, forwards, backwards,
 		"paging forwards and then in the reverse ordering did not reach the same set")

@@ -344,12 +344,12 @@ type StreamFilter struct {
 func (f StreamFilter) Streams(string, string) bool { return !f.Deny }
 
 // Authorizer grants PermOwn to OwnerID and refuses everybody else with
-// ErrNotFound, which is what an owner-scoped refusal is (FR-033).
+// ErrNotFound, which is what a patient-scoped refusal is (FR-033).
 type Authorizer struct {
 	Owner string
 }
 
-func (a Authorizer) Record(_ context.Context, actor access.Actor, _ kind.Kind, _ string, need access.Permission) (access.Grant, error) {
+func (a Authorizer) Patient(_ context.Context, actor access.Actor, _ string, need access.Permission) (access.Grant, error) {
 	owner := a.Owner
 	if owner == "" {
 		owner = OwnerID
