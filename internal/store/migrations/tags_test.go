@@ -45,6 +45,8 @@ func TestTagsDownRemovesTheCollectionCleanly(t *testing.T) {
 	// unwinding in the real migration runner removes them first, in reverse
 	// creation order. Reproduced here so this test exercises tagsDown in the
 	// state it actually runs in.
+	require.NoError(t, treatmentMedicationsDown(app))
+	require.NoError(t, linksMedicationsDown(app))
 	require.NoError(t, familyMemberTagsDown(app))
 	require.NoError(t, treatmentsDown(app))
 	require.NoError(t, proceduresDown(app))

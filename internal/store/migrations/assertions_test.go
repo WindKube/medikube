@@ -39,6 +39,10 @@ func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 	require.NoError(t, err)
 	conditions, err := app.FindCollectionByNameOrId(kind.Condition.Collection())
 	require.NoError(t, err)
+	treatments, err := app.FindCollectionByNameOrId(kind.Treatment.Collection())
+	require.NoError(t, err)
+	medications, err := app.FindCollectionByNameOrId(kind.Medication.Collection())
+	require.NoError(t, err)
 
 	cases := []struct {
 		relation    relationRule
@@ -224,6 +228,16 @@ func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 			relation:    relationRule{collection: kind.FamilyMember.Collection(), field: familyFieldPatient, required: true, cascadeDelete: true},
 			target:      patients.Id,
 			consequence: "deleting a patient must delete every relative recorded against them, and a row without a patient is unreachable",
+		},
+		{
+			relation:    relationRule{collection: TreatmentMedicationsCollection, field: treatmentMedicationFieldTreatment, required: true, cascadeDelete: true},
+			target:      treatments.Id,
+			consequence: "deleting a treatment must delete its course-medication links (FR-058), and a link without a treatment is unreachable",
+		},
+		{
+			relation:    relationRule{collection: TreatmentMedicationsCollection, field: treatmentMedicationFieldMedication, required: true, cascadeDelete: true},
+			target:      medications.Id,
+			consequence: "deleting a medication must delete its course-medication links (FR-058), and a link without a medication is unreachable",
 		},
 	}
 
