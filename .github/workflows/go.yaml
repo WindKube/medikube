@@ -227,7 +227,9 @@ jobs:
       - name: task gen
         run: task gen
       - name: Migration reversibility and the phase-001 repoint
-        run: go test -count=1 -run 'TestEveryMigrationUpDownUpLeavesAnIdenticalSchema|TestRepoint|TestTheInstanceStartsAgainstACompletelyEmptyDataDirectory' -v ./internal/store/migrations/...
+        run: >-
+          go test -count=1 -v ./internal/store/migrations/...
+          -run 'TestEveryMigrationUpDownUpLeavesAnIdenticalSchema|TestRepoint|TestTheInstanceStarts'
 
   # T166, SC-004. The chart summary benchmark — 50,000 medications on one
   # patient must answer within a 2s p95 — run as `task bench:chart` here so a

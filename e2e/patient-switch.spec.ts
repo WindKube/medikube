@@ -154,8 +154,9 @@ test.describe('the active-patient switcher', () => {
     await page.goto(patientsListPath);
 
     const started = Date.now();
-    await page.getByRole('combobox', { name: 'Active patient' }).selectOption({ label: targetName });
-    await expect(page.getByText(targetName)).toBeVisible();
+    const option = page.getByRole('option', { name: new RegExp(targetName) });
+    await switchTo(page, (await option.getAttribute('value')) ?? '');
+    await expect(page.getByRole('link', { name: targetName })).toBeVisible();
     const elapsed = Date.now() - started;
 
     expect(elapsed, `locating and choosing took ${elapsed}ms`).toBeLessThanOrEqual(10000);
