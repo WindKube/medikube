@@ -150,3 +150,18 @@ func TestTheDetailCarriesTheDeleteConfirmation(t *testing.T) {
 	assert.Contains(t, viewstest.Text(confirm), medication.Name,
 		"FR-028 requires the confirmation to name the medication")
 }
+
+// FR-048: the heading is programmatically focusable.
+func TestTheDetailHeadingIsFocusable(t *testing.T) {
+	t.Parallel()
+
+	medication := view(t, everyFieldFilledIn(t))
+	tree := viewstest.Render(t, records.MedicationDetail(records.MedicationDetailProps{
+		Medication: medication,
+	}), "div")
+
+	heading := tree.One(t, viewstest.WithID(ids.RecordDetailHeading(kind.Medication, medication.ID)))
+
+	require.Equal(t, "h1", heading.Data)
+	assert.Equal(t, "-1", viewstest.Attr(heading, "tabindex"))
+}

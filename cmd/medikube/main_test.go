@@ -412,34 +412,10 @@ func TestTheCompositionRootWiresEveryRouteMediKubeServes(t *testing.T) {
 func TestTheOperationsStillAnsweringNotImplementedAreExactlyThese(t *testing.T) {
 	t.Parallel()
 
-	pending := []string{
-		// internal/web/page/overview.go — US4, T264.
-		"overviewPage",
-	}
+	pending := []string{}
 
 	assert.ElementsMatch(t, pending, unimplemented(),
 		"an operation was implemented and left in the stub list, or a stub appeared that nobody declared")
-}
-
-func TestAnUnimplementedOperationAnswersNotImplementedInTheMediKubeEnvelope(t *testing.T) {
-	t.Parallel()
-
-	var logs syncBuffer
-
-	base := serving(t, testConfig(t, filepath.Join(t.TempDir(), "pb_data")), &logs)
-
-	// overviewPage, not healthz: healthz has a real handler as of US5 (T285)
-	// and answers 200, so it can no longer stand in for "an operation with no
-	// handler yet". overviewPage is the one name still left in
-	// TestTheOperationsStillAnsweringNotImplementedAreExactlyThese's list, and
-	// it is a page-kind route, so the failure renders as the HTML error page
-	// rather than the JSON envelope (FR-046).
-	res, body := get(t, base+"/")
-
-	assert.Equal(t, http.StatusNotImplemented, res.StatusCode)
-	assert.Contains(t, string(body), `aria-label="Something went wrong"`)
-	assert.NotContains(t, string(body), "not implemented",
-		"the stub's own words reached the client; only the page copy may")
 }
 
 // PocketBase's serve command defaults to 127.0.0.1:8090 and to a wildcard CORS

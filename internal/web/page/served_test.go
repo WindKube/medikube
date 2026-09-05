@@ -26,9 +26,7 @@ import (
 // following internal/store/filter_test.go's filterDSLExempt and
 // internal/architecture/kind_literals_test.go's kindLiteralExempt: an exemption
 // nobody had to justify is an exemption nobody revisits.
-var pageStubExempt = map[string]string{
-	"overviewPage": "T264, phase 6 (US4): the overview is that story's page and nothing renders it yet",
-}
+var pageStubExempt = map[string]string{}
 
 func TestEveryPageInTheRouteTableIsServedRatherThanStubbed(t *testing.T) {
 	t.Parallel()

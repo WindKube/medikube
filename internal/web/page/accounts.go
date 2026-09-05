@@ -255,10 +255,11 @@ func (l accountLinks) signedOutNav(current string) []shell.NavLink {
 	}
 }
 
-// signedInNav is the record kinds plus the account's own page.
+// signedInNav is the record kinds plus the account's own page. Settings is
+// already one of medications.nav's entries — FR-050 requires it on every
+// signed-in page, not only this one — so this is that list and nothing more.
 func (l accountLinks) signedInNav(current string) []shell.NavLink {
-	return append(l.medications.nav(current),
-		shell.NavLink{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage})
+	return l.medications.nav(current)
 }
 
 // render is the one place an account page becomes a response.
@@ -266,7 +267,8 @@ func (l accountLinks) signedInNav(current string) []shell.NavLink {
 // `private, no-store` on all six: five of them carry a form a credential or an
 // address is about to be typed into — two of those carry a live recovery token
 // as well — and the sixth carries somebody's own address and display name. None
-// of that belongs in a shared cache or on a disk.
+// of that belongs in a shared cache or on a disk. RenderPage is what applies
+// it, along with the theme class and the version stamp every page carries.
 func (p *accountPages) render(
 	e *core.RequestEvent,
 	title string,
@@ -274,14 +276,7 @@ func (p *accountPages) render(
 	nav []shell.NavLink,
 	main web.Component,
 ) error {
-	e.Response.Header().Set("Cache-Control", pageCacheControl)
-
-	return web.Render(e, http.StatusOK, shell.Document(shell.DocumentProps{
-		Title:    title,
-		SignedIn: signedIn,
-		Nav:      nav,
-		Main:     main,
-	}))
+	return RenderPage(e, http.StatusOK, title, NavState{SignedIn: signedIn, Nav: nav}, main)
 }
 
 // holdings is what deletion will destroy, as the confirmation states it.

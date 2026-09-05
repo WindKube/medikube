@@ -111,7 +111,35 @@ func operations(
 
 	maps.Copy(table, accountPages)
 
+	// P3, the application root. It needs only the counter the account surface
+	// already built, so it is wired here rather than in wired() alongside the
+	// record family it counts through.
+	overviewPage, err := page.OverviewPage(page.OverviewDeps{Counts: accounts.Deps.Counts})
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, overviewPage)
+
+	// The two embedded assets every page's head links. Neither needs the
+	// application: they are compiled into the binary, so they are wired here
+	// rather than in wired() only because that is where every other group
+	// that needs nothing lives.
+	maps.Copy(table, assetHandlers())
+
+	page.SetBuildVersion(version)
+
 	return table, nil
+}
+
+// assetHandlers is contracts/pages.md's two KindAsset routes: the compiled
+// Tailwind stylesheet and the vendored Datastar runtime, both embedded and
+// served with an immutable cache header.
+func assetHandlers() httproute.Handlers {
+	return httproute.Handlers{
+		"assetAppCSS":     web.ServeAppCSS,
+		"assetDatastarJS": web.ServeDatastarJS,
+	}
 }
 
 // wired is where each group's handlers arrive as they land — every group that
@@ -270,6 +298,12 @@ func unimplemented() []string {
 	}
 
 	for _, opID := range api.HealthOperations() {
+		implemented[opID] = nil
+	}
+
+	implemented[page.OpOverviewPage] = nil
+
+	for opID := range assetHandlers() {
 		implemented[opID] = nil
 	}
 

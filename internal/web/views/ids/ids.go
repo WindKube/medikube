@@ -20,6 +20,9 @@ const (
 	// has stopped being kept current. It is an id rather than a class because
 	// a test asserts on the element and because a later phase will patch it.
 	StreamStale = "stream-stale"
+
+	// Overview is contracts/pages.md P3's landmark, the application root.
+	Overview = "overview"
 )
 
 // The roles an element plays, spelled once. They are what separates
@@ -36,6 +39,7 @@ const (
 	roleConfirm = "confirm"
 	roleField   = "field"
 	roleError   = "error"
+	roleHeading = "heading"
 )
 
 // The forms that belong to no kind: the five on the signed-out surface and the
@@ -85,6 +89,13 @@ func RecordPager(k kind.Kind) string { return join(prefix(k), rolePager) }
 
 func RecordDetail(k kind.Kind, recordID string) string {
 	return join(prefix(k), roleDetail, recordID)
+}
+
+// RecordListHeading and RecordDetailHeading are the focus targets of FR-048.
+func RecordListHeading(k kind.Kind) string { return join(prefix(k), roleList, roleHeading) }
+
+func RecordDetailHeading(k kind.Kind, recordID string) string {
+	return join(prefix(k), roleDetail, recordID, roleHeading)
 }
 
 // RecordForm takes an empty recordID for the create form, which has no record

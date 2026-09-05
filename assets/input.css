@@ -10,3 +10,28 @@
 @import "tailwindcss";
 
 @source "../internal/web/**/*.templ";
+
+/* D-36: the theme is a class the server renders on <html>, resolved from the
+   account's stored preference, and Tailwind's dark variant has to answer to
+   both that class and the device — because "system" (or a signed-out
+   visitor, who has no preference to read) renders no class at all.
+
+   Three states, each a separate rule OR'd together by the variant:
+   - html.dark            -> dark, whatever the device says.
+   - html.light            -> never dark, whatever the device says.
+   - neither class present -> dark exactly when prefers-color-scheme does.
+
+   The block form (rather than the single-line `@custom-variant dark (...)`)
+   is what lets the media query and the class selectors coexist; @slot is
+   where Tailwind splices every utility this variant guards. */
+@custom-variant dark {
+	&:where(.dark, .dark *) {
+		@slot;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		&:where(:not(.light, .light *)) {
+			@slot;
+		}
+	}
+}

@@ -53,6 +53,18 @@ type DocumentProps struct {
 
 	Nav []NavLink
 
+	// ThemeClass is D-36's class on <html>: "dark", "light" or "" — resolved
+	// server-side, before the first byte, from the account's stored
+	// preference (shell.ThemeClass). Empty is a legitimate value and not a
+	// missing one: it is what "system" renders, and what leaves Tailwind's
+	// dark variant following prefers-color-scheme instead.
+	ThemeClass string
+
+	// Version is the footer's build stamp — cmd/medikube's own version
+	// string, threaded through rather than read from a package this side of
+	// the [PB] boundary would have no way to reach.
+	Version string
+
 	// Main is the page's own landmark and everything inside it.
 	Main templ.Component
 

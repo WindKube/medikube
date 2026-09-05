@@ -63,6 +63,7 @@ import (
 	"medikube/internal/web"
 	"medikube/internal/web/api"
 	"medikube/internal/web/apitest"
+	"medikube/internal/web/views/shell"
 )
 
 // The sentinels: values that exist nowhere in MediKube, are written into the
@@ -1149,6 +1150,9 @@ func drivePages(c *client) {
 
 	// The not-found view: a path that matches no route at all.
 	c.do(http.MethodGet, notFoundPath, "")
+
+	c.do(http.MethodGet, shell.AppCSSHref, "")
+	c.do(http.MethodGet, shell.DatastarJSHref, "")
 
 	c.token(testsupport.AccountAEmail)
 	c.bearer = ""

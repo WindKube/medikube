@@ -27,7 +27,11 @@ templ MedicationList(props MedicationListProps) {
 		class="flex flex-col"
 	>
 		<div class="flex flex-wrap items-center justify-between gap-3">
-			<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ medicationsTitle }</h1>
+			<h1
+				id={ ids.RecordListHeading(kind.Medication) }
+				tabindex="-1"
+				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ medicationsTitle }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }

@@ -69,12 +69,6 @@ var pathParameter = regexp.MustCompile(`\{[^}]*\}`)
 // It is checked in both directions. A route listed here that starts refusing is
 // a stale entry and fails, so the table cannot outlive what it excuses.
 var anonymousExempt = map[string]anonymousException{
-	"overviewPage": {
-		Answers: http.StatusNotImplemented,
-		Reason: "T264, phase 6 (US4): the overview page has no handler yet, so every caller — signed in or not — gets " +
-			"the stub and there is no refusal here to assert. internal/web/page/served_test.go carries the same " +
-			"exemption for the same reason and is what fails when the page lands",
-	},
 	"nativeSuperuserAuthMethods": {
 		Answers: http.StatusOK,
 		Reason: "contracts/README.md: PocketBase's auth-method discovery for the superuser collection. It publishes " +
@@ -85,9 +79,9 @@ var anonymousExempt = map[string]anonymousException{
 }
 
 // anonymousException is one excused route. The status is part of the exemption
-// and not a footnote: it is what makes the entry self-cancelling. overviewPage
-// is excused because it answers the 501 stub, so the day it answers anything
-// else the excuse fails and somebody has to write the refusal down instead.
+// and not a footnote: it is what makes the entry self-cancelling — a route
+// excused for answering the 501 stub fails the day it answers anything else,
+// and somebody has to write the refusal down instead.
 type anonymousException struct {
 	Answers int
 	Reason  string

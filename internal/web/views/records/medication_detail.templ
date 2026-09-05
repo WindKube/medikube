@@ -34,7 +34,11 @@ templ MedicationDetail(props MedicationDetailProps) {
 		class="flex flex-col"
 	>
 		<header class="flex flex-wrap items-start justify-between gap-3">
-			<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ props.Medication.Name }</h1>
+			<h1
+				id={ ids.RecordDetailHeading(kind.Medication, props.Medication.ID) }
+				tabindex="-1"
+				class="break-words text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ props.Medication.Name }</h1>
 			<div class="flex flex-wrap gap-2">
 				if props.Medication.Links.Edit != "" {
 					<a
@@ -70,12 +74,12 @@ templ MedicationDetail(props MedicationDetailProps) {
 
 templ detailValue(entry DetailEntry) {
 	if entry.Multiline {
-		<dd class="whitespace-pre-line text-sm text-slate-900 dark:text-slate-100">{ entry.Value }</dd>
+		<dd class="whitespace-pre-line break-words text-sm text-slate-900 dark:text-slate-100">{ entry.Value }</dd>
 	} else if entry.Datetime != "" {
 		<dd class="text-sm tabular-nums text-slate-900 dark:text-slate-100">
 			<time datetime={ entry.Datetime }>{ entry.Value }</time>
 		</dd>
 	} else {
-		<dd class="text-sm text-slate-900 dark:text-slate-100">{ entry.Value }</dd>
+		<dd class="break-words text-sm text-slate-900 dark:text-slate-100">{ entry.Value }</dd>
 	}
 }

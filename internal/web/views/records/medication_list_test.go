@@ -144,3 +144,14 @@ func TestThePagerIsRenderedEvenWithNoNextPage(t *testing.T) {
 
 	assert.Len(t, tree.All(viewstest.WithID(ids.RecordPager(kind.Medication))), 1)
 }
+
+// FR-048: the heading is programmatically focusable.
+func TestTheHeadingIsFocusable(t *testing.T) {
+	t.Parallel()
+
+	tree := viewstest.Render(t, records.MedicationList(listProps(t)), "div")
+	heading := tree.One(t, viewstest.WithID(ids.RecordListHeading(kind.Medication)))
+
+	require.Equal(t, "h1", heading.Data)
+	assert.Equal(t, "-1", viewstest.Attr(heading, "tabindex"))
+}

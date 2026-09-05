@@ -284,14 +284,7 @@ func (p *medicationPages) session(actor access.Actor) (*recordfamily.Handler, er
 }
 
 func (p *medicationPages) render(e *core.RequestEvent, title string, main sequence) error {
-	e.Response.Header().Set("Cache-Control", pageCacheControl)
-
-	return web.Render(e, http.StatusOK, shell.Document(shell.DocumentProps{
-		Title:    title,
-		SignedIn: true,
-		Nav:      p.links.nav(e.Request.URL.Path),
-		Main:     main,
-	}))
+	return RenderPage(e, http.StatusOK, title, NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
 }
 
 // pageCacheControl keeps a rendered medication list out of every shared cache
@@ -318,19 +311,21 @@ func (s sequence) Render(ctx context.Context, w io.Writer) error {
 	return nil
 }
 
-// medicationLinks holds the four addresses the pages and the components need,
+// medicationLinks holds the five addresses the pages and the components need,
 // each recovered from the route table rather than composed here.
 type medicationLinks struct {
-	listPage   string
-	detailPage string
-	record     string
-	collection string
+	listPage     string
+	detailPage   string
+	settingsPage string
+	record       string
+	collection   string
 }
 
 func newMedicationLinks() (medicationLinks, error) {
 	paths, err := routePaths(map[string]string{
 		OpMedicationListPage:   "",
 		OpMedicationDetailPage: "",
+		OpSettingsPage:         "",
 		api.OpGetRecord:        "",
 		api.OpCreateRecord:     "",
 	})
@@ -341,10 +336,11 @@ func newMedicationLinks() (medicationLinks, error) {
 	segment := kind.Medication.Segment()
 
 	return medicationLinks{
-		listPage:   paths[OpMedicationListPage],
-		detailPage: paths[OpMedicationDetailPage],
-		record:     strings.ReplaceAll(paths[api.OpGetRecord], "{"+api.PathKind+"}", segment),
-		collection: strings.ReplaceAll(paths[api.OpCreateRecord], "{"+api.PathKind+"}", segment),
+		listPage:     paths[OpMedicationListPage],
+		detailPage:   paths[OpMedicationDetailPage],
+		settingsPage: paths[OpSettingsPage],
+		record:       strings.ReplaceAll(paths[api.OpGetRecord], "{"+api.PathKind+"}", segment),
+		collection:   strings.ReplaceAll(paths[api.OpCreateRecord], "{"+api.PathKind+"}", segment),
 	}, nil
 }
 
@@ -391,9 +387,15 @@ func (v MedicationViews) cancelHref(medication views.MedicationView) string {
 
 // nav is the primary navigation's contents. contracts/pages.md fixes the
 // landmark on every page and leaves what is in it to the page.
+//
+// Settings is here too, and not only on the account surface's own nav
+// (accountLinks.signedInNav): FR-050 requires every signed-in page to offer a
+// route to the medication list AND to settings, and a person reading a
+// medication's detail is one of them.
 func (l medicationLinks) nav(current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: medicationListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }
 

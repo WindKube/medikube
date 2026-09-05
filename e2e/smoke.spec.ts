@@ -391,7 +391,10 @@ test.describe('P5 — one record', () => {
       expect(value.trim(), 'an empty value was rendered instead of being left out').not.toBe('');
     }
 
-    await expect(page.getByRole(confirmLandmark.role, { name: confirmLandmark.name })).toBeAttached();
+    // Rendered on every detail page, revealed only once Delete is asked for.
+    const confirm = page.getByRole(confirmLandmark.role, { name: confirmLandmark.name, includeHidden: true });
+    await expect(confirm).toBeAttached();
+    await expect(confirm).toBeHidden();
   });
 
   test('shows a name full of markup characters as text', async ({ page }) => {
@@ -456,7 +459,7 @@ async function focusableControls(page: Page, within: string): Promise<string[]> 
       if (!root) return [];
 
       return Array.from(root.querySelectorAll<HTMLElement>(selector))
-        .filter((element) => element.offsetParent !== null || element.tagName === 'A')
+        .filter((element) => element.offsetParent !== null)
         .map((element) => {
           const label = (element.getAttribute('aria-label') ?? element.textContent ?? '').trim().slice(0, 40);
           return `${element.tagName.toLowerCase()}#${element.id}:${label}`;
@@ -469,7 +472,7 @@ async function focusableControls(page: Page, within: string): Promise<string[]> 
 async function tabThrough(page: Page, steps: number): Promise<Focused[]> {
   const walk: Focused[] = [];
 
-  for (let step = 0; step < steps; step += 1) {
+  for (let step = 0; walk.length < steps && step < steps * 4; step += 1) {
     await page.keyboard.press('Tab');
 
     const control = await page.evaluate(() => {
@@ -530,7 +533,7 @@ test.describe('SC-014 — the keyboard', () => {
     const expected = await focusableControls(page, 'main');
     expect(expected.length, 'the page offers no controls at all').toBeGreaterThan(12);
 
-    const walk = await tabThrough(page, expected.length + 8);
+    const walk = await tabThrough(page, (await focusableControls(page, 'body')).length + 2);
 
     expect(walk[0]?.label, 'the first Tab does not reach the skip link').toBe('Skip to content');
     reached(walk, expected);
@@ -547,17 +550,20 @@ test.describe('SC-014 — the keyboard', () => {
     const article = page.getByRole(detailLandmark.role, { name: detailLandmark.name });
     await expect(article.getByRole('link', { name: 'Edit' })).toBeVisible();
 
-    const confirm = page.getByRole(confirmLandmark.role, { name: confirmLandmark.name });
-    await expect(confirm.getByRole('button')).toHaveCount(2);
-
     const expected = await focusableControls(page, 'main');
-    const walk = await tabThrough(page, expected.length + 8);
+    const walk = await tabThrough(page, (await focusableControls(page, 'body')).length + 2);
 
     reached(walk, expected);
 
     for (const control of walk) {
       expect(control.indicator, `no focus indicator on ${describe(control)}`).toBe(true);
     }
+
+    await article.getByRole('button', { name: 'Delete' }).click();
+    const confirm = page.getByRole(confirmLandmark.role, { name: confirmLandmark.name });
+    await expect(confirm.getByRole('button')).toHaveCount(2);
+    await page.keyboard.press('Tab');
+    await expect(confirm.getByRole('button', { name: 'Delete permanently' })).toBeFocused();
   });
 
   test.fixme(

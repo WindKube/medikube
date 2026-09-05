@@ -589,15 +589,19 @@ func TestTheQueryableColumnsAreExactlyTheOnesTheRequirementsName(t *testing.T) {
 // Files outside internal/store that may hold something this walk would
 // otherwise flag, each because the string is the point of the file.
 var filterDSLExempt = map[string]string{
-	"internal/platform/pb/assert_test.go":          "the negative fixture: it sets an API rule precisely to prove the boot assertion refuses one",
-	"internal/platform/pb/adminwarn_test.go":       "the negative fixture: it sets a partial MFA rule precisely to prove the boot warning fires on one",
-	"internal/web/api/bulk_absence_test.go":        "T238's negative fixture: it hands MediKube PocketBase's own query vocabulary, and filter-expression injections, precisely to prove no route accepts one. The strings are the test input",
-	"internal/testsupport/phileak/phileak_test.go": "the sentinel assertions read metric LABELS of the form route=\"...\", which the literal heuristic cannot tell from a filter. No filter is built here",
-	"internal/web/page/errors_test.go":             "names xhtml.Parse from golang.org/x/net/html, which parses the rendered markup. It is not search.Provider.Parse and reads no request input",
-	"internal/cli/routes.go":                       "names (*flag.FlagSet).Parse on a FlagSet built for this one command (T282); it is not search.Provider.Parse and reads no filter DSL",
-	"internal/cli/openapi.go":                      "names (*flag.FlagSet).Parse, the same as routes.go",
-	"internal/cli/healthcheck.go":                  "names (*flag.FlagSet).Parse, the same as routes.go",
-	"internal/cli/seed_dispatch.go":                "names (*flag.FlagSet).Parse, the same as routes.go",
+	"internal/platform/pb/assert_test.go":           "the negative fixture: it sets an API rule precisely to prove the boot assertion refuses one",
+	"internal/platform/pb/adminwarn_test.go":        "the negative fixture: it sets a partial MFA rule precisely to prove the boot warning fires on one",
+	"internal/web/api/bulk_absence_test.go":         "T238's negative fixture: it hands MediKube PocketBase's own query vocabulary, and filter-expression injections, precisely to prove no route accepts one. The strings are the test input",
+	"internal/testsupport/phileak/phileak_test.go":  "the sentinel assertions read metric LABELS of the form route=\"...\", which the literal heuristic cannot tell from a filter. No filter is built here",
+	"internal/web/page/errors_test.go":              "names xhtml.Parse from golang.org/x/net/html, which parses the rendered markup. It is not search.Provider.Parse and reads no request input",
+	"internal/cli/routes.go":                        "names (*flag.FlagSet).Parse on a FlagSet built for this one command (T282); it is not search.Provider.Parse and reads no filter DSL",
+	"internal/cli/openapi.go":                       "names (*flag.FlagSet).Parse, the same as routes.go",
+	"internal/cli/healthcheck.go":                   "names (*flag.FlagSet).Parse, the same as routes.go",
+	"internal/cli/seed_dispatch.go":                 "names (*flag.FlagSet).Parse, the same as routes.go",
+	"internal/web/views/layout_test.go":             "names xhtml.Parse from golang.org/x/net/html, which parses the rendered shell. It is not search.Provider.Parse and reads no request input",
+	"internal/web/views/shell/theme_test.go":        "names xhtml.Parse from golang.org/x/net/html, which parses the rendered document. It is not search.Provider.Parse and reads no request input",
+	"internal/web/views/shell/noscript_test.go":     "names xhtml.Parse from golang.org/x/net/html, which parses the rendered document. It is not search.Provider.Parse and reads no request input",
+	"internal/web/views/shell/live_regions_test.go": "names xhtml.Parse from golang.org/x/net/html, which parses the rendered document. It is not search.Provider.Parse and reads no request input",
 }
 
 // PocketBase's own entry points into its filter DSL. A call to one of these is

@@ -49,17 +49,27 @@ func (p *ErrorPages) Render(e *core.RequestEvent, status int, failure web.Failur
 		return false, nil
 	}
 
-	// An error page carries somebody's navigation and a correlation id, and a
-	// 404 that a shared cache kept would be answered to the next caller from
-	// the cache rather than from the authorization checkpoint.
-	e.Response.Header().Set("Cache-Control", pageCacheControl)
-
 	actor, carried := web.ActorFrom(e.Request.Context())
 
 	// A request with no actor renders the signed-out navigation. It fails to
 	// the smaller surface deliberately: the alternative is offering an account's
 	// own links to somebody the request could not identify.
-	return true, web.Render(e, status, p.Document(status, failure, carried && actor.Authenticated()))
+	signedIn := carried && actor.Authenticated()
+
+	view, name := p.view(status, failure.RequestID)
+
+	nav := p.links.signedOutNav("")
+	if signedIn {
+		nav = p.links.signedInNav("")
+	}
+
+	// No nav entry is current: an error view belongs to no page in the table,
+	// and marking one would announce the reader as being somewhere they are
+	// not. RenderPage is what applies the no-store cache header — an error
+	// page carries somebody's navigation and a correlation id, and a 404 that
+	// a shared cache kept would be answered to the next caller from the cache
+	// rather than from the authorization checkpoint — and the theme class.
+	return true, RenderPage(e, status, name, NavState{SignedIn: signedIn, Nav: nav}, view)
 }
 
 // RendersPage reports whether a failure on this path is answered with a page.
