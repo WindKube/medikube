@@ -63,6 +63,7 @@ import (
 	"medikube/internal/obs"
 	"medikube/internal/platform/pb"
 	"medikube/internal/testsupport"
+	"medikube/internal/testsupport/seed"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
 	"medikube/internal/web/apitest"
@@ -114,6 +115,9 @@ const (
 	BodyPart          = "left-popliteal-fossa"
 	Mechanism         = "fell-from-a-ladder-while-not-supervised"
 	RecoveryNotes     = "she-did-not-want-her-employer-to-know"
+	InsuranceMemberID = "member-number-8823-vandeleur"
+	InsuranceCompany  = "Halvorsen-Mutual-Underwriters"
+	EquipmentSerial   = "serial-number-9910-nebulizer"
 )
 
 // Sentinel is one planted value and what it stands for. The meaning is printed
@@ -158,6 +162,9 @@ func Sentinels() []Sentinel {
 		{BodyPart, "where on their body it is"},
 		{Mechanism, "how it happened"},
 		{RecoveryNotes, "whatever they chose to write down about recovering from it"},
+		{InsuranceMemberID, "an insurance policy's member number (FR-047, SC-012)"},
+		{InsuranceCompany, "the insurer they are covered by"},
+		{EquipmentSerial, "the serial number of a piece of medical equipment they use"},
 	}
 }
 
@@ -970,6 +977,8 @@ func drive(t testing.TB, c *client) {
 	driveRecords(c)
 	driveImmunizationRecords(c)
 	driveInjuryRecords(c)
+	driveInsurance(c)
+	driveEquipment(c)
 	drivePatients(c)
 	driveDirectory(c)
 	drivePages(c)
@@ -1369,6 +1378,81 @@ func driveRecords(c *client) {
 	<-streamed
 }
 
+// driveInsurance walks the same seven operations as driveRecords, this time
+// against insurance's own kind, with a member number as the sentinel FR-047
+// and SC-012 name outright.
+func driveInsurance(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+	address := "/api/v1/records/" + kind.Insurance.Segment()
+
+	created := c.do(http.MethodPost, address, jsonBody(c.t, api.InsuranceCreate{
+		Patient:     patientID,
+		Type:        "medical",
+		Company:     InsuranceCompany,
+		MemberName:  PatientFirstName,
+		MemberID:    InsuranceMemberID,
+		EffectiveOn: "2024-01-01",
+		Notes:       Notes,
+	}))
+	require.Equal(c.t, http.StatusCreated, created.Status,
+		"the sentinel insurance record was not created, so every read below reads nothing: %s", created.Body)
+
+	id := decodedID(c.t, created.Body)
+	recordAddr := address + "/" + id
+
+	read := c.do(http.MethodGet, recordAddr, "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+	etag := read.Header.Get("ETag")
+
+	c.do(http.MethodGet, address+"?patient="+patientID, "")
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, recordAddr, "")
+
+	c.token(testsupport.AccountAEmail)
+	c.doWith(http.MethodPatch, recordAddr, jsonBody(c.t, api.InsurancePatch{MemberID: ptr(InsuranceMemberID)}),
+		map[string]string{"If-Match": etag})
+	c.doWith(http.MethodDelete, recordAddr, "", map[string]string{"If-Match": etag})
+}
+
+// driveEquipment is driveInsurance's twin for the equipment kind, with a
+// serial number as its own person-identifying sentinel.
+func driveEquipment(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+	address := "/api/v1/records/" + kind.Equipment.Segment()
+
+	created := c.do(http.MethodPost, address, jsonBody(c.t, api.EquipmentCreate{
+		Patient: patientID,
+		Name:    "sentinel-equipment",
+		Type:    "cpap",
+		Serial:  EquipmentSerial,
+		Notes:   Notes,
+	}))
+	require.Equal(c.t, http.StatusCreated, created.Status,
+		"the sentinel equipment record was not created, so every read below reads nothing: %s", created.Body)
+
+	id := decodedID(c.t, created.Body)
+	recordAddr := address + "/" + id
+
+	read := c.do(http.MethodGet, recordAddr, "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+	etag := read.Header.Get("ETag")
+
+	c.do(http.MethodGet, address+"?patient="+patientID, "")
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, recordAddr, "")
+
+	c.token(testsupport.AccountAEmail)
+	c.doWith(http.MethodPatch, recordAddr, jsonBody(c.t, api.EquipmentPatch{Serial: ptr(EquipmentSerial)}),
+		map[string]string{"If-Match": etag})
+	c.doWith(http.MethodDelete, recordAddr, "", map[string]string{"If-Match": etag})
+}
+
 // decodedID reads the id out of a created record's body without asserting on
 // the rest of the shape, which is another suite's business.
 func decodedID(t testing.TB, body string) string {
@@ -1481,6 +1565,18 @@ func drivePages(c *client) {
 	// The detail page of a record this account does not own, and of one that
 	// has never existed. Both render the not-found view.
 	c.do(http.MethodGet, pageOfKind()+"/"+missingRecordID, "")
+
+	// US5's two kinds, one list and one detail page each, with the patient
+	// this account owns them through named explicitly (a bare list page
+	// redirects to the active patient rather than rendering).
+	for _, path := range []string{
+		"/" + kind.Insurance.Segment() + "?patient=" + testsupport.AccountAPatientSelfID,
+		"/" + kind.Insurance.Segment() + "/" + seed.InsurancePrimaryID,
+		"/" + kind.Equipment.Segment() + "?patient=" + testsupport.AccountAPatientSelfID,
+		"/" + kind.Equipment.Segment() + "/" + seed.EquipmentOverdueID,
+	} {
+		c.do(http.MethodGet, path, "")
+	}
 }
 
 // driveNativePaths walks contracts/README.md's documented PocketBase-native

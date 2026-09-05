@@ -107,6 +107,12 @@ const (
 	AccountCMedicationCount = 0
 )
 
+// US5's two counts: both kinds seed only account A's self-record.
+const (
+	AccountAInsuranceCount = 2
+	AccountAEquipmentCount = 2
+)
+
 // AuthToken mints a PocketBase auth token for a seeded account, which is what
 // an HTTP test presents as the caller.
 //
