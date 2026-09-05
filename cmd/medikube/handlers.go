@@ -20,6 +20,7 @@ import (
 	"medikube/internal/platform/pb"
 	"medikube/internal/realtime"
 	"medikube/internal/records"
+	"medikube/internal/records/kinds"
 	accessservice "medikube/internal/service/access"
 	auditservice "medikube/internal/service/audit"
 	facilitysvc "medikube/internal/service/facility"
@@ -31,6 +32,8 @@ import (
 	"medikube/internal/store"
 	auditstore "medikube/internal/store/audit"
 	facilitystore "medikube/internal/store/facility"
+	storeimmunization "medikube/internal/store/immunization"
+	storeinjury "medikube/internal/store/injury"
 	medicationstore "medikube/internal/store/medication"
 	patientstore "medikube/internal/store/patient"
 	practitionerstore "medikube/internal/store/practitioner"
@@ -285,6 +288,16 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 		return nil, err
 	}
 
+	immunizationPages, err := page.ImmunizationHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
+	injuryPages, err := page.InjuryHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
 	streams, err := stream.Handlers(stream.Deps{Resolve: resolve, Hub: hub})
 	if err != nil {
 		return nil, err
@@ -292,6 +305,8 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 
 	maps.Copy(table, records)
 	maps.Copy(table, pages)
+	maps.Copy(table, immunizationPages)
+	maps.Copy(table, injuryPages)
 	maps.Copy(table, streams)
 
 	return table, nil
@@ -509,7 +524,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	registry.SetIndexer(indexer)
 	registry.SetSearchReader(searchRepo)
 
-	if err := medication.Register(registry, medication.Wiring{
+	if err = medication.Register(registry, medication.Wiring{
 		Repository:   repository,
 		Authorizer:   authorizer,
 		Codec:        api.MedicationCodec{},
@@ -517,6 +532,50 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Views:        views,
 		SearchFields: api.MedicationSearchFields,
 		Basis:        api.MedicationBasis,
+	}); err != nil {
+		return err
+	}
+
+	immunizationRepo, err := storeimmunization.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	immunizationViews, err := page.NewImmunizationViews()
+	if err != nil {
+		return err
+	}
+
+	if err = kinds.Register(registry, kinds.Wiring{
+		Repository:   immunizationRepo,
+		Authorizer:   authorizer,
+		Codec:        api.ImmunizationCodec{},
+		Schema:       api.ImmunizationSchema(),
+		Views:        immunizationViews,
+		SearchFields: api.ImmunizationSearchFields,
+		Basis:        api.ImmunizationBasis,
+	}); err != nil {
+		return err
+	}
+
+	injuryRepo, err := storeinjury.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	injuryViews, err := page.NewInjuryViews()
+	if err != nil {
+		return err
+	}
+
+	if err := kinds.RegisterInjury(registry, kinds.InjuryWiring{
+		Repository:   injuryRepo,
+		Authorizer:   authorizer,
+		Codec:        api.InjuryCodec{},
+		Schema:       api.InjurySchema(),
+		Views:        injuryViews,
+		SearchFields: api.InjurySearchFields,
+		Basis:        api.InjuryBasis,
 	}); err != nil {
 		return err
 	}

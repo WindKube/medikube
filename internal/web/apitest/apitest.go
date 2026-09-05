@@ -41,6 +41,7 @@ import (
 	"medikube/internal/platform/pb"
 	"medikube/internal/realtime"
 	"medikube/internal/records"
+	"medikube/internal/records/kinds"
 	accessservice "medikube/internal/service/access"
 	auditservice "medikube/internal/service/audit"
 	facilitysvc "medikube/internal/service/facility"
@@ -52,6 +53,8 @@ import (
 	"medikube/internal/store"
 	auditstore "medikube/internal/store/audit"
 	facilitystore "medikube/internal/store/facility"
+	storeimmunization "medikube/internal/store/immunization"
+	storeinjury "medikube/internal/store/injury"
 	storemedication "medikube/internal/store/medication"
 	patientstore "medikube/internal/store/patient"
 	practitionerstore "medikube/internal/store/practitioner"
@@ -440,6 +443,16 @@ func handlerTable(
 		return nil, err
 	}
 
+	injuryPageOps, err := page.InjuryHandlers(resolve, patientResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	immunizationPageOps, err := page.ImmunizationHandlers(resolve, patientResolve)
+	if err != nil {
+		return nil, err
+	}
+
 	assets := httproute.Handlers{
 		"assetAppCSS":     web.ServeAppCSS,
 		"assetDatastarJS": web.ServeDatastarJS,
@@ -447,7 +460,7 @@ func handlerTable(
 
 	groups := []httproute.Handlers{
 		recordOps, pageOps, streamOps, accountOps, accountPages, overviewPage, assets,
-		patientOps, photoOps, activePatientOps, patientPages, directoryOps,
+		patientOps, photoOps, activePatientOps, patientPages, directoryOps, injuryPageOps, immunizationPageOps,
 	}
 
 	for _, group := range groups {
@@ -556,6 +569,50 @@ func registerKinds(
 		Views:        views,
 		SearchFields: api.MedicationSearchFields,
 		Basis:        api.MedicationBasis,
+	}); registerErr != nil {
+		return nil, nil, nil, nil, registerErr
+	}
+
+	immunizationRepo, err := storeimmunization.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	immunizationViews, err := page.NewImmunizationViews()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if registerErr := kinds.Register(registry, kinds.Wiring{
+		Repository:   immunizationRepo,
+		Authorizer:   authorizer,
+		Codec:        api.ImmunizationCodec{},
+		Schema:       api.ImmunizationSchema(),
+		Views:        immunizationViews,
+		SearchFields: api.ImmunizationSearchFields,
+		Basis:        api.ImmunizationBasis,
+	}); registerErr != nil {
+		return nil, nil, nil, nil, registerErr
+	}
+
+	injuryRepo, err := storeinjury.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	injuryViews, err := page.NewInjuryViews()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if registerErr := kinds.RegisterInjury(registry, kinds.InjuryWiring{
+		Repository:   injuryRepo,
+		Authorizer:   authorizer,
+		Codec:        api.InjuryCodec{},
+		Schema:       api.InjurySchema(),
+		Views:        injuryViews,
+		SearchFields: api.InjurySearchFields,
+		Basis:        api.InjuryBasis,
 	}); registerErr != nil {
 		return nil, nil, nil, nil, registerErr
 	}
