@@ -98,6 +98,31 @@ func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 			target:      patients.Id,
 			consequence: "a patient's deletion must unset the reference and keep the historical row",
 		},
+		{
+			relation:    relationRule{collection: kind.Immunization.Collection(), field: immunizationFieldPatient, required: true, cascadeDelete: true},
+			target:      patients.Id,
+			consequence: "deleting a patient must delete every immunization row filed against them (FR-087)",
+		},
+		{
+			relation:    relationRule{collection: kind.Immunization.Collection(), field: immunizationFieldPractitioner, required: false, cascadeDelete: false},
+			target:      practitioners.Id,
+			consequence: "deleting a practitioner must unset an immunization's own reference, not delete the immunization",
+		},
+		{
+			relation:    relationRule{collection: kind.Immunization.Collection(), field: immunizationFieldFacility, required: false, cascadeDelete: false},
+			target:      facilities.Id,
+			consequence: "deleting a facility must unset an immunization's own reference, not delete the immunization",
+		},
+		{
+			relation:    relationRule{collection: kind.Injury.Collection(), field: injuryFieldPatient, required: true, cascadeDelete: true},
+			target:      patients.Id,
+			consequence: "deleting a patient must delete every injury row filed against them (FR-087)",
+		},
+		{
+			relation:    relationRule{collection: kind.Injury.Collection(), field: injuryFieldPractitioner, required: false, cascadeDelete: false},
+			target:      practitioners.Id,
+			consequence: "deleting a practitioner must unset an injury's own reference, not delete the injury",
+		},
 	}
 
 	declared := make([]relationRule, 0, len(cases))

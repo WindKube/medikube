@@ -74,6 +74,11 @@ func Relations() []relationRule {
 		// deleting a patient deletes the account that holds it (data-model §4).
 		{collection: usersCollection, field: usersFieldActivePatient, required: false, cascadeDelete: false},
 		{collection: auditEventsCollection, field: auditFieldPatient, required: false, cascadeDelete: false},
+		{collection: kind.Immunization.Collection(), field: immunizationFieldPatient, required: true, cascadeDelete: true},
+		{collection: kind.Immunization.Collection(), field: immunizationFieldPractitioner, required: false, cascadeDelete: false},
+		{collection: kind.Immunization.Collection(), field: immunizationFieldFacility, required: false, cascadeDelete: false},
+		{collection: kind.Injury.Collection(), field: injuryFieldPatient, required: true, cascadeDelete: true},
+		{collection: kind.Injury.Collection(), field: injuryFieldPractitioner, required: false, cascadeDelete: false},
 	}
 }
 

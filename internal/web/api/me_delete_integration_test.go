@@ -322,7 +322,10 @@ func TestTheCascadePublishesOneEventPerMedicationAndNoneForTheAccount(t *testing
 		domainidentity.DeleteConfirmationPhrase,
 	))
 
-	owned := map[string]bool{"patients": true, "practitioners": true, "facilities": true, "search_index": true}
+	owned := map[string]bool{
+		"patients": true, "practitioners": true, "facilities": true, "search_index": true,
+		kind.Immunization.Collection(): true, kind.Injury.Collection(): true,
+	}
 
 	var medications, accounts int
 

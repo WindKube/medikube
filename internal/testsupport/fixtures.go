@@ -77,6 +77,11 @@ const (
 	SingleDayMedicationID = "mkmedamara00005"
 	// FutureStartMedicationID starts in 2099.
 	FutureStartMedicationID = "mkmedamara00006"
+
+	// ImmunizationSampleID is account A's one full-data immunization row.
+	ImmunizationSampleID = "mkimmamara00001"
+	// InjurySampleID is account A's one active injury row.
+	InjurySampleID = "mkinjamara00001"
 )
 
 // Whether each seeded account's address is confirmed (FR-075).

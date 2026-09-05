@@ -1,0 +1,248 @@
+package records
+
+import (
+	"medikube/internal/domain/kind"
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
+
+const (
+	immunizationEmptyTitle  = "Nothing recorded yet"
+	immunizationEmptyBody   = "Record the first one and it will be listed here, with everything you noted about it."
+	immunizationCreateLabel = "Record a vaccination"
+	immunizationsTitle      = "Vaccinations"
+
+	immunizationDetailArticle     = "Vaccination"
+	immunizationConfirmTitle      = "Delete this vaccination?"
+	immunizationConfirmConsequence = "This is permanent. There is no recycle bin and no undo, so everything recorded here goes with it."
+	immunizationConfirmLabel     = "Delete permanently"
+	immunizationConfirmCancel    = "Keep it"
+	immunizationEditLabel        = "Edit"
+	immunizationDeleteLabel      = "Delete"
+
+	immunizationConfirmSignal = "_confirming_delete"
+)
+
+// ImmunizationList is contracts/pages.md P4's landmark for this kind.
+templ ImmunizationList(props ImmunizationListProps) {
+	<section
+		id={ ids.RecordList(kind.Immunization) }
+		aria-label={ immunizationsTitle }
+		class="flex flex-col"
+	>
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<h1
+				id={ ids.RecordListHeading(kind.Immunization) }
+				tabindex="-1"
+				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ immunizationsTitle }</h1>
+			if props.CreateHref != "" {
+				<a
+					href={ props.CreateHref }
+					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+				>{ immunizationCreateLabel }</a>
+			}
+		</div>
+		if len(props.Immunizations) == 0 {
+			<div class="mt-6">
+				@components.EmptyState(components.EmptyStateProps{
+					ID:          ids.RecordEmpty(kind.Immunization),
+					Title:       immunizationEmptyTitle,
+					Body:        immunizationEmptyBody,
+					ActionHref:  props.CreateHref,
+					ActionLabel: immunizationCreateLabel,
+				})
+			</div>
+		} else {
+			<div class="mt-4 overflow-x-auto">
+				<table class="w-full border-collapse text-left text-sm">
+					<thead>
+						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
+							<th scope="col" class="pb-2 pr-4 font-medium">{ ImmunizationFieldLabel(ImmunizationFieldVaccineName) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ ImmunizationFieldLabel(ImmunizationFieldDoseNumber) }</th>
+							<th scope="col" class="pb-2 font-medium">{ ImmunizationFieldLabel(ImmunizationFieldAdministeredOn) }</th>
+						</tr>
+					</thead>
+					<tbody id={ ids.RecordRows(kind.Immunization) }>
+						for _, immunization := range props.Immunizations {
+							@ImmunizationRow(immunization)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		@components.Pagination(components.PaginationProps{
+			ID:           ids.RecordPager(kind.Immunization),
+			PreviousHref: props.PreviousHref,
+			NextHref:     props.NextHref,
+		})
+	</section>
+}
+
+// ImmunizationRow is the element contracts/streams.md patches by id.
+templ ImmunizationRow(immunization ImmunizationView) {
+	<tr
+		id={ ids.RecordRow(kind.Immunization, immunization.ID) }
+		class="border-b border-slate-200 last:border-b-0 dark:border-slate-800"
+	>
+		<th scope="row" class="py-3 pr-4 text-left align-top font-medium">
+			<a
+				href={ immunization.Links.Detail }
+				class="text-teal-800 underline underline-offset-2 hover:text-teal-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-teal-300 dark:hover:text-teal-200"
+			>{ immunization.VaccineName }</a>
+		</th>
+		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
+			if immunization.DoseNumber != "" {
+				<span class="sr-only">{ ImmunizationFieldLabel(ImmunizationFieldDoseNumber) }</span>
+				{ immunization.DoseNumber }
+			}
+		</td>
+		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
+			if immunization.AdministeredOn != "" {
+				<span class="sr-only">{ ImmunizationFieldLabel(ImmunizationFieldAdministeredOn) }</span>
+				<time datetime={ immunization.AdministeredOn }>{ immunization.AdministeredOn }</time>
+			}
+		</td>
+	</tr>
+}
+
+// ImmunizationDetail is contracts/pages.md P5's landmark for this kind.
+templ ImmunizationDetail(props ImmunizationDetailProps) {
+	<article
+		id={ ids.RecordDetail(kind.Immunization, props.Immunization.ID) }
+		aria-label={ immunizationDetailArticle }
+		data-signals={ "{" + immunizationConfirmSignal + ": false, _etag: " + jsLiteral(props.Immunization.Version) + "}" }
+		class="flex flex-col"
+	>
+		<header class="flex flex-wrap items-start justify-between gap-3">
+			<h1
+				id={ ids.RecordDetailHeading(kind.Immunization, props.Immunization.ID) }
+				tabindex="-1"
+				class="break-words text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ props.Immunization.VaccineName }</h1>
+			<div class="flex flex-wrap gap-2">
+				if props.Immunization.Links.Edit != "" {
+					<a
+						href={ props.Immunization.Links.Edit }
+						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+					>{ immunizationEditLabel }</a>
+				}
+				<button
+					type="button"
+					data-on:click={ "$" + immunizationConfirmSignal + " = true" }
+					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
+				>{ immunizationDeleteLabel }</button>
+			</div>
+		</header>
+		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+			for _, entry := range props.Immunization.Entries() {
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				@immunizationDetailValue(entry)
+			}
+		</dl>
+		@components.Confirm(components.ConfirmProps{
+			ID:           ids.RecordConfirm(kind.Immunization, props.Immunization.ID),
+			Signal:       immunizationConfirmSignal,
+			Title:        immunizationConfirmTitle,
+			Subject:      props.Immunization.VaccineName,
+			Consequence:  immunizationConfirmConsequence,
+			ConfirmLabel: immunizationConfirmLabel,
+			ConfirmOn:    immunizationDeleteExpression(props.Immunization),
+			CancelLabel:  immunizationConfirmCancel,
+		})
+	</article>
+}
+
+templ immunizationDetailValue(entry DetailEntry) {
+	if entry.Datetime != "" {
+		<dd class="text-sm tabular-nums text-slate-900 dark:text-slate-100">
+			<time datetime={ entry.Datetime }>{ entry.Value }</time>
+		</dd>
+	} else {
+		<dd class="break-words text-sm text-slate-900 dark:text-slate-100">{ entry.Value }</dd>
+	}
+}
+
+// ImmunizationForm is both the create form and the edit form.
+templ ImmunizationForm(props ImmunizationFormProps) {
+	<form
+		id={ props.FormID }
+		aria-label={ props.Label() }
+		data-on:submit__prevent={ props.OnSubmit }
+		class="flex max-w-2xl flex-col gap-5"
+	>
+		if props.Notice != "" {
+			<p role="alert" class="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{ props.Notice }</p>
+		}
+		<input type="hidden" name="patient" data-bind="patient" value={ props.Immunization.PatientID }/>
+		@immunizationTextControl(props, ImmunizationFieldVaccineName, "text", true)
+		@immunizationTextControl(props, ImmunizationFieldTradeName, "text", false)
+		@immunizationTextControl(props, ImmunizationFieldAdministeredOn, "date", true)
+		@immunizationTextControl(props, ImmunizationFieldDoseNumber, "number", false)
+		@immunizationTextControl(props, ImmunizationFieldLotNumber, "text", false)
+		@immunizationTextControl(props, ImmunizationFieldManufacturer, "text", false)
+		@immunizationSelectControl(props, ImmunizationFieldSite, props.Immunization.SiteOptions())
+		@immunizationSelectControl(props, ImmunizationFieldRoute, props.Immunization.RouteOptions())
+		@immunizationTextControl(props, ImmunizationFieldExpiresOn, "date", false)
+		<div class="flex flex-wrap items-center gap-3">
+			<button
+				type="submit"
+				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ props.SubmitLabel() }</button>
+			if props.CancelHref != "" {
+				<a
+					href={ props.CancelHref }
+					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
+				>{ cancelLabel }</a>
+			}
+		</div>
+	</form>
+}
+
+templ immunizationTextControl(props ImmunizationFormProps, field, inputType string, required bool) {
+	<div class="flex flex-col">
+		<label
+			for={ ids.Field(props.FormID, field) }
+			class="text-sm font-medium text-slate-900 dark:text-slate-100"
+		>{ ImmunizationFieldLabel(field) }</label>
+		<input
+			id={ ids.Field(props.FormID, field) }
+			name={ field }
+			type={ inputType }
+			value={ props.Immunization.Value(field) }
+			data-bind={ field }
+			required?={ required }
+			if props.Errors.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(props.FormID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		/>
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+	</div>
+}
+
+templ immunizationSelectControl(props ImmunizationFormProps, field string, options []Option) {
+	<div class="flex flex-col">
+		<label
+			for={ ids.Field(props.FormID, field) }
+			class="text-sm font-medium text-slate-900 dark:text-slate-100"
+		>{ ImmunizationFieldLabel(field) }</label>
+		<select
+			id={ ids.Field(props.FormID, field) }
+			name={ field }
+			data-bind={ field }
+			if props.Errors.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(props.FormID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		>
+			<option value="" selected?={ props.Immunization.Value(field) == "" }>{ notRecorded }</option>
+			for _, option := range options {
+				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+			}
+		</select>
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+	</div>
+}

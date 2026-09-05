@@ -143,7 +143,7 @@ func TestExactlyEightOperationsArePublic(t *testing.T) {
 // contracts/pages.md, "The pages". The landmark strings are what a Playwright
 // getByRole selector contains, so changing one is a breaking change to the gate
 // and has to break this test first.
-func TestTheTableCarriesTheFifteenPages(t *testing.T) {
+func TestTheTableCarriesTheNineteenPages(t *testing.T) {
 	t.Parallel()
 
 	segment := kind.Medication.Segment()
@@ -191,8 +191,24 @@ func TestTheTableCarriesTheFifteenPages(t *testing.T) {
 			"patientDetailPage", "/patients/{patientId}", httproute.AuthUser,
 			`region[name="Patient chart"]`, "/patients/" + seed.AccountAPatientSelfID,
 		},
+		{
+			"immunizationListPage", "/" + kind.Immunization.Segment(), httproute.AuthUser, `region[name="Vaccinations"]`,
+			"/" + kind.Immunization.Segment() + "?patient=" + seed.AccountAPatientParentID,
+		},
+		{
+			"immunizationDetailPage", "/" + kind.Immunization.Segment() + "/{id}", httproute.AuthUser,
+			`article[name="Vaccination"]`, "/" + kind.Immunization.Segment() + "/" + seed.ImmunizationSampleID,
+		},
+		{
+			"injuryListPage", "/" + kind.Injury.Segment(), httproute.AuthUser, `region[name="Injuries"]`,
+			"/" + kind.Injury.Segment() + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			"injuryDetailPage", "/" + kind.Injury.Segment() + "/{id}", httproute.AuthUser,
+			`article[name="Injury"]`, "/" + kind.Injury.Segment() + "/mkinjamara00001",
+		},
 	}
-	require.Len(t, want, 15)
+	require.Len(t, want, 19)
 
 	byOpID := inventoryByOpID(t)
 

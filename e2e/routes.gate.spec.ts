@@ -45,6 +45,16 @@ async function nameOf(page: Page, url: string): Promise<string> {
   return ((await response.json()) as { name: string }).name;
 }
 
+// fieldOf is nameOf generalised to a member other than `name`: immunization's
+// detail page titles itself after vaccine_name, the same way medication's
+// titles itself after name (medicationDetailPage's own apiNameOf above).
+async function fieldOf(page: Page, url: string, field: string): Promise<string> {
+  const response = await page.request.get(url);
+  expect(response.ok(), `routes.gate: the API did not answer for ${url}`).toBe(true);
+
+  return ((await response.json()) as Record<string, string>)[field];
+}
+
 // idOf reads the record id P5's SmokeURL is bound to, off the end of the URL
 // itself, so nothing here needs a second copy of the kind's URL segment.
 function idOf(smokeURL: string): string {
@@ -73,6 +83,12 @@ async function titleFor(route: PageRoute, page: Page): Promise<string> {
       return fixtures.title(fixtures.titles.verifyEmail);
     case 'medicationDetailPage':
       return fixtures.title(await apiNameOf(page, idOf(route.smokeURL)));
+    case 'immunizationDetailPage':
+      return fixtures.title(
+        await fieldOf(page, `/api/v1/records/immunizations/${idOf(route.smokeURL)}`, 'vaccine_name'),
+      );
+    case 'injuryDetailPage':
+      return fixtures.title(await fieldOf(page, `/api/v1/records/injuries/${idOf(route.smokeURL)}`, 'name'));
     case 'patientListPage':
       return fixtures.title('People');
     case 'patientDetailPage':
