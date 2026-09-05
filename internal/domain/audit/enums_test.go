@@ -109,10 +109,11 @@ func TestEachVocabularyIsExactlyWhatTheMigrationDeclares(t *testing.T) {
 			ActionBackupCreate,
 			ActionBackupRestore,
 			ActionEmailChange,
+			ActionSwitchPatient,
 		}
 
-		assert.Len(t, Actions(), 20,
-			"data-model §3: nineteen shared-contract values plus access_denied, declared in full")
+		assert.Len(t, Actions(), 21,
+			"data-model §3: nineteen shared-contract values plus access_denied, plus phase 002's switch_patient")
 		assertVocabulary(t, want, Actions, Action.Valid,
 			[]string{"", " ", "Create", "read", "access-denied", "accessDenied", "user"})
 	})
@@ -144,12 +145,14 @@ func TestEachVocabularyIsExactlyWhatTheMigrationDeclares(t *testing.T) {
 			TargetKindExport,
 			TargetKindBackup,
 			TargetKindSystem,
+			TargetKindPractitioner,
+			TargetKindFacility,
 		}
 
-		assert.Len(t, TargetKinds(), 23,
-			"data-model §3: fifteen record kinds and eight platform kinds, declared in full")
+		assert.Len(t, TargetKinds(), 25,
+			"data-model §3: fifteen record kinds and eight platform kinds, plus phase 002's practitioner and facility")
 		assertVocabulary(t, want, TargetKinds, TargetKind.Valid,
-			[]string{"", " ", "Medication", "medications", "practitioner", "facility", "tag", "search", "login"})
+			[]string{"", " ", "Medication", "medications", "tag", "search", "login"})
 	})
 }
 

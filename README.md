@@ -107,6 +107,9 @@ trip and not five.
 |---|---|---|
 | `MEDIKUBE_FILES_MAX_UPLOAD_BYTES` | `33554432` | 32 MiB. |
 | `MEDIKUBE_FILES_ALLOWED_MIME` | `application/pdf,image/png,image/jpeg,image/heic,text/plain` | The accepted upload types. At least one is required. |
+| `MEDIKUBE_FILES_PHOTO_MAX_BYTES` | `15728640` | 15 MiB. `patients.photo`'s size ceiling. |
+| `MEDIKUBE_FILES_PHOTO_MIME_TYPES` | `image/jpeg,image/png,image/webp` | The accepted photo types. At least one is required. |
+| `MEDIKUBE_FILES_PHOTO_THUMBS` | `100x100t,400x400f` | The eager thumbnail sizes generated on upload. At least one is required. |
 
 Secrets never reach the log stream: the boot line is written by an allowlist
 (`internal/config/redact.go`), so a DSN or a token is reported as present or absent and never as a

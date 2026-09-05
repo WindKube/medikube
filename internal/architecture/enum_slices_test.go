@@ -40,18 +40,23 @@ const enumTree = "internal/domain"
 // D-05) — which is why the check is "the constant is named in the declaration"
 // rather than "the slice's element type is the enum".
 var enumSlices = map[string]string{
-	"access.Permission":        "permissions",
-	"audit.ActorKind":          "actorKinds",
-	"audit.Action":             "actions",
-	"audit.TargetKind":         "targetKinds",
-	"clinical.MedicationType":  "medicationTypes",
-	"clinical.MedicationRoute": "medicationRoutes",
-	"clinical.TherapyStatus":   "therapyStatuses",
-	"identity.Role":            "roles",
-	"identity.UnitSystem":      "unitSystems",
-	"identity.DateFormat":      "dateFormats",
-	"identity.Theme":           "themes",
-	"kind.Kind":                "registry",
+	"access.Permission":          "permissions",
+	"audit.ActorKind":            "actorKinds",
+	"audit.Action":               "actions",
+	"audit.TargetKind":           "targetKinds",
+	"clinical.MedicationType":    "medicationTypes",
+	"clinical.MedicationRoute":   "medicationRoutes",
+	"clinical.TherapyStatus":     "therapyStatuses",
+	"identity.Role":              "roles",
+	"identity.UnitSystem":        "unitSystems",
+	"identity.DateFormat":        "dateFormats",
+	"identity.Theme":             "themes",
+	"kind.Kind":                  "registry",
+	"person.Sex":                 "sexes",
+	"person.BloodType":           "bloodTypes",
+	"person.RelationshipToOwner": "relationshipsToOwner",
+	"directory.FacilityKind":     "facilityKinds",
+	"directory.Specialty":        "specialties",
 }
 
 func TestEveryDeclaredEnumConstantIsCarriedByItsPublishedSlice(t *testing.T) {

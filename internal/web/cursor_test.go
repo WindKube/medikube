@@ -246,6 +246,42 @@ func TestARefusedParameterNeverRepeatsWhatWasSent(t *testing.T) {
 		"the rejected value is in the error, and the error is logged")
 }
 
+// T039, research D-29: every phase-002 list ends its default sort on `id`,
+// the mandatory tiebreaker — two rows sharing every other sorted column (twins,
+// a father and son with the same name) would otherwise make a cursor ambiguous.
+func TestEveryPhase002SortEndsInTheIDTiebreaker(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		sort []domain.SortKey
+	}{
+		{name: "patients", sort: PatientsSort()},
+		{name: "practitioners", sort: PractitionersSort()},
+		{name: "facilities", sort: FacilitiesSort()},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			require.NotEmpty(t, testCase.sort)
+			last := testCase.sort[len(testCase.sort)-1]
+			assert.Equal(t, "id", last.Field, "the tiebreaker must be the final term, not merely present")
+			assert.False(t, last.Desc, "id ascending is what makes the tiebreaker deterministic")
+		})
+	}
+}
+
+// research D-29's table, verbatim.
+func TestThePhase002DefaultSortsMatchResearchD29(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, []domain.SortKey{{Field: "last_name"}, {Field: "first_name"}, {Field: "id"}}, PatientsSort())
+	assert.Equal(t, []domain.SortKey{{Field: "name"}, {Field: "id"}}, PractitionersSort())
+	assert.Equal(t, []domain.SortKey{{Field: "kind"}, {Field: "name"}, {Field: "id"}}, FacilitiesSort())
+}
+
 // flip changes one byte of a token so the AEAD open fails on authentication
 // rather than on decoding.
 func flip(token string) string {

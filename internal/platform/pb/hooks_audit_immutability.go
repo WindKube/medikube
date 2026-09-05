@@ -9,6 +9,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/hook"
 
+	"medikube/internal/domain/audit"
 	"medikube/internal/store"
 )
 
@@ -90,9 +91,9 @@ func refuseAuditRemoval(e *core.RecordEvent) error {
 		ErrAuditImmutable, e.Record.Id)
 }
 
-// refuseAuditEdit refuses every update but the one PocketBase makes itself.
+// refuseAuditEdit refuses every update but the ones PocketBase makes itself.
 func refuseAuditEdit(e *core.RecordEvent) error {
-	cascade, err := cascadeClearedTheActor(e)
+	cascade, err := cascadeClearedARelation(e)
 	if err != nil {
 		return err
 	}
@@ -104,26 +105,50 @@ func refuseAuditEdit(e *core.RecordEvent) error {
 	return fmt.Errorf("%w: the row %s cannot be edited", ErrAuditImmutable, e.Record.Id)
 }
 
-// cascadeClearedTheActor reports whether this update is the one legitimate
-// write to a stored audit row: PocketBase emptying the actor relation because
-// the account it pointed at has just been deleted.
-//
-// `audit_events.actor` deliberately does not cascade, so PocketBase unsets the
-// reference and re-saves the row rather than taking the row with the account —
-// which is what lets the account_delete entry outlive its actor, with
-// actor_kind as the surviving evidence that a person did it (research D-22).
-// That re-save runs through app.SaveNoValidate inside the delete's transaction
-// (core/record_model.go's deleteRefRecords), so it arrives here as an ordinary
-// update. A guard that refused every update would therefore make deleting an
-// account fail outright — in production, on the first person who asked to be
-// forgotten, and not in any test that never deletes one.
+// clearableAuditRelation is one of audit_events' non-cascading relations: a
+// column name to find the field by, and the two accessors that read its value
+// off an audit.Event without this file knowing the Go field is called ActorID
+// or PatientID.
+type clearableAuditRelation struct {
+	field string
+	get   func(audit.Event) string
+	clear func(*audit.Event)
+}
+
+// auditClearableRelations is both of data-model §3/§5's non-cascading
+// relations: `actor`, unset when the account that made the entry is deleted
+// (research D-22), and `patient`, unset when the patient the entry concerned is
+// deleted (data-model §5). Both re-saves run through app.SaveNoValidate inside
+// the deleting transaction (core/record_model.go's deleteRefRecords) and arrive
+// here as an ordinary update; a guard that refused every update would make
+// either deletion fail outright.
+func auditClearableRelations() []clearableAuditRelation {
+	return []clearableAuditRelation{
+		{
+			field: store.AuditFieldActor,
+			get:   func(ev audit.Event) string { return ev.ActorID },
+			clear: func(ev *audit.Event) { ev.ActorID = "" },
+		},
+		{
+			field: store.AuditFieldPatient,
+			get:   func(ev audit.Event) string { return ev.PatientID },
+			clear: func(ev *audit.Event) { ev.PatientID = "" },
+		},
+	}
+}
+
+// cascadeClearedARelation reports whether this update is one of the two
+// legitimate writes to a stored audit row: PocketBase emptying a relation
+// because the record it pointed at has just been deleted.
 //
 // The branch is bounded by a fact about the world rather than by a flag the
-// caller sets: the account is already gone, because the record is deleted
+// caller sets: the referenced record is already gone, because it is deleted
 // before its references are unset. Without that clause this is a door — set the
-// actor to empty and the row stops saying who did it, which is the single most
-// valuable edit anyone could make to an audit trail.
-func cascadeClearedTheActor(e *core.RecordEvent) (bool, error) {
+// relation to empty and the row stops saying who did it or which patient it
+// concerned, which is the single most valuable edit anyone could make to an
+// audit trail. Exactly one relation may clear per update: two clearing at once
+// is not a cascade PocketBase produces and this refuses it like any other edit.
+func cascadeClearedARelation(e *core.RecordEvent) (bool, error) {
 	// Both sides are read through internal/store's own mapper rather than
 	// column by column, so "nothing else changed" covers every column the
 	// writer writes and keeps covering them when data-model §3 grows one.
@@ -137,27 +162,47 @@ func cascadeClearedTheActor(e *core.RecordEvent) (bool, error) {
 		return false, fmt.Errorf("%w: %w", ErrAuditImmutable, err)
 	}
 
-	if was.ActorID == "" || now.ActorID != "" {
+	var (
+		clearedField string
+		clearedID    string
+		clearedCount int
+	)
+
+	for _, relation := range auditClearableRelations() {
+		if relation.get(was) == "" || relation.get(now) != "" {
+			continue
+		}
+
+		clearedCount++
+		clearedField = relation.field
+		clearedID = relation.get(was)
+	}
+
+	if clearedCount != 1 {
 		return false, nil
 	}
 
-	cleared := was
-	cleared.ActorID = ""
+	expect := was
+	for _, relation := range auditClearableRelations() {
+		if relation.field == clearedField {
+			relation.clear(&expect)
+		}
+	}
 
-	if now != cleared {
+	if now != expect {
 		return false, nil
 	}
 
-	return theAccountIsGone(e, was.ActorID)
+	return theReferencedRecordIsGone(e, clearedField, clearedID)
 }
 
-func theAccountIsGone(e *core.RecordEvent, accountID string) (bool, error) {
-	relation, err := actorRelation(e.Record.Collection())
+func theReferencedRecordIsGone(e *core.RecordEvent, field, recordID string) (bool, error) {
+	relation, err := namedRelation(e.Record.Collection(), field)
 	if err != nil {
 		return false, err
 	}
 
-	_, err = e.App.FindRecordById(relation.CollectionId, accountID)
+	_, err = e.App.FindRecordById(relation.CollectionId, recordID)
 
 	switch {
 	case err == nil:
@@ -166,41 +211,29 @@ func theAccountIsGone(e *core.RecordEvent, accountID string) (bool, error) {
 		return true, nil
 	default:
 		// Fail closed. A lookup that could not answer is not an answer, and a
-		// guard that treated a database error as "the account is gone" would
+		// guard that treated a database error as "the record is gone" would
 		// hand the one permitted edit to anybody who could make a query fail.
 		return false, fmt.Errorf(
-			"%w: whether the account %s still exists could not be established, so the edit is refused: %w",
-			ErrAuditImmutable, accountID, err)
+			"%w: whether %s %s still exists could not be established, so the edit is refused: %w",
+			ErrAuditImmutable, field, recordID, err)
 	}
 }
 
-// actorRelation is the collection's one relation, found by its type rather than
-// by its name: internal/store keeps the column names to itself, and the shape —
-// a single non-cascading reference to an account — is what the branch above
-// actually depends on.
-func actorRelation(collection *core.Collection) (*core.RelationField, error) {
-	var found *core.RelationField
-
-	for _, field := range collection.Fields {
-		relation, isRelation := field.(*core.RelationField)
-		if !isRelation {
-			continue
-		}
-
-		if found != nil {
-			return nil, fmt.Errorf("%w: %s carries more than one relation, so which one a cascade clears "+
-				"is no longer decidable and no update can be permitted", ErrAuditImmutable, collection.Name)
-		}
-
-		found = relation
+// namedRelation finds one relation field by its column name, which is the
+// shape the branch above depends on: a non-cascading reference this guard
+// already knows how to identify by data-model §3/§5's own field name.
+func namedRelation(collection *core.Collection, name string) (*core.RelationField, error) {
+	field := collection.Fields.GetByName(name)
+	if field == nil {
+		return nil, fmt.Errorf("%w: %s has no %s field", ErrAuditImmutable, collection.Name, name)
 	}
 
-	if found == nil {
-		return nil, fmt.Errorf("%w: %s carries no relation, so nothing can be clearing one",
-			ErrAuditImmutable, collection.Name)
+	relation, isRelation := field.(*core.RelationField)
+	if !isRelation {
+		return nil, fmt.Errorf("%w: %s.%s is not a relation", ErrAuditImmutable, collection.Name, name)
 	}
 
-	return found, nil
+	return relation, nil
 }
 
 // AssertAuditImmutabilityBound fails when the guard is not in force.

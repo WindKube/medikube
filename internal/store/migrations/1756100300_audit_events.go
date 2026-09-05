@@ -29,6 +29,36 @@ const (
 	auditTargetIndex    = "idx_audit_target"
 )
 
+// phase1AuditActions and phase1AuditTargetKinds are the twenty actions and
+// twenty-three target kinds this migration declared at the time it was
+// written — a frozen list rather than enumValues(audit.Actions()) /
+// enumValues(audit.TargetKinds()).
+//
+// Those two functions read the *current* Go vocabulary, which phase 002 grows
+// with switch_patient, practitioner and facility. A migration is a historical
+// snapshot (Principle IX): calling the live accessor here would mean replaying
+// this migration in isolation years from now creates a column with whatever
+// the vocabulary has grown to by then, not the twenty/twenty-three this
+// migration actually shipped — which is exactly what
+// TestEveryMigrationUpDownUpLeavesAnIdenticalSchema catches.
+// 1756200500_audit_events_patient.go's down restores these same two slices.
+var (
+	phase1AuditActions = []string{
+		"create", "update", "delete", "access_denied", "login", "login_failed",
+		"logout", "password_change", "account_delete", "admin_session",
+		"read_sensitive", "share_grant", "share_revoke", "share_expire",
+		"invite_send", "invite_respond", "export", "backup_create",
+		"backup_restore", "email_change",
+	}
+	phase1AuditTargetKinds = []string{
+		"medication", "allergy", "condition", "encounter", "procedure",
+		"treatment", "symptom", "vitals", "immunization", "injury", "insurance",
+		"equipment", "emergency_contact", "family_member", "lab_result",
+		"patient", "user", "share", "invitation", "attachment", "export",
+		"backup", "system",
+	}
+)
+
 func init() {
 	register(auditEventsUp, auditEventsDown)
 }
@@ -75,13 +105,13 @@ func auditEventsUp(app core.App) error {
 		Name:      auditFieldAction,
 		Required:  true,
 		MaxSelect: 1,
-		Values:    enumValues(audit.Actions()),
+		Values:    phase1AuditActions,
 	})
 	collection.Fields.Add(&core.SelectField{
 		Name:      auditFieldTargetKind,
 		Required:  true,
 		MaxSelect: 1,
-		Values:    enumValues(audit.TargetKinds()),
+		Values:    phase1AuditTargetKinds,
 	})
 
 	// An opaque id, never a name, never a path, never a filename — with the one

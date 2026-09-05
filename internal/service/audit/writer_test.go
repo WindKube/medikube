@@ -95,10 +95,11 @@ var eventFields = map[string]string{
 	"OccurredAt": "a server clock reading",
 	"ActorID":    "an account identifier, minted by the store",
 	"ActorKind":  "one of four declared values",
-	"Action":     "one of twenty declared values",
-	"TargetKind": "one of twenty-three declared values",
+	"Action":     "one of twenty-one declared values",
+	"TargetKind": "one of twenty-five declared values",
 	"TargetID":   "an opaque record identifier, bounded at MaxTargetID",
 	"RequestID":  "a correlation handle, bounded at MaxRequestID",
+	"PatientID":  "the person a patient-scoped action concerned, bounded at MaxPatientID",
 }
 
 // contentWords are the field names a value, a name, a note or a diff would

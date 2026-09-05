@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -21,19 +22,20 @@ import (
 // rather than a literal at each call site. domain.CodeValidationFailed is the
 // fourteenth and lives with the type that raises it.
 const (
-	CodeUnauthenticated    = "unauthenticated"
-	CodeForbidden          = "forbidden"
-	CodeNotFound           = "not_found"
-	CodeVersionMismatch    = "version_mismatch"
-	CodeConflict           = "conflict"
-	CodeRegistrationClosed = "registration_closed"
-	CodeInvalidToken       = "invalid_token"
-	CodeMailUnconfigured   = "mail_unconfigured"
-	CodeInvalidCursor      = "invalid_cursor"
-	CodeRateLimited        = "rate_limited"
-	CodeClientClosed       = "client_closed"
-	CodeTimeout            = "timeout"
-	CodeInternal           = "internal_error"
+	CodeUnauthenticated      = "unauthenticated"
+	CodeForbidden            = "forbidden"
+	CodeNotFound             = "not_found"
+	CodeVersionMismatch      = "version_mismatch"
+	CodeConflict             = "conflict"
+	CodeRegistrationClosed   = "registration_closed"
+	CodeInvalidToken         = "invalid_token"
+	CodeMailUnconfigured     = "mail_unconfigured"
+	CodeInvalidCursor        = "invalid_cursor"
+	CodeRateLimited          = "rate_limited"
+	CodeClientClosed         = "client_closed"
+	CodeTimeout              = "timeout"
+	CodeInternal             = "internal_error"
+	CodeUnsupportedMediaType = "unsupported_media_type"
 
 	// CodeBadRequest is the one code contracts/README.md's table does not name.
 	// It is what a 4xx raised inside PocketBase and not by MediKube resolves to
@@ -173,6 +175,8 @@ func Classify(err error) (int, string) {
 		return http.StatusConflict, CodeConflict
 	case errors.Is(err, domain.ErrRateLimited):
 		return http.StatusTooManyRequests, CodeRateLimited
+	case errors.Is(err, domain.ErrUnsupportedMedia):
+		return http.StatusUnsupportedMediaType, CodeUnsupportedMediaType
 	}
 
 	var apiErr *router.ApiError
@@ -241,6 +245,8 @@ func Message(code string) string {
 		return "the request was cancelled"
 	case CodeTimeout:
 		return "the request took too long"
+	case CodeUnsupportedMediaType:
+		return "that file type is not accepted"
 	case CodeBadRequest:
 		return "the request could not be processed"
 	}
@@ -260,6 +266,32 @@ func NewFailure(err error, requestID string) Failure {
 	}
 
 	return failure
+}
+
+// unsupportedFileTypeSubstring is the sentence core/validators/file.go:63
+// builds around the uploaded filename: `Failed to upload %q due to unsupported
+// file type.`. This is the one recognisable, filename-free part of it.
+const unsupportedFileTypeSubstring = "unsupported file type"
+
+// MapFileValidationError replaces a PocketBase file-field validation failure
+// with domain.ErrUnsupportedMedia (research D-17), and returns every other
+// error unchanged.
+//
+// PocketBase's own message embeds the uploaded filename
+// (`core/validators/file.go:63`), which constitution VII names as PHI: it must
+// never reach the response, the log stream or Sentry. The match is on a
+// substring PocketBase's own message always contains and the filename never
+// does, so this never needs to parse or echo any part of what it replaces.
+func MapFileValidationError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	if strings.Contains(err.Error(), unsupportedFileTypeSubstring) {
+		return domain.ErrUnsupportedMedia
+	}
+
+	return err
 }
 
 // NewEnvelope builds the whole body.

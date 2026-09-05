@@ -50,6 +50,10 @@ const (
 	ActionBackupCreate  Action = "backup_create"
 	ActionBackupRestore Action = "backup_restore"
 	ActionEmailChange   Action = "email_change"
+
+	// ActionSwitchPatient is phase 002's own: "every change to the person in
+	// view" (FR-020, FR-045), written when the active-patient pointer changes.
+	ActionSwitchPatient Action = "switch_patient"
 )
 
 // TargetKind is what the action concerned: one of the fifteen record kinds or
@@ -83,6 +87,13 @@ const (
 	TargetKindExport     TargetKind = "export"
 	TargetKindBackup     TargetKind = "backup"
 	TargetKindSystem     TargetKind = "system"
+
+	// TargetKindPractitioner and TargetKindFacility are phase 002's own
+	// directory kinds. Neither is one of kind.Kind's clinical record kinds —
+	// the directory is not a record kind, it is what a record's practitioner
+	// or pharmacy field points at.
+	TargetKindPractitioner TargetKind = "practitioner"
+	TargetKindFacility     TargetKind = "facility"
 )
 
 // One declaration per vocabulary, in the order data-model §3 declares it, which
@@ -118,6 +129,7 @@ var (
 		ActionBackupCreate,
 		ActionBackupRestore,
 		ActionEmailChange,
+		ActionSwitchPatient,
 	}
 
 	targetKinds = []TargetKind{
@@ -144,6 +156,8 @@ var (
 		TargetKindExport,
 		TargetKindBackup,
 		TargetKindSystem,
+		TargetKindPractitioner,
+		TargetKindFacility,
 	}
 )
 

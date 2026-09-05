@@ -17,11 +17,16 @@ import (
 	"medikube/internal/domain/kind"
 )
 
-// T075. data-model §4's matrix, read off the migrated schema field by field.
-// Both booleans are one character from silently wrong on each relation, neither
-// flip produces a compile error, and the symptoms are a medication that
-// outlives the account that owned it (FR-014, SC-012) and an audit trail that
-// deletes the record of the deletion (FR-036, FR-037).
+// T075, T022. data-model §4 and phase 002's §7 relationship map, read off the
+// migrated schema field by field. Both booleans are one character from
+// silently wrong on each relation, neither flip produces a compile error, and
+// the symptoms range from a medication that outlives the account that owned it
+// (FR-014, SC-012) to a patient's deletion silently deleting the account that
+// holds it (data-model §4).
+//
+// medications.patient is not here: research D-13's repoint is a later phase's
+// migration, not this one's, and asserting a field that does not exist yet
+// would pass for the wrong reason.
 func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 	t.Parallel()
 
@@ -29,25 +34,70 @@ func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 
 	users, err := app.FindCollectionByNameOrId(usersCollection)
 	require.NoError(t, err)
+	facilities, err := app.FindCollectionByNameOrId(facilitiesCollection)
+	require.NoError(t, err)
+	practitioners, err := app.FindCollectionByNameOrId(practitionersCollection)
+	require.NoError(t, err)
+	patients, err := app.FindCollectionByNameOrId(patientsCollection)
+	require.NoError(t, err)
 
 	cases := []struct {
 		relation    relationRule
-		maxSelect   int
+		target      string
 		consequence string
 	}{
 		{
 			relation:    relationRule{collection: kind.Medication.Collection(), field: medicationFieldOwner, required: true, cascadeDelete: true},
-			maxSelect:   1,
+			target:      users.Id,
 			consequence: "deleting an account must delete every medication row it owns, and a row without an owner is unreachable",
 		},
 		{
 			relation:    relationRule{collection: auditEventsCollection, field: auditFieldActor, required: false, cascadeDelete: false},
-			maxSelect:   1,
+			target:      users.Id,
 			consequence: "deleting an account must unset the reference and keep the row, so the account_delete entry survives",
+		},
+		{
+			relation:    relationRule{collection: facilitiesCollection, field: facilityFieldOwner, required: true, cascadeDelete: true},
+			target:      users.Id,
+			consequence: "FR-037: closing the account destroys its directory",
+		},
+		{
+			relation:    relationRule{collection: practitionersCollection, field: practitionerFieldOwner, required: true, cascadeDelete: true},
+			target:      users.Id,
+			consequence: "FR-037: closing the account destroys its directory",
+		},
+		{
+			relation:    relationRule{collection: practitionersCollection, field: practitionerFieldFacility, required: false, cascadeDelete: false},
+			target:      facilities.Id,
+			consequence: "deleting a facility must unset a practitioner's reference to it, not delete the practitioner",
+		},
+		{
+			relation:    relationRule{collection: patientsCollection, field: patientFieldOwner, required: true, cascadeDelete: true},
+			target:      users.Id,
+			consequence: "FR-002: closing the account destroys the people it kept records for",
+		},
+		{
+			relation:    relationRule{collection: patientsCollection, field: patientFieldPrimaryPractitioner, required: false, cascadeDelete: false},
+			target:      practitioners.Id,
+			consequence: "deleting a practitioner must unset a patient's primary-practitioner reference, not delete the patient",
+		},
+		{
+			relation:    relationRule{collection: usersCollection, field: usersFieldActivePatient, required: false, cascadeDelete: false},
+			target:      patients.Id,
+			consequence: "a patient's deletion must not delete the account whose active_patient pointed at it",
+		},
+		{
+			relation:    relationRule{collection: auditEventsCollection, field: auditFieldPatient, required: false, cascadeDelete: false},
+			target:      patients.Id,
+			consequence: "a patient's deletion must unset the reference and keep the historical row",
 		},
 	}
 
-	require.ElementsMatch(t, []relationRule{cases[0].relation, cases[1].relation}, Relations(),
+	declared := make([]relationRule, 0, len(cases))
+	for _, testCase := range cases {
+		declared = append(declared, testCase.relation)
+	}
+	require.ElementsMatch(t, declared, Relations(),
 		"the matrix the boot assertion checks is not the matrix this test declares")
 
 	for _, testCase := range cases {
@@ -62,8 +112,8 @@ func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 
 			assert.Equal(t, testCase.relation.required, relation.Required, testCase.consequence)
 			assert.Equal(t, testCase.relation.cascadeDelete, relation.CascadeDelete, testCase.consequence)
-			assert.Equal(t, testCase.maxSelect, relation.MaxSelect)
-			assert.Equal(t, users.Id, relation.CollectionId)
+			assert.Equal(t, 1, relation.MaxSelect)
+			assert.Equal(t, testCase.target, relation.CollectionId)
 		})
 	}
 
@@ -377,6 +427,84 @@ func newUser(t *testing.T, app core.App, email string) *core.Record {
 	require.NoError(t, app.Save(record))
 
 	return record
+}
+
+// T021. Every one of the five API rules is nil on all three collections this
+// phase adds — the lockdown at the schema layer, and the only thing a
+// PocketBase upgrade that added a default rule to NewBaseCollection could not
+// silently undo.
+func TestTheThreeNewCollectionsHaveEveryAPIRuleNil(t *testing.T) {
+	t.Parallel()
+
+	app := newTestApp(t)
+
+	for _, name := range []string{facilitiesCollection, practitionersCollection, patientsCollection} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			collection, err := app.FindCollectionByNameOrId(name)
+			require.NoError(t, err)
+
+			assert.Nil(t, collection.ListRule)
+			assert.Nil(t, collection.ViewRule)
+			assert.Nil(t, collection.CreateRule)
+			assert.Nil(t, collection.UpdateRule)
+			assert.Nil(t, collection.DeleteRule)
+		})
+	}
+
+	assert.NoError(t, AssertAPIRules(app))
+}
+
+// T023. patients.photo (FR-008, FR-009, FR-044): Protected so no PocketBase
+// file token and no link carrying its own credential can reach it, sized to
+// the configured 15 MiB and offering exactly the two thumbnails data-model §3
+// names.
+func TestPatientsPhotoIsProtectedAndSizedToTheConfiguredLimit(t *testing.T) {
+	t.Parallel()
+
+	app := newTestApp(t)
+
+	collection, err := app.FindCollectionByNameOrId(patientsCollection)
+	require.NoError(t, err)
+
+	field := collection.Fields.GetByName(patientFieldPhoto)
+	require.NotNil(t, field)
+
+	file, isFile := field.(*core.FileField)
+	require.Truef(t, isFile, "%s is a %s field, not a file", patientFieldPhoto, field.Type())
+
+	assert.True(t, file.Protected, "FR-044: no file token and no link may reach a patient's photograph")
+	assert.EqualValues(t, PhotoMaxBytes, file.MaxSize)
+	assert.ElementsMatch(t, []string{"image/jpeg", "image/png", "image/webp"}, file.MimeTypes)
+	assert.ElementsMatch(t, []string{"100x100t", "400x400f"}, file.Thumbs)
+	assert.Equal(t, 1, file.MaxSelect)
+
+	assert.NoError(t, AssertProtectedFiles(app))
+}
+
+// T023's other half: the boot assertion refuses to start when Protected is
+// flipped false, exercised on the real migrated schema rather than on the
+// synthetic collection TestAssertProtectedFilesRefusesAnUnprotectedFileField
+// already covers.
+func TestBootRefusesAnUnprotectedPatientPhoto(t *testing.T) {
+	t.Parallel()
+
+	app := newTestApp(t)
+
+	collection, err := app.FindCollectionByNameOrId(patientsCollection)
+	require.NoError(t, err)
+
+	file, isFile := collection.Fields.GetByName(patientFieldPhoto).(*core.FileField)
+	require.True(t, isFile)
+	file.Protected = false
+	require.NoError(t, app.Save(collection))
+
+	err = AssertProtectedFiles(app)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrFileFieldUnprotected)
+	assert.Contains(t, err.Error(), patientsCollection+"."+patientFieldPhoto)
+	assert.ErrorIs(t, AssertFatal(app), ErrFileFieldUnprotected)
 }
 
 func newRecord(t *testing.T, app core.App, collectionName string, values map[string]any) *core.Record {

@@ -36,8 +36,8 @@ func TestAuditEventVocabularyIsExactlyWhatDataModelDeclares(t *testing.T) {
 		count    int
 	}{
 		{field: auditFieldActorKind, expected: enumValues(audit.ActorKinds()), count: 4},
-		{field: auditFieldAction, expected: enumValues(audit.Actions()), count: 20},
-		{field: auditFieldTargetKind, expected: enumValues(audit.TargetKinds()), count: 23},
+		{field: auditFieldAction, expected: enumValues(audit.Actions()), count: 21},
+		{field: auditFieldTargetKind, expected: enumValues(audit.TargetKinds()), count: 25},
 	}
 
 	for _, testCase := range cases {
@@ -136,6 +136,7 @@ func TestAuditEventsHasNoColumnAValueCouldBeWrittenInto(t *testing.T) {
 		auditFieldRequestID,
 		fieldCreated,
 		fieldUpdated,
+		auditFieldPatient,
 	}
 
 	assert.Equal(t, expected, collection.Fields.FieldNames())
@@ -167,6 +168,7 @@ func TestAuditIndexesAlreadyCarryPhase006sTiebreakers(t *testing.T) {
 		{index: auditOccurredIndex, columns: "(occurred_at DESC, id DESC)"},
 		{index: auditActorTimeIndex, columns: "(actor, occurred_at DESC, id DESC)"},
 		{index: auditTargetIndex, columns: "(target_kind, target_id, occurred_at DESC)"},
+		{index: auditPatientTimeIndex, columns: "(patient, occurred_at DESC, id DESC)"},
 	}
 
 	require.Len(t, collection.Indexes, len(cases),

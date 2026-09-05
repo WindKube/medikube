@@ -95,6 +95,24 @@ func (c Config) validateFiles() []error {
 		}
 	}
 
+	if c.Files.PhotoMaxBytes <= 0 {
+		errs = append(errs, errors.New("MEDIKUBE_FILES_PHOTO_MAX_BYTES must be a positive number of bytes"))
+	}
+
+	if len(c.Files.PhotoMimeTypes) == 0 {
+		errs = append(errs, errors.New("MEDIKUBE_FILES_PHOTO_MIME_TYPES must list at least one media type"))
+	}
+
+	for _, mime := range c.Files.PhotoMimeTypes {
+		if !strings.Contains(mime, "/") {
+			errs = append(errs, fmt.Errorf("MEDIKUBE_FILES_PHOTO_MIME_TYPES entry %q is not a media type", mime))
+		}
+	}
+
+	if len(c.Files.PhotoThumbs) == 0 {
+		errs = append(errs, errors.New("MEDIKUBE_FILES_PHOTO_THUMBS must list at least one thumbnail size"))
+	}
+
 	return errs
 }
 

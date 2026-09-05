@@ -91,6 +91,13 @@ type OTelConfig struct {
 type FilesConfig struct {
 	MaxUploadBytes int64    `env:"MAX_UPLOAD_BYTES" envDefault:"33554432"`
 	AllowedMIME    []string `env:"ALLOWED_MIME" envSeparator:"," envDefault:"application/pdf,image/png,image/jpeg,image/heic,text/plain"`
+
+	// The three limits patients.photo is migrated with (research D-16, D-18).
+	// PhotoMaxBytes is 15 MiB — PocketBase's own DefaultFileFieldMaxSize is 5
+	// MiB and rejects an ordinary phone photograph for the wrong reason.
+	PhotoMaxBytes  int64    `env:"PHOTO_MAX_BYTES" envDefault:"15728640"`
+	PhotoMimeTypes []string `env:"PHOTO_MIME_TYPES" envSeparator:"," envDefault:"image/jpeg,image/png,image/webp"`
+	PhotoThumbs    []string `env:"PHOTO_THUMBS" envSeparator:"," envDefault:"100x100t,400x400f"`
 }
 
 // Load reads and validates the process environment. It is the only way a

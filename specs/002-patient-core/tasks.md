@@ -35,13 +35,13 @@ Project Structure section of [plan.md](./plan.md).
 
 **Purpose**: make the workspace ready. No behaviour ships in this phase.
 
-- [ ] T001 [P] Create `internal/domain/person/doc.go` and `internal/domain/directory/doc.go` with package comments stating that these packages import only the standard library (Principle II)
-- [ ] T002 [P] Create service package skeletons with `doc.go` in `internal/service/patient/`, `internal/service/practitioner/`, `internal/service/facility/` and their `patienttest/`, `practitionertest/`, `facilitytest/` subpackages
-- [ ] T003 [P] Create store package skeletons with `doc.go` in `internal/store/patient/`, `internal/store/practitioner/`, `internal/store/facility/`, each stating it is a `[PB]` package permitted to import PocketBase
-- [ ] T004 Extend `.golangci.yml`: add the new `internal/domain/**` and `internal/service/**` paths to the `depguard` rule `domain-and-services-stay-pure`, and add the three new `internal/store/*` packages to the `forbidigo` exclusion list alongside the existing adapter exclusions
-- [ ] T005 Add `FilesConfig{PhotoMaxBytes int64, PhotoMimeTypes []string, PhotoThumbs []string}` under `envPrefix:"FILES_"` to `internal/config/config.go` (defaults 15 MiB, `image/jpeg,image/png,image/webp`, `100x100t,400x400f`) with a defaults-and-validation table test in `internal/config/config_test.go`
-- [ ] T006 [P] Add `fixture:rebuild` and `bench:chart` targets to `Taskfile.yaml`, following the existing `gen`/`test` conventions
-- [ ] T007 [P] Add `internal/store/migrations/doc.go` recording this phase's six migration filenames, their required order and why the order is forced by the relation graph (research D-15)
+- [x] T001 [P] Create `internal/domain/person/doc.go` and `internal/domain/directory/doc.go` with package comments stating that these packages import only the standard library (Principle II)
+- [x] T002 [P] Create service package skeletons with `doc.go` in `internal/service/patient/`, `internal/service/practitioner/`, `internal/service/facility/` and their `patienttest/`, `practitionertest/`, `facilitytest/` subpackages
+- [x] T003 [P] Create store package skeletons with `doc.go` in `internal/store/patient/`, `internal/store/practitioner/`, `internal/store/facility/`, each stating it is a `[PB]` package permitted to import PocketBase
+- [x] T004 Extend `.golangci.yml`: add the new `internal/domain/**` and `internal/service/**` paths to the `depguard` rule `domain-and-services-stay-pure`, and add the three new `internal/store/*` packages to the `forbidigo` exclusion list alongside the existing adapter exclusions
+- [x] T005 Add `FilesConfig{PhotoMaxBytes int64, PhotoMimeTypes []string, PhotoThumbs []string}` under `envPrefix:"FILES_"` to `internal/config/config.go` (defaults 15 MiB, `image/jpeg,image/png,image/webp`, `100x100t,400x400f`) with a defaults-and-validation table test in `internal/config/config_test.go`
+- [x] T006 [P] Add `fixture:rebuild` and `bench:chart` targets to `Taskfile.yaml`, following the existing `gen`/`test` conventions
+- [x] T007 [P] Add `internal/store/migrations/doc.go` recording this phase's six migration filenames, their required order and why the order is forced by the relation graph (research D-15)
 
 ---
 
@@ -54,54 +54,54 @@ every user story below depends on.
 
 ### Domain — tests first
 
-- [ ] T008 [P] Table test for `person.Sex`, `person.BloodType`, `person.RelationshipToOwner` `Valid()` covering every listed value plus three rejects, in `internal/domain/person/enums_test.go`
-- [ ] T009 [P] Table test for `person.AgeAt` covering: born today ("0 days", never "0"), born yesterday, the day before a birthday, on a birthday, a 29 February birth date evaluated in a non-leap year, and an unset birth date, in `internal/domain/person/age_test.go`
-- [ ] T010 [P] Table test for metric↔imperial height and weight formatting and for the invariant that conversion never mutates the SI value, in `internal/domain/person/measure_test.go`
-- [ ] T011 [P] Table test for `person.Patient.Validate()` asserting a payload with four simultaneous faults returns four `fields[]` entries in one `*domain.ValidationError` (FR-003, US1-3), plus each individual rule from data-model.md §3, in `internal/domain/person/validate_test.go`
-- [ ] T012 [P] Test that `person.Patient.MarshalZerologObject` emits only `id` and `owner_id` and that no name, birth date or address appears in the rendered event (FR-046), in `internal/domain/person/patient_test.go`
-- [ ] T013 [P] Table test for `directory.FacilityKind.Valid()` and `directory.Specialty.Valid()`, asserting the catch-all `other` is present and that the Go slice and the generated select vocabulary are identical, in `internal/domain/directory/enums_test.go`
-- [ ] T014 [P] Table test for `directory.Practitioner.Validate()` / `Facility.Validate()` and their redacting marshallers, in `internal/domain/directory/validate_test.go`
+- [x] T008 [P] Table test for `person.Sex`, `person.BloodType`, `person.RelationshipToOwner` `Valid()` covering every listed value plus three rejects, in `internal/domain/person/enums_test.go`
+- [x] T009 [P] Table test for `person.AgeAt` covering: born today ("0 days", never "0"), born yesterday, the day before a birthday, on a birthday, a 29 February birth date evaluated in a non-leap year, and an unset birth date, in `internal/domain/person/age_test.go`
+- [x] T010 [P] Table test for metric↔imperial height and weight formatting and for the invariant that conversion never mutates the SI value, in `internal/domain/person/measure_test.go`
+- [x] T011 [P] Table test for `person.Patient.Validate()` asserting a payload with four simultaneous faults returns four `fields[]` entries in one `*domain.ValidationError` (FR-003, US1-3), plus each individual rule from data-model.md §3, in `internal/domain/person/validate_test.go`
+- [x] T012 [P] Test that `person.Patient.MarshalZerologObject` emits only `id` and `owner_id` and that no name, birth date or address appears in the rendered event (FR-046), in `internal/domain/person/patient_test.go`
+- [x] T013 [P] Table test for `directory.FacilityKind.Valid()` and `directory.Specialty.Valid()`, asserting the catch-all `other` is present and that the Go slice and the generated select vocabulary are identical, in `internal/domain/directory/enums_test.go`
+- [x] T014 [P] Table test for `directory.Practitioner.Validate()` / `Facility.Validate()` and their redacting marshallers, in `internal/domain/directory/validate_test.go`
 
 ### Domain — implementation
 
-- [ ] T015 [P] Implement `person.Sex`, `person.BloodType`, `person.RelationshipToOwner` with `Valid()` and the generated select vocabularies in `internal/domain/person/enums.go`
-- [ ] T016 [P] Implement `person.AgeAt(birth, on) person.Age` with a `String()` that degrades to months and days below one year, in `internal/domain/person/age.go`
-- [ ] T017 [P] Implement `person.FormatHeight` / `person.FormatWeight` over canonical SI in `internal/domain/person/measure.go` (kept here rather than a shared `units` package until vitals in phase 003 makes a second consumer — research D-21)
-- [ ] T018 Implement `person.Patient` plus `Validate()` and `MarshalZerologObject` in `internal/domain/person/patient.go` and `internal/domain/person/validate.go` (depends on T015–T017)
-- [ ] T019 [P] Implement `directory.FacilityKind` — practice, pharmacy, hospital, laboratory, imaging centre, other (FR-034) — and the 42-value `directory.Specialty` in `internal/domain/directory/enums.go`
-- [ ] T020 Implement `directory.Practitioner` and `directory.Facility` with `Validate()` and redacting marshallers in `internal/domain/directory/practitioner.go` and `internal/domain/directory/facility.go` (depends on T019)
+- [x] T015 [P] Implement `person.Sex`, `person.BloodType`, `person.RelationshipToOwner` with `Valid()` and the generated select vocabularies in `internal/domain/person/enums.go`
+- [x] T016 [P] Implement `person.AgeAt(birth, on) person.Age` with a `String()` that degrades to months and days below one year, in `internal/domain/person/age.go`
+- [x] T017 [P] Implement `person.FormatHeight` / `person.FormatWeight` over canonical SI in `internal/domain/person/measure.go` (kept here rather than a shared `units` package until vitals in phase 003 makes a second consumer — research D-21)
+- [x] T018 Implement `person.Patient` plus `Validate()` and `MarshalZerologObject` in `internal/domain/person/patient.go` and `internal/domain/person/validate.go` (depends on T015–T017)
+- [x] T019 [P] Implement `directory.FacilityKind` — practice, pharmacy, hospital, laboratory, imaging centre, other (FR-034) — and the 42-value `directory.Specialty` in `internal/domain/directory/enums.go`
+- [x] T020 Implement `directory.Practitioner` and `directory.Facility` with `Validate()` and redacting marshallers in `internal/domain/directory/practitioner.go` and `internal/domain/directory/facility.go` (depends on T019)
 
 ### Schema — tests first
 
-- [ ] T021 Integration test asserting each of the five migrations applies and reverts cleanly and that all five API rules are `nil` on `facilities`, `practitioners` and `patients`, in `internal/store/migrations/migrations_test.go`
-- [ ] T022 Integration test asserting the `Required`/`CascadeDelete` matrix of research D-06 field by field — including that `users.active_patient` is `CascadeDelete: false` and `medications.patient` is `CascadeDelete: true` — in `internal/store/migrations/assertions_test.go`
-- [ ] T023 Integration test asserting `patients.photo` is `Protected: true` — so no PocketBase file token and no link carrying its own credential can reach it (FR-044) — that `MaxSize` is the configured 15 MiB (FR-008) and `Thumbs` is `["100x100t","400x400f"]`, plus a case proving the boot assertion **refuses to start** when `Protected` is flipped to false, in `internal/store/migrations/assertions_test.go`
+- [x] T021 Integration test asserting each of the five migrations applies and reverts cleanly and that all five API rules are `nil` on `facilities`, `practitioners` and `patients`, in `internal/store/migrations/migrations_test.go`
+- [x] T022 Integration test asserting the `Required`/`CascadeDelete` matrix of research D-06 field by field — including that `users.active_patient` is `CascadeDelete: false` and `medications.patient` is `CascadeDelete: true` — in `internal/store/migrations/assertions_test.go`
+- [x] T023 Integration test asserting `patients.photo` is `Protected: true` — so no PocketBase file token and no link carrying its own credential can reach it (FR-044) — that `MaxSize` is the configured 15 MiB (FR-008) and `Thumbs` is `["100x100t","400x400f"]`, plus a case proving the boot assertion **refuses to start** when `Protected` is flipped to false, in `internal/store/migrations/assertions_test.go`
 
-- [ ] T023a [P] Extend `internal/store/migrations/audit_vocab_test.go` (phase 001, T070a) to assert the **complete** expected vocabulary after this phase — **twenty-one** actions and **twenty-five** target kinds, set-equal, not a delta — so a value this phase writes but no migration declared fails here rather than failing `SelectField` validation in production (ANALYSIS C1). **Fails until T028 lands**, which is the point.
+- [x] T023a [P] Extend `internal/store/migrations/audit_vocab_test.go` (phase 001, T070a) to assert the **complete** expected vocabulary after this phase — **twenty-one** actions and **twenty-five** target kinds, set-equal, not a delta — so a value this phase writes but no migration declared fails here rather than failing `SelectField` validation in production (ANALYSIS C1). **Fails until T028 lands**, which is the point.
 
 ### Schema — implementation
 
-- [ ] T024 [P] Implement migration `internal/store/migrations/1756200100_facilities.go` (collection, nil rules, all fields from data-model.md §1 — the full recorded set of FR-034 — three indexes, reversible `down`)
-- [ ] T025 Implement migration `internal/store/migrations/1756200200_practitioners.go` including the `facility` relation and the `(owner, LOWER(name), specialty)` unique index (depends on T024)
-- [ ] T026 Implement migration `internal/store/migrations/1756200300_patients.go` including `primary_practitioner`, the `Protected` photo field and the partial unique index `(owner) WHERE is_self_record = 1` (depends on T025)
-- [ ] T027 Implement migration `internal/store/migrations/1756200400_users_active_patient.go` adding `active_patient` with `CascadeDelete: false` (depends on T026)
-- [ ] T028 Implement migration `internal/store/migrations/1756200500_audit_events_patient.go` adding `patient`, extending the `action` vocabulary with `switch_patient` and `target_kind` with `practitioner`/`facility` (`patient` already exists — phase 001 declares the contract's complete vocabulary), and adding the `(patient, occurred_at DESC)` index (depends on T026; **turns T023a green**)
-- [ ] T029 Extend `internal/store/migrations/assertions.go` with the nil-rule check over the three new collections, the `Protected: true` check over `patients.photo`, and the new `Required`/`CascadeDelete` matrix assertion
-- [ ] T030 Register the five migrations and the extended assertions in `internal/platform/pb/boot.go` and `cmd/medikube/main.go`
+- [x] T024 [P] Implement migration `internal/store/migrations/1756200100_facilities.go` (collection, nil rules, all fields from data-model.md §1 — the full recorded set of FR-034 — three indexes, reversible `down`)
+- [x] T025 Implement migration `internal/store/migrations/1756200200_practitioners.go` including the `facility` relation and the `(owner, LOWER(name), specialty)` unique index (depends on T024)
+- [x] T026 Implement migration `internal/store/migrations/1756200300_patients.go` including `primary_practitioner`, the `Protected` photo field and the partial unique index `(owner) WHERE is_self_record = 1` (depends on T025)
+- [x] T027 Implement migration `internal/store/migrations/1756200400_users_active_patient.go` adding `active_patient` with `CascadeDelete: false` (depends on T026)
+- [x] T028 Implement migration `internal/store/migrations/1756200500_audit_events_patient.go` adding `patient`, extending the `action` vocabulary with `switch_patient` and `target_kind` with `practitioner`/`facility` (`patient` already exists — phase 001 declares the contract's complete vocabulary), and adding the `(patient, occurred_at DESC)` index (depends on T026; **turns T023a green**)
+- [x] T029 Extend `internal/store/migrations/assertions.go` with the nil-rule check over the three new collections, the `Protected: true` check over `patients.photo`, and the new `Required`/`CascadeDelete` matrix assertion
+- [x] T030 Register the five migrations and the extended assertions in `internal/platform/pb/boot.go` and `cmd/medikube/main.go`
 
 ### Shared ports, authorization and test scaffolding
 
-- [ ] T031 Test then implement `records.Registry.Kinds() []kind.Kind` and per-kind patient counting dispatch in `internal/records/registry.go` and `internal/records/registry_test.go` — the extension point the chart summary consumes so that nothing switches on kind (Principle II)
-- [ ] T032 [P] Test then implement the `Patient` field on `audit.Event` and `audit.RecentForPatient(ctx, patientID, limit)` in `internal/service/audit/writer.go`, `internal/service/audit/recent.go` and their `_test.go` files, asserting no content field can be written
-- [ ] T033 Unit test for `access.Authorizer.Patient` with `t.Parallel()`: owner allowed with `PermOwn`, stranger returns `domain.ErrNotFound` (never `ErrForbidden`), anonymous returns `ErrUnauthenticated`, and every refusal produces exactly one audit row — in `internal/service/access/authorizer_test.go`
-- [ ] T034 Implement patient-ownership resolution and audited refusal in `internal/service/access/authorizer.go` (depends on T033)
-- [ ] T035 [P] Implement `testsupport.RunOwnershipMatrix(t, []Case)` — the table-driven owner-succeeds / stranger-404-byte-identical helper that every story's authorization tests use and that phase 005 extends with share rows — in `internal/testsupport/authz.go`
-- [ ] T036 [P] Rebuild the committed fixture data dir `internal/testdata/pb_data` with the five migrations applied, and export the seeded ids as constants from `internal/testsupport/fixtures.go` (accounts A, B and C per data-model.md §9)
-- [ ] T037 Extend `internal/cli/seed.go` to produce the deterministic set of data-model.md §9, leaving Account B's directories **empty** so the smoke gate exercises the empty states (depends on T036)
-- [ ] T038 [P] Extend the ETag/If-Match helper in `internal/web/etag.go` to cover patients, practitioners and facilities, with a test asserting a missing `If-Match` is `422` with field `If-Match` and a mismatch is `412` carrying the current representation so the account holder is told what happened and shown the current values (FR-011), in `internal/web/etag_test.go`
-- [ ] T039 [P] Register the three new cursor sort-key sets of research D-29 in `internal/web/cursor.go`, with a test asserting the id tiebreaker is always present, in `internal/web/cursor_test.go`
-- [ ] T040 [P] Map PocketBase file-validation errors into MediKube's PHI-free envelope in `internal/web/errors.go`, with a test asserting the uploaded filename never appears in the response or the log stream (research D-17), in `internal/web/errors_test.go`
-- [ ] T041 [P] Extend the route registry test in `internal/httproute/registry_test.go` to assert that every registered `page` route carries a landmark and a `smokeUrl`, that no registered path ends in `/`, and that every operation has a unique `operationId`
+- [x] T031 Test then implement `records.Registry.Kinds() []kind.Kind` and per-kind patient counting dispatch in `internal/records/registry.go` and `internal/records/registry_test.go` — the extension point the chart summary consumes so that nothing switches on kind (Principle II)
+- [x] T032 [P] Test then implement the `Patient` field on `audit.Event` and `audit.RecentForPatient(ctx, patientID, limit)` in `internal/service/audit/writer.go`, `internal/service/audit/recent.go` and their `_test.go` files, asserting no content field can be written
+- [x] T033 Unit test for `access.Authorizer.Patient` with `t.Parallel()`: owner allowed with `PermOwn`, stranger returns `domain.ErrNotFound` (never `ErrForbidden`), anonymous returns `ErrUnauthenticated`, and every refusal produces exactly one audit row — in `internal/service/access/authorizer_test.go`
+- [x] T034 Implement patient-ownership resolution and audited refusal in `internal/service/access/authorizer.go` (depends on T033)
+- [x] T035 [P] Implement `testsupport.RunOwnershipMatrix(t, []Case)` — the table-driven owner-succeeds / stranger-404-byte-identical helper that every story's authorization tests use and that phase 005 extends with share rows — in `internal/testsupport/authz.go`
+- [x] T036 [P] Rebuild the committed fixture data dir `internal/testdata/pb_data` with the five migrations applied, and export the seeded ids as constants from `internal/testsupport/fixtures.go` (accounts A, B and C per data-model.md §9)
+- [x] T037 Extend `internal/cli/seed.go` to produce the deterministic set of data-model.md §9, leaving Account B's directories **empty** so the smoke gate exercises the empty states (depends on T036)
+- [x] T038 [P] Extend the ETag/If-Match helper in `internal/web/etag.go` to cover patients, practitioners and facilities, with a test asserting a missing `If-Match` is `422` with field `If-Match` and a mismatch is `412` carrying the current representation so the account holder is told what happened and shown the current values (FR-011), in `internal/web/etag_test.go`
+- [x] T039 [P] Register the three new cursor sort-key sets of research D-29 in `internal/web/cursor.go`, with a test asserting the id tiebreaker is always present, in `internal/web/cursor_test.go`
+- [x] T040 [P] Map PocketBase file-validation errors into MediKube's PHI-free envelope in `internal/web/errors.go`, with a test asserting the uploaded filename never appears in the response or the log stream (research D-17), in `internal/web/errors_test.go`
+- [x] T041 [P] Extend the route registry test in `internal/httproute/registry_test.go` to assert that every registered `page` route carries a landmark and a `smokeUrl`, that no registered path ends in `/`, and that every operation has a unique `operationId`
 
 **Checkpoint**: the schema exists, the domain types validate, ownership is decidable, and the test
 harness can express "owner succeeds, stranger is refused". User stories may now begin.

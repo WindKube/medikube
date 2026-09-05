@@ -140,6 +140,42 @@ func resolveSort(raw string, allowed []domain.SortKey) ([]domain.SortKey, bool) 
 	return resolved, true
 }
 
+// The three sort-key sets research D-29 fixes for phase 002's lists. They live
+// here rather than in a service package the way medication.Sorts does: patients,
+// practitioners and facilities are not a kind.Kind (research D-05 — the anchor,
+// not a record kind), so there is no per-kind service package for this
+// foundational phase to put them in ahead of the story that builds one.
+//
+// Every set ends in `id`: the mandatory tiebreaker, because two rows sharing
+// every other sorted column — twins, a father and son with the same name — would
+// otherwise make a cursor ambiguous (research D-29, spec Edge Cases).
+
+// PatientsSort is the default sort for the patients list.
+func PatientsSort() []domain.SortKey {
+	return []domain.SortKey{
+		{Field: "last_name"},
+		{Field: "first_name"},
+		{Field: "id"},
+	}
+}
+
+// PractitionersSort is the default sort for the practitioners list.
+func PractitionersSort() []domain.SortKey {
+	return []domain.SortKey{
+		{Field: "name"},
+		{Field: "id"},
+	}
+}
+
+// FacilitiesSort is the default sort for the facilities list.
+func FacilitiesSort() []domain.SortKey {
+	return []domain.SortKey{
+		{Field: "kind"},
+		{Field: "name"},
+		{Field: "id"},
+	}
+}
+
 // CursorScope is the query a cursor continues, as one unambiguous string.
 //
 // It is authenticated into the token and never transmitted, so the cursor

@@ -17,6 +17,7 @@ const (
 	CodeInvalidDate      = "invalid_date"
 	CodeTooLong          = "too_long"
 	CodeTooShort         = "too_short"
+	CodeOutOfRange       = "out_of_range"
 	CodeUnknownField     = "unknown_field"
 )
 

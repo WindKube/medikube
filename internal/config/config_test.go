@@ -75,6 +75,10 @@ func TestLoadAppliesDocumentedDefaults(t *testing.T) {
 	assert.Equal(t,
 		[]string{"application/pdf", "image/png", "image/jpeg", "image/heic", "text/plain"},
 		cfg.Files.AllowedMIME)
+
+	assert.Equal(t, int64(15_728_640), cfg.Files.PhotoMaxBytes, "15 MiB (research D-18)")
+	assert.Equal(t, []string{"image/jpeg", "image/png", "image/webp"}, cfg.Files.PhotoMimeTypes)
+	assert.Equal(t, []string{"100x100t", "400x400f"}, cfg.Files.PhotoThumbs)
 }
 
 func TestEveryVariableParses(t *testing.T) {
@@ -118,6 +122,9 @@ func TestEveryVariableParses(t *testing.T) {
 
 		"MEDIKUBE_FILES_MAX_UPLOAD_BYTES": "1024",
 		"MEDIKUBE_FILES_ALLOWED_MIME":     "application/pdf,image/png",
+		"MEDIKUBE_FILES_PHOTO_MAX_BYTES":  "2048",
+		"MEDIKUBE_FILES_PHOTO_MIME_TYPES": "image/png",
+		"MEDIKUBE_FILES_PHOTO_THUMBS":     "50x50t",
 	}
 
 	// A field nobody added an entry for would otherwise be silently untested.
@@ -164,6 +171,10 @@ func TestEveryVariableParses(t *testing.T) {
 
 	assert.Equal(t, int64(1024), cfg.Files.MaxUploadBytes)
 	assert.Equal(t, []string{"application/pdf", "image/png"}, cfg.Files.AllowedMIME)
+
+	assert.Equal(t, int64(2048), cfg.Files.PhotoMaxBytes)
+	assert.Equal(t, []string{"image/png"}, cfg.Files.PhotoMimeTypes)
+	assert.Equal(t, []string{"50x50t"}, cfg.Files.PhotoThumbs)
 }
 
 // A mounted Docker or Kubernetes secret is a file, and files end with a
@@ -301,6 +312,16 @@ func TestValidateRejectsEachSetting(t *testing.T) {
 			want: "MEDIKUBE_FILES_ALLOWED_MIME",
 		},
 		{
+			name: "photo size ceiling is not positive",
+			env:  map[string]string{"MEDIKUBE_FILES_PHOTO_MAX_BYTES": "0"},
+			want: "MEDIKUBE_FILES_PHOTO_MAX_BYTES",
+		},
+		{
+			name: "photo mime type is not a media type",
+			env:  map[string]string{"MEDIKUBE_FILES_PHOTO_MIME_TYPES": "jpeg"},
+			want: "MEDIKUBE_FILES_PHOTO_MIME_TYPES",
+		},
+		{
 			name: "dev mode in production",
 			env:  map[string]string{"MEDIKUBE_DEV": "true"},
 			want: "MEDIKUBE_DEV",
@@ -380,10 +401,12 @@ func TestValidateIsReachableOnItsOwn(t *testing.T) {
 
 	cfg.DrainMax = cfg.DrainDelay
 	cfg.Files.AllowedMIME = nil
+	cfg.Files.PhotoThumbs = nil
 	err = cfg.Validate()
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "MEDIKUBE_DRAIN_MAX")
 	assert.Contains(t, err.Error(), "MEDIKUBE_FILES_ALLOWED_MIME")
+	assert.Contains(t, err.Error(), "MEDIKUBE_FILES_PHOTO_THUMBS")
 }
 
 func TestLoadReadsTheProcessEnvironment(t *testing.T) {

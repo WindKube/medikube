@@ -68,6 +68,7 @@ func TestEventHasNoFieldThatContentCouldBeWrittenInto(t *testing.T) {
 		{name: "TargetKind", typ: "audit.TargetKind"},
 		{name: "TargetID", typ: "string"},
 		{name: "RequestID", typ: "string"},
+		{name: "PatientID", typ: "string"},
 	}
 
 	fields := reflect.VisibleFields(reflect.TypeFor[Event]())
@@ -117,7 +118,7 @@ func TestEventHasNoFieldThatContentCouldBeWrittenInto(t *testing.T) {
 			}
 		}
 
-		assert.Equal(t, []string{"ActorID", "TargetID", "RequestID"}, free)
+		assert.Equal(t, []string{"ActorID", "TargetID", "RequestID", "PatientID"}, free)
 	})
 
 	t.Run("no field carries a wire name", func(t *testing.T) {
@@ -223,7 +224,7 @@ func TestAnEventMissingOrMisspellingAColumnIsRefused(t *testing.T) {
 		},
 		{
 			name:  "an undeclared target kind",
-			build: func() Event { e := minimalEvent(); e.TargetKind = "practitioner"; return e },
+			build: func() Event { e := minimalEvent(); e.TargetKind = "record"; return e },
 			field: "target_kind",
 			code:  domain.CodeInvalidValue,
 		},
@@ -336,4 +337,42 @@ func TestTheIdentifierColumnsAreBoundedAt64(t *testing.T) {
 			})
 		})
 	}
+}
+
+// patient_id is a bare record id and not a composed name, so it gets its own
+// bound rather than a row in the table above (data-model §5, MaxPatientID).
+func TestThePatientColumnIsBoundedAtARecordID(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, 15, MaxPatientID, "a PocketBase record id (constitution: 15-character opaque text ids)")
+
+	t.Run("empty is accepted: most actions concern no patient", func(t *testing.T) {
+		t.Parallel()
+
+		event := minimalEvent()
+		event.PatientID = ""
+
+		assert.NoError(t, event.Validate())
+	})
+
+	t.Run("at the bound", func(t *testing.T) {
+		t.Parallel()
+
+		event := minimalEvent()
+		event.PatientID = strings.Repeat("x", MaxPatientID)
+
+		assert.NoError(t, event.Validate())
+	})
+
+	t.Run("one past the bound", func(t *testing.T) {
+		t.Parallel()
+
+		event := minimalEvent()
+		event.PatientID = strings.Repeat("x", MaxPatientID+1)
+
+		fields := refusals(t, event.Validate())
+		require.Len(t, fields, 1)
+		assert.Equal(t, "patient", fields[0].Field)
+		assert.Equal(t, domain.CodeTooLong, fields[0].Code)
+	})
 }

@@ -304,6 +304,8 @@ func TestTheCascadePublishesOneEventPerMedicationAndNoneForTheAccount(t *testing
 		domainidentity.DeleteConfirmationPhrase,
 	))
 
+	owned := map[string]bool{"patients": true, "practitioners": true, "facilities": true}
+
 	var medications, accounts int
 
 	for _, collection := range deleted {
@@ -312,12 +314,12 @@ func TestTheCascadePublishesOneEventPerMedicationAndNoneForTheAccount(t *testing
 			medications++
 		case store.AccountCollection:
 			accounts++
+		default:
+			assert.True(t, owned[collection], "a %s row was deleted, and the account does not own that collection", collection)
 		}
 	}
 
 	assert.Equal(t, testsupport.AccountAMedicationCount, medications,
 		"the cascade did not delete one medication at a time, so the record stream tells nobody their list changed")
 	assert.Equal(t, 1, accounts)
-	assert.Len(t, deleted, testsupport.AccountAMedicationCount+1,
-		"something other than the account and its medication rows was deleted")
 }

@@ -18,6 +18,10 @@ const (
 	MaxTargetID = 64
 
 	MaxRequestID = 64
+
+	// MaxPatientID is a bare PocketBase record id and nothing composed, unlike
+	// TargetID (constitution: "15-character opaque PocketBase text ids").
+	MaxPatientID = 15
 )
 
 // Event is one thing that happened. Its defining property is negative: there is
@@ -51,6 +55,12 @@ type Event struct {
 	// background run has no HTTP request and still fills this from the run id
 	// its own log lines carry.
 	RequestID string
+
+	// PatientID is the person a patient-scoped action concerned. Null for a
+	// non-patient action — creating a practitioner, an admin session — and
+	// unset (not cascaded) when the patient is deleted, so a historical entry
+	// survives without pointing at a ghost (phase 002 data-model §5).
+	PatientID string
 }
 
 // Validate reports every offending column at once. It is the last check before
@@ -94,6 +104,10 @@ func (e Event) Validate() error {
 		invalid.Add("request_id", domain.CodeRequired, "a request id is required")
 	case utf8.RuneCountInString(e.RequestID) > MaxRequestID:
 		invalid.Addf("request_id", domain.CodeTooLong, "a request id is at most %d characters", MaxRequestID)
+	}
+
+	if utf8.RuneCountInString(e.PatientID) > MaxPatientID {
+		invalid.Addf("patient", domain.CodeTooLong, "a patient id is at most %d characters", MaxPatientID)
 	}
 
 	return invalid.OrNil()

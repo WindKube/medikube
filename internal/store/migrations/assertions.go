@@ -52,12 +52,26 @@ type relationRule struct {
 }
 
 // Relations is the matrix, declared here and asserted at boot. Reading it: the
-// medication cascade is what makes FR-014 and SC-012 true, and the audit
-// non-cascade is what keeps the account_delete row after its actor is gone.
+// medication cascade is what makes FR-014 and SC-012 true, the audit
+// non-cascade is what keeps the account_delete row after its actor is gone, and
+// phase 002's four additions are research D-06's: an account's own directory
+// and patients are destroyed with it, but a patient losing its practitioner,
+// its facility or its primary practitioner — and an account's active-patient
+// pointer or a historical audit row losing the patient it concerned — never
+// take the referencing row with them.
 func Relations() []relationRule {
 	return []relationRule{
 		{collection: kind.Medication.Collection(), field: medicationFieldOwner, required: true, cascadeDelete: true},
 		{collection: auditEventsCollection, field: auditFieldActor, required: false, cascadeDelete: false},
+		{collection: facilitiesCollection, field: facilityFieldOwner, required: true, cascadeDelete: true},
+		{collection: practitionersCollection, field: practitionerFieldOwner, required: true, cascadeDelete: true},
+		{collection: practitionersCollection, field: practitionerFieldFacility, required: false, cascadeDelete: false},
+		{collection: patientsCollection, field: patientFieldOwner, required: true, cascadeDelete: true},
+		{collection: patientsCollection, field: patientFieldPrimaryPractitioner, required: false, cascadeDelete: false},
+		// CascadeDelete is load-bearing and false: true here would mean
+		// deleting a patient deletes the account that holds it (data-model §4).
+		{collection: usersCollection, field: usersFieldActivePatient, required: false, cascadeDelete: false},
+		{collection: auditEventsCollection, field: auditFieldPatient, required: false, cascadeDelete: false},
 	}
 }
 
