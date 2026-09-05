@@ -21,6 +21,8 @@ var expectedKinds = []kind.Kind{
 	kind.Medication,
 	kind.Immunization,
 	kind.Injury,
+	kind.Insurance,
+	kind.Equipment,
 }
 
 // TestEveryExpectedKindHasACompleteRegistration is T021: it walks
@@ -36,6 +38,8 @@ func TestEveryExpectedKindHasACompleteRegistration(t *testing.T) {
 	require.NoError(t, registry.Register(recordstest.Registration(kind.Medication, audit.TargetKindMedication)))
 	require.NoError(t, registry.Register(recordstest.Registration(kind.Immunization, audit.TargetKindImmunization)))
 	require.NoError(t, registry.Register(recordstest.Registration(kind.Injury, audit.TargetKindInjury)))
+	require.NoError(t, registry.Register(recordstest.Registration(kind.Insurance, audit.TargetKindInsurance)))
+	require.NoError(t, registry.Register(recordstest.Registration(kind.Equipment, audit.TargetKindEquipment)))
 
 	require.NotEmpty(t, expectedKinds, "the expectation list itself is empty, so this test asserts nothing")
 
