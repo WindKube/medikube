@@ -11,6 +11,7 @@ import (
 
 	"medikube/internal/domain"
 	domainaccess "medikube/internal/domain/access"
+	domainaudit "medikube/internal/domain/audit"
 	"medikube/internal/domain/identity"
 	"medikube/internal/domain/kind"
 	"medikube/internal/service/access"
@@ -307,7 +308,7 @@ func TestACheckpointWiredWithoutAnOwnerLookupIsRefused(t *testing.T) {
 //
 // Kind and Record are the two because a list and a create name no record. The
 // day a third is genuinely needed, this line is where the case for it is made.
-func TestTheCheckpointHasTwoDoorsAndNoThirdOne(t *testing.T) {
+func TestTheCheckpointHasThreeDoorsAndNoFourthOne(t *testing.T) {
 	t.Parallel()
 
 	checkpointType := reflect.TypeOf(checkpoint(t, owners()))
@@ -317,8 +318,11 @@ func TestTheCheckpointHasTwoDoorsAndNoThirdOne(t *testing.T) {
 		doors = append(doors, checkpointType.Method(index).Name)
 	}
 
-	assert.Equal(t, []string{"Kind", "Record"}, doors,
-		"the authorization checkpoint has grown a door: every service reaches these two and nothing else decides")
+	// Patient joined in phase 002: a person is not a kind.Kind, so it is a
+	// third door rather than a third argument to Record — and it is still the
+	// whole list. A caller reaches one of these three and nothing else decides.
+	assert.Equal(t, []string{"Kind", "Patient", "Record"}, doors,
+		"the authorization checkpoint has grown a door: every service reaches these three and nothing else decides")
 }
 
 // T239. In THIS phase the ladder has one rung, and that is deliberate.
@@ -356,4 +360,149 @@ func TestThisPhasesLadderHasOneRung(t *testing.T) {
 		assert.Equalf(t, domainaccess.PermOwn, level,
 			"the owner was answered %s for %s: this phase's ladder has one rung and the owner holds it", level, need)
 	}
+}
+
+// T033/T034. Patient anchors on the person rather than on a kind, and it is
+// tested separately from Kind and Record for exactly that reason: it answers
+// with a typed error on every refusal, rather than a Grant of zero value, and
+// every refusal it produces writes exactly one audit row.
+
+const patientID = "mkptamara00001"
+
+type fakePatientOwners struct {
+	owners map[string]string
+	fail   error
+}
+
+func (f *fakePatientOwners) PatientOwner(_ context.Context, id string) (string, error) {
+	if f.fail != nil {
+		return "", f.fail
+	}
+
+	owner, found := f.owners[id]
+	if !found {
+		return "", domain.ErrNotFound
+	}
+
+	return owner, nil
+}
+
+func patientOwners() *fakePatientOwners {
+	return &fakePatientOwners{owners: map[string]string{patientID: ownerID}}
+}
+
+type fakeAuditor struct {
+	rows []domainaudit.Event
+}
+
+func (f *fakeAuditor) Record(_ context.Context, event domainaudit.Event) error {
+	f.rows = append(f.rows, event)
+
+	return nil
+}
+
+func patientCheckpoint(t *testing.T, owners access.PatientOwners, auditor access.Auditor) *access.Authorizer {
+	t.Helper()
+
+	authorizer, err := access.New(&fakeOwners{owners: map[string]string{}}, access.WithPatients(owners, auditor))
+	require.NoError(t, err)
+
+	return authorizer
+}
+
+func TestPatientGrantsTheOwnerAndNobodyElse(t *testing.T) {
+	t.Parallel()
+
+	auditor := &fakeAuditor{}
+	grant, err := patientCheckpoint(t, patientOwners(), auditor).
+		Patient(t.Context(), actor(ownerID), patientID, domainaccess.PermOwn)
+
+	require.NoError(t, err)
+	assert.Equal(t, domainaccess.PermOwn, grant.Level)
+	assert.Empty(t, auditor.rows, "the owner's own reach must write no refusal row")
+}
+
+func TestPatientRefusesAStrangerAsANotFoundAndAuditsIt(t *testing.T) {
+	t.Parallel()
+
+	auditor := &fakeAuditor{}
+	grant, err := patientCheckpoint(t, patientOwners(), auditor).
+		Patient(t.Context(), actor(strangerID), patientID, domainaccess.PermOwn)
+
+	require.ErrorIs(t, err, domain.ErrNotFound)
+	assert.NotErrorIs(t, err, domain.ErrForbidden,
+		"FR-042: a patient's existence is itself PHI, so a stranger is refused exactly as a miss")
+	assert.Zero(t, grant.Level)
+
+	require.Len(t, auditor.rows, 1)
+	row := auditor.rows[0]
+	assert.Equal(t, domainaudit.ActionAccessDenied, row.Action)
+	assert.Equal(t, domainaudit.TargetKindPatient, row.TargetKind)
+	assert.Equal(t, patientID, row.TargetID)
+	assert.Equal(t, patientID, row.PatientID)
+	assert.Equal(t, strangerID, row.ActorID)
+	assert.Equal(t, requestID, row.RequestID)
+}
+
+func TestPatientRefusesAnIdentifierThatIsNotThereTheSameWayAndAuditsIt(t *testing.T) {
+	t.Parallel()
+
+	auditor := &fakeAuditor{}
+	grant, err := patientCheckpoint(t, patientOwners(), auditor).
+		Patient(t.Context(), actor(ownerID), "mkptnosuchrow01", domainaccess.PermOwn)
+
+	require.ErrorIs(t, err, domain.ErrNotFound)
+	assert.Zero(t, grant.Level)
+	require.Len(t, auditor.rows, 1)
+	assert.Equal(t, "mkptnosuchrow01", auditor.rows[0].TargetID)
+}
+
+func TestPatientRefusesAnAnonymousCallerAsUnauthenticatedAndAuditsIt(t *testing.T) {
+	t.Parallel()
+
+	auditor := &fakeAuditor{}
+	grant, err := patientCheckpoint(t, patientOwners(), auditor).
+		Patient(t.Context(), domainaccess.Anonymous(requestID), patientID, domainaccess.PermOwn)
+
+	require.ErrorIs(t, err, domain.ErrUnauthenticated)
+	assert.Zero(t, grant.Level)
+	require.Len(t, auditor.rows, 1)
+	assert.Equal(t, patientID, auditor.rows[0].TargetID)
+}
+
+func TestPatientRefusesASuperuserAsANotFoundAndAuditsIt(t *testing.T) {
+	t.Parallel()
+
+	auditor := &fakeAuditor{}
+	grant, err := patientCheckpoint(t, patientOwners(), auditor).
+		Patient(t.Context(), superuserHoldingTheOwnersAccount(), patientID, domainaccess.PermOwn)
+
+	require.ErrorIs(t, err, domain.ErrNotFound)
+	assert.Zero(t, grant.Level)
+	assert.Len(t, auditor.rows, 1)
+}
+
+func TestPatientReportsAnOwnerLookupThatCouldNotAnswerAndDoesNotAuditIt(t *testing.T) {
+	t.Parallel()
+
+	broken := errors.New("the owner lookup could not answer")
+	owners := patientOwners()
+	owners.fail = broken
+
+	auditor := &fakeAuditor{}
+	grant, err := patientCheckpoint(t, owners, auditor).
+		Patient(t.Context(), actor(strangerID), patientID, domainaccess.PermOwn)
+
+	require.ErrorIs(t, err, broken)
+	assert.Zero(t, grant.Level)
+	assert.Empty(t, auditor.rows, "a failure to answer is not a refusal to audit")
+}
+
+func TestPatientRefusesConstructionWithNoAnchorWired(t *testing.T) {
+	t.Parallel()
+
+	grant, err := checkpoint(t, owners()).Patient(t.Context(), actor(ownerID), patientID, domainaccess.PermOwn)
+
+	require.Error(t, err)
+	assert.Zero(t, grant.Level)
 }

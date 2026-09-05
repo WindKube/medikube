@@ -71,6 +71,10 @@ var writtenBy = map[audit.Action]string{
 	// Declared and written by nothing in 001–006 (data-model §3). Confirming an
 	// address writes `update`, however obviously named this constant is.
 	audit.ActionEmailChange: byALaterPhase,
+
+	// Phase 002's own: written when the active-patient pointer changes
+	// (FR-020, FR-045), by internal/service/patient and not by this package.
+	audit.ActionSwitchPatient: byAnother,
 }
 
 // exercise is one call of one method and the rows it is expected to leave
@@ -323,7 +327,7 @@ func TestEveryDeclaredActionSaysWhoWritesIt(t *testing.T) {
 	t.Parallel()
 
 	declared := audit.Actions()
-	require.Len(t, declared, 20, "the declared vocabulary has moved; data-model §3 fixes it at twenty")
+	require.Len(t, declared, 21, "the declared vocabulary has moved; phase 002 data-model §3 fixes it at twenty-one")
 
 	for _, action := range declared {
 		writer, classified := writtenBy[action]

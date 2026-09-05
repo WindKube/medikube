@@ -131,6 +131,39 @@ tasks:
     cmds:
       - ./{{.BIN}} seed {{.CLI_ARGS}}
 
+  fixture:rebuild:
+    desc: >-
+      Rebuild the committed internal/testdata/pb_data fixture that every
+      tests.NewTestApp clones, from the migrations and the seed data
+    vars:
+      FIXTURE_DIR: internal/testdata/pb_data
+    deps: [build]
+    env:
+      MEDIKUBE_ENV: development
+      MEDIKUBE_DATA_DIR: "{{.FIXTURE_DIR}}"
+      MEDIKUBE_PUBLIC_URL: http://localhost:8090
+    cmds:
+      - rm -rf {{.FIXTURE_DIR}}
+      - mkdir -p {{.FIXTURE_DIR}}
+      - ./{{.BIN}} migrate up
+      - ./{{.BIN}} seed
+      # PocketBase's own request/model log, and never schema: committing it
+      # would bloat the fixture with rows that mean nothing to a test that
+      # clones it.
+      - rm -f {{.FIXTURE_DIR}}/logs.db {{.FIXTURE_DIR}}/logs.db-shm {{.FIXTURE_DIR}}/logs.db-wal
+      - |
+        cat > {{.FIXTURE_DIR}}/.gitignore <<'EOF'
+        *.db-shm
+        *.db-wal
+        *.db-journal
+        EOF
+
+  bench:chart:
+    desc: The chart summary benchmark — 50,000 medications on one patient, SC-004's 2s p95
+    deps: [gen]
+    cmds:
+      - go test -run '^$' -bench . -benchtime 1x ./internal/store/patient/...
+
   routes:
     desc: "Print the route inventory — `task routes -- --json` for the machine form"
     deps: [build]

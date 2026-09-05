@@ -87,6 +87,9 @@ func testConfig(t *testing.T, dataDir string) config.Config {
 		Files: config.FilesConfig{
 			MaxUploadBytes: 1 << 20,
 			AllowedMIME:    []string{"application/pdf"},
+			PhotoMaxBytes:  15728640,
+			PhotoMimeTypes: []string{"image/jpeg", "image/png", "image/webp"},
+			PhotoThumbs:    []string{"100x100t", "400x400f"},
 		},
 	}
 

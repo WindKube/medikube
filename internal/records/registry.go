@@ -1,6 +1,7 @@
 package records
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"slices"
@@ -379,4 +380,29 @@ func (r *Registry) FromCollection(collection string) (Entry, bool) {
 	}
 
 	return r.entries[index], true
+}
+
+// CountByKind dispatches one count over every registered kind's collection and
+// assembles the result keyed by kind.
+//
+// This is the extension point patient.Service.Summary consumes (research
+// D-22): count is the one indexed `COUNT(*) WHERE patient = ?` a store adapter
+// supplies, and nothing here switches on kind to decide which collection to
+// ask. Registering a thirteenth kind changes zero lines in this function.
+func (r *Registry) CountByKind(
+	ctx context.Context,
+	count func(ctx context.Context, collection string) (int, error),
+) (map[kind.Kind]int, error) {
+	result := make(map[kind.Kind]int, len(r.entries))
+
+	for _, entry := range r.entries {
+		n, err := count(ctx, entry.Collection)
+		if err != nil {
+			return nil, fmt.Errorf("records: counting %s: %w", entry.Collection, err)
+		}
+
+		result[entry.Kind] = n
+	}
+
+	return result, nil
 }

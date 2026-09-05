@@ -120,6 +120,9 @@ const (
 	auditFieldTargetKind = "target_kind"
 	auditFieldTargetID   = "target_id"
 	auditFieldRequestID  = "request_id"
+	// auditFieldPatient is phase 002's addition (data-model §5): the person a
+	// patient-scoped action concerned, null for a non-patient action.
+	auditFieldPatient = "patient"
 )
 
 var (
@@ -266,6 +269,7 @@ func AuditEventFromRecord(record *core.Record) (audit.Event, error) {
 		TargetKind: audit.TargetKind(record.GetString(auditFieldTargetKind)),
 		TargetID:   record.GetString(auditFieldTargetID),
 		RequestID:  record.GetString(auditFieldRequestID),
+		PatientID:  record.GetString(auditFieldPatient),
 	}, nil
 }
 
@@ -281,6 +285,7 @@ func AuditEventToRecord(record *core.Record, event audit.Event) error {
 	record.Set(auditFieldTargetKind, string(event.TargetKind))
 	record.Set(auditFieldTargetID, event.TargetID)
 	record.Set(auditFieldRequestID, event.RequestID)
+	record.Set(auditFieldPatient, event.PatientID)
 
 	return nil
 }
@@ -334,7 +339,7 @@ func AssertMappedFields(app core.App) error {
 			fieldID, fieldCreated, fieldUpdated,
 			auditFieldOccurredAt, auditFieldActor, auditFieldActorKind,
 			auditFieldAction, auditFieldTargetKind, auditFieldTargetID,
-			auditFieldRequestID,
+			auditFieldRequestID, auditFieldPatient,
 		},
 	}
 

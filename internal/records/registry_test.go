@@ -2,6 +2,7 @@ package records_test
 
 import (
 	"context"
+	"errors"
 	"maps"
 	"slices"
 	"strings"
@@ -346,6 +347,42 @@ func TestEntriesIsACopy(t *testing.T) {
 	entries[0].Segment = "clobbered"
 
 	assert.Equal(t, kind.Medication.Segment(), registry.Entries()[0].Segment)
+}
+
+// T031. The chart summary's extension point: one count per registered kind's
+// collection, with nothing here deciding which collection belongs to which
+// kind by switching on it — that answer comes out of the registry itself.
+func TestCountByKindDispatchesOverEveryRegisteredCollectionWithoutSwitchingOnKind(t *testing.T) {
+	t.Parallel()
+
+	registry := records.NewRegistry()
+	require.NoError(t, registry.Register(recordstest.Registration(kind.Medication, audit.TargetKindMedication)))
+
+	seen := map[string]int{}
+	counts, err := registry.CountByKind(context.Background(), func(_ context.Context, collection string) (int, error) {
+		seen[collection]++
+
+		return 7, nil
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, map[kind.Kind]int{kind.Medication: 7}, counts)
+	assert.Equal(t, map[string]int{kind.Medication.Collection(): 1}, seen)
+}
+
+func TestCountByKindReportsTheCollectionAFailedCountCameFrom(t *testing.T) {
+	t.Parallel()
+
+	registry := records.NewRegistry()
+	require.NoError(t, registry.Register(recordstest.Registration(kind.Medication, audit.TargetKindMedication)))
+
+	broken := errors.New("the count could not be made")
+	_, err := registry.CountByKind(context.Background(), func(_ context.Context, _ string) (int, error) {
+		return 0, broken
+	})
+
+	require.ErrorIs(t, err, broken)
+	assert.Contains(t, err.Error(), kind.Medication.Collection())
 }
 
 func render(t *testing.T, renderer records.Renderer) string {
