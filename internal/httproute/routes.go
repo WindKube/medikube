@@ -366,6 +366,16 @@ func patientRoutes() []Route {
 			Summary: "Partial update. If-Match is required; a mismatch is 412 carrying the current representation.",
 		},
 		{
+			OpID: "deletePatient", Method: http.MethodDelete, Path: one,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Permanent. A self-record is refused with 409: closing the account is what removes it.",
+		},
+		{
+			OpID: "getPatientChart", Method: http.MethodGet, Path: one + "/summary",
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Per-kind counts and the last ten activity entries. Never cached, never an ETag.",
+		},
+		{
 			OpID: "putPatientPhoto", Method: http.MethodPut, Path: photo,
 			Kind: KindAPI, Auth: AuthUser,
 			Summary: "Replace the one photograph. The type is decided from its content, never its name.",

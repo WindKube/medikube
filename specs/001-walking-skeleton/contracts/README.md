@@ -73,6 +73,7 @@ what lets a person quote a reference to an operator without disclosing anything 
 | `ErrUnsupportedMedia` — an upload's sniffed content type is not accepted (phase 002 research D-17) | 415 | `unsupported_media_type` |
 | an upload over `MEDIKUBE_FILES_PHOTO_MAX_BYTES` (phase 002 contracts/patient-photo.md) | 413 | `payload_too_large` |
 | a patient-scoped list with no `?patient=` (phase 002 research D-13, contracts/medications-rescope.md) | 400 | `patient_required` |
+| deleting a self-record (phase 002 FR-051, contracts/patients.md) — closing the account is what removes it | 409 | `self_record_protected` |
 | `context.Canceled` / `context.DeadlineExceeded` | 499 / 504 | `client_closed` / `timeout` |
 | anything else | 500 | `internal_error`, message always the literal `"internal error"` |
 

@@ -48,6 +48,8 @@ var contractInventory = []string{
 	"createPatient",
 	"getPatient",
 	"updatePatient",
+	"deletePatient",
+	"getPatientChart",
 	"putPatientPhoto",
 	"getPatientPhoto",
 	"deletePatientPhoto",
@@ -86,6 +88,8 @@ var ownerScoped = []string{
 	"createPatient",
 	"getPatient",
 	"updatePatient",
+	"deletePatient",
+	"getPatientChart",
 	"putPatientPhoto",
 	"getPatientPhoto",
 	"deletePatientPhoto",
@@ -139,7 +143,7 @@ func TestGenerateRefusesADocumentWithNoVersion(t *testing.T) {
 func TestTheAPIOperationsAreExactlyTheContractInventory(t *testing.T) {
 	t.Parallel()
 
-	require.Len(t, contractInventory, 30, "contracts/README.md's inventory plus 002-patient-core's patient operations, including setActivePatient, is 30 operations")
+	require.Len(t, contractInventory, 32, "contracts/README.md's inventory plus 002-patient-core's patient operations is 32 operations")
 
 	loaded := roundTrip(t, generate(t, twoKindInput()))
 	documented := operationsByID(t, loaded)
@@ -171,7 +175,7 @@ func TestEveryOperationIDIsUnique(t *testing.T) {
 
 	loaded := roundTrip(t, generate(t, twoKindInput()))
 
-	assert.Len(t, operationsByID(t, loaded), 51)
+	assert.Len(t, operationsByID(t, loaded), 53)
 }
 
 func TestEveryOperationCarriesItsAuthorizationRule(t *testing.T) {

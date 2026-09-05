@@ -261,6 +261,32 @@ func (r *Repo) SelfRecord(ctx context.Context, ownerID string) (person.Patient, 
 	return store.PatientFromRecord(records[0])
 }
 
+// Delete is permanent (FR-049, US6-2, US6-3, SC-010). It deletes the one
+// row and relies on PocketBase's own cascade over the schema's declared
+// matrix (research D-06) — medications.patient's CascadeDelete removes every
+// medication and its practitioner/pharmacy references are unset, the photo
+// and its thumbnails go with the record's file field, and every
+// users.active_patient / audit_events.patient pointing here is unset. There
+// is nothing left for this method to delete by hand.
+func (r *Repo) Delete(ctx context.Context, ownerID, id, expectedVersion string) error {
+	return store.RunInTransaction(r.app, func(txApp core.App) error {
+		record, err := r.owned(ctx, txApp, ownerID, id)
+		if err != nil {
+			return err
+		}
+
+		if versionErr := expectVersion(record, id, expectedVersion); versionErr != nil {
+			return versionErr
+		}
+
+		if deleteErr := txApp.DeleteWithContext(ctx, record); deleteErr != nil {
+			return fmt.Errorf("deleting patient %s: %w", id, deleteErr)
+		}
+
+		return nil
+	})
+}
+
 // PatientOwner is the resolver access.PatientOwners consumes (research D-05):
 // an id in, the owning account out, domain.ErrNotFound for a row that is not
 // there.

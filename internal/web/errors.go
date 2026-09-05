@@ -51,6 +51,12 @@ const (
 	// patient-scoped data requires `?patient=`, and an absent one is refused
 	// before the store is asked anything.
 	CodePatientRequired = "patient_required"
+
+	// CodeSelfRecordProtected is deletePatient's refusal of a self-record
+	// (FR-051, US6-4). It is its own code, not CodeConflict, because
+	// Message(code) is constant per code and the account-closure explanation
+	// is not the generic "already recorded" conflict text.
+	CodeSelfRecordProtected = "self_record_protected"
 )
 
 // StatusClientClosed is nginx's 499, which contracts/README.md's table names
@@ -98,6 +104,15 @@ var (
 	// every request names its patient, and there is no fallback to the
 	// caller's own active patient at this checkpoint.
 	ErrPatientRequired = &Coded{Status: http.StatusBadRequest, Code: CodePatientRequired}
+
+	// ErrSelfRecordProtected is deletePatient's refusal of a self-record
+	// (FR-051, US6-4): closing the account is what removes it. It is a
+	// *Coded rather than a domain sentinel because a domain sentinel's
+	// status must be one no other domain sentinel already answers with
+	// (errors_test.go), and 409 is domain.ErrConflict's; the handler
+	// translates patient.ErrSelfRecordProtected into this one, the same way
+	// it translates a stale If-Match into WriteVersionMismatch.
+	ErrSelfRecordProtected = &Coded{Status: http.StatusConflict, Code: CodeSelfRecordProtected}
 )
 
 // Coded is an error that names its own status and machine code, for the
@@ -270,6 +285,8 @@ func Message(code string) string {
 		return "the request could not be processed"
 	case CodePatientRequired:
 		return "name the patient this request is for"
+	case CodeSelfRecordProtected:
+		return "closing the account is what removes a self-record; there is no separate delete for it"
 	}
 
 	return InternalMessage

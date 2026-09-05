@@ -34,6 +34,7 @@ var dataChangingJSONOnly = map[string]string{
 	"deleteRecord":             "contracts/records.md: answers the JSON envelope; live feedback is the SSE stream",
 	"createPatient":            "contracts/patients.md: answers the JSON envelope",
 	"updatePatient":            "contracts/patients.md: answers the JSON envelope",
+	"deletePatient":            "contracts/patients.md: answers 204; the redirect to /patients carries its own explanation",
 	"putPatientPhoto":          "contracts/patient-photo.md: answers the JSON envelope",
 	"deletePatientPhoto":       "contracts/patient-photo.md: answers the JSON envelope",
 	"createPractitioner":       "contracts/practitioners.md: answers the JSON envelope",

@@ -6,7 +6,8 @@ import (
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
-	"medikube/internal/domain/audit"
+	domainaudit "medikube/internal/domain/audit"
+	"medikube/internal/domain/kind"
 	"medikube/internal/domain/person"
 )
 
@@ -60,6 +61,12 @@ type Repository interface {
 	// CreateSelfRecord's 409 (FR-004) be checked before the write is even
 	// attempted, ahead of the partial unique index that guards it underneath.
 	SelfRecord(ctx context.Context, ownerID string) (person.Patient, error)
+
+	// Delete is permanent (FR-049). The cascade over medications, the photo
+	// and its thumbnails, and the auto-unset of every users.active_patient
+	// and audit_events.patient pointing at the row are PocketBase's own
+	// (research D-06) — this method deletes the one row and relies on them.
+	Delete(ctx context.Context, ownerID, id, expectedVersion string) error
 }
 
 // Upload is one photograph as the edge read it: PocketBase's own content
@@ -123,5 +130,33 @@ type ActivePatientStore interface {
 // FR-045's switch_patient row, mirroring
 // internal/service/practitioner.Auditor.
 type Auditor interface {
-	Record(ctx context.Context, event audit.Event) error
+	Record(ctx context.Context, event domainaudit.Event) error
+}
+
+// CountEntry is one registered kind's own tile (contracts/patient-chart.md):
+// its kind, its records page path, its display label and the count itself —
+// everything patient.Service.Summary needs to hand the chart one tile, with
+// nothing here switching on kind.
+type CountEntry struct {
+	Kind  kind.Kind
+	Path  string
+	Label string
+	Count int
+}
+
+// RecordCounter is the chart's per-kind counts (FR-028, SC-007), one entry
+// per kind registered in internal/records including a kind with zero records
+// (FR-030) — never fewer, and never one this package derives itself. Its
+// sole implementation walks internal/records' registry (research D-22):
+// registering a new kind changes nothing here.
+type RecordCounter interface {
+	CountsByKind(ctx context.Context, patientID string) ([]CountEntry, error)
+}
+
+// RecentActivityReader is the chart's last-ten activity (FR-029), newest
+// first. audit.Event already carries no name, value, note or filename — the
+// property that makes "an entry for a deleted record carries no identifying
+// detail" structural rather than a rule this package has to remember.
+type RecentActivityReader interface {
+	RecentForPatient(ctx context.Context, patientID string, limit int) ([]domainaudit.Event, error)
 }

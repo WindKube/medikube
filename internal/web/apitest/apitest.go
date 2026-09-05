@@ -402,7 +402,7 @@ func handlerTable(
 		return nil, err
 	}
 
-	patientOps, err := api.PatientHandlers(patientResolve, unitSystemOf(accounts.Service))
+	patientOps, err := api.PatientHandlers(patientResolve, unitSystemOf(accounts.Service), resolve)
 	if err != nil {
 		return nil, err
 	}
@@ -599,7 +599,19 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient
 		return nil, nil, nil, err
 	}
 
-	patientService, err := patient.New(patientRepo, photos, authorizer, activePatient, auditor)
+	counter, err := records.NewCounter(registry, func(ctx context.Context, collection, patientID string) (int, error) {
+		return store.CountByPatient(ctx, app, collection, patientID)
+	})
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	activity, err := auditservice.NewRecentActivity(trail)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	patientService, err := patient.New(patientRepo, photos, authorizer, activePatient, auditor, counter, activity)
 	if err != nil {
 		return nil, nil, nil, err
 	}

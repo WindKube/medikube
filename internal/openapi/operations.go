@@ -414,6 +414,34 @@ func operationDocs() map[string]operationDoc {
 			notes: "Only supplied members change. A missing `If-Match` is 422 on that header; a mismatch is 412 and " +
 				"the response carries the stored patient's current representation.",
 		},
+		"deletePatient": {
+			successStatus: http.StatusNoContent,
+			successNote:   "Permanently gone: the cascade removes every medication, the photo and its thumbnails. There is no recycle bin and no undo.",
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusConflict,
+				http.StatusPreconditionFailed,
+				http.StatusInternalServerError,
+			},
+			headers:     []param{ifMatch},
+			ownerScoped: true,
+			notes: "`If-Match` is required. A self-record is 409: closing the account is what removes it " +
+				"(FR-051). Another account's patient is 404 and nothing is deleted (FR-050).",
+		},
+
+		// contracts/patient-chart.md
+		"getPatientChart": {
+			successStatus: http.StatusOK,
+			successNote: "The patient, one entry per registered kind (including a kind with zero records), the " +
+				"total record count, and the last ten activity entries newest first.",
+			errors:      []int{http.StatusUnauthorized, http.StatusNotFound, http.StatusInternalServerError},
+			ownerScoped: true,
+			notes: "Computed on every request; there is no counter column and no cache (research D-22). Never " +
+				"cached and never an ETag: the response aggregates several collections. An activity entry carries " +
+				"no name, value, note or filename (FR-029), and `target_exists` says whether the deleted target " +
+				"still has anything to link to.",
+		},
 
 		// contracts/patient-photo.md
 		"putPatientPhoto": {
