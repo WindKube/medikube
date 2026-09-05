@@ -81,10 +81,31 @@ func SelfRecordOf(resolve PatientResolve) SelfRecordFunc {
 	}
 }
 
+// PatientForms is what api.PatientHandlers renders a Datastar form submit
+// through, implemented by the page package's own form and list builders so
+// the API and the page can never disagree about what either looks like. A
+// nil PatientForms means "JSON only" — every handler falls back to today's
+// envelope for a build that wires none.
+type PatientForms interface {
+	// Invalid re-renders the form the submission failed, with the field
+	// errors and the submitted values it has (isNew selects the create form
+	// from the edit one; submitted.ID is empty on a create).
+	Invalid(ctx context.Context, actor access.Actor, submitted person.Patient, isNew bool, invalid *domain.ValidationError) (web.Component, error)
+	// Stale re-renders the edit form from the server's current values, with
+	// research D-24's notice that the record changed underneath the caller.
+	Stale(ctx context.Context, actor access.Actor, current person.Patient) (web.Component, error)
+	// Created re-renders the list landmark with the new row plus a blank
+	// create form.
+	Created(ctx context.Context, actor access.Actor, created person.Patient) (web.Component, error)
+	// Updated re-renders the detail landmark plus the pre-filled edit form.
+	Updated(ctx context.Context, actor access.Actor, updated person.Patient) (web.Component, error)
+}
+
 type patientHandlers struct {
 	resolve  PatientResolve
 	unitOf   UnitSystemOf
 	records  Resolve
+	forms    PatientForms
 	photoURL func(id string) string
 }
 
@@ -92,8 +113,9 @@ type patientHandlers struct {
 // contracts/patient-chart.md's summary. records resolves the kind registry's
 // generic handler, used only to answer whether an audited target still
 // exists (patient_chart.go); a nil records still serves every other
-// operation, so tests that do not need it may omit it.
-func PatientHandlers(resolve PatientResolve, unitOf UnitSystemOf, records Resolve) (httproute.Handlers, error) {
+// operation, so tests that do not need it may omit it. forms may be nil too,
+// which serves JSON only.
+func PatientHandlers(resolve PatientResolve, unitOf UnitSystemOf, records Resolve, forms PatientForms) (httproute.Handlers, error) {
 	if resolve == nil {
 		return nil, ErrNoPatients
 	}
@@ -106,6 +128,7 @@ func PatientHandlers(resolve PatientResolve, unitOf UnitSystemOf, records Resolv
 		resolve: resolve,
 		unitOf:  unitOf,
 		records: records,
+		forms:   forms,
 		photoURL: func(id string) string {
 			return "/api/v1/patients/" + id + "/photo"
 		},
@@ -183,12 +206,21 @@ func (h *patientHandlers) create(e *core.RequestEvent, actor access.Actor) error
 
 	draft, err := body.Draft()
 	if err != nil {
-		return err
+		return h.invalid(e, actor, draft, true, err)
 	}
 
 	created, err := svc.Create(e.Request.Context(), actor, draft)
 	if err != nil {
-		return err
+		return h.invalid(e, actor, draft, true, err)
+	}
+
+	if wantsFormPatch(e) && h.forms != nil {
+		component, formErr := h.forms.Created(e.Request.Context(), actor, created)
+		if formErr != nil {
+			return formErr
+		}
+
+		return web.Patch(e, component, web.ByElementID())
 	}
 
 	rendered, err := h.detail(e.Request.Context(), actor, created)
@@ -201,6 +233,28 @@ func (h *patientHandlers) create(e *core.RequestEvent, actor access.Actor) error
 	web.SetETag(e, created.Version)
 
 	return web.WriteJSON(e, http.StatusCreated, rendered)
+}
+
+// invalid answers a rejected create or update with the form re-rendered from
+// what was submitted, patched into place by its own id; every other caller —
+// no Datastar-Request header, or a build with no PatientForms wired — keeps
+// today's 422 envelope unchanged.
+func (h *patientHandlers) invalid(e *core.RequestEvent, actor access.Actor, submitted person.Patient, isNew bool, err error) error {
+	var invalid *domain.ValidationError
+	if !errors.As(err, &invalid) {
+		return err
+	}
+
+	if !wantsFormPatch(e) || h.forms == nil {
+		return err
+	}
+
+	component, formErr := h.forms.Invalid(e.Request.Context(), actor, submitted, isNew, invalid)
+	if formErr != nil {
+		return formErr
+	}
+
+	return web.Patch(e, component, web.ByElementID())
 }
 
 func (h *patientHandlers) get(e *core.RequestEvent, actor access.Actor) error {
@@ -247,12 +301,25 @@ func (h *patientHandlers) update(e *core.RequestEvent, actor access.Actor) error
 
 	patch, err := body.ToServicePatch()
 	if err != nil {
-		return err
+		return h.invalidUpdate(e, actor, svc, id, err)
 	}
 
 	updated, updateErr := svc.Update(e.Request.Context(), actor, id, version, patch)
 	if updateErr != nil {
-		return h.stale(e, actor, svc, id, updateErr)
+		if errors.Is(updateErr, domain.ErrVersionMismatch) {
+			return h.stale(e, actor, svc, id, updateErr)
+		}
+
+		return h.invalidUpdate(e, actor, svc, id, updateErr)
+	}
+
+	if wantsFormPatch(e) && h.forms != nil {
+		component, formErr := h.forms.Updated(e.Request.Context(), actor, updated)
+		if formErr != nil {
+			return formErr
+		}
+
+		return web.Patch(e, component, web.ByElementID())
 	}
 
 	rendered, err := h.detail(e.Request.Context(), actor, updated)
@@ -266,6 +333,27 @@ func (h *patientHandlers) update(e *core.RequestEvent, actor access.Actor) error
 	return web.WriteJSON(e, http.StatusOK, rendered)
 }
 
+// invalidUpdate re-reads the record rather than overlaying the submitted
+// patch onto it: a patch is partial by design and the fields it left
+// untouched have no submitted value to show.
+func (h *patientHandlers) invalidUpdate(e *core.RequestEvent, actor access.Actor, svc *patient.Service, id string, err error) error {
+	var invalid *domain.ValidationError
+	if !errors.As(err, &invalid) {
+		return err
+	}
+
+	if !wantsFormPatch(e) || h.forms == nil {
+		return err
+	}
+
+	current, readErr := svc.Get(e.Request.Context(), actor, id)
+	if readErr != nil {
+		return readErr
+	}
+
+	return h.invalid(e, actor, current, false, err)
+}
+
 func (h *patientHandlers) stale(e *core.RequestEvent, actor access.Actor, svc *patient.Service, id string, err error) error {
 	if !errors.Is(err, domain.ErrVersionMismatch) {
 		return err
@@ -274,6 +362,17 @@ func (h *patientHandlers) stale(e *core.RequestEvent, actor access.Actor, svc *p
 	current, readErr := svc.Get(e.Request.Context(), actor, id)
 	if readErr != nil {
 		return readErr
+	}
+
+	if wantsFormPatch(e) && h.forms != nil {
+		component, formErr := h.forms.Stale(e.Request.Context(), actor, current)
+		if formErr != nil {
+			return formErr
+		}
+
+		web.SetETag(e, current.Version)
+
+		return web.Patch(e, component, web.ByElementID())
 	}
 
 	rendered, renderErr := h.detail(e.Request.Context(), actor, current)

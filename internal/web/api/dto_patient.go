@@ -144,11 +144,7 @@ func (c PatientCreate) Draft() (person.Patient, error) {
 
 	birthDate := readPatientDate(&invalid, PatientMemberBirthDate, ptrOrNil(c.BirthDate))
 
-	if err := invalid.OrNil(); err != nil {
-		return person.Patient{}, err
-	}
-
-	return person.Patient{
+	draft := person.Patient{
 		FirstName:             c.FirstName,
 		LastName:              c.LastName,
 		BirthDate:             birthDate,
@@ -159,7 +155,16 @@ func (c PatientCreate) Draft() (person.Patient, error) {
 		Address:               c.Address,
 		RelationshipToOwner:   person.RelationshipToOwner(c.Relationship),
 		PrimaryPractitionerID: c.Practitioner,
-	}, nil
+	}
+
+	// draft carries every field submitted regardless of the date error, so a
+	// Datastar re-render of a rejected create still shows what was typed
+	// (FR-027) rather than a form emptied by the one field that failed.
+	if err := invalid.OrNil(); err != nil {
+		return draft, err
+	}
+
+	return draft, nil
 }
 
 // ToServicePatch reads an update body into a service patch.

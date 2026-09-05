@@ -7,7 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"medikube/internal/domain"
 	"medikube/internal/testsupport"
+	"medikube/internal/web/views/directory"
+	"medikube/internal/web/views/ids"
 )
 
 // contracts/facilities.md's five operations: T129.
@@ -371,5 +374,54 @@ func TestDeleteFacility(t *testing.T) {
 
 		answer := caller.delete(facilityURL(testsupport.AccountAFacilityPracticeID), `"anything"`)
 		assert.Equal(t, http.StatusNotFound, answer.Status, answer.Body)
+	})
+}
+
+// TestCreateFacilityOverDatastarAnswersHTML mirrors patients_test.go's own: a
+// Datastar submit gets the form or the list back as text/html on 200, and
+// every other caller keeps today's JSON exactly (422/201).
+func TestCreateFacilityOverDatastarAnswersHTML(t *testing.T) {
+	t.Parallel()
+
+	datastar := map[string]string{"Datastar-Request": "true"}
+
+	t.Run("an invalid create over Datastar answers 200 text/html with the form and the field error", func(t *testing.T) {
+		t.Parallel()
+
+		caller := newCaller(t)
+
+		answer := caller.do(http.MethodPost, facilitiesURL(), `{}`, datastar)
+		require.Equal(t, http.StatusOK, answer.Status, answer.Body)
+		assert.Contains(t, answer.Body, ids.DirectoryForm(directory.FacilitySegment, ""))
+		assert.Contains(t, answer.Body, "a kind is required")
+	})
+
+	t.Run("the same invalid create with no Datastar-Request header still answers 422 JSON", func(t *testing.T) {
+		t.Parallel()
+
+		caller := newCaller(t)
+
+		answer := caller.post(facilitiesURL(), `{}`)
+		assert.Equal(t, http.StatusUnprocessableEntity, answer.Status, answer.Body)
+		assert.Contains(t, answer.Body, `"code":"`+domain.CodeValidationFailed+`"`)
+	})
+
+	t.Run("a valid create over Datastar answers 200 text/html with the list landmark", func(t *testing.T) {
+		t.Parallel()
+
+		caller := newCaller(t)
+
+		answer := caller.do(http.MethodPost, facilitiesURL(), `{"kind":"hospital","name":"Datastar Hospital"}`, datastar)
+		require.Equal(t, http.StatusOK, answer.Status, answer.Body)
+		assert.Contains(t, answer.Body, ids.DirectoryList(directory.FacilitySegment))
+	})
+
+	t.Run("the same valid create with no Datastar-Request header still answers 201 JSON", func(t *testing.T) {
+		t.Parallel()
+
+		caller := newCaller(t)
+
+		answer := caller.post(facilitiesURL(), `{"kind":"hospital","name":"Plain Hospital"}`)
+		assert.Equal(t, http.StatusCreated, answer.Status, answer.Body)
 	})
 }

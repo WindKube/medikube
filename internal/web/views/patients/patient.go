@@ -485,6 +485,11 @@ type PatientFormProps struct {
 
 	Patient PatientView
 	Errors  FieldErrors
+
+	// Notice is set when the form was re-rendered from the server's current
+	// values after a stale If-Match (research D-24): the person submitted a
+	// change that no longer applies to what is now saved.
+	Notice string
 }
 
 func (p PatientFormProps) Label() string {

@@ -8,6 +8,9 @@ templ FacilityForm(props FacilityFormProps) {
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
+		if props.Notice != "" {
+			<p role="alert" class="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{ props.Notice }</p>
+		}
 		@directorySelect(props.FormID, FieldFacilityKind, props.Facility.KindOptions(), props.Facility.Value(FieldFacilityKind), props.Errors)
 		@directoryText(props.FormID, FieldFacilityName, "text", true, props.Facility.Value(FieldFacilityName), props.Errors)
 		@directoryText(props.FormID, FieldFacilityBrand, "text", false, props.Facility.Value(FieldFacilityBrand), props.Errors)

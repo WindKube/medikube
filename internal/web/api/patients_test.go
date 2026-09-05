@@ -14,6 +14,7 @@ import (
 	"medikube/internal/testsupport"
 	"medikube/internal/web"
 	"medikube/internal/web/apitest"
+	"medikube/internal/web/views/ids"
 )
 
 // T050, T054. contracts/patients.md's four CRUD operations driven through
@@ -308,3 +309,74 @@ func TestAPatientWriteFiresNoRecordCRUDRequestEvents(t *testing.T) {
 
 // missingPatientID is a well-formed id no fixture uses.
 const missingPatientID = "mkpatnobody0001"
+
+// TestAPatientCreateOverDatastarAnswersHTML is 002's own form-patch
+// behaviour: a Datastar submit gets the form or the list back as text/html
+// on 200, and every other caller keeps today's JSON exactly (422/201).
+func TestAPatientCreateOverDatastarAnswersHTML(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		body    string
+		headers map[string]string
+		status  int
+		content []string
+	}{
+		{
+			name:    "an invalid create over Datastar answers 200 text/html with the form and the field error",
+			body:    `{}`,
+			headers: map[string]string{"Datastar-Request": "true"},
+			status:  http.StatusOK,
+			content: []string{
+				ids.PatientForm(""),
+				"a first name is required",
+			},
+		},
+		{
+			name:    "the same invalid create with no Datastar-Request header still answers 422 JSON",
+			body:    `{}`,
+			headers: nil,
+			status:  http.StatusUnprocessableEntity,
+			content: []string{`"code":"` + domain.CodeValidationFailed + `"`},
+		},
+		{
+			name:    "a valid create over Datastar answers 200 text/html with the list landmark",
+			body:    `{"first_name":"Ngozi","last_name":"Adeyemi","birth_date":"1990-06-01"}`,
+			headers: map[string]string{"Datastar-Request": "true"},
+			status:  http.StatusOK,
+			content: []string{ids.PatientList()},
+		},
+		{
+			name:    "the same valid create with no Datastar-Request header still answers 201 JSON",
+			body:    `{"first_name":"Ngozi","last_name":"Adeyemi","birth_date":"1990-06-01"}`,
+			headers: nil,
+			status:  http.StatusCreated,
+			content: []string{`"first_name":"Ngozi"`},
+		},
+	}
+
+	for _, one := range cases {
+		t.Run(one.name, func(t *testing.T) {
+			t.Parallel()
+
+			headers, before := patientSignedIn(testsupport.AccountAEmail)
+			for k, v := range one.headers {
+				headers[k] = v
+			}
+
+			scenario := tests.ApiScenario{
+				Name:            one.name,
+				Method:          http.MethodPost,
+				URL:             patientsURL(),
+				Headers:         headers,
+				Body:            strings.NewReader(one.body),
+				ExpectedStatus:  one.status,
+				ExpectedContent: one.content,
+				BeforeTestFunc:  before,
+			}
+
+			runPatients(t, scenario)
+		})
+	}
+}

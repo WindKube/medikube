@@ -969,8 +969,15 @@ func drivePatients(c *client) {
 	address := "/api/v1/patients/" + patientID
 
 	c.do(http.MethodGet, "/api/v1/patients", "")
-	c.do(http.MethodGet, address, "")
+	afterCreate := c.do(http.MethodGet, address, "")
 	c.do(http.MethodPatch, address, jsonBody(c.t, api.PatientPatch{Address: ptr(PatientAddress)}))
+
+	// A rejected Datastar submit answers the form re-rendered from the
+	// current record, so the address sentinel must appear here too — in the
+	// body, never in the logs.
+	c.doWith(http.MethodPatch, address, jsonBody(c.t, api.PatientPatch{BirthDate: ptr("not-a-date")}),
+		map[string]string{"Datastar-Request": "true", "If-Match": afterCreate.Header.Get("ETag")})
+
 	c.do(http.MethodGet, "/api/v1/patients/"+missingRecordID, "")
 
 	body, contentType := photoUpload(c.t)
@@ -1015,6 +1022,18 @@ func driveDirectory(c *client) {
 
 	c.do(http.MethodPatch, "/api/v1/facilities/"+facilityID, jsonBody(c.t, api.FacilityPatch{Name: ptr(FacilityName)}))
 	c.do(http.MethodPatch, "/api/v1/practitioners/"+practitionerID, jsonBody(c.t, api.PractitionerPatch{Name: ptr(PractitionerName)}))
+
+	// A rejected Datastar submit answers the form re-rendered from the
+	// current record, so the name sentinels must appear here too — in the
+	// body, never in the logs.
+	facilityETag := c.do(http.MethodGet, "/api/v1/facilities/"+facilityID, "").Header.Get("ETag")
+	c.doWith(http.MethodPatch, "/api/v1/facilities/"+facilityID, jsonBody(c.t, api.FacilityPatch{Website: ptr("not-a-url")}),
+		map[string]string{"Datastar-Request": "true", "If-Match": facilityETag})
+
+	practitionerETag := c.do(http.MethodGet, "/api/v1/practitioners/"+practitionerID, "").Header.Get("ETag")
+	c.doWith(http.MethodPatch, "/api/v1/practitioners/"+practitionerID, jsonBody(c.t, api.PractitionerPatch{Email: ptr("not-an-email")}),
+		map[string]string{"Datastar-Request": "true", "If-Match": practitionerETag})
+
 	c.do(http.MethodDelete, "/api/v1/practitioners/"+practitionerID, "")
 	c.do(http.MethodDelete, "/api/v1/facilities/"+facilityID, "")
 
@@ -1204,6 +1223,12 @@ func driveRecords(c *client) {
 	if current == "" {
 		current = etag
 	}
+
+	// A rejected Datastar submit answers the form re-rendered from the
+	// current record, so the name and notes sentinels must appear here too —
+	// in the body, never in the logs.
+	c.doWith(http.MethodPatch, address, jsonBody(c.t, api.MedicationPatch{Type: ptr("not-a-real-type")}),
+		map[string]string{"Datastar-Request": "true", "If-Match": current})
 
 	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
 

@@ -194,6 +194,10 @@ type PractitionerFormProps struct {
 	CancelHref   string
 	Practitioner PractitionerView
 	Errors       FieldErrors
+
+	// Notice is set when the form was re-rendered from the server's current
+	// values after a stale If-Match.
+	Notice string
 }
 
 func (p PractitionerFormProps) Label() string {

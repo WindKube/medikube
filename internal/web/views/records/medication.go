@@ -415,6 +415,10 @@ type MedicationFormProps struct {
 
 	Medication MedicationView
 	Errors     FieldErrors
+
+	// Notice is set when the form was re-rendered from the server's current
+	// values after a stale If-Match.
+	Notice string
 }
 
 // Label is the form's accessible name, and it is the component's rather than

@@ -137,7 +137,18 @@ func operations(
 
 	maps.Copy(table, accountPages)
 
-	patientOps, err := api.PatientHandlers(patientResolve, unitSystemOf(accounts.Service), resolve)
+	patientDeps := page.PatientDeps{
+		Resolve: patientResolve,
+		UnitOf:  unitSystemOf(accounts.Service),
+		Records: resolve,
+	}
+
+	patientForms, err := page.NewPatientForms(patientDeps)
+	if err != nil {
+		return nil, err
+	}
+
+	patientOps, err := api.PatientHandlers(patientResolve, unitSystemOf(accounts.Service), resolve, patientForms)
 	if err != nil {
 		return nil, err
 	}
@@ -158,11 +169,7 @@ func operations(
 
 	maps.Copy(table, activePatientOps)
 
-	patientPages, err := page.PatientPages(page.PatientDeps{
-		Resolve: patientResolve,
-		UnitOf:  unitSystemOf(accounts.Service),
-		Records: resolve,
-	})
+	patientPages, err := page.PatientPages(patientDeps)
 	if err != nil {
 		return nil, err
 	}
@@ -196,15 +203,26 @@ func operations(
 		return services.Facility, resolveErr
 	})
 
+	practitionerForms, err := page.NewPractitionerForms(practitionerResolve, facilityResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	facilityForms, err := page.NewFacilityForms(facilityResolve)
+	if err != nil {
+		return nil, err
+	}
+
 	practitionerOps, err := api.PractitionerHandlers(api.PractitionerDeps{
 		Resolve:    practitionerResolve,
 		Facilities: facilityResolve,
+		Forms:      practitionerForms,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	facilityOps, err := api.FacilityHandlers(api.FacilityDeps{Resolve: facilityResolve})
+	facilityOps, err := api.FacilityHandlers(api.FacilityDeps{Resolve: facilityResolve, Forms: facilityForms})
 	if err != nil {
 		return nil, err
 	}
