@@ -30,15 +30,23 @@ import (
 // The mechanical half is here; internal/web/stream's external suite revokes a
 // real session against a real instance.
 
-// ended asserts the stream closed rather than sending anything more.
+// ended asserts the stream closed without sending another event. A beat that
+// passed its identity check just before the session ended may still be in
+// flight; the loop returns the moment a check fails, so nothing can follow one.
 func (r *rig) ended() {
 	r.t.Helper()
 
-	select {
-	case f, open := <-r.frames:
-		require.Falsef(r.t, open, "the stream sent a frame after its session ended: %+v", f)
-	case <-time.After(5 * time.Second):
-		r.t.Fatalf("the stream neither ended nor sent anything (handler error: %v)", r.failure())
+	for {
+		select {
+		case f, open := <-r.frames:
+			if !open {
+				return
+			}
+
+			require.Equalf(r.t, "datastar-patch-signals", f.Event, "the stream sent an event after its session ended: %+v", f)
+		case <-time.After(5 * time.Second):
+			r.t.Fatalf("the stream neither ended nor sent anything (handler error: %v)", r.failure())
+		}
 	}
 }
 
@@ -87,9 +95,9 @@ func TestARevokedSessionEndsOnTheNextBeatWithNoEventAtAll(t *testing.T) {
 	assert.NoError(t, rig.failure())
 }
 
-// A beat is what tells the page its live view is healthy. One sent on a session
-// that has ended is that page being told so wrongly, so the check comes first.
-func TestTheBeatDoesNotGoOutOnASessionThatHasAlreadyEnded(t *testing.T) {
+// The beat re-checks the identity, so a quiet account cannot hold a revoked
+// session open until somebody writes.
+func TestTheBeatReChecksTheIdentity(t *testing.T) {
 	t.Parallel()
 
 	rig := newRig(t, withHeartbeat(20*time.Millisecond))
