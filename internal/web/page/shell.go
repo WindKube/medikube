@@ -3,6 +3,7 @@ package page
 import (
 	"sync/atomic"
 
+	"github.com/a-h/templ"
 	"github.com/pocketbase/pocketbase/core"
 
 	domainidentity "medikube/internal/domain/identity"
@@ -49,6 +50,12 @@ func resolveTheme(e *core.RequestEvent) domainidentity.Theme {
 type NavState struct {
 	SignedIn bool
 	Nav      []shell.NavLink
+
+	// Switcher is FR-014's shell control content. Zero value renders present
+	// but with no options — every signed-in page carries the element, and a
+	// page that has not yet been taught to resolve the patient list renders
+	// it empty rather than omitting it.
+	Switcher shell.PatientSwitcherProps
 }
 
 // RenderPage is the one place a page becomes a response, replacing three
@@ -56,10 +63,16 @@ type NavState struct {
 func RenderPage(e *core.RequestEvent, status int, title string, nav NavState, main web.Component) error {
 	e.Response.Header().Set("Cache-Control", pageCacheControl)
 
+	var switcher templ.Component
+	if nav.SignedIn {
+		switcher = shell.PatientSwitcher(nav.Switcher)
+	}
+
 	return web.Render(e, status, shell.Document(shell.DocumentProps{
 		Title:      title,
 		SignedIn:   nav.SignedIn,
 		Nav:        nav.Nav,
+		Switcher:   switcher,
 		ThemeClass: shell.ThemeClass(resolveTheme(e)),
 		Version:    getBuildVersion(),
 		Main:       main,

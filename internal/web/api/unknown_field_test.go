@@ -64,7 +64,10 @@ var unknownFieldFixtures = map[string]any{
 	"PractitionerPatch":  api.PractitionerPatch{},
 	"FacilityCreate":     api.FacilityCreate{Kind: "practice", Name: "Fixture Facility"},
 	"FacilityPatch":      api.FacilityPatch{},
+	"ActivePatientBody":  api.ActivePatientBody{Patient: &activePatientFixture},
 }
+
+var activePatientFixture = "pat0000000000001"
 
 var patientPatchFirstNameFixture = "Amara"
 

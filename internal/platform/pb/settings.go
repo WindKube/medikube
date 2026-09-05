@@ -96,7 +96,7 @@ func ApplySettings(app core.App, cfg config.Config) error {
 	settings.Logs.LogIP = false
 	settings.Logs.LogAuthId = false
 
-	settings.RateLimits.Enabled = true
+	settings.RateLimits.Enabled = cfg.RateLimits
 	settings.RateLimits.Rules = RateLimitRules()
 
 	if err := app.Save(settings); err != nil {

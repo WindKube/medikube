@@ -71,7 +71,7 @@ func TestSetPhotoRefusesAnOversizeFile(t *testing.T) {
 	authorizer := patienttest.NewAuthorizer(repo, auditor)
 	photos := patienttest.NewPhotoStore(10, []string{"image/png"}) // 10-byte ceiling
 
-	svc, err := patient.New(repo, photos, authorizer)
+	svc, err := patient.New(repo, photos, authorizer, patienttest.NewActivePatientStore(), auditor)
 	require.NoError(t, err)
 
 	created, err := svc.Create(t.Context(), owner(), personDraft())
@@ -95,7 +95,7 @@ func TestSetPhotoReplacementRemovesThePrevious(t *testing.T) {
 	authorizer := patienttest.NewAuthorizer(repo, auditor)
 	photos := patienttest.NewPhotoStore(15<<20, []string{"image/png"})
 
-	svc, err := patient.New(repo, photos, authorizer)
+	svc, err := patient.New(repo, photos, authorizer, patienttest.NewActivePatientStore(), auditor)
 	require.NoError(t, err)
 
 	created, err := svc.Create(t.Context(), owner(), personDraft())
@@ -123,7 +123,7 @@ func TestDeletePhotoLeavesNone(t *testing.T) {
 	authorizer := patienttest.NewAuthorizer(repo, auditor)
 	photos := patienttest.NewPhotoStore(15<<20, []string{"image/png"})
 
-	svc, err := patient.New(repo, photos, authorizer)
+	svc, err := patient.New(repo, photos, authorizer, patienttest.NewActivePatientStore(), auditor)
 	require.NoError(t, err)
 
 	created, err := svc.Create(t.Context(), owner(), personDraft())

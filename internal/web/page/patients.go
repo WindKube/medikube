@@ -102,7 +102,7 @@ func (p *patientPages) list(e *core.RequestEvent, actor access.Actor) error {
 		Total:    total,
 	})
 
-	return RenderPage(e, http.StatusOK, patientListTitle, NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
+	return RenderPage(e, http.StatusOK, patientListTitle, p.nav(e, actor), main)
 }
 
 // detail renders P2: a patient belonging to somebody else is a 404 here for
@@ -131,7 +131,21 @@ func (p *patientPages) detail(e *core.RequestEvent, actor access.Actor) error {
 
 	main := patients.PatientDetail(patients.PatientDetailProps{Patient: view})
 
-	return RenderPage(e, http.StatusOK, view.FullName(), NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
+	return RenderPage(e, http.StatusOK, view.FullName(), p.nav(e, actor), main)
+}
+
+// nav builds the primary navigation plus FR-014's switcher, threaded through
+// every page in this package the same way.
+func (p *patientPages) nav(e *core.RequestEvent, actor access.Actor) NavState {
+	switcher, err := patientSwitcherProps(e.Request.Context(), actor, p.deps.Resolve)
+	if err != nil {
+		// The switcher is presentation on top of a page that has already
+		// resolved and rendered fine without it; it degrades to an empty
+		// control rather than failing a page that has nothing else wrong.
+		switcher = shell.PatientSwitcherProps{}
+	}
+
+	return NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path), Switcher: switcher}
 }
 
 func (p *patientPages) view(found domainperson.Patient, system identity.UnitSystem) patients.PatientView {

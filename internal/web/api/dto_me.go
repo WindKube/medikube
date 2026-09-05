@@ -23,6 +23,20 @@ type Me struct {
 	Theme          string   `json:"theme"`
 	CreatedAt      string   `json:"created_at"`
 	Counts         MeCounts `json:"counts"`
+
+	// ActivePatient and Patients are contracts/active-patient.md's amendment:
+	// the person in view (null when unset or unreachable, FR-017) and how
+	// many the account owns, in the one wire object the switcher and the
+	// dashboard both read.
+	ActivePatient *PatientSummary `json:"active_patient"`
+	Patients      MePatients      `json:"patients"`
+}
+
+// MePatients is FR-018's own count: how many patients the account owns, so
+// the UI can tell "nobody chosen yet, but there is only one" from "nobody
+// chosen, and there are several" without a second round trip.
+type MePatients struct {
+	OwnedCount int `json:"owned_count"`
 }
 
 // MeCounts is what the danger zone reads so the deletion confirmation can state
@@ -84,7 +98,7 @@ type DeleteAccountRequest struct {
 // the point: the domain entity carries DisabledAt and UpdatedAt, and an
 // embedded struct would publish whatever the entity grows next without anybody
 // deciding to.
-func NewMe(user domainidentity.User, counts MeCounts) Me {
+func NewMe(user domainidentity.User, counts MeCounts, activePatient *PatientSummary, ownedCount int) Me {
 	// An empty map rather than a nil one: encoding/json writes nil as `null`,
 	// and a client reading counts["medications"] off null is a crash where the
 	// honest answer is "none".
@@ -104,6 +118,8 @@ func NewMe(user domainidentity.User, counts MeCounts) Me {
 		Theme:          string(user.Theme),
 		CreatedAt:      wireInstant(user.CreatedAt),
 		Counts:         counts,
+		ActivePatient:  activePatient,
+		Patients:       MePatients{OwnedCount: ownedCount},
 	}
 }
 

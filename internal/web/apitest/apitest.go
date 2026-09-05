@@ -113,7 +113,7 @@ func WithRegistrationOpen(open bool) Option {
 	return func(s *settings) { s.registrationOpen = open }
 }
 
-// WithStreamHeartbeat shortens the interval between $stream_beat frames.
+// WithStreamHeartbeat shortens the interval between $_stream_beat frames.
 func WithStreamHeartbeat(interval time.Duration) Option {
 	return func(s *settings) { s.heartbeat = interval }
 }
@@ -268,6 +268,7 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 		PublicURL:        PublicURL,
 		Resolve:          resolve,
 		SelfRecord:       api.SelfRecordOf(patientResolve),
+		Patients:         patientResolve,
 	})
 	if err != nil {
 		return nil, err
@@ -366,7 +367,7 @@ func handlerTable(
 		return nil, err
 	}
 
-	pageOps, err := page.Handlers(resolve)
+	pageOps, err := page.Handlers(resolve, patientResolve)
 	if err != nil {
 		return nil, err
 	}
@@ -411,6 +412,11 @@ func handlerTable(
 		return nil, err
 	}
 
+	activePatientOps, err := api.ActivePatientHandlers(patientResolve)
+	if err != nil {
+		return nil, err
+	}
+
 	patientPages, err := page.PatientPages(page.PatientDeps{
 		Resolve: patientResolve,
 		UnitOf:  unitSystemOf(accounts.Service),
@@ -426,7 +432,7 @@ func handlerTable(
 
 	groups := []httproute.Handlers{
 		recordOps, pageOps, streamOps, accountOps, accountPages, overviewPage, assets,
-		patientOps, photoOps, patientPages, directoryOps,
+		patientOps, photoOps, activePatientOps, patientPages, directoryOps,
 	}
 
 	for _, group := range groups {
@@ -588,7 +594,12 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient
 		return nil, nil, nil, err
 	}
 
-	patientService, err := patient.New(patientRepo, photos, authorizer)
+	activePatient, err := patientstore.NewActivePatientRepo(app)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	patientService, err := patient.New(patientRepo, photos, authorizer, activePatient, auditor)
 	if err != nil {
 		return nil, nil, nil, err
 	}

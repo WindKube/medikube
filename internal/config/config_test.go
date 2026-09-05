@@ -51,6 +51,7 @@ func TestLoadAppliesDocumentedDefaults(t *testing.T) {
 	assert.False(t, cfg.Log.Pretty)
 
 	assert.False(t, cfg.Auth.RegistrationOpen, "registration is closed by default (research D-18)")
+	assert.True(t, cfg.RateLimits)
 	assert.Equal(t, 168*time.Hour, cfg.Auth.SessionTTL, "seven days (FR-008)")
 
 	assert.Equal(t, 730, cfg.Retention.AuditDays, "two years (data-model, audit_events)")
@@ -95,6 +96,7 @@ func TestEveryVariableParses(t *testing.T) {
 		"MEDIKUBE_ALLOWED_ORIGINS": "https://a.example,https://b.example",
 		"MEDIKUBE_TRUSTED_PROXIES": "10.0.0.1,10.0.0.2",
 		"MEDIKUBE_CURSOR_KEY":      secretFile(t, "cursor.key", "cursor-key-value"),
+		"MEDIKUBE_RATE_LIMITS":     "false",
 
 		"MEDIKUBE_LOG_LEVEL":  "debug",
 		"MEDIKUBE_LOG_PRETTY": "true",
@@ -149,6 +151,7 @@ func TestEveryVariableParses(t *testing.T) {
 	assert.True(t, cfg.Log.Pretty)
 
 	assert.True(t, cfg.Auth.RegistrationOpen)
+	assert.False(t, cfg.RateLimits)
 	assert.Equal(t, 24*time.Hour, cfg.Auth.SessionTTL)
 
 	assert.Equal(t, 365, cfg.Retention.AuditDays)

@@ -1,0 +1,52 @@
+package shell
+
+import "medikube/internal/web/views/ids"
+
+// PatientSwitcher is FR-014's `combobox[name="Active patient"]`: the person
+// in view, and every other patient the account holder may switch to. It
+// renders outside #main (mounted in nav(), never inside main()'s landmark),
+// so a patch to the main region can never morph it away.
+//
+// A native <select> rather than a hand-rolled listbox: browsers already give
+// it the combobox role in the accessibility tree, open-and-choose is one
+// keyboard or pointer gesture (SC-002's "no more than two interactions"), and
+// there is no ARIA state machine here for a defect to hide in.
+templ PatientSwitcher(props PatientSwitcherProps) {
+	<div id={ ids.ActivePatientSwitcher() } class="flex items-center gap-2">
+		if active, ok := props.Active(); ok {
+			<span class="flex items-center gap-2">
+				if active.PhotoURL != "" {
+					<img
+						src={ active.PhotoURL }
+						alt=""
+						class="h-6 w-6 rounded-full object-cover"
+					/>
+				}
+				<span class="text-sm font-medium text-slate-900 dark:text-slate-100">{ active.Name }</span>
+			</span>
+		}
+		<label for={ ids.ActivePatientSwitcher() + "-select" } class="sr-only">Active patient</label>
+		<select
+			id={ ids.ActivePatientSwitcher() + "-select" }
+			role="combobox"
+			aria-label="Active patient"
+			name="patient"
+			data-bind="_active_patient"
+			if props.Href != "" {
+				data-on:change={ "@put(" + quotePS(props.Href) + ", {payload: {patient: $_active_patient}})" }
+			}
+			class="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		>
+			if len(props.Options) == 0 {
+				<option value="">No patient selected</option>
+			}
+			for _, opt := range props.Options {
+				<option value={ opt.ID } selected?={ opt.Active }>{ opt.Label() }</option>
+			}
+		</select>
+	</div>
+}
+
+func quotePS(value string) string {
+	return "'" + value + "'"
+}

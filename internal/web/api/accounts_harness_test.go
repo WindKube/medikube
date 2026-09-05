@@ -98,7 +98,8 @@ func (r *rig) withRateLimits() *rig {
 	r.t.Helper()
 
 	require.NoError(r.t, pb.ApplySettings(r.instance.App, config.Config{
-		Auth: config.AuthConfig{SessionTTL: apitest.SessionTTL},
+		RateLimits: true,
+		Auth:       config.AuthConfig{SessionTTL: apitest.SessionTTL},
 	}))
 
 	require.True(r.t, r.instance.App.Settings().RateLimits.Enabled,
@@ -208,6 +209,12 @@ type meDTO struct {
 	Theme          string         `json:"theme"`
 	CreatedAt      string         `json:"created_at"`
 	Counts         map[string]int `json:"counts"`
+	ActivePatient  *struct {
+		ID string `json:"id"`
+	} `json:"active_patient"`
+	Patients struct {
+		OwnedCount int `json:"owned_count"`
+	} `json:"patients"`
 }
 
 type sessionDTO struct {

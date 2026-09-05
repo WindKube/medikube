@@ -37,6 +37,7 @@ func PatientOperations() []string {
 	return []string{
 		OpListPatients, OpCreatePatient, OpGetPatient, OpUpdatePatient,
 		OpPutPatientPhoto, OpGetPatientPhoto, OpDeletePatientPhoto,
+		OpSetActivePatient,
 	}
 }
 

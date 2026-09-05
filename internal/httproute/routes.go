@@ -256,6 +256,14 @@ func accountRoutes() []Route {
 			Kind: KindAPI, Auth: AuthUser,
 			Summary: "Replace the password and rotate the token key, which ends every other session.",
 		},
+		{
+			// contracts/active-patient.md. A whole-value replace, hence PUT,
+			// collapsing upstream's four routes into one (SHARED-DESIGN
+			// §2.3 route 12). Never consulted for authorization (FR-015).
+			OpID: "setActivePatient", Method: http.MethodPut, Path: base + "/active-patient",
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Set or clear the person in view. Authorized against the target before the pointer is written.",
+		},
 	}
 }
 

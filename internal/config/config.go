@@ -36,6 +36,9 @@ type Config struct {
 	// otherwise derived from PocketBase's persisted auth-token secret (CT-3).
 	CursorKey string `env:"CURSOR_KEY,file,unset"`
 
+	// Off only for a test instance whose browser suite registers accounts faster than a stranger may.
+	RateLimits bool `env:"RATE_LIMITS" envDefault:"true"`
+
 	Log       LogConfig       `envPrefix:"LOG_"`
 	Auth      AuthConfig      `envPrefix:"AUTH_"`
 	Retention RetentionConfig `envPrefix:"RETENTION_"`

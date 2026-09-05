@@ -273,6 +273,15 @@ func operationDocs() map[string]operationDoc {
 			errors:        []int{http.StatusUnauthorized, http.StatusUnprocessableEntity, http.StatusInternalServerError},
 			notes:         "A wrong current password is 422 on that member rather than 401: the caller is authenticated, the password is what failed.",
 		},
+		// contracts/active-patient.md
+		"setActivePatient": {
+			successStatus: http.StatusOK,
+			successNote:   "The newly active patient, or null when the pointer was cleared.",
+			errors:        []int{http.StatusUnauthorized, http.StatusNotFound, http.StatusUnprocessableEntity, http.StatusInternalServerError},
+			ownerScoped:   true,
+			notes: "The target is authorized before the pointer is written, so another account's patient is 404 and the pointer is left unchanged. " +
+				"Never consulted for authorization (FR-015): changing the selection grants nothing.",
+		},
 
 		// contracts/records.md
 		"listRecords": pagedListDoc(

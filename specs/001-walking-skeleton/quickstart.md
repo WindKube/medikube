@@ -54,6 +54,7 @@ export MEDIKUBE_LOG_LEVEL=debug
 export MEDIKUBE_LOG_PRETTY=true
 export MEDIKUBE_AUTH_REGISTRATION_OPEN=true    # closed by default; open it to exercise sign-up
 export MEDIKUBE_AUTH_SESSION_TTL=168h          # 7 days
+export MEDIKUBE_RATE_LIMITS=true               # off only for the browser suite's throwaway instance
 ```
 
 `MEDIKUBE_DATA_DIR` is **required**. Leaving it unset makes PocketBase put `pb_data` next to the

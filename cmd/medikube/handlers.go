@@ -68,8 +68,17 @@ func operations(
 		table[route.OpID] = notImplemented(route.OpID)
 	}
 
+	// contracts/patients.md and contracts/patient-photo.md. The stack is
+	// resolved lazily (patientFamily), the same reason recordFamily is: the
+	// repository needs the cursor codec, which is keyed from a secret the
+	// migrations have only just created. Resolved here, ahead of everything
+	// that reads it — wired()'s medication pages need it for the context
+	// header and the redirect, and the account surface needs it so
+	// registration can provision the self-record FR-005 requires.
+	patientResolve, photoResolve := patientFamily(app, cfg)
+
 	// The real ones win. This is the only line each later group touches.
-	served, err := wired(resolve, hub)
+	served, err := wired(resolve, patientResolve, hub)
 	if err != nil {
 		return nil, err
 	}
@@ -80,13 +89,6 @@ func operations(
 	// only the build stamp, the start instant and the drain flag, all of which
 	// the composition root already holds by the time it calls this.
 	maps.Copy(table, api.HealthHandlers(health))
-
-	// contracts/patients.md and contracts/patient-photo.md. The stack is
-	// resolved lazily (patientFamily), the same reason recordFamily is: the
-	// repository needs the cursor codec, which is keyed from a secret the
-	// migrations have only just created. Resolved here, ahead of the account
-	// surface, so registration can provision the self-record FR-005 requires.
-	patientResolve, photoResolve := patientFamily(app, cfg)
 
 	// The account surface is assembled separately because it is the one group
 	// that needs the application itself: PocketBase owns the credential, the
@@ -99,6 +101,7 @@ func operations(
 		PublicURL:        cfg.PublicURL,
 		Resolve:          resolve,
 		SelfRecord:       api.SelfRecordOf(patientResolve),
+		Patients:         patientResolve,
 	})
 	if err != nil {
 		return nil, err
@@ -144,6 +147,13 @@ func operations(
 	}
 
 	maps.Copy(table, photoOps)
+
+	activePatientOps, err := api.ActivePatientHandlers(patientResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, activePatientOps)
 
 	patientPages, err := page.PatientPages(page.PatientDeps{
 		Resolve: patientResolve,
@@ -238,7 +248,7 @@ func assetHandlers() httproute.Handlers {
 // can be assembled from the kind registry alone. The record family, the two
 // record pages and the Datastar stream are in; the account surface needs the
 // application and is assembled by operations above.
-func wired(resolve api.Resolve, hub *realtime.Hub) (httproute.Handlers, error) {
+func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
 	records, err := api.Handlers(resolve)
@@ -246,7 +256,7 @@ func wired(resolve api.Resolve, hub *realtime.Hub) (httproute.Handlers, error) {
 		return nil, err
 	}
 
-	pages, err := page.Handlers(resolve)
+	pages, err := page.Handlers(resolve, patients)
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +341,12 @@ func patientFamily(app core.App, cfg config.Config) (api.PatientResolve, api.Pat
 			return patientStack{}, err
 		}
 
-		service, err := patient.New(repository, photos, authorizer)
+		activePatient, err := patientstore.NewActivePatientRepo(app)
+		if err != nil {
+			return patientStack{}, err
+		}
+
+		service, err := patient.New(repository, photos, authorizer, activePatient, auditor)
 		if err != nil {
 			return patientStack{}, err
 		}
@@ -576,7 +591,11 @@ func directoryOperations() []string {
 // have landed, not by whether an instance could build one, so the resolver
 // handed in here is one that is never called.
 func unimplemented() []string {
-	implemented, err := wired(func() (*records.Handler, error) { return nil, nil }, realtime.New())
+	implemented, err := wired(
+		func() (*records.Handler, error) { return nil, nil },
+		func() (*patient.Service, error) { return nil, nil },
+		realtime.New(),
+	)
 	if err != nil {
 		panic("medikube: the handler groups cannot be assembled: " + err.Error())
 	}

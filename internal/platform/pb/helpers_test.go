@@ -178,6 +178,7 @@ func testConfig(t *testing.T, dataDir string) config.Config {
 	cfg := config.Config{
 		Env:        "production",
 		DataDir:    dataDir,
+		RateLimits: true,
 		HTTPAddr:   "127.0.0.1:8090",
 		PublicURL:  "https://medikube.example",
 		DrainDelay: 5 * time.Second,

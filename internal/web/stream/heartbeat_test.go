@@ -41,7 +41,7 @@ func TestTheHeartbeatIntervalAndTheStalenessThresholdAreTheContractsNumbers(t *t
 }
 
 // The wire format, on a real socket: a datastar-patch-signals frame whose one
-// data line is `signals {"stream_beat":"<RFC3339 UTC>"}`.
+// data line is `signals {"_stream_beat":"<RFC3339 UTC>"}`.
 func TestAHeartbeatCarriesAnRFC3339StreamBeat(t *testing.T) {
 	t.Parallel()
 

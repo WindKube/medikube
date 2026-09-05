@@ -69,6 +69,7 @@ trip and not five.
 
 | Variable | Default | What it is |
 |---|---|---|
+| `MEDIKUBE_RATE_LIMITS` | `true` | The request rate limiter. Only a test instance turns it off. |
 | `MEDIKUBE_AUTH_REGISTRATION_OPEN` | `false` | Closed by default: an instance reachable from the internet must not accept accounts from strangers. |
 | `MEDIKUBE_AUTH_SESSION_TTL` | `168h` | Session lifetime, seven days (FR-008). |
 | `MEDIKUBE_RETENTION_AUDIT_DAYS` | `730` | How long audit events are kept. |

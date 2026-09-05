@@ -31,6 +31,10 @@ type AccountsConfig struct {
 	// SelfRecord provisions the account's one self-record patient at
 	// registration (FR-005). Nil is tolerated (see Deps.SelfRecord).
 	SelfRecord SelfRecordFunc
+
+	// Patients resolves the patient stack getMe and setActivePatient both
+	// need (contracts/active-patient.md).
+	Patients PatientResolve
 }
 
 // Accounts is one assembled identity stack.
@@ -118,6 +122,7 @@ func NewAccounts(app core.App, cfg AccountsConfig) (*Accounts, error) {
 			Counts:     counts,
 			Mail:       pb.MailConfigured(app),
 			SelfRecord: cfg.SelfRecord,
+			Patients:   cfg.Patients,
 		},
 		Service:       service,
 		Authenticator: authenticator,

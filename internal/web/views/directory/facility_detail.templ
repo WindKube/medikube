@@ -7,7 +7,7 @@ import (
 	"medikube/internal/web/views/ids"
 )
 
-const facilityConfirmSignal = "confirming_delete"
+const facilityConfirmSignal = "_confirming_delete"
 
 const (
 	facilityDetailArticle = "Facility"
@@ -24,7 +24,7 @@ templ FacilityDetail(props FacilityDetailProps) {
 	<article
 		id={ ids.DirectoryDetail(FacilitySegment, props.Facility.ID) }
 		aria-label={ facilityDetailArticle }
-		data-signals={ "{" + facilityConfirmSignal + ": false, etag: " + jsQuote(props.Facility.Version) + "}" }
+		data-signals={ "{" + facilityConfirmSignal + ": false, _etag: " + jsQuote(props.Facility.Version) + "}" }
 		class="flex flex-col"
 	>
 		<header class="flex flex-wrap items-start justify-between gap-3">
@@ -63,7 +63,7 @@ templ FacilityDetail(props FacilityDetailProps) {
 			Subject:      props.Facility.Name,
 			Consequence:  facilityConfirmBody,
 			ConfirmLabel: facilityConfirmLabel,
-			ConfirmOn:    "@delete(" + jsQuote(props.Facility.Links.Record) + ", {headers: {'If-Match': $etag}})",
+			ConfirmOn:    "@delete(" + jsQuote(props.Facility.Links.Record) + ", {headers: {'If-Match': $_etag}})",
 			CancelLabel:  facilityConfirmCancel,
 		})
 	</article>
