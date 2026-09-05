@@ -54,7 +54,7 @@ func TestThePatientDetailPageRendersThePrefilledEditForm(t *testing.T) {
 	formID := ids.PatientForm(testsupport.AccountAPatientSelfID)
 	assert.Contains(t, body, attribute("id", formID),
 		"the detail page's edit link targets #%s, but no form on the page carries that id", formID)
-	assert.Contains(t, body, `value="Amara"`, "the edit form is not pre-filled with the patient's own values")
+	assert.Contains(t, body, attribute("value", "Amara"), "the edit form is not pre-filled with the patient's own values")
 }
 
 func TestThePractitionerListPageRendersTheCreateForm(t *testing.T) {
@@ -77,7 +77,7 @@ func TestThePractitionerDetailPageRendersThePrefilledEditForm(t *testing.T) {
 	formID := ids.DirectoryForm(directory.PractitionerSegment, seed.AccountAPractitionerID)
 	assert.Contains(t, body, attribute("id", formID),
 		"the detail page's edit link targets #%s, but no form on the page carries that id", formID)
-	assert.Contains(t, body, `value="Dr. Ngozi Adeyemi"`, "the edit form is not pre-filled with the practitioner's own values")
+	assert.Contains(t, body, attribute("value", "Dr. Ngozi Adeyemi"), "the edit form is not pre-filled with the practitioner's own values")
 }
 
 func TestTheFacilityListPageRendersTheCreateForm(t *testing.T) {
@@ -100,5 +100,5 @@ func TestTheFacilityDetailPageRendersThePrefilledEditForm(t *testing.T) {
 	formID := ids.DirectoryForm(directory.FacilitySegment, seed.AccountAFacilityPracticeID)
 	assert.Contains(t, body, attribute("id", formID),
 		"the detail page's edit link targets #%s, but no form on the page carries that id", formID)
-	assert.Contains(t, body, `value="Riverside Family Practice"`, "the edit form is not pre-filled with the facility's own values")
+	assert.Contains(t, body, attribute("value", "Riverside Family Practice"), "the edit form is not pre-filled with the facility's own values")
 }
