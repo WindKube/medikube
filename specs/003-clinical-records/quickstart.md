@@ -24,6 +24,14 @@ task install:tailwind          # pinned standalone binary; note the x64-not-amd6
 task install:golangci-lint     # v2; v1 does not understand Go 1.27
 ```
 
+**T001 verification (2026-09-05).** `go.mod` declares `go 1.27` with `toolchain go1.27.0` right
+below it. `Taskfile.yaml` sets `GOTOOLCHAIN: auto` explicitly in its global `env` block (not
+unset, but the safe default a CI runner inheriting a stray `local` from its shell cannot
+override); its own comment names why. `.github/workflows/go.yaml` sets up Go via
+`go-version-file` and never sets `GOTOOLCHAIN` at all — its comment says so in the same breath it
+warns against `local`. No workflow under `.github/workflows/` sets `GOTOOLCHAIN=local`.
+Precondition holds; nothing to change.
+
 ---
 
 ## 1. Generate, build, run

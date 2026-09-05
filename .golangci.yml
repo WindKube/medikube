@@ -120,6 +120,11 @@ linters:
             - pkg: github.com/a-h/templ
               desc: >-
                 Constitution Principle II. Rendering belongs to internal/web.
+            - pkg: medikube/internal/web/views
+              desc: >-
+                Constitution Principle II. A service that imports its own
+                rendering has taken on a second responsibility; internal/records'
+                Views interface is the seam a service is handed instead.
 
         # The constitution's Forbidden Dependencies list, enforced everywhere
         # including inside the [PB] packages — jsvm in particular would be
@@ -205,6 +210,19 @@ linters:
             post-commit OnRecordAfter*Success hooks. The auth family
             (OnRecordAuthRequest) is deliberately absent from this list: it is the
             sign-in audit seam and it does fire.
+        # T003. Datastar's inline-script family: methods that push JavaScript or
+        # a raw browser action at a subscriber rather than a signal or an
+        # attribute a templ component declares. MediKube's whole UI is
+        # hypermedia-driven — a view's behaviour is legible in its .templ
+        # source — and a handler that reaches for one of these instead writes
+        # behaviour nowhere a page's own markup names it.
+        - pattern: \.(ExecuteScript|ConsoleLog|ConsoleError|Redirect|Redirectf|DispatchCustomEvent|ReplaceURL|ReplaceURLQuerystring|Prefetch)$
+          pkg: ^github\.com/starfederation/datastar-go/datastar$
+          msg: >-
+            SHARED-DESIGN.md and contracts/streams.md. MediKube's SSE stream
+            patches fragments and signals; it does not push scripts, browser
+            navigation or console output at the client. Express the behaviour as
+            a data-on-* attribute or a signal in the .templ component instead.
 
   exclusions:
     generated: lax

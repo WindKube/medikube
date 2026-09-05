@@ -158,6 +158,17 @@ tasks:
         *.db-journal
         EOF
 
+  fixture:regen:
+    desc: >-
+      Regenerate internal/testdata/pb_data (T007) — every migration against a
+      clean database, plus `medikube seed`. Forgetting this after a schema
+      change runs every integration test against last phase's schema, silently.
+    deps: [gen]
+    env:
+      MEDIKUBE_FIXTURE_REGEN: "1"
+    cmds:
+      - go test -count=1 -run TestRegenerateTheCommittedFixture ./internal/testsupport/
+
   bench:chart:
     desc: The chart summary benchmark — 50,000 medications on one patient, SC-004's 2s p95
     deps: [gen]
@@ -197,6 +208,7 @@ tasks:
     desc: Every linter, in CI's order
     cmds:
       - task: lint:go
+      - task: lint:datastar
       - task: lint:md
       - task: lint:yaml
       - task: lint:actions
@@ -208,6 +220,11 @@ tasks:
     deps: [gen, install:golangci-lint]
     cmds:
       - .bin/golangci-lint run ./...
+
+  lint:datastar:
+    desc: "Datastar Pro-attribute allowlist over internal/web/views/**/*.templ (T004)"
+    cmds:
+      - bash scripts/check-datastar-attrs.sh
 
   lint:md:
     desc: markdownlint-cli2 over the prose
@@ -269,6 +286,16 @@ tasks:
     deps: [gen]
     cmds:
       - go test -tags=phileak -count=1 ./internal/testsupport/phileak/...
+
+  test:scale:
+    desc: "The scale suite (SC-003, FR-089) — 50,000-row search and tag-rename timing"
+    # Build-tagged and therefore invisible to `task test`, same reason as
+    # test:phileak: it is minutes of wall clock building a large fixture
+    # rather than seconds. Phase 003's user stories populate it; this task
+    # exists ahead of them so the harness is in place before the first case.
+    deps: [gen]
+    cmds:
+      - go test -tags=scale -count=1 ./...
 
   test:netgate:
     desc: "The egress gate — proves nothing dials out with no destination configured (FR-047)"
