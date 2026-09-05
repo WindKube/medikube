@@ -70,6 +70,7 @@ var enumSlices = map[string]string{
 	"clinical.ContactRelationship": "contactRelationships",
 	"clinical.EquipmentType":       "equipmentTypes",
 	"clinical.FamilyRelationship":  "familyRelationships",
+	"clinical.EffectiveSource":     "effectiveSources",
 	"identity.Role":                "roles",
 	"identity.UnitSystem":          "unitSystems",
 	"identity.DateFormat":          "dateFormats",
