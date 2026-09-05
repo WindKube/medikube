@@ -206,6 +206,20 @@ func TestTheTableCarriesTheNineteenPages(t *testing.T) {
 		{
 			"injuryDetailPage", "/" + kind.Injury.Segment() + "/{id}", httproute.AuthUser,
 			`article[name="Injury"]`, "/" + kind.Injury.Segment() + "/mkinjamara00001",
+			"insuranceListPage", "/" + kind.Insurance.Segment(), httproute.AuthUser, `region[name="Insurance"]`,
+			"/" + kind.Insurance.Segment() + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			"insuranceDetailPage", "/" + kind.Insurance.Segment() + "/{id}", httproute.AuthUser,
+			`article[name="Insurance"]`, "/" + kind.Insurance.Segment() + "/" + seed.InsurancePrimaryID,
+		},
+		{
+			"equipmentListPage", "/" + kind.Equipment.Segment(), httproute.AuthUser, `region[name="Equipment"]`,
+			"/" + kind.Equipment.Segment() + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			"equipmentDetailPage", "/" + kind.Equipment.Segment() + "/{id}", httproute.AuthUser,
+			`article[name="Equipment"]`, "/" + kind.Equipment.Segment() + "/" + seed.EquipmentOverdueID,
 		},
 	}
 	require.Len(t, want, 19)

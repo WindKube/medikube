@@ -88,6 +88,13 @@ var kindLiteralExempt = map[string]string{
 	"internal/web/views/records/insurance_form_templ.go":   "false positive, the same generated-markup shape",
 	"internal/web/views/records/insurance_list_templ.go":   "false positive, the same generated-markup shape",
 	"internal/web/views/records/insurance_row_templ.go":    "false positive, the same generated-markup shape",
+	"internal/web/api/equipment_contract_test.go":          "false positive: the contract suite's own skip reasons name the kind in prose",
+	"internal/web/api/insurance_contract_test.go":          "false positive, the same skip-reason shape",
+	"internal/web/api/equipment_http_test.go":              "false positive: an OwnershipCase.Name names the kind in prose",
+	"internal/web/api/insurance_http_test.go":              "false positive, the same case-name shape",
+	"internal/httproute/routes_test.go": "false positive: the opID and landmark literals for these two kinds' " +
+		"pages spell the kind's own name (e.g. \"insuranceListPage\") because the segment equals the kind's " +
+		"ordinary English name; every other kind's opID is a distinct plural so this table never needed the exemption before",
 }
 
 func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {
