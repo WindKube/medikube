@@ -99,6 +99,83 @@ Note that MediKube only uses the copy when tracing is configured: with no OTLP e
 `InstrumentedDBConnect` returns nil and PocketBase opens the database through its own function.
 An untraced deployment cannot be hurt by this drifting.
 
+## 4a. `deleteRefRecords`'s unset semantics — the `Required`/`CascadeDelete` matrix
+
+**What.** `internal/store/migrations`' relation fields (`patients.owner`, `medications.patient`,
+`users.active_patient`, `patients.primary_practitioner`, `medications.practitioner`,
+`medications.pharmacy`, `practitioners.facility`, `practitioners.owner`, `facilities.owner`,
+`audit_events.patient`) each set `Required`/`CascadeDelete` to an exact, tested value, and none of
+MediKube's own code clears a reference on delete.
+
+**Why there is no public API.** `core/record_model.go`'s `deleteRefRecords` is unexported and does
+three different things depending on the two booleans: non-cascade + non-required unsets the id and
+re-saves the referencing record via `SaveNoValidate` (which still fires model hooks — clearing a
+practitioner off 40 medications writes 40 update audit rows, correctly); non-cascade + required
+with no other ids left fails the delete outright; cascade deletes the referencing record. There is
+no way to ask PocketBase for this behaviour — it is a side effect of the two struct fields, read
+from source rather than documented (research D-06, D-13's `assertions.go`).
+
+**Symptom if an upgrade breaks it.** Silent and structural, not a crash: if a boolean's effective
+behaviour changes, a delete either cascades where FR-040 requires the reference merely cleared
+(losing data an upgrade should not lose), or a required-but-not-cascading relation starts failing
+deletes that used to succeed. `internal/store/migrations/assertions_test.go`'s
+`TestDeletingAnAccountDeletesItsMedicationsAndOutlivesItsAuditTrail` and its per-relation table are
+what catch it.
+
+**Check on upgrade.** Run `go test ./internal/store/migrations/...` and read
+`assertions.go`'s cascade/required table against the matrix in research.md's D-06 before believing
+the bump; a change to `deleteRefRecords`'s three branches is the one PocketBase upgrade this
+checklist cannot pre-empt with a source-diff, since nothing here calls the unexported function
+directly.
+
+## 4b. The `thumbs_<filename>/` key layout — patient photo thumbnails
+
+**What.** `internal/store/patient/photo.go` generates thumbnails eagerly, on upload, at
+`<collectionId>/<recordId>/thumbs_<filename>/<size>_<filename>` — PocketBase's own naming for a
+thumb it would otherwise create lazily on first request through `/api/files/`, which MediKube
+never calls (constitution VII: no file-token URL).
+
+**Why there is no public API.** Bypassing PB's file route to keep photos protected (research D-16)
+means PB's lazy thumbnailer (`apis/file.go`) never runs, so MediKube's own upload path has to
+reproduce the key PB would have used. The layout is read out of `apis/file.go` and
+`core/field_file.go`'s `fsys.DeletePrefix(record.BaseFilesPath() + "/thumbs_" + filename + "/")` —
+that prefix-delete is what makes replacing a photo actually remove the old thumbnails, and only
+holds if MediKube's key matches it exactly.
+
+**Symptom if an upgrade breaks it.** Nothing errors. If PocketBase's own thumb key format changes,
+MediKube's hand-generated thumbs simply stop matching what a future PB-owned cleanup path expects,
+and replacing a photo leaves the previous thumbnails on disk forever — a slow leak, not a failure.
+
+**Check on upgrade.** Re-read `apis/file.go`'s thumb-key construction and `field_file.go`'s
+`DeletePrefix` call against `internal/store/patient/photo.go`'s own key-building; a rename of
+either the `thumbs_` prefix or the `<size>_<filename>` suffix is the whole of what to look for.
+
+## 4c. The single-transaction migration runner — the medication re-attribution
+
+**What.** `internal/store/migrations/1756200600_medications_repoint.go` re-attributes every
+medication from `owner` to `patient` with one raw `UPDATE ... SET patient = (SELECT ...)`
+statement, asserts zero rows are left unattributed, and only then flips the field to
+`Required: true, CascadeDelete: true` — relying on `core/migrations_runner.go` wrapping every
+pending migration in one `AuxRunInTransaction(RunInTransaction(...))` so a failed assertion rolls
+back this migration **and every other one in the batch**, leaving no partially migrated state
+(research D-13, CT-1).
+
+**Why there is no public API.** There is no supported way to run a bulk `UPDATE` through
+PocketBase's record API without loading and re-saving every row — which would fire
+`OnRecordAfterUpdateSuccess` once per medication and write a spurious audit row for every one.
+The safety this migration relies on (all-or-nothing across the whole batch) is a documented
+implementation detail of PocketBase's migration runner, not a contract.
+
+**Symptom if an upgrade breaks it.** If a future PocketBase version runs each migration in its own
+transaction instead of one shared one, a failure in this migration's assertion step would leave
+steps 1–3 committed and only this migration rolled back — a database with `medications.patient`
+declared `Required` on rows that were never actually backfilled, which fails loudly on the very
+next write rather than at migration time.
+
+**Check on upgrade.** Read `core/migrations_runner.go`'s transaction wrapping before assuming it is
+unchanged, and run `go test ./internal/store/migrations/...` — the repoint migration's own test
+seeds unattributed medications and asserts the whole batch rolls back together.
+
 ## 5. Three account behaviours MediKube depends on rather than reimplements
 
 **What.** `internal/store/identity` deliberately does not carry its own copy of any of these.

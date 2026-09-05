@@ -73,6 +73,19 @@ and drives every endpoint against sentinel data. Extend the exercise, never the 
 - Dependency versions are pinned in `specs/001-walking-skeleton/plan.md`'s Technical Context.
   Changing one is an amendment, not a bump.
 
+## Patients (phase 002)
+
+An account owns several patients (a self-record plus dependants). Three rules, all enforced at
+the data-access layer rather than by convention:
+
+- Patient scope is explicit. Every record and every call names the patient it is for — nothing
+  infers a "current patient" server-side.
+- `users.active_patient` (the switcher's pointer) is never an authorization input. It picks what a
+  screen shows; access is decided from ownership alone.
+- Records are hard deleted, no `deleted_at`, ever (constitution VII). Files are the only thing
+  this codebase treats as soft-deletable, and a patient's photo does not use that path — replacing
+  or losing one removes the old file and its thumbnails immediately.
+
 ## Before upgrading PocketBase
 
 Read [`docs/pocketbase-upgrade-checklist.md`](docs/pocketbase-upgrade-checklist.md). Four places

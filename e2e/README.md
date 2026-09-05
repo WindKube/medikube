@@ -104,3 +104,42 @@ cd e2e && npx playwright test smoke.spec.ts
 Expected failure: `gate.ts`'s `open()` collects every console `error` and
 `warning` before the first navigation, and assertion 5 (`expect(problems.console).toEqual([])`)
 fails for that page, listing the exact message. Revert the change afterward.
+
+### T158 — phase-002 pages: a removed landmark, then a thrown script
+
+002-patient-core's own demonstration (open risk R11), run against one of this
+phase's new pages instead of phase 001's. Same caveat as above: Chromium
+cannot launch here, so neither command below has been run and neither output
+is real — this is the procedure and the assertion text `gate.ts` and
+`routes.gate.spec.ts` would produce, worked out by reading both files.
+
+**Removing a landmark.** Delete `aria-label="Patients"` from
+`internal/web/views/patient`'s list region (or `aria-label="Patient chart"`
+from the detail region).
+
+```bash
+task build
+cd e2e && npx playwright test routes.gate.spec.ts
+```
+
+Expected failure: `gate.ts`'s `open()` assertion 3 fails for `patientListPage`
+(or `patientDetailPage`), at both viewports, with the message
+`/patients is missing region[name="Patients"]` (or
+`/patients/<id> is missing region[name="Patient chart"]`) — assertion 2 (the
+four shell landmarks) still passes, since only the page's own landmark was
+touched.
+
+**A thrown script.** Add a script on the patient list or chart page that
+throws during load, e.g. a Datastar attribute referencing an undefined
+signal.
+
+```bash
+task build
+cd e2e && npx playwright test routes.gate.spec.ts
+```
+
+Expected failure: `gate.ts`'s `page.on('pageerror', ...)` listener records the
+exception into `problems.crashes`, and `open()`'s assertion 6
+(`expect(problems.crashes).toEqual([])`) fails with the message
+`uncaught page failures on /patients` (or the detail path), listing the
+thrown error's text. Revert both changes afterward.
