@@ -111,6 +111,6 @@ func packagesImporting(tb testing.TB, importPath string) []string {
 }
 
 func skippedDir(name string) bool {
-	return name == ".git" || name == ".bin" || name == "node_modules" || name == "vendor" ||
-		name == "pb_data" || strings.HasPrefix(name, ".venv")
+	return strings.HasPrefix(name, ".") || name == ".bin" || name == "node_modules" ||
+		name == "pb_data" || name == "vendor"
 }
