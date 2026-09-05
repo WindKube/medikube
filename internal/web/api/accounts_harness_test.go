@@ -98,7 +98,8 @@ func (r *rig) withRateLimits() *rig {
 	r.t.Helper()
 
 	require.NoError(r.t, pb.ApplySettings(r.instance.App, config.Config{
-		Auth: config.AuthConfig{SessionTTL: apitest.SessionTTL},
+		RateLimits: true,
+		Auth:       config.AuthConfig{SessionTTL: apitest.SessionTTL},
 	}))
 
 	require.True(r.t, r.instance.App.Settings().RateLimits.Enabled,
