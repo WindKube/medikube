@@ -163,6 +163,7 @@ type SymptomView struct {
 	Severity        string
 	SeverityValue   string
 	OccurredAt      string
+	OccurredAtInput string
 	DurationMinutes string
 	PainScale       string
 	BodySite        string
@@ -171,6 +172,7 @@ type SymptomView struct {
 	Impact          string
 	ImpactValue     string
 	ResolvedAt      string
+	ResolvedAtInput string
 	IsChronic       bool
 	Status          string
 	StatusValue     string
@@ -204,6 +206,7 @@ func NewSymptomView(symptom clinical.Symptom, links SymptomLinks) SymptomView {
 		Severity:        SymptomSeverityLabel(symptom.Severity),
 		SeverityValue:   string(symptom.Severity),
 		OccurredAt:      symptom.OccurredAt.String(),
+		OccurredAtInput: symptom.OccurredAt.Input(),
 		DurationMinutes: durationMinutes,
 		PainScale:       painScale,
 		BodySite:        symptom.BodySite,
@@ -212,6 +215,7 @@ func NewSymptomView(symptom clinical.Symptom, links SymptomLinks) SymptomView {
 		Impact:          SymptomImpactLabel(symptom.Impact),
 		ImpactValue:     string(symptom.Impact),
 		ResolvedAt:      symptom.ResolvedAt.String(),
+		ResolvedAtInput: symptom.ResolvedAt.Input(),
 		IsChronic:       symptom.IsChronic,
 		Status:          SymptomStatusLabel(symptom.Status),
 		StatusValue:     string(symptom.Status),
@@ -317,7 +321,7 @@ func (m SymptomView) Value(field string) string {
 	case SymptomFieldSeverity:
 		return m.SeverityValue
 	case SymptomFieldOccurredAt:
-		return m.OccurredAt
+		return m.OccurredAtInput
 	case SymptomFieldDurationMinutes:
 		return m.DurationMinutes
 	case SymptomFieldPainScale:
@@ -331,7 +335,7 @@ func (m SymptomView) Value(field string) string {
 	case SymptomFieldImpact:
 		return m.ImpactValue
 	case SymptomFieldResolvedAt:
-		return m.ResolvedAt
+		return m.ResolvedAtInput
 	case SymptomFieldStatus:
 		return m.StatusValue
 	default:

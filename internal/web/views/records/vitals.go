@@ -100,7 +100,8 @@ type VitalsView struct {
 	ID        string
 	PatientID string
 
-	RecordedAt string
+	RecordedAt      string
+	RecordedAtInput string
 
 	SystolicMmHg        string
 	DiastolicMmHg       string
@@ -146,6 +147,7 @@ func NewVitalsView(v clinical.Vitals, links VitalsLinks) VitalsView {
 		ID:                  v.ID,
 		PatientID:           v.PatientID,
 		RecordedAt:          v.RecordedAt.String(),
+		RecordedAtInput:     v.RecordedAt.Input(),
 		SystolicMmHg:        formatFloatPtr(v.SystolicMmHg),
 		DiastolicMmHg:       formatFloatPtr(v.DiastolicMmHg),
 		HeartRateBpm:        formatFloatPtr(v.HeartRateBpm),
@@ -267,7 +269,7 @@ func (m VitalsView) GlucoseContextOptions() []Option {
 func (m VitalsView) Value(field string) string {
 	switch field {
 	case VitalsFieldRecordedAt:
-		return m.RecordedAt
+		return m.RecordedAtInput
 	case VitalsFieldSystolicMmHg:
 		return m.SystolicMmHg
 	case VitalsFieldDiastolicMmHg:
