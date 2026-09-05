@@ -347,10 +347,11 @@ func TestAFilterOutsideTheKindsVocabularyIsRefused(t *testing.T) {
 	assert.False(t, errors.As(err, &invalid))
 }
 
-// The cross-kind list. With one selected kind it is the kind's own list, cursor
-// and all. With more than one it is refused loudly rather than served with a
-// cursor that can only continue one of its sources — a page that repeats or
-// skips rows is what FR-023 forbids, and it would do so invisibly.
+// The cross-kind list's selection. With one selected kind it is the kind's own
+// list, cursor and all. With more than one — or none, over a registry that has
+// more than one kind — it needs a search.Reader to page, which is
+// crosskind_test.go's own suite; here it is unwired, so the merge is refused
+// rather than run over nothing.
 func TestTheCrossKindListRefusesToPageAcrossMoreThanOneKind(t *testing.T) {
 	t.Parallel()
 
@@ -364,25 +365,23 @@ func TestTheCrossKindListRefusesToPageAcrossMoreThanOneKind(t *testing.T) {
 		assert.NotNil(t, page.Items)
 	})
 
-	t.Run("two kinds is refused", func(t *testing.T) {
+	t.Run("two kinds with no search reader wired is refused", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := handler.List(context.Background(), owner(),
 			records.Query{Kinds: []kind.Kind{kind.Medication, recordstest.Kind}})
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, records.ErrCrossKindPaging)
+		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
 
 	t.Run("no selection means every registered kind", func(t *testing.T) {
 		t.Parallel()
 
 		// Two kinds are registered here, so the default selection is also the
-		// refused one. With the production registry's single kind it is the
-		// delegating case, which is why this is a blocker for phase 003 and not
-		// for this one.
+		// unwired one.
 		_, err := handler.List(context.Background(), owner(), records.Query{})
-		assert.ErrorIs(t, err, records.ErrCrossKindPaging)
+		assert.ErrorIs(t, err, domain.ErrNotFound)
 	})
 
 	t.Run("an unregistered kind in the selection is a validation failure", func(t *testing.T) {

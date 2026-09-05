@@ -11,6 +11,7 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/kind"
+	"medikube/internal/service/search"
 )
 
 // IfMatchField is the field name a missing precondition is reported against.
@@ -18,15 +19,12 @@ import (
 // and contracts/records.md names it in the 422 body.
 const IfMatchField = "If-Match"
 
-// ErrCrossKindPaging is the cross-kind list refusing to page across more than
-// one kind.
-//
-// The cursor binds one kind's sort keys into its associated data, so a merged
-// page whose cursor can continue only one of its sources would repeat or skip
-// rows — precisely what FR-023 forbids, and invisibly. This phase registers one
-// kind, so the condition is unreachable in a shipped build; phase 003 registers
-// thirteen and must land a composite cursor before it registers the second.
-var ErrCrossKindPaging = errors.New("records: a cross-kind page across more than one kind needs a composite cursor")
+// crossKindSort is the cross-kind list's one published ordering: most recent
+// first, the same term search.SortOccurredOn names on the index side. A
+// `sort` other than the default is refused exactly as an unknown one is on a
+// single kind's list (contracts/records.md) — the merged page has one
+// ordering, not an allowlist.
+var crossKindSort = domain.SortKey{Field: "occurred_on", Desc: true}
 
 // Handler is the ONE generic record handler. It resolves {kind} to a
 // registration, decodes into that kind's own typed DTO and calls that kind's
@@ -48,15 +46,21 @@ type Handler struct {
 	// routed through it would silently match nothing — which is how the
 	// second registered kind would drop out of the selection unnoticed.
 	byKind map[kind.Kind]Entry
+
+	// searchReader pages search_index for a cross-kind list, and is nil
+	// wherever the registry was never given one (SetSearchReader) — a
+	// registration built for a test that never selects two kinds at once.
+	searchReader search.Reader
 }
 
 func NewHandler(registry *Registry) *Handler {
 	entries := registry.Entries()
 
 	handler := &Handler{
-		dispatch: make(map[string]Entry, len(entries)),
-		order:    make([]string, 0, len(entries)),
-		byKind:   make(map[kind.Kind]Entry, len(entries)),
+		dispatch:     make(map[string]Entry, len(entries)),
+		order:        make([]string, 0, len(entries)),
+		byKind:       make(map[kind.Kind]Entry, len(entries)),
+		searchReader: registry.searchReader,
 	}
 
 	for _, entry := range entries {
@@ -100,8 +104,90 @@ func (h *Handler) List(ctx context.Context, actor access.Actor, query Query) (do
 	case 1:
 		return h.list(ctx, actor, selected[0], query)
 	default:
-		return domain.Page[Record]{}, fmt.Errorf("%w: %d kinds selected", ErrCrossKindPaging, len(selected))
+		return h.crossKindList(ctx, actor, selected, query)
 	}
+}
+
+// crossKindList pages search_index directly, ordered by occurred_on, and
+// hydrates every ref it reads through that ref's own kind's Service.Get —
+// which is where FR-033's ownership check already lives, and stays.
+//
+// A ref whose record is gone by the time it is hydrated (deleted between the
+// index read and this call) is skipped rather than failing the page: the
+// index is a maintained *index*, not the record, and its being one request
+// stale is not the caller's problem.
+func (h *Handler) crossKindList(
+	ctx context.Context, actor access.Actor, selected []Entry, query Query,
+) (domain.Page[Record], error) {
+	if h.searchReader == nil {
+		return domain.Page[Record]{}, fmt.Errorf(
+			"records: the cross-kind list has no search index reader to page: %w", domain.ErrNotFound)
+	}
+
+	// The patient scope is authorized once, up front, against any one
+	// selected kind's checkpoint: every registered kind anchors on the same
+	// patient (registry.go's own doc), and a per-ref hydrate cannot answer
+	// "why is the caller not even allowed to list this patient at all" —
+	// only "is this one record theirs" — which is the wrong refusal for a
+	// stranger naming somebody else's patient.
+	if _, err := selected[0].Authorizer.Patient(ctx, actor, query.PatientID, access.PermView); err != nil {
+		return domain.Page[Record]{}, err
+	}
+
+	if len(query.Sort) > 0 && (len(query.Sort) != 1 || query.Sort[0] != crossKindSort) {
+		var invalid domain.ValidationError
+		invalid.Add("sort", domain.CodeInvalidValue, "the cross-kind list publishes one ordering and it is not this one")
+
+		return domain.Page[Record]{}, invalid.OrNil()
+	}
+
+	if query.Search != "" || len(query.Filters) > 0 {
+		return domain.Page[Record]{}, fmt.Errorf(
+			"%w: the cross-kind list has no search and no named filters of its own", domain.ErrBadRequest)
+	}
+
+	kinds := make([]kind.Kind, 0, len(selected))
+	for _, entry := range selected {
+		kinds = append(kinds, entry.Kind)
+	}
+
+	refs, err := h.searchReader.Page(ctx, query.PatientID, kinds, query.Limit, query.Cursor)
+	if err != nil {
+		return domain.Page[Record]{}, err
+	}
+
+	items := make([]Record, 0, len(refs.Items))
+
+	for _, ref := range refs.Items {
+		entry, registered := h.byKind[ref.Kind]
+		if !registered {
+			continue
+		}
+
+		record, getErr := entry.Service.Get(ctx, actor, ref.RecordID)
+		if errors.Is(getErr, domain.ErrNotFound) {
+			continue
+		}
+
+		if getErr != nil {
+			return domain.Page[Record]{}, getErr
+		}
+
+		items = append(items, record)
+	}
+
+	page := domain.NewPage(items, refs.NextCursor)
+
+	if query.Count {
+		total, countErr := h.searchReader.Count(ctx, query.PatientID, kinds)
+		if countErr != nil {
+			return domain.Page[Record]{}, countErr
+		}
+
+		page = page.WithTotal(total)
+	}
+
+	return page, nil
 }
 
 // ListOfKind is one kind's list. The kind comes from the path, so a selection

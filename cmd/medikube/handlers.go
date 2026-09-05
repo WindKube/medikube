@@ -496,7 +496,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		return err
 	}
 
-	searchRepo, err := searchstore.New(app)
+	searchRepo, err := searchstore.New(app, cursors)
 	if err != nil {
 		return err
 	}
@@ -507,6 +507,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	}
 
 	registry.SetIndexer(indexer)
+	registry.SetSearchReader(searchRepo)
 
 	if err := medication.Register(registry, medication.Wiring{
 		Repository:   repository,

@@ -35,3 +35,29 @@ type Repository interface {
 	// the patient's own delete (FR-087, SC-005).
 	RemoveByPatient(ctx context.Context, patientID string) error
 }
+
+// Ref is one indexed row's identity — enough for a caller that already knows
+// how to hydrate a record of that kind (kind.Kind's own Service.Get) to fetch
+// the rest. It carries no title and no body: this is what a cross-kind page
+// reads to decide *which* records to hydrate, never what it answers with.
+type Ref struct {
+	Kind       kind.Kind
+	RecordID   string
+	OccurredOn domain.Date
+}
+
+// Reader is the read side of the unified search index: phase 003's cross-kind
+// list pages search_index directly, ordered by occurred_on (most recent
+// first, absent last) with id as the keyset tiebreaker, because no per-kind
+// keyset cursor can continue a page merged from more than one kind's table.
+type Reader interface {
+	// Page returns one page of a patient's indexed records across the given
+	// kinds (every registered kind when empty), oldest boundary first —
+	// meaning most recent occurred_on first. cursor is the opaque token a
+	// previous page minted; the empty string starts the first page.
+	Page(ctx context.Context, patientID string, kinds []kind.Kind, limit int, cursor string) (domain.Page[Ref], error)
+
+	// Count answers how many rows the same narrowing matches, with no keyset
+	// boundary — the same number on every page of a traversal.
+	Count(ctx context.Context, patientID string, kinds []kind.Kind) (int, error)
+}

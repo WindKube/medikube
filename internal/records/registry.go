@@ -182,6 +182,15 @@ type Registry struct {
 	// write to — a registry with no indexer simply does not index, rather
 	// than requiring one for every fixture that only needs a registration.
 	indexer *search.Indexer
+
+	// searchReader is the cross-kind list's read side: Handler.List pages it
+	// directly once more than one kind is selected, because no per-kind
+	// keyset cursor can continue a page merged from more than one kind's
+	// table. Nil is a legitimate value the same way indexer's is — a
+	// registry with no reader simply has no cross-kind list to serve, and
+	// every unit-level test that registers two kinds without one never
+	// exercises that path.
+	searchReader search.Reader
 }
 
 // SetIndexer wires the search index's write side into every kind registered
@@ -190,6 +199,12 @@ type Registry struct {
 // so cannot construct a search.Indexer), and wired here by the composition
 // root before the first kind registers.
 func (r *Registry) SetIndexer(indexer *search.Indexer) { r.indexer = indexer }
+
+// SetSearchReader wires the search index's read side into the registry, for
+// Handler.List's cross-kind page. Like SetIndexer it is a setter and not a
+// NewRegistry parameter, and for the same reason: the registry is built once,
+// empty, from internal/di, before the search.Reader it would need exists.
+func (r *Registry) SetSearchReader(reader search.Reader) { r.searchReader = reader }
 
 func NewRegistry() *Registry {
 	return &Registry{
