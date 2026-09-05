@@ -220,6 +220,11 @@ func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 			target:      conditions.Id,
 			consequence: "deleting a condition must unset a treatment's reference to it, not delete the treatment",
 		},
+		{
+			relation:    relationRule{collection: kind.FamilyMember.Collection(), field: familyFieldPatient, required: true, cascadeDelete: true},
+			target:      patients.Id,
+			consequence: "deleting a patient must delete every relative recorded against them, and a row without a patient is unreachable",
+		},
 	}
 
 	declared := make([]relationRule, 0, len(cases))

@@ -98,6 +98,7 @@ func Relations() []relationRule {
 		{collection: kind.Treatment.Collection(), field: treatmentFieldPractitioner, required: false, cascadeDelete: false},
 		{collection: kind.Treatment.Collection(), field: treatmentFieldFacility, required: false, cascadeDelete: false},
 		{collection: kind.Treatment.Collection(), field: careFieldCondition, required: false, cascadeDelete: false},
+		{collection: kind.FamilyMember.Collection(), field: familyFieldPatient, required: true, cascadeDelete: true},
 	}
 }
 
