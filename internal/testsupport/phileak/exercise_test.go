@@ -106,6 +106,14 @@ const (
 	PhotoFilename     = "portrait-in-a-hospital-gown.png"
 	PractitionerName  = "Dr-Ngozi-Halvorsen-Adeyemi"
 	FacilityName      = "St-Wilgefortis-Oncology-Clinic"
+	VaccineName       = "Xerovantis-9-Serum"
+	TradeName         = "Corvalix-Junior"
+	LotNumber         = "lot-quenderthil-002"
+	Manufacturer      = "Nordvekk-Bio-Institut"
+	InjuryName        = "torn-brachioradial-fascia"
+	BodyPart          = "left-popliteal-fossa"
+	Mechanism         = "fell-from-a-ladder-while-not-supervised"
+	RecoveryNotes     = "she-did-not-want-her-employer-to-know"
 )
 
 // Sentinel is one planted value and what it stands for. The meaning is printed
@@ -142,6 +150,14 @@ func Sentinels() []Sentinel {
 		{PhotoFilename, "the name of the file their photograph came in as"},
 		{PractitionerName, "the clinician they see, which discloses a specialty"},
 		{FacilityName, "the place they are treated, which discloses a condition"},
+		{VaccineName, "the vaccine they were given"},
+		{TradeName, "the brand it was sold under"},
+		{LotNumber, "the batch it was drawn from"},
+		{Manufacturer, "who made it"},
+		{InjuryName, "the injury they sustained"},
+		{BodyPart, "where on their body it is"},
+		{Mechanism, "how it happened"},
+		{RecoveryNotes, "whatever they chose to write down about recovering from it"},
 	}
 }
 
@@ -908,6 +924,12 @@ func recordsOfKind() string { return "/api/v1/records/" + kind.Medication.Segmen
 
 func recordAddress(id string) string { return recordsOfKind() + "/" + id }
 
+func immunizationsOfKind() string { return "/api/v1/records/" + kind.Immunization.Segment() }
+func injuriesOfKind() string      { return "/api/v1/records/" + kind.Injury.Segment() }
+
+func immunizationPageOfKind() string { return "/" + kind.Immunization.Segment() }
+func injuryPageOfKind() string       { return "/" + kind.Injury.Segment() }
+
 // sentinelPatientFor plants one minimal patient for the given account,
 // directly against the database: the registration-time hook that provisions a
 // self-record automatically (FR-005) is a different story's work, so an
@@ -946,6 +968,8 @@ func drive(t testing.TB, c *client) {
 	driveHealth(c)
 	drivePublicAuth(c)
 	driveRecords(c)
+	driveImmunizationRecords(c)
+	driveInjuryRecords(c)
 	drivePatients(c)
 	driveDirectory(c)
 	drivePages(c)
@@ -1159,6 +1183,116 @@ func sentinelMedication(patientID string) api.MedicationCreate {
 	}
 }
 
+// sentinelImmunization mirrors sentinelMedication for the immunization kind:
+// every optional member filled with a sentinel.
+func sentinelImmunization(patientID string) api.ImmunizationCreate {
+	administered := "2024-03-15"
+	dose := 2
+
+	return api.ImmunizationCreate{
+		Patient:        patientID,
+		VaccineName:    VaccineName,
+		TradeName:      TradeName,
+		AdministeredOn: &administered,
+		DoseNumber:     &dose,
+		LotNumber:      LotNumber,
+		Manufacturer:   Manufacturer,
+	}
+}
+
+// sentinelInjury mirrors sentinelMedication for the injury kind.
+func sentinelInjury(patientID string) api.InjuryCreate {
+	occurred := "2024-03-15"
+
+	return api.InjuryCreate{
+		Patient:       patientID,
+		Name:          InjuryName,
+		BodyPart:      BodyPart,
+		OccurredOn:    &occurred,
+		Mechanism:     Mechanism,
+		RecoveryNotes: RecoveryNotes,
+	}
+}
+
+// driveImmunizationRecords and driveInjuryRecords are driveRecords' shape,
+// walked for the two other kinds this build registers: create, read, list,
+// a stranger's read and a stale-precondition update, each planting its own
+// sentinels rather than medication's.
+func driveImmunizationRecords(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+
+	created := c.do(http.MethodPost, immunizationsOfKind(), jsonBody(c.t, sentinelImmunization(patientID)))
+	require.Equal(c.t, http.StatusCreated, created.Status, "the sentinel immunization was not created: %s", created.Body)
+
+	id := decodedID(c.t, created.Body)
+	address := immunizationsOfKind() + "/" + id
+
+	read := c.do(http.MethodGet, address, "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+
+	etag := read.Header.Get("ETag")
+	require.NotEmpty(c.t, etag, "no ETag, so the precondition step below would not be a precondition")
+
+	c.do(http.MethodGet, immunizationsOfKind()+"?patient="+patientID, "")
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, address, "")
+
+	c.token(testsupport.AccountAEmail)
+	patch := jsonBody(c.t, api.ImmunizationPatch{TradeName: ptr(TradeName), Manufacturer: ptr(Manufacturer)})
+	updated := c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": etag})
+	require.Equal(c.t, http.StatusOK, updated.Status, "%s", updated.Body)
+
+	c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": `"not-the-current-version"`})
+
+	current := updated.Header.Get("ETag")
+	if current == "" {
+		current = etag
+	}
+
+	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
+}
+
+func driveInjuryRecords(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+
+	created := c.do(http.MethodPost, injuriesOfKind(), jsonBody(c.t, sentinelInjury(patientID)))
+	require.Equal(c.t, http.StatusCreated, created.Status, "the sentinel injury was not created: %s", created.Body)
+
+	id := decodedID(c.t, created.Body)
+	address := injuriesOfKind() + "/" + id
+
+	read := c.do(http.MethodGet, address, "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+
+	etag := read.Header.Get("ETag")
+	require.NotEmpty(c.t, etag, "no ETag, so the precondition step below would not be a precondition")
+
+	c.do(http.MethodGet, injuriesOfKind()+"?patient="+patientID, "")
+	c.do(http.MethodGet, injuriesOfKind()+"?patient="+patientID+"&unresolved=true", "")
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, address, "")
+
+	c.token(testsupport.AccountAEmail)
+	patch := jsonBody(c.t, api.InjuryPatch{Mechanism: ptr(Mechanism), RecoveryNotes: ptr(RecoveryNotes)})
+	updated := c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": etag})
+	require.Equal(c.t, http.StatusOK, updated.Status, "%s", updated.Body)
+
+	c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": `"not-the-current-version"`})
+
+	current := updated.Header.Get("ETag")
+	if current == "" {
+		current = etag
+	}
+
+	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
+}
+
 // driveRecords walks contracts/records.md's seven operations against a record
 // that holds every sentinel, including the refusals: a stranger's read, a
 // genuine miss, a stale precondition, an unpublished filter value and a forged
@@ -1335,6 +1469,10 @@ func drivePages(c *client) {
 		pageOfKind(),
 		pageOfKind() + "/" + testsupport.NameOnlyMedicationID,
 		pageOfKind() + "/" + testsupport.ScriptedMedicationID,
+		immunizationPageOfKind() + "?patient=" + testsupport.AccountAPatientSelfID,
+		immunizationPageOfKind() + "/" + testsupport.ImmunizationSampleID,
+		injuryPageOfKind() + "?patient=" + testsupport.AccountAPatientSelfID,
+		injuryPageOfKind() + "/" + testsupport.InjurySampleID,
 		"/settings",
 	} {
 		c.do(http.MethodGet, path, "")
