@@ -494,6 +494,149 @@ func operationDocs() map[string]operationDoc {
 			notes: "It reports whether the instance can serve and nothing about the data it holds.",
 		},
 
+		// contracts/practitioners.md
+		"listPractitioners": {
+			successStatus: http.StatusOK,
+			successNote:   "A page of the account's practitioner directory.",
+			errors: []int{
+				http.StatusBadRequest,
+				http.StatusUnauthorized,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			query: []param{
+				stringParam("q", "Case-insensitive substring match over name."),
+				stringParam("specialty", "Narrow to one specialty from the fixed vocabulary. Outside it, 422."),
+				stringParam("facility", "Narrow to practitioners at one facility."),
+				limitParam(), cursorParam(), countParam(),
+			},
+			ownerScoped: true,
+			notes: "Also the type-ahead behind every practitioner picker: `?q=` with a short prefix and `?limit=10` " +
+				"is the autocomplete call, and there is no separate operation for it.",
+		},
+		"createPractitioner": {
+			successStatus:  http.StatusCreated,
+			successNote:    "The created practitioner.",
+			successHeaders: []string{"Location", "ETag"},
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusConflict,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			ownerScoped: true,
+			notes: "A duplicate `(owner, name, specialty)` is 409, including when neither has a specialty. A " +
+				"`facility` naming a facility the actor does not own is 404 (FR-042).",
+		},
+		"getPractitioner": {
+			successStatus:  http.StatusOK,
+			successNote:    "The practitioner, including `usage`: how many patients name them as primary and how many clinical records reference them (FR-040).",
+			successHeaders: []string{"ETag"},
+			errors:         []int{http.StatusUnauthorized, http.StatusNotFound, http.StatusInternalServerError},
+			ownerScoped:    true,
+		},
+		"updatePractitioner": {
+			successStatus:  http.StatusOK,
+			successNote:    "The updated practitioner.",
+			successHeaders: []string{"ETag"},
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusConflict,
+				http.StatusPreconditionFailed,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			headers:     []param{ifMatch},
+			ownerScoped: true,
+			notes: "Only supplied members change. `facility` accepts an explicit null to clear the reference. A " +
+				"missing `If-Match` is 422 on that header; a mismatch is 412 and the response carries the stored " +
+				"practitioner's current version.",
+		},
+		"deletePractitioner": {
+			successStatus: http.StatusNoContent,
+			successNote:   "The practitioner is permanently gone.",
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusPreconditionFailed,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			headers:     []param{ifMatch},
+			ownerScoped: true,
+			notes:       "Every referencing record — a patient's primary practitioner, a medication's practitioner — survives with the reference cleared (research D-06).",
+		},
+
+		// contracts/facilities.md
+		"listFacilities": {
+			successStatus: http.StatusOK,
+			successNote:   "A page of the account's directory of places of care.",
+			errors: []int{
+				http.StatusBadRequest,
+				http.StatusUnauthorized,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			query: []param{
+				stringParam("q", "Case-insensitive substring match over name and brand."),
+				stringParam("kind", "One of practice, pharmacy, hospital, lab, imaging, other. Outside the vocabulary, 422."),
+				limitParam(), cursorParam(), countParam(),
+			},
+			ownerScoped: true,
+			notes:       "Also the kind filter (FR-036) and the type-ahead behind every facility and pharmacy picker (FR-039): one operation, not six.",
+		},
+		"createFacility": {
+			successStatus:  http.StatusCreated,
+			successNote:    "The created facility.",
+			successHeaders: []string{"Location", "ETag"},
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			ownerScoped: true,
+			notes: "There is deliberately no uniqueness constraint on name: a chain's second branch is a second " +
+				"entry with its own address and hours (FR-035, US5-3).",
+		},
+		"getFacility": {
+			successStatus:  http.StatusOK,
+			successNote:    "The facility, including `usage`: the practitioners that name it and the clinical records whose pharmacy it is.",
+			successHeaders: []string{"ETag"},
+			errors:         []int{http.StatusUnauthorized, http.StatusNotFound, http.StatusInternalServerError},
+			ownerScoped:    true,
+		},
+		"updateFacility": {
+			successStatus:  http.StatusOK,
+			successNote:    "The updated facility.",
+			successHeaders: []string{"ETag"},
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusPreconditionFailed,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			headers:     []param{ifMatch},
+			ownerScoped: true,
+			notes:       "Only supplied members change. Changing `kind` is permitted: a practice that turns out to be a hospital is a correction, not a new entity.",
+		},
+		"deleteFacility": {
+			successStatus: http.StatusNoContent,
+			successNote:   "The facility is permanently gone.",
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusPreconditionFailed,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			headers:     []param{ifMatch},
+			ownerScoped: true,
+			notes:       "References from a practitioner's facility and a medication's pharmacy are unset, not cascaded (research D-06).",
+		},
+
 		// contracts/README.md, "Documented PocketBase-native paths that stay public"
 		"nativeAdminUI":                   nativeDoc("It ships in production, hardened: mandatory superuser MFA, mandatory IP allowlist, every session audited."),
 		"nativeSuperuserAuthWithPassword": nativeDoc("The admin UI's own authentication."),

@@ -1,4 +1,5 @@
-// Package practitioner is the PocketBase adapter for the practitioner
-// directory. It sits on the PocketBase side of the import boundary and is
-// permitted to import github.com/pocketbase/pocketbase.
+// Package practitioner is practitioner.Repository against PocketBase: the
+// account-owned directory of clinicians, with no patient anchor and no
+// internal/domain/kind involvement — a practitioner is a directory entry, not
+// a clinical record kind.
 package practitioner

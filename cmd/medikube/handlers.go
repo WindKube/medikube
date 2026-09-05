@@ -13,6 +13,7 @@ import (
 
 	"medikube/internal/config"
 	"medikube/internal/domain/access"
+	"medikube/internal/domain/audit"
 	"medikube/internal/domain/identity"
 	"medikube/internal/httproute"
 	"medikube/internal/obs"
@@ -21,13 +22,17 @@ import (
 	"medikube/internal/records"
 	accessservice "medikube/internal/service/access"
 	auditservice "medikube/internal/service/audit"
+	facilitysvc "medikube/internal/service/facility"
 	serviceidentity "medikube/internal/service/identity"
 	"medikube/internal/service/medication"
 	"medikube/internal/service/patient"
+	practitionersvc "medikube/internal/service/practitioner"
 	"medikube/internal/store"
 	auditstore "medikube/internal/store/audit"
+	facilitystore "medikube/internal/store/facility"
 	medicationstore "medikube/internal/store/medication"
 	patientstore "medikube/internal/store/patient"
+	practitionerstore "medikube/internal/store/practitioner"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
 	"medikube/internal/web/page"
@@ -47,6 +52,7 @@ func operations(
 	app core.App,
 	cfg config.Config,
 	resolve api.Resolve,
+	resolveDirectory func() (directoryServices, error),
 	hub *realtime.Hub,
 	health api.HealthDeps,
 ) (httproute.Handlers, error) {
@@ -158,6 +164,39 @@ func operations(
 	}
 
 	maps.Copy(table, overviewPage)
+
+	// The directory: practitioners and facilities, contracts/practitioners.md
+	// and contracts/facilities.md's ten operations. Wired here, alongside
+	// accounts, because both need the application: a repository needs the
+	// cursor codec, and the codec is keyed from a secret the migrations have
+	// only just created — see directoryFamily.
+	practitionerResolve := api.PractitionerResolve(func() (*practitionersvc.Service, error) {
+		services, err := resolveDirectory()
+
+		return services.Practitioner, err
+	})
+
+	facilityResolve := api.FacilityResolve(func() (*facilitysvc.Service, error) {
+		services, err := resolveDirectory()
+
+		return services.Facility, err
+	})
+
+	practitionerOps, err := api.PractitionerHandlers(api.PractitionerDeps{
+		Resolve:    practitionerResolve,
+		Facilities: facilityResolve,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	facilityOps, err := api.FacilityHandlers(api.FacilityDeps{Resolve: facilityResolve})
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, practitionerOps)
+	maps.Copy(table, facilityOps)
 
 	// The two embedded assets every page's head links. Neither needs the
 	// application: they are compiled into the binary, so they are wired here
@@ -425,6 +464,95 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	return pb.BindRecordStream(app, pb.RecordStream{Hub: hub, Kinds: registry.Kinds()})
 }
 
+// directoryServices is the two services practitioners.md and facilities.md's
+// ten operations are built on.
+type directoryServices struct {
+	Practitioner *practitionersvc.Service
+	Facility     *facilitysvc.Service
+}
+
+// directoryFamily resolves both directory services, once, on first use —
+// recordFamily's own mechanism, for the same reason: a repository needs the
+// cursor codec, and the codec is keyed from a secret the migrations have only
+// just created (store.CursorSecret), which does not exist until apis.Serve's
+// OnServe has run.
+func directoryFamily(app core.App) func() (directoryServices, error) {
+	return sync.OnceValues(func() (directoryServices, error) {
+		return registerDirectory(app)
+	})
+}
+
+// registerDirectory builds both directory services and binds their audit
+// hooks. One call, no route: practitioners and facilities are not a
+// kind.Kind (research D-05), so neither goes through registerKinds.
+func registerDirectory(app core.App) (directoryServices, error) {
+	secret, err := store.CursorSecret(app, "")
+	if err != nil {
+		return directoryServices{}, err
+	}
+
+	cursors, err := store.NewCursorCodec(secret)
+	if err != nil {
+		return directoryServices{}, err
+	}
+
+	trail, err := auditstore.New(app)
+	if err != nil {
+		return directoryServices{}, err
+	}
+
+	auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
+	if err != nil {
+		return directoryServices{}, err
+	}
+
+	practitionerRepo, err := practitionerstore.New(app, cursors)
+	if err != nil {
+		return directoryServices{}, err
+	}
+
+	practitionerService, err := practitionersvc.New(practitionerRepo, practitionersvc.DefaultAuthorizer, auditor)
+	if err != nil {
+		return directoryServices{}, err
+	}
+
+	facilityRepo, err := facilitystore.New(app, cursors)
+	if err != nil {
+		return directoryServices{}, err
+	}
+
+	facilityService, err := facilitysvc.New(facilityRepo, facilitysvc.NewAuthorizer(), auditor)
+	if err != nil {
+		return directoryServices{}, err
+	}
+
+	if err := pb.BindDirectoryAudit(app, pb.DirectoryAudit{
+		Trail: auditor,
+		Collections: map[string]audit.TargetKind{
+			"practitioners": audit.TargetKindPractitioner,
+			"facilities":    audit.TargetKindFacility,
+		},
+		Actor:   web.ActorFrom,
+		Request: obs.CorrelationID,
+	}); err != nil {
+		return directoryServices{}, err
+	}
+
+	return directoryServices{Practitioner: practitionerService, Facility: facilityService}, nil
+}
+
+// directoryOperations is the ten operation ids practitioners.md and
+// facilities.md publish, for unimplemented() to mark done alongside the other
+// groups operations() assembles outside wired().
+func directoryOperations() []string {
+	return []string{
+		api.OpListPractitioners, api.OpCreatePractitioner, api.OpGetPractitioner,
+		api.OpUpdatePractitioner, api.OpDeletePractitioner,
+		api.OpListFacilities, api.OpCreateFacility, api.OpGetFacility,
+		api.OpUpdateFacility, api.OpDeleteFacility,
+	}
+}
+
 // unimplemented lists, sorted, the operations still answered by the stub.
 //
 // It resolves nothing: the handler table's shape is decided by which groups
@@ -459,6 +587,10 @@ func unimplemented() []string {
 	}
 
 	implemented[page.OpOverviewPage] = nil
+
+	for _, opID := range directoryOperations() {
+		implemented[opID] = nil
+	}
 
 	for opID := range assetHandlers() {
 		implemented[opID] = nil

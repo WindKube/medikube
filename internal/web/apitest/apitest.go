@@ -43,13 +43,17 @@ import (
 	"medikube/internal/records"
 	accessservice "medikube/internal/service/access"
 	auditservice "medikube/internal/service/audit"
+	facilitysvc "medikube/internal/service/facility"
 	serviceidentity "medikube/internal/service/identity"
 	"medikube/internal/service/medication"
 	"medikube/internal/service/patient"
+	practitionersvc "medikube/internal/service/practitioner"
 	"medikube/internal/store"
 	auditstore "medikube/internal/store/audit"
+	facilitystore "medikube/internal/store/facility"
 	storemedication "medikube/internal/store/medication"
 	patientstore "medikube/internal/store/patient"
+	practitionerstore "medikube/internal/store/practitioner"
 	"medikube/internal/testsupport"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -269,7 +273,17 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 		return nil, err
 	}
 
-	table, err := handlerTable(resolve, patientResolve, photoResolve, hub, chosen, accounts)
+	practitionerService, facilityService, err := registerDirectory(app)
+	if err != nil {
+		return nil, err
+	}
+
+	directoryOps, err := directoryHandlers(practitionerService, facilityService)
+	if err != nil {
+		return nil, err
+	}
+
+	table, err := handlerTable(resolve, patientResolve, photoResolve, hub, chosen, accounts, directoryOps)
 	if err != nil {
 		return nil, err
 	}
@@ -335,6 +349,7 @@ func handlerTable(
 	hub *realtime.Hub,
 	chosen settings,
 	accounts *api.Accounts,
+	directoryOps httproute.Handlers,
 ) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
@@ -411,7 +426,7 @@ func handlerTable(
 
 	groups := []httproute.Handlers{
 		recordOps, pageOps, streamOps, accountOps, accountPages, overviewPage, assets,
-		patientOps, photoOps, patientPages,
+		patientOps, photoOps, patientPages, directoryOps,
 	}
 
 	for _, group := range groups {
@@ -579,6 +594,100 @@ func registerKinds(app core.App, hub *realtime.Hub) (*records.Registry, *patient
 	}
 
 	return registry, patientService, photos, nil
+}
+
+// registerDirectory builds the two directory services this instance serves —
+// the same call cmd/medikube's registerDirectory makes — and binds their
+// audit hooks. Practitioners and facilities are not a kind.Kind (research
+// D-05), so neither goes through registerKinds.
+func registerDirectory(app core.App) (*practitionersvc.Service, *facilitysvc.Service, error) {
+	secret, err := store.CursorSecret(app, "")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	codec, err := store.NewCursorCodec(secret)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	trail, err := auditstore.New(app)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	practitionerRepo, err := practitionerstore.New(app, codec)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	practitionerService, err := practitionersvc.New(practitionerRepo, practitionersvc.DefaultAuthorizer, auditor)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	facilityRepo, err := facilitystore.New(app, codec)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	facilityService, err := facilitysvc.New(facilityRepo, facilitysvc.NewAuthorizer(), auditor)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := pb.BindDirectoryAudit(app, pb.DirectoryAudit{
+		Trail: auditor,
+		Collections: map[string]audit.TargetKind{
+			"practitioners": audit.TargetKindPractitioner,
+			"facilities":    audit.TargetKindFacility,
+		},
+		Actor:   web.ActorFrom,
+		Request: obs.CorrelationID,
+	}); err != nil {
+		return nil, nil, err
+	}
+
+	return practitionerService, facilityService, nil
+}
+
+// directoryHandlers is the ten operations, resolved to the two services
+// already built — this harness never needs the lazy Resolve indirection
+// cmd/medikube uses, because the instance is already migrated by the time
+// Wire runs.
+func directoryHandlers(practitionerService *practitionersvc.Service, facilityService *facilitysvc.Service) (httproute.Handlers, error) {
+	practitionerResolve := api.PractitionerResolve(func() (*practitionersvc.Service, error) { return practitionerService, nil })
+	facilityResolve := api.FacilityResolve(func() (*facilitysvc.Service, error) { return facilityService, nil })
+
+	practitionerOps, err := api.PractitionerHandlers(api.PractitionerDeps{
+		Resolve:    practitionerResolve,
+		Facilities: facilityResolve,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	facilityOps, err := api.FacilityHandlers(api.FacilityDeps{Resolve: facilityResolve})
+	if err != nil {
+		return nil, err
+	}
+
+	table := make(httproute.Handlers, len(practitionerOps)+len(facilityOps))
+
+	for opID, handler := range practitionerOps {
+		table[opID] = handler
+	}
+
+	for opID, handler := range facilityOps {
+		table[opID] = handler
+	}
+
+	return table, nil
 }
 
 // Events reads the trail back, newest last, so a test can assert what one

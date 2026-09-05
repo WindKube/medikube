@@ -256,6 +256,21 @@ var queryLanguageParameters = map[string]string{
 	"$autoCancel": "false",
 }
 
+// recordIDFor is the seeded id a route's plain `{id}` fetch must answer 200
+// for. Every route's {id} lives in a different collection — a medication's,
+// a practitioner's, a facility's — and testsupport.NameOnlyMedicationID is
+// the default because most of the walked routes are medication's.
+func recordIDFor(opID string) string {
+	switch opID {
+	case "getPractitioner":
+		return testsupport.AccountAPractitionerID
+	case "getFacility":
+		return testsupport.AccountAFacilityPracticeID
+	default:
+		return testsupport.NameOnlyMedicationID
+	}
+}
+
 // TestNoPublishedRouteHonoursPocketBasesQueryLanguage is part two, driven by
 // the route table rather than by a list of URLs.
 //
@@ -290,7 +305,7 @@ func TestNoPublishedRouteHonoursPocketBasesQueryLanguage(t *testing.T) {
 			continue
 		}
 
-		url := bind(t, route.Path, anonymousParameters(testsupport.NameOnlyMedicationID))
+		url := bind(t, route.Path, anonymousParameters(recordIDFor(route.OpID)))
 
 		// listRecords and listRecordsOfKind are the two routes
 		// contracts/medications-rescope.md requires a `?patient=` on; every

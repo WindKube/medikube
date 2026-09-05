@@ -168,6 +168,27 @@ var checkpointExempt = map[string]exemption{
 		reason:         "creates a new patient for the actor; owner is taken from the session and there is no existing row to authorize against yet (FR-002)",
 		insteadReaches: "Authenticated",
 	},
+
+	// practitioner and facility each declare their own trivial Authorizer
+	// implementation in their own package (ports.go / authorizer.go) rather
+	// than importing internal/service/access's, because the directory has no
+	// share and no level beyond ownership to resolve. Each one IS the
+	// checkpoint the package's own service methods call, so requiring it to
+	// call something to authorize would be requiring a second checkpoint —
+	// the same reasoning internal/service/access's own package-level
+	// exemption states above. PROSE ONLY: nothing below proves these four.
+	"internal/service/practitioner.actorAuthorizer.Actor": {
+		reason: "IS the practitioner checkpoint itself",
+	},
+	"internal/service/practitioner/practitionertest.Authorizer.Actor": {
+		reason: "the practitioner contract suite's fake Authorizer, for the same reason",
+	},
+	"internal/service/facility.defaultAuthorizer.Actor": {
+		reason: "IS the facility checkpoint itself",
+	},
+	"internal/service/facility/facilitytest.Authorizer.Actor": {
+		reason: "the facility contract suite's fake Authorizer, for the same reason",
+	},
 }
 
 func TestEveryServiceMethodThatTouchesARecordReachesTheCheckpoint(t *testing.T) {

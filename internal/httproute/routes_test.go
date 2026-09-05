@@ -72,8 +72,22 @@ func TestTheTableCarriesTheTwentyNineDocumentedOperations(t *testing.T) {
 		{"putPatientPhoto", http.MethodPut, "/api/v1/patients/{patientId}/photo", httproute.KindAPI, httproute.AuthUser},
 		{"getPatientPhoto", http.MethodGet, "/api/v1/patients/{patientId}/photo", httproute.KindAPI, httproute.AuthUser},
 		{"deletePatientPhoto", http.MethodDelete, "/api/v1/patients/{patientId}/photo", httproute.KindAPI, httproute.AuthUser},
+		// contracts/practitioners.md and contracts/facilities.md (phase
+		// 002-patient-core, US5): two directories, ten operations, added
+		// beside README.md's own twenty-two rather than folded into its
+		// count, which stays what phase 001 pinned.
+		{"listPractitioners", http.MethodGet, "/api/v1/practitioners", httproute.KindAPI, httproute.AuthUser},
+		{"createPractitioner", http.MethodPost, "/api/v1/practitioners", httproute.KindAPI, httproute.AuthUser},
+		{"getPractitioner", http.MethodGet, "/api/v1/practitioners/{id}", httproute.KindAPI, httproute.AuthUser},
+		{"updatePractitioner", http.MethodPatch, "/api/v1/practitioners/{id}", httproute.KindAPI, httproute.AuthUser},
+		{"deletePractitioner", http.MethodDelete, "/api/v1/practitioners/{id}", httproute.KindAPI, httproute.AuthUser},
+		{"listFacilities", http.MethodGet, "/api/v1/facilities", httproute.KindAPI, httproute.AuthUser},
+		{"createFacility", http.MethodPost, "/api/v1/facilities", httproute.KindAPI, httproute.AuthUser},
+		{"getFacility", http.MethodGet, "/api/v1/facilities/{id}", httproute.KindAPI, httproute.AuthUser},
+		{"updateFacility", http.MethodPatch, "/api/v1/facilities/{id}", httproute.KindAPI, httproute.AuthUser},
+		{"deleteFacility", http.MethodDelete, "/api/v1/facilities/{id}", httproute.KindAPI, httproute.AuthUser},
 	}
-	require.Len(t, want, 29)
+	require.Len(t, want, 39)
 
 	byOpID := inventoryByOpID(t)
 
