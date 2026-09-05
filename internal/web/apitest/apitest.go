@@ -44,6 +44,7 @@ import (
 	"medikube/internal/records/kinds"
 	accessservice "medikube/internal/service/access"
 	auditservice "medikube/internal/service/audit"
+	"medikube/internal/service/encounter"
 	"medikube/internal/service/equipment"
 	facilitysvc "medikube/internal/service/facility"
 	serviceidentity "medikube/internal/service/identity"
@@ -51,14 +52,17 @@ import (
 	"medikube/internal/service/medication"
 	"medikube/internal/service/patient"
 	practitionersvc "medikube/internal/service/practitioner"
+	"medikube/internal/service/procedure"
 	searchsvc "medikube/internal/service/search"
 	"medikube/internal/service/symptom"
+	"medikube/internal/service/treatment"
 	"medikube/internal/service/vitals"
 	"medikube/internal/store"
 	storeallergy "medikube/internal/store/allergy"
 	auditstore "medikube/internal/store/audit"
 	storecondition "medikube/internal/store/condition"
 	storeemergencycontact "medikube/internal/store/emergencycontact"
+	storeencounter "medikube/internal/store/encounter"
 	storeequipment "medikube/internal/store/equipment"
 	facilitystore "medikube/internal/store/facility"
 	storeidentity "medikube/internal/store/identity"
@@ -68,8 +72,10 @@ import (
 	storemedication "medikube/internal/store/medication"
 	patientstore "medikube/internal/store/patient"
 	practitionerstore "medikube/internal/store/practitioner"
+	storeprocedure "medikube/internal/store/procedure"
 	searchstore "medikube/internal/store/search"
 	storesymptom "medikube/internal/store/symptom"
+	storetreatment "medikube/internal/store/treatment"
 	storevitals "medikube/internal/store/vitals"
 	"medikube/internal/testsupport"
 	"medikube/internal/web"
@@ -414,6 +420,21 @@ func handlerTable(
 		return nil, err
 	}
 
+	encounterPageOps, err := page.EncounterHandlers(resolve, patientResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	procedurePageOps, err := page.ProcedureHandlers(resolve, patientResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	treatmentPageOps, err := page.TreatmentHandlers(resolve, patientResolve)
+	if err != nil {
+		return nil, err
+	}
+
 	streamOps, err := stream.Handlers(stream.Deps{
 		Resolve:   resolve,
 		Hub:       hub,
@@ -491,7 +512,8 @@ func handlerTable(
 	}
 
 	groups := []httproute.Handlers{
-		recordOps, pageOps, symptomPageOps, vitalsPageOps, streamOps, accountOps, accountPages, overviewPage, assets,
+		recordOps, pageOps, symptomPageOps, vitalsPageOps, encounterPageOps, procedurePageOps, treatmentPageOps,
+		streamOps, accountOps, accountPages, overviewPage, assets,
 		patientOps, photoOps, activePatientOps, patientPages, directoryOps, injuryPageOps, immunizationPageOps,
 		insurancePageOps, equipmentPageOps,
 	}
@@ -838,6 +860,72 @@ func registerKinds(
 		Views:        vitalsViews,
 		SearchFields: api.VitalsSearchFields,
 		Basis:        api.VitalsBasis,
+	}); registerErr != nil {
+		return nil, nil, nil, nil, registerErr
+	}
+
+	encounterViews, err := page.NewEncounterViews()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	encounterRepo, err := storeencounter.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if registerErr := encounter.Register(registry, encounter.Wiring{
+		Repository:   encounterRepo,
+		Authorizer:   authorizer,
+		Codec:        api.EncounterCodec{},
+		Schema:       api.EncounterSchema(),
+		Views:        encounterViews,
+		SearchFields: api.EncounterSearchFields,
+		Basis:        api.EncounterBasis,
+	}); registerErr != nil {
+		return nil, nil, nil, nil, registerErr
+	}
+
+	procedureViews, err := page.NewProcedureViews()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	procedureRepo, err := storeprocedure.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if registerErr := procedure.Register(registry, procedure.Wiring{
+		Repository:   procedureRepo,
+		Authorizer:   authorizer,
+		Codec:        api.ProcedureCodec{},
+		Schema:       api.ProcedureSchema(),
+		Views:        procedureViews,
+		SearchFields: api.ProcedureSearchFields,
+		Basis:        api.ProcedureBasis,
+	}); registerErr != nil {
+		return nil, nil, nil, nil, registerErr
+	}
+
+	treatmentViews, err := page.NewTreatmentViews()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	treatmentRepo, err := storetreatment.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if registerErr := treatment.Register(registry, treatment.Wiring{
+		Repository:   treatmentRepo,
+		Authorizer:   authorizer,
+		Codec:        api.TreatmentCodec{},
+		Schema:       api.TreatmentSchema(),
+		Views:        treatmentViews,
+		SearchFields: api.TreatmentSearchFields,
+		Basis:        api.TreatmentBasis,
 	}); registerErr != nil {
 		return nil, nil, nil, nil, registerErr
 	}

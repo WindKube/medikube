@@ -1,5 +1,7 @@
 package records
 
+import "medikube/internal/domain/kind"
+
 // Field names US2's three kinds add that medication.go does not already
 // declare. Several columns are shared verbatim with medication (name, type,
 // status, started_on, ended_on, frequency, dosage, notes) and FieldLabel
@@ -23,8 +25,13 @@ const (
 	FieldExpectedOutcome = "expected_outcome"
 	FieldPractitioner    = "practitioner"
 	FieldFacility        = "facility"
-	FieldEncounters      = "encounters"
-	FieldEquipment       = "equipment"
+)
+
+// Named after the collections they relate to, per data-model §4.5 (FR-028),
+// so declared from the kind table rather than spelled a second time here.
+var (
+	FieldEncounters = kind.Encounter.Collection()
+	FieldEquipment  = kind.Equipment.Collection()
 )
 
 // init extends the shared label table medication.go declares (fieldLabels),
@@ -51,8 +58,8 @@ func init() {
 		FieldExpectedOutcome: "Expected outcome",
 		FieldPractitioner:    "Practitioner",
 		FieldFacility:        "Place of care",
-		FieldEncounters:      "Related encounters",
-		FieldEquipment:       "Related equipment",
+		FieldEncounters:      "Related visits",
+		FieldEquipment:       "Related devices",
 	} {
 		fieldLabels[field] = label
 	}

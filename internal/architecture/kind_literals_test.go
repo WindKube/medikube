@@ -102,6 +102,9 @@ var kindLiteralExempt = map[string]string{
 	"internal/web/views/records/vitals_row_templ.go":    "the same, for vitals_row.templ",
 	"internal/web/views/records/vitals_detail_templ.go": "the same, for vitals_detail.templ",
 	"internal/web/views/records/vitals_form_templ.go":   "the same, for vitals_form.templ",
+	"internal/web/api/treatment.go": "FR-028's two multi-relations are named after the collections they point to " +
+		"(data-model §4.5); the JSON struct tags carrying those names are literal by construction and cannot call " +
+		"Segment() or Collection()",
 }
 
 func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {

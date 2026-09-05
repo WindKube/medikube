@@ -41,10 +41,13 @@ func TestTagsDownRemovesTheCollectionCleanly(t *testing.T) {
 	app := newTestApp(t)
 
 	// search_index.tags, medications.tags and the tags fields belonging to
-	// US1's three kinds and US5's two kinds are later migrations' relations
-	// to this collection; unwinding in the real migration runner removes
-	// them first, in reverse creation order. Reproduced here so this test
-	// exercises tagsDown in the state it actually runs in.
+	// US1, US2 and US5's kinds are later migrations' relations to this
+	// collection; unwinding in the real migration runner removes them first,
+	// in reverse creation order. Reproduced here so this test exercises
+	// tagsDown in the state it actually runs in.
+	require.NoError(t, treatmentsDown(app))
+	require.NoError(t, proceduresDown(app))
+	require.NoError(t, encountersDown(app))
 	require.NoError(t, injuriesDown(app))
 	require.NoError(t, immunizationsDown(app))
 	require.NoError(t, insurancesDown(app))

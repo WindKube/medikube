@@ -350,6 +350,20 @@ func Apply(app core.App) error {
 			return err
 		}
 
+		// Treatments' encounters relation needs the encounters it names to
+		// already exist, so encounters are applied first.
+		if err := applyEncounters(tx); err != nil {
+			return err
+		}
+
+		if err := applyProcedures(tx); err != nil {
+			return err
+		}
+
+		if err := applyTreatments(tx); err != nil {
+			return err
+		}
+
 		return applyActivePatients(tx)
 	})
 }

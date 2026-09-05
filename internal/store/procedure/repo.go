@@ -202,16 +202,16 @@ func (r *Repo) Update(ctx context.Context, entity clinical.Procedure, expectedVe
 			return err
 		}
 
-		if err := expectVersion(record, entity.ID, expectedVersion); err != nil {
-			return err
+		if versionErr := expectVersion(record, entity.ID, expectedVersion); versionErr != nil {
+			return versionErr
 		}
 
-		if err := store.ProcedureToRecord(record, entity); err != nil {
-			return err
+		if mapErr := store.ProcedureToRecord(record, entity); mapErr != nil {
+			return mapErr
 		}
 
-		if err := txApp.SaveWithContext(ctx, record); err != nil {
-			return fmt.Errorf("updating %s %s: %w", kind.Procedure, entity.ID, err)
+		if saveErr := txApp.SaveWithContext(ctx, record); saveErr != nil {
+			return fmt.Errorf("updating %s %s: %w", kind.Procedure, entity.ID, saveErr)
 		}
 
 		mapped, err := store.ProcedureFromRecord(record)

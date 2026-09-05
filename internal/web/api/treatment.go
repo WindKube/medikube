@@ -25,9 +25,14 @@ const (
 	TreatmentMemberStatus          = "status"
 	TreatmentMemberPractitioner    = "practitioner"
 	TreatmentMemberFacility        = "facility"
-	TreatmentMemberEncounters      = "encounters"
-	TreatmentMemberEquipment       = "equipment"
 	TreatmentMemberNotes           = "notes"
+)
+
+// Named after the collections they relate to, per data-model §4.5 (FR-028),
+// so declared from the kind table rather than spelled a second time here.
+var (
+	TreatmentMemberEncounters = kind.Encounter.Collection()
+	TreatmentMemberEquipment  = kind.Equipment.Collection()
 )
 
 var treatmentMembers = []string{

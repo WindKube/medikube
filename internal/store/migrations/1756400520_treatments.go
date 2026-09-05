@@ -33,10 +33,15 @@ const (
 	treatmentFieldStatus          = "status"
 	treatmentFieldPractitioner    = "practitioner"
 	treatmentFieldFacility        = "facility"
-	treatmentFieldEncounters      = "encounters"
-	treatmentFieldEquipment       = "equipment"
 	treatmentFieldNotes           = "notes"
 	treatmentFieldTags            = "tags"
+)
+
+// Named after the collections they relate to, per data-model §4.5 (FR-028),
+// so declared from the kind table rather than spelled a second time here.
+var (
+	treatmentFieldEncounters = kind.Encounter.Collection()
+	treatmentFieldEquipment  = kind.Equipment.Collection()
 )
 
 func init() {
