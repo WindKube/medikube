@@ -20,12 +20,13 @@ func sentinelsByName(t *testing.T) map[string]error {
 	t.Helper()
 
 	return map[string]error{
-		"ErrNotFound":        ErrNotFound,
-		"ErrForbidden":       ErrForbidden,
-		"ErrUnauthenticated": ErrUnauthenticated,
-		"ErrVersionMismatch": ErrVersionMismatch,
-		"ErrConflict":        ErrConflict,
-		"ErrRateLimited":     ErrRateLimited,
+		"ErrNotFound":         ErrNotFound,
+		"ErrForbidden":        ErrForbidden,
+		"ErrUnauthenticated":  ErrUnauthenticated,
+		"ErrVersionMismatch":  ErrVersionMismatch,
+		"ErrConflict":         ErrConflict,
+		"ErrRateLimited":      ErrRateLimited,
+		"ErrUnsupportedMedia": ErrUnsupportedMedia,
 	}
 }
 

@@ -30,6 +30,12 @@ var (
 	ErrConflict = errors.New("conflict")
 
 	ErrRateLimited = errors.New("rate limited")
+
+	// ErrUnsupportedMedia is an upload whose sniffed content type PocketBase's
+	// own MimeTypes validator refused (research D-17). It replaces, and never
+	// wraps, PocketBase's own message: that message embeds the uploaded
+	// filename, which constitution VII names as PHI.
+	ErrUnsupportedMedia = errors.New("unsupported media type")
 )
 
 // Sentinels returns every sentinel the domain defines, so the error mapper's
@@ -46,5 +52,6 @@ func Sentinels() []error {
 		ErrVersionMismatch,
 		ErrConflict,
 		ErrRateLimited,
+		ErrUnsupportedMedia,
 	}
 }

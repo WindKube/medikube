@@ -456,3 +456,37 @@ func TestAnApiErrorFromPocketBaseKeepsItsStatusAndGetsAMediKubeCode(t *testing.T
 		})
 	}
 }
+
+// T040, research D-17. PocketBase's own file-validation message embeds the
+// uploaded filename (`core/validators/file.go:63`); constitution VII names
+// that filename as PHI, so it must never reach the response, the log stream
+// or Sentry — not even as a substring.
+func TestMapFileValidationErrorNeverPropagatesTheFilename(t *testing.T) {
+	t.Parallel()
+
+	secretFilename := "amaras-mri-2024-confidential.jpg"
+	pocketBaseErr := fmt.Errorf(`Failed to upload %q due to unsupported file type.`, secretFilename)
+
+	mapped := MapFileValidationError(pocketBaseErr)
+
+	require.ErrorIs(t, mapped, domain.ErrUnsupportedMedia)
+	assert.NotContains(t, mapped.Error(), secretFilename)
+
+	status, code := Classify(mapped)
+	assert.Equal(t, http.StatusUnsupportedMediaType, status)
+	assert.Equal(t, CodeUnsupportedMediaType, code)
+
+	failure := NewFailure(mapped, "req")
+	assert.NotContains(t, failure.Message, secretFilename)
+	assert.NotContains(t, fmt.Sprintf("%#v", failure), secretFilename,
+		"no member of the envelope carries any part of the uploaded filename")
+}
+
+func TestMapFileValidationErrorLeavesEveryOtherErrorAlone(t *testing.T) {
+	t.Parallel()
+
+	assert.NoError(t, MapFileValidationError(nil))
+
+	other := errors.New("some other save failure")
+	assert.Same(t, other, MapFileValidationError(other))
+}
