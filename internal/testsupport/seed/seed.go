@@ -330,6 +330,14 @@ func Apply(app core.App) error {
 			return err
 		}
 
+		if err := applySymptoms(tx); err != nil {
+			return err
+		}
+
+		if err := applyVitals(tx); err != nil {
+			return err
+		}
+
 		return applyActivePatients(tx)
 	})
 }

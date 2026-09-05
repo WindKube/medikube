@@ -1,0 +1,83 @@
+// T102. Smoke cases for the two US3 kinds' pages, at both viewports (every
+// case here runs once per project in playwright.config.ts). open() carries
+// contracts/pages.md's seven assertions; what is asserted here on top of that
+// is the one thing only a browser proves: the seeded row is actually on the
+// page.
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { open } from './gate';
+import { expect, test } from './auth';
+
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+function goString(relative: string, name: string): string {
+  const source = readFileSync(resolve(repositoryRoot, relative), 'utf8');
+  const found = new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`).exec(source);
+  if (!found) {
+    throw new Error(`e2e: ${relative} no longer declares ${name}`);
+  }
+  return found[1];
+}
+
+const fixturesGo = 'internal/testsupport/fixtures.go';
+const shellGo = 'internal/web/views/shell/props.go';
+
+function title(page: string): string {
+  return page + goString(shellGo, 'SuffixSeparator') + goString(shellGo, 'ProductName');
+}
+
+const symptomListTitle = goString('internal/web/page/symptoms.go', 'symptomListTitle');
+const vitalsListTitle = goString('internal/web/page/vitals.go', 'vitalsListTitle');
+
+// Read from internal/testsupport/seed/seed_clinical.go rather than restated:
+// the episode's name is what the symptom detail page titles itself with, and
+// the measurement set's recorded_at (RFC3339) is what the vitals one does.
+const symptomID = goString(fixturesGo, 'SymptomHeadacheOneID');
+const symptomName = 'Headache';
+const vitalsID = goString(fixturesGo, 'VitalsOneID');
+const vitalsRecordedAt = '2025-06-01T07:00:00Z';
+
+const symptomSegment = 'symptoms';
+const vitalsSegment = 'vitals';
+
+test.describe('the symptom pages', () => {
+  test('lists the seeded episode', async ({ page }) => {
+    const list = await open(page, {
+      path: `/${symptomSegment}`,
+      title: title(symptomListTitle),
+      landmark: { role: 'region', name: 'Symptoms' },
+    });
+
+    await expect(list.locator(`a[href="/${symptomSegment}/${symptomID}"]`)).toBeVisible();
+  });
+
+  test('shows one episode', async ({ page }) => {
+    await open(page, {
+      path: `/${symptomSegment}/${symptomID}`,
+      title: title(symptomName),
+      landmark: { role: 'article', name: 'Symptom episode' },
+    });
+  });
+});
+
+test.describe('the measurements pages', () => {
+  test('lists the seeded measurement set', async ({ page }) => {
+    const list = await open(page, {
+      path: `/${vitalsSegment}`,
+      title: title(vitalsListTitle),
+      landmark: { role: 'region', name: 'Measurements' },
+    });
+
+    await expect(list.locator(`a[href="/${vitalsSegment}/${vitalsID}"]`)).toBeVisible();
+  });
+
+  test('shows one measurement set', async ({ page }) => {
+    await open(page, {
+      path: `/${vitalsSegment}/${vitalsID}`,
+      title: title(vitalsRecordedAt),
+      landmark: { role: 'article', name: 'Measurement set' },
+    });
+  });
+});
