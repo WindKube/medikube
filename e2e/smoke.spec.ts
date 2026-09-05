@@ -472,7 +472,7 @@ async function focusableControls(page: Page, within: string): Promise<string[]> 
 async function tabThrough(page: Page, steps: number): Promise<Focused[]> {
   const walk: Focused[] = [];
 
-  for (let step = 0; step < steps; step += 1) {
+  for (let step = 0; walk.length < steps && step < steps * 4; step += 1) {
     await page.keyboard.press('Tab');
 
     const control = await page.evaluate(() => {
