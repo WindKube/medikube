@@ -59,11 +59,14 @@
             "allergy": "#/components/schemas/Record_allergies",
             "condition": "#/components/schemas/Record_conditions",
             "emergency_contact": "#/components/schemas/Record_emergency-contacts",
+            "encounter": "#/components/schemas/Record_encounters",
             "equipment": "#/components/schemas/Record_equipment",
             "immunization": "#/components/schemas/Record_immunizations",
             "injury": "#/components/schemas/Record_injuries",
             "insurance": "#/components/schemas/Record_insurance",
-            "medication": "#/components/schemas/Record_medications"
+            "medication": "#/components/schemas/Record_medications",
+            "procedure": "#/components/schemas/Record_procedures",
+            "treatment": "#/components/schemas/Record_treatments"
           },
           "propertyName": "kind"
         },
@@ -91,6 +94,15 @@
           },
           {
             "$ref": "#/components/schemas/Record_equipment"
+          },
+          {
+            "$ref": "#/components/schemas/Record_encounters"
+          },
+          {
+            "$ref": "#/components/schemas/Record_procedures"
+          },
+          {
+            "$ref": "#/components/schemas/Record_treatments"
           }
         ]
       },
@@ -119,6 +131,15 @@
           },
           {
             "$ref": "#/components/schemas/RecordCreate_equipment"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_encounters"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_procedures"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_treatments"
           }
         ]
       },
@@ -234,6 +255,55 @@
           "patient",
           "phone",
           "relationship"
+        ],
+        "type": "object"
+      },
+      "RecordCreate_encounters": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "duration_minutes": {
+            "type": "integer"
+          },
+          "facility": {
+            "type": "string"
+          },
+          "follow_up": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "occurred_on": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "visit_type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "patient",
+          "reason"
         ],
         "type": "object"
       },
@@ -547,6 +617,134 @@
         ],
         "type": "object"
       },
+      "RecordCreate_procedures": {
+        "additionalProperties": false,
+        "properties": {
+          "anesthesia": {
+            "type": "string"
+          },
+          "anesthesia_notes": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "complications": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "duration_minutes": {
+            "type": "integer"
+          },
+          "facility": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "occurred_on": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "setting": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "patient"
+        ],
+        "type": "object"
+      },
+      "RecordCreate_treatments": {
+        "additionalProperties": false,
+        "properties": {
+          "condition": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dosage": {
+            "type": "string"
+          },
+          "encounters": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ended_on": {
+            "type": "string"
+          },
+          "equipment": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "expected_outcome": {
+            "type": "string"
+          },
+          "facility": {
+            "type": "string"
+          },
+          "frequency": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "setting": {
+            "type": "string"
+          },
+          "started_on": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "patient"
+        ],
+        "type": "object"
+      },
       "RecordPatch": {
         "oneOf": [
           {
@@ -572,6 +770,15 @@
           },
           {
             "$ref": "#/components/schemas/RecordPatch_equipment"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_encounters"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_procedures"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_treatments"
           }
         ]
       },
@@ -669,6 +876,51 @@
             "type": "string"
           },
           "relationship": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RecordPatch_encounters": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "duration_minutes": {
+            "type": "integer"
+          },
+          "facility": {
+            "type": "string"
+          },
+          "follow_up": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "occurred_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "plan": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "visit_type": {
             "type": "string"
           }
         },
@@ -974,17 +1226,143 @@
         },
         "type": "object"
       },
+      "RecordPatch_procedures": {
+        "additionalProperties": false,
+        "properties": {
+          "anesthesia": {
+            "type": "string"
+          },
+          "anesthesia_notes": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "complications": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "duration_minutes": {
+            "type": "integer"
+          },
+          "facility": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "occurred_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "setting": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RecordPatch_treatments": {
+        "additionalProperties": false,
+        "properties": {
+          "condition": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dosage": {
+            "type": "string"
+          },
+          "encounters": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ended_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "equipment": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "expected_outcome": {
+            "type": "string"
+          },
+          "facility": {
+            "type": "string"
+          },
+          "frequency": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "setting": {
+            "type": "string"
+          },
+          "started_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "RecordSummary": {
         "discriminator": {
           "mapping": {
             "allergy": "#/components/schemas/RecordSummary_allergies",
             "condition": "#/components/schemas/RecordSummary_conditions",
             "emergency_contact": "#/components/schemas/RecordSummary_emergency-contacts",
+            "encounter": "#/components/schemas/RecordSummary_encounters",
             "equipment": "#/components/schemas/RecordSummary_equipment",
             "immunization": "#/components/schemas/RecordSummary_immunizations",
             "injury": "#/components/schemas/RecordSummary_injuries",
             "insurance": "#/components/schemas/RecordSummary_insurance",
-            "medication": "#/components/schemas/RecordSummary_medications"
+            "medication": "#/components/schemas/RecordSummary_medications",
+            "procedure": "#/components/schemas/RecordSummary_procedures",
+            "treatment": "#/components/schemas/RecordSummary_treatments"
           },
           "propertyName": "kind"
         },
@@ -1012,6 +1390,15 @@
           },
           {
             "$ref": "#/components/schemas/RecordSummary_equipment"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_encounters"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_procedures"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_treatments"
           }
         ]
       },
@@ -1166,6 +1553,46 @@
           "name",
           "phone",
           "relationship",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "RecordSummary_encounters": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "encounter"
+            ],
+            "type": "string"
+          },
+          "occurred_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priority": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "visit_type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "occurred_on",
+          "reason",
           "updated_at"
         ],
         "type": "object"
@@ -1389,6 +1816,84 @@
           "name",
           "started_on",
           "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "RecordSummary_procedures": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "procedure"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "occurred_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "occurred_on",
+          "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "RecordSummary_treatments": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "treatment"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "started_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "started_on",
           "updated_at"
         ],
         "type": "object"
@@ -1617,6 +2122,78 @@
           "phone",
           "relationship",
           "tags",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "Record_encounters": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "duration_minutes": {
+            "type": "integer"
+          },
+          "facility": {
+            "type": "string"
+          },
+          "follow_up": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "encounter"
+            ],
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "occurred_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "patient": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "visit_type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "id",
+          "kind",
+          "occurred_on",
+          "patient",
+          "reason",
           "updated_at"
         ],
         "type": "object"
@@ -2087,6 +2664,187 @@
           "patient",
           "started_on",
           "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "Record_procedures": {
+        "additionalProperties": false,
+        "properties": {
+          "anesthesia": {
+            "type": "string"
+          },
+          "anesthesia_notes": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "complications": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "duration_minutes": {
+            "type": "integer"
+          },
+          "facility": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "procedure"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "occurred_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "setting": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "id",
+          "kind",
+          "name",
+          "occurred_on",
+          "patient",
+          "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "Record_treatments": {
+        "additionalProperties": false,
+        "properties": {
+          "condition": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "dosage": {
+            "type": "string"
+          },
+          "encounters": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ended_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "equipment": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "expected_outcome": {
+            "type": "string"
+          },
+          "facility": {
+            "type": "string"
+          },
+          "frequency": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "treatment"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "setting": {
+            "type": "string"
+          },
+          "started_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "encounters",
+          "ended_on",
+          "equipment",
+          "id",
+          "kind",
+          "name",
+          "patient",
+          "started_on",
           "updated_at"
         ],
         "type": "object"
@@ -4628,7 +5386,10 @@
                 "immunizations",
                 "injuries",
                 "insurance",
-                "equipment"
+                "equipment",
+                "encounters",
+                "procedures",
+                "treatments"
               ],
               "type": "string"
             }
@@ -4771,7 +5532,10 @@
                 "immunizations",
                 "injuries",
                 "insurance",
-                "equipment"
+                "equipment",
+                "encounters",
+                "procedures",
+                "treatments"
               ],
               "type": "string"
             }
@@ -4880,7 +5644,10 @@
                 "immunizations",
                 "injuries",
                 "insurance",
-                "equipment"
+                "equipment",
+                "encounters",
+                "procedures",
+                "treatments"
               ],
               "type": "string"
             }
@@ -4984,7 +5751,10 @@
                 "immunizations",
                 "injuries",
                 "insurance",
-                "equipment"
+                "equipment",
+                "encounters",
+                "procedures",
+                "treatments"
               ],
               "type": "string"
             }
@@ -5074,7 +5844,10 @@
                 "immunizations",
                 "injuries",
                 "insurance",
-                "equipment"
+                "equipment",
+                "encounters",
+                "procedures",
+                "treatments"
               ],
               "type": "string"
             }
