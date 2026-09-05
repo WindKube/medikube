@@ -1,0 +1,29 @@
+package directory
+
+// FacilityForm is both the create form and the edit form (FR-034, FR-035).
+templ FacilityForm(props FacilityFormProps) {
+	<form
+		id={ props.FormID }
+		aria-label={ props.Label() }
+		data-on:submit__prevent={ props.OnSubmit }
+		class="flex max-w-2xl flex-col gap-5"
+	>
+		@directorySelect(props.FormID, FieldFacilityKind, props.Facility.KindOptions(), props.Facility.Value(FieldFacilityKind), props.Errors)
+		@directoryText(props.FormID, FieldFacilityName, "text", true, props.Facility.Value(FieldFacilityName), props.Errors)
+		@directoryText(props.FormID, FieldFacilityBrand, "text", false, props.Facility.Value(FieldFacilityBrand), props.Errors)
+		@directoryText(props.FormID, FieldFacilityStreet, "text", false, props.Facility.Value(FieldFacilityStreet), props.Errors)
+		@directoryText(props.FormID, FieldFacilityCity, "text", false, props.Facility.Value(FieldFacilityCity), props.Errors)
+		@directoryText(props.FormID, FieldFacilityRegion, "text", false, props.Facility.Value(FieldFacilityRegion), props.Errors)
+		@directoryText(props.FormID, FieldFacilityPostalCode, "text", false, props.Facility.Value(FieldFacilityPostalCode), props.Errors)
+		@directoryText(props.FormID, FieldFacilityCountry, "text", false, props.Facility.Value(FieldFacilityCountry), props.Errors)
+		@directoryText(props.FormID, FieldFacilityPhone, "text", false, props.Facility.Value(FieldFacilityPhone), props.Errors)
+		@directoryText(props.FormID, FieldFacilityFax, "text", false, props.Facility.Value(FieldFacilityFax), props.Errors)
+		@directoryText(props.FormID, FieldFacilityEmail, "email", false, props.Facility.Value(FieldFacilityEmail), props.Errors)
+		@directoryText(props.FormID, FieldFacilityWebsite, "url", false, props.Facility.Value(FieldFacilityWebsite), props.Errors)
+		@directoryText(props.FormID, FieldFacilityPortalURL, "url", false, props.Facility.Value(FieldFacilityPortalURL), props.Errors)
+		@directoryText(props.FormID, FieldFacilityHours, "text", false, props.Facility.Value(FieldFacilityHours), props.Errors)
+		@directoryTextarea(props.FormID, FieldFacilityServices, props.Facility.Value(FieldFacilityServices), props.Errors)
+		@directoryTextarea(props.FormID, FieldFacilityNotes, props.Facility.Value(FieldFacilityNotes), props.Errors)
+		@directoryFormActions(props.SubmitLabel(), props.CancelHref)
+	</form>
+}

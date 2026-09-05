@@ -296,34 +296,34 @@ the medication prescriber link.
 
 ### Tests for User Story 5 ⚠️ write first
 
-- [ ] T119 [P] [US5] Fakes and `practitionertest.RepositoryContract` in `internal/service/practitioner/practitionertest/fake.go` and `contract.go`
-- [ ] T120 [P] [US5] Fakes and `facilitytest.RepositoryContract` in `internal/service/facility/facilitytest/fake.go` and `contract.go`
-- [ ] T121 [P] [US5] Unit tests for `practitioner.Service` including the `(owner, LOWER(name), specialty)` duplicate returning `409` with an explanation (FR-038, US5-4) and a specialty outside the vocabulary returning `422` (FR-033) — in `internal/service/practitioner/service_test.go`
-- [ ] T122 [P] [US5] Unit tests for `facility.Service` including that `kind` is required and that two identically named facilities are both accepted (FR-035, US5-3) — in `internal/service/facility/service_test.go`
-- [ ] T123 [P] [US5] Integration test running `practitionertest.RepositoryContract` against the adapter, in `internal/store/practitioner/repo_integration_test.go`
-- [ ] T124 [P] [US5] Integration test asserting two practitioners with the same name and **no specialty at all** collide — the SQLite NULL-distinctness trap that only fails closed because the select field stores `''` (research D-25) — in `internal/store/practitioner/unique_integration_test.go`
-- [ ] T125 [P] [US5] Integration test running `facilitytest.RepositoryContract` and asserting two same-named branches are both stored and both listed, in `internal/store/facility/repo_integration_test.go`
+- [x] T119 [P] [US5] Fakes and `practitionertest.RepositoryContract` in `internal/service/practitioner/practitionertest/fake.go` and `contract.go`
+- [x] T120 [P] [US5] Fakes and `facilitytest.RepositoryContract` in `internal/service/facility/facilitytest/fake.go` and `contract.go`
+- [x] T121 [P] [US5] Unit tests for `practitioner.Service` including the `(owner, LOWER(name), specialty)` duplicate returning `409` with an explanation (FR-038, US5-4) and a specialty outside the vocabulary returning `422` (FR-033) — in `internal/service/practitioner/service_test.go`
+- [x] T122 [P] [US5] Unit tests for `facility.Service` including that `kind` is required and that two identically named facilities are both accepted (FR-035, US5-3) — in `internal/service/facility/service_test.go`
+- [x] T123 [P] [US5] Integration test running `practitionertest.RepositoryContract` against the adapter, in `internal/store/practitioner/repo_integration_test.go`
+- [x] T124 [P] [US5] Integration test asserting two practitioners with the same name and **no specialty at all** collide — the SQLite NULL-distinctness trap that only fails closed because the select field stores `''` (research D-25) — in `internal/store/practitioner/unique_integration_test.go`
+- [x] T125 [P] [US5] Integration test running `facilitytest.RepositoryContract` and asserting two same-named branches are both stored and both listed, in `internal/store/facility/repo_integration_test.go`
 - [ ] T126 [P] [US5] Integration test asserting that deleting a practitioner referenced by `patients.primary_practitioner` and by `medications.practitioner` leaves both records alive with the reference cleared, and that the number of records modified equals the `usage.records` reported beforehand (FR-040, US5-5) — in `internal/store/practitioner/delete_unset_integration_test.go`
-- [ ] T127 [P] [US5] Same test for a facility referenced by `practitioners.facility` and `medications.pharmacy`, in `internal/store/facility/delete_unset_integration_test.go`
-- [ ] T128 [P] [US5] `tests.ApiScenario` suite for the five practitioner operations covering 200/201/401/404/409/412/422, `?q=` search by name with `?specialty=` and `?facility=` filtering (FR-036) and the `usage` block on detail, in `internal/web/api/practitioners_test.go`
-- [ ] T129 [P] [US5] `tests.ApiScenario` suite for the five facility operations including `?kind=` filtering and `?q=` search by name (FR-036), in `internal/web/api/facilities_test.go`
-- [ ] T130 [P] [US5] Authorization test over all ten directory operations via `testsupport.RunOwnershipMatrix`, plus an explicit assertion that `?q=` matching another account's entry returns `[]` (FR-037, US5-6, SC-014) — in `internal/web/api/directory_authz_test.go`
-- [ ] T131 [P] [US5] templ render tests for the six directory components asserting the `region[name="Practitioners"]` / `region[name="Facilities"]` and `article` landmarks in both populated and empty states, in `internal/web/views/directory/practitioner_list_test.go` and `internal/web/views/directory/facility_list_test.go`
+- [x] T127 [P] [US5] Same test for a facility referenced by `practitioners.facility` and `medications.pharmacy`, in `internal/store/facility/delete_unset_integration_test.go`
+- [x] T128 [P] [US5] `tests.ApiScenario` suite for the five practitioner operations covering 200/201/401/404/409/412/422, `?q=` search by name with `?specialty=` and `?facility=` filtering (FR-036) and the `usage` block on detail, in `internal/web/api/practitioners_test.go`
+- [x] T129 [P] [US5] `tests.ApiScenario` suite for the five facility operations including `?kind=` filtering and `?q=` search by name (FR-036), in `internal/web/api/facilities_test.go`
+- [x] T130 [P] [US5] Authorization test over all ten directory operations via `testsupport.RunOwnershipMatrix`, plus an explicit assertion that `?q=` matching another account's entry returns `[]` (FR-037, US5-6, SC-014) — in `internal/web/api/directory_authz_test.go`
+- [x] T131 [P] [US5] templ render tests for the six directory components asserting the `region[name="Practitioners"]` / `region[name="Facilities"]` and `article` landmarks in both populated and empty states, in `internal/web/views/directory/practitioner_list_test.go` and `internal/web/views/directory/facility_list_test.go`
 
 ### Implementation for User Story 5
 
-- [ ] T132 [P] [US5] Declare ports and implement `practitioner.Service` in `internal/service/practitioner/ports.go` and `service.go`
-- [ ] T133 [P] [US5] Declare ports and implement `facility.Service` in `internal/service/facility/ports.go` and `service.go`
-- [ ] T134 [P] [US5] Implement the PocketBase repository in `internal/store/practitioner/repo.go`, including the two `usage` counts as indexed `COUNT(*)`s
-- [ ] T135 [P] [US5] Implement the PocketBase repository in `internal/store/facility/repo.go`, including its two `usage` counts
-- [ ] T136 [US5] Implement the directory DTOs including `Usage`, `PractitionerRef` and `FacilityRef` in `internal/web/api/dto_directory.go`
-- [ ] T137 [US5] Implement the five practitioner handlers in `internal/web/api/practitioners.go`
-- [ ] T138 [US5] Implement the five facility handlers in `internal/web/api/facilities.go`
-- [ ] T139 [US5] Register the ten operations — `listPractitioners`, `createPractitioner`, `getPractitioner`, `updatePractitioner`, `deletePractitioner`, `listFacilities`, `createFacility`, `getFacility`, `updateFacility`, `deleteFacility` — and the four page routes with the landmarks and smoke URLs of `contracts/pages.md` §2 in `internal/httproute/routes.go`, under those `operationId`s so the Principle IX gate finds the same ten names in the registry and in `api/openapi.json`
-- [ ] T140 [US5] Implement the six templ views in `internal/web/views/directory/`
-- [ ] T141 [US5] Implement the `/practitioners`, `/practitioners/{id}`, `/facilities`, `/facilities/{id}` page handlers in `internal/web/page/practitioners.go` and `internal/web/page/facilities.go`
-- [ ] T142 [US5] Implement the type-ahead picker with an inline create drawer that does not lose the record being written (FR-039), in `internal/web/views/shared/directory_picker.templ`
-- [ ] T143 [US5] Bind the audit hooks for `practitioners` and `facilities` in `internal/platform/pb/hooks.go` and wire both services into `internal/di/providers.go`
+- [x] T132 [P] [US5] Declare ports and implement `practitioner.Service` in `internal/service/practitioner/ports.go` and `service.go`
+- [x] T133 [P] [US5] Declare ports and implement `facility.Service` in `internal/service/facility/ports.go` and `service.go`
+- [x] T134 [P] [US5] Implement the PocketBase repository in `internal/store/practitioner/repo.go`, including the two `usage` counts as indexed `COUNT(*)`s
+- [x] T135 [P] [US5] Implement the PocketBase repository in `internal/store/facility/repo.go`, including its two `usage` counts
+- [x] T136 [US5] Implement the directory DTOs including `Usage`, `PractitionerRef` and `FacilityRef` in `internal/web/api/dto_directory.go`
+- [x] T137 [US5] Implement the five practitioner handlers in `internal/web/api/practitioners.go`
+- [x] T138 [US5] Implement the five facility handlers in `internal/web/api/facilities.go`
+- [x] T139 [US5] Register the ten operations — `listPractitioners`, `createPractitioner`, `getPractitioner`, `updatePractitioner`, `deletePractitioner`, `listFacilities`, `createFacility`, `getFacility`, `updateFacility`, `deleteFacility` — and the four page routes with the landmarks and smoke URLs of `contracts/pages.md` §2 in `internal/httproute/routes.go`, under those `operationId`s so the Principle IX gate finds the same ten names in the registry and in `api/openapi.json`
+- [x] T140 [US5] Implement the six templ views in `internal/web/views/directory/`
+- [x] T141 [US5] Implement the `/practitioners`, `/practitioners/{id}`, `/facilities`, `/facilities/{id}` page handlers in `internal/web/page/practitioners.go` and `internal/web/page/facilities.go`
+- [x] T142 [US5] Implement the type-ahead picker with an inline create drawer that does not lose the record being written (FR-039), in `internal/web/views/shared/directory_picker.templ`
+- [x] T143 [US5] Bind the audit hooks for `practitioners` and `facilities` in `internal/platform/pb/hooks.go` and wire both services into `internal/di/providers.go`
 
 **Checkpoint**: the directory removes repeated typing, stays private to its account, and is safe to
 delete from.

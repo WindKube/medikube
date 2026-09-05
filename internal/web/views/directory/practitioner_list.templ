@@ -1,0 +1,90 @@
+package directory
+
+import (
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
+
+const (
+	practitionersLandmark  = "Practitioners"
+	practitionersEmptyTitle = "Nothing recorded yet"
+	practitionersEmptyBody  = "Add the first one and it will be listed here."
+	addPractitionerLabel    = "Add a practitioner"
+)
+
+// PractitionerList is contracts/pages.md P3's landmark. The empty state
+// renders inside it, never instead of it (FR-029).
+templ PractitionerList(props PractitionerListProps) {
+	<section
+		id={ ids.DirectoryList(PractitionerSegment) }
+		aria-label={ practitionersLandmark }
+		class="flex flex-col"
+	>
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<h1
+				id={ ids.DirectoryListHeading(PractitionerSegment) }
+				tabindex="-1"
+				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ practitionersLandmark }</h1>
+			if props.CreateHref != "" {
+				<a
+					href={ props.CreateHref }
+					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+				>{ addPractitionerLabel }</a>
+			}
+		</div>
+		if len(props.Practitioners) == 0 {
+			<div class="mt-6">
+				@components.EmptyState(components.EmptyStateProps{
+					ID:          ids.DirectoryEmpty(PractitionerSegment),
+					Title:       practitionersEmptyTitle,
+					Body:        practitionersEmptyBody,
+					ActionHref:  props.CreateHref,
+					ActionLabel: addPractitionerLabel,
+				})
+			</div>
+		} else {
+			<div class="mt-4 overflow-x-auto">
+				<table class="w-full border-collapse text-left text-sm">
+					<thead>
+						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
+							<th scope="col" class="pb-2 pr-4 font-medium">{ PractitionerFieldLabel(FieldPractitionerName) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ PractitionerFieldLabel(FieldPractitionerSpecialty) }</th>
+							<th scope="col" class="pb-2 font-medium">{ PractitionerFieldLabel(FieldPractitionerFacility) }</th>
+						</tr>
+					</thead>
+					<tbody id={ ids.DirectoryRows(PractitionerSegment) }>
+						for _, p := range props.Practitioners {
+							@PractitionerRow(p)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		@components.Pagination(components.PaginationProps{
+			ID:       ids.DirectoryPager(PractitionerSegment),
+			NextHref: props.NextHref,
+		})
+	</section>
+}
+
+templ PractitionerRow(p PractitionerView) {
+	<tr id={ ids.DirectoryRow(PractitionerSegment, p.ID) } class="border-b border-slate-200 last:border-b-0 dark:border-slate-800">
+		<th scope="row" class="py-3 pr-4 text-left align-top font-medium">
+			<a
+				href={ p.Links.Detail }
+				class="text-teal-800 underline underline-offset-2 hover:text-teal-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-teal-300 dark:hover:text-teal-200"
+			>{ p.Name }</a>
+		</th>
+		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
+			if p.Specialty != "" {
+				{ p.Specialty }
+			}
+		</td>
+		<td class="py-3 align-top text-slate-700 dark:text-slate-300">
+			if p.FacilityName != "" {
+				{ p.FacilityName }
+			}
+		</td>
+	</tr>
+}

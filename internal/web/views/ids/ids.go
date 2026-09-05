@@ -116,6 +116,38 @@ func Field(formID, field string) string { return join(formID, roleField, field) 
 
 func FieldError(formID, field string) string { return join(formID, roleError, field) }
 
+// DirectoryList and the rest of this family are Record*'s twin for
+// practitioners and facilities, which are not a kind.Kind (research D-05:
+// they are what a record's own practitioner/pharmacy fields point at, not a
+// record kind themselves). They take the directory's own segment
+// ("practitioners"/"facilities") in place of a kind, and share the same
+// roles and the same sanitisation.
+func DirectoryList(segment string) string { return join(safe(segment), roleList) }
+
+func DirectoryRows(segment string) string { return join(safe(segment), roleRows) }
+
+func DirectoryRow(segment, recordID string) string { return join(safe(segment), roleRow, recordID) }
+
+func DirectoryEmpty(segment string) string { return join(safe(segment), roleEmpty) }
+
+func DirectoryPager(segment string) string { return join(safe(segment), rolePager) }
+
+func DirectoryDetail(segment, recordID string) string {
+	return join(safe(segment), roleDetail, recordID)
+}
+
+func DirectoryListHeading(segment string) string { return join(safe(segment), roleList, roleHeading) }
+
+func DirectoryDetailHeading(segment, recordID string) string {
+	return join(safe(segment), roleDetail, recordID, roleHeading)
+}
+
+func DirectoryForm(segment, recordID string) string { return join(safe(segment), roleForm, recordID) }
+
+func DirectoryConfirm(segment, recordID string) string {
+	return join(safe(segment), roleConfirm, recordID)
+}
+
 func prefix(k kind.Kind) string {
 	sanitised := safe(k.Enum())
 	if sanitised == "" || !isLetter(sanitised[0]) {

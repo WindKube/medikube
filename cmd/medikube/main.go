@@ -238,11 +238,12 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 	// everything else the container holds: a hub nobody closes leaves every
 	// open stream's watcher goroutine parked until the process exits.
 	resolve := recordFamily(app, records.NewRegistry(), container.Hub())
+	resolveDirectory := directoryFamily(app)
 
 	readiness := obs.NewReadiness()
 	startedAt := time.Now()
 
-	table, err := operations(app, cfg, resolve, container.Hub(), api.HealthDeps{
+	table, err := operations(app, cfg, resolve, resolveDirectory, container.Hub(), api.HealthDeps{
 		Version:   version,
 		StartedAt: startedAt,
 		Readiness: readiness,
@@ -337,7 +338,7 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 
 	destinations.bindShutdown(app, log)
 
-	bindBootGate(app, cfg, log, resolve)
+	bindBootGate(app, cfg, log, resolve, resolveDirectory)
 
 	return app, container, destinations, nil
 }
@@ -369,7 +370,10 @@ func (b binders) Bind(se *core.ServeEvent) error {
 // after the write would let an instance whose batch endpoint somebody enabled
 // in the admin UI be silently repaired on every boot instead of refusing —
 // and the refusal is the point.
-func bindBootGate(app core.App, cfg config.Config, log zerolog.Logger, resolve api.Resolve) {
+func bindBootGate(
+	app core.App, cfg config.Config, log zerolog.Logger,
+	resolve api.Resolve, resolveDirectory func() (directoryServices, error),
+) {
 	app.OnServe().Bind(&hook.Handler[*core.ServeEvent]{
 		Id:       bootGateHookID,
 		Priority: bootGatePriority,
@@ -397,6 +401,10 @@ func bindBootGate(app core.App, cfg config.Config, log zerolog.Logger, resolve a
 			// serve rather than a 500 on somebody's first request.
 			if _, err := resolve(); err != nil {
 				return fmt.Errorf("MediKube refuses to serve: register the record kinds: %w", err)
+			}
+
+			if _, err := resolveDirectory(); err != nil {
+				return fmt.Errorf("MediKube refuses to serve: register the directory: %w", err)
 			}
 
 			superusers, err := se.App.FindCachedCollectionByNameOrId(core.CollectionNameSuperusers)

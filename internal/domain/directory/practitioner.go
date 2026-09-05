@@ -77,6 +77,14 @@ func (p Practitioner) Validate() error {
 		invalid.Addf("notes", domain.CodeTooLong, "the notes accept at most %d characters", maxPractitionerNotes)
 	}
 
+	if p.Email != "" && !isBareAddress(p.Email) {
+		invalid.Add("email", domain.CodeInvalidValue, "that is not an email address")
+	}
+
+	if p.Website != "" && !isAbsoluteHTTPURL(p.Website) {
+		invalid.Add("website", domain.CodeInvalidValue, "that is not a web address")
+	}
+
 	return invalid.OrNil()
 }
 

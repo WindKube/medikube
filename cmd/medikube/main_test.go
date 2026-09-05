@@ -382,6 +382,7 @@ func TestTheCompositionRootWiresEveryRouteMediKubeServes(t *testing.T) {
 		pb.New(cfg, pb.Options{}),
 		cfg,
 		func() (*records.Handler, error) { return nil, nil },
+		func() (directoryServices, error) { return directoryServices{}, nil },
 		realtime.New(),
 		api.HealthDeps{},
 	)

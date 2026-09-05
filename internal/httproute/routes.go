@@ -144,6 +144,7 @@ func table() []Route {
 	routes = append(routes, accountRoutes()...)
 	routes = append(routes, recordRoutes()...)
 	routes = append(routes, patientRoutes()...)
+	routes = append(routes, directoryRoutes()...)
 	routes = append(routes, healthRoutes()...)
 	routes = append(routes, pageRoutes()...)
 	routes = append(routes, patientPageRoutes()...)
@@ -468,6 +469,30 @@ func pageRoutes() []Route {
 			Landmark: `article[name="Medication"]`, SmokeURL: list + "/" + seed.NameOnlyID,
 		},
 		{
+			OpID: "practitionerListPage", Method: http.MethodGet, Path: "/practitioners",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "contracts/pages.md P3: the account's practitioner directory.",
+			Landmark: `region[name="Practitioners"]`, SmokeURL: "/practitioners",
+		},
+		{
+			OpID: "practitionerDetailPage", Method: http.MethodGet, Path: "/practitioners/{id}",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "contracts/pages.md P4: one practitioner, with usage.",
+			Landmark: `article[name="Practitioner"]`, SmokeURL: "/practitioners/" + seed.AccountAPractitionerID,
+		},
+		{
+			OpID: "facilityListPage", Method: http.MethodGet, Path: "/facilities",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "contracts/pages.md P5: the account's directory of places of care.",
+			Landmark: `region[name="Facilities"]`, SmokeURL: "/facilities",
+		},
+		{
+			OpID: "facilityDetailPage", Method: http.MethodGet, Path: "/facilities/{id}",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "contracts/pages.md P6: one facility, with usage.",
+			Landmark: `article[name="Facility"]`, SmokeURL: "/facilities/" + seed.AccountAFacilityPracticeID,
+		},
+		{
 			OpID: "settingsPage", Method: http.MethodGet, Path: settingsPath,
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "Display name, preferences, address confirmation and the danger zone.",
@@ -595,6 +620,71 @@ func errorViews() []ErrorView {
 			Unreachable: "no URL in a shipped build produces a 500 on purpose, and a route that deliberately fails is a worse " +
 				"defect than an unsmoked error page. It belongs to contracts/pages.md's negative-control family, alongside " +
 				"the removed-landmark and console-error builds, and is covered by internal/web/page/errors_test.go (T230).",
+		},
+	}
+}
+
+// contracts/practitioners.md and contracts/facilities.md. Two account-owned
+// directories, ten operations, neither a kind.Kind (research D-05): they are
+// what a record's practitioner and pharmacy fields point at, not a record kind
+// themselves.
+func directoryRoutes() []Route {
+	practitioners := apiBase + "/practitioners"
+	onePractitioner := practitioners + "/{id}"
+
+	facilities := apiBase + "/facilities"
+	oneFacility := facilities + "/{id}"
+
+	return []Route{
+		{
+			OpID: "listPractitioners", Method: http.MethodGet, Path: practitioners,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "The account's practitioner directory, cursor-paginated. Also the type-ahead behind every practitioner picker.",
+		},
+		{
+			OpID: "createPractitioner", Method: http.MethodPost, Path: practitioners,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Add a practitioner to the account's directory.",
+		},
+		{
+			OpID: "getPractitioner", Method: http.MethodGet, Path: onePractitioner,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "One practitioner, with usage. Another account's id answers 404.",
+		},
+		{
+			OpID: "updatePractitioner", Method: http.MethodPatch, Path: onePractitioner,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Partial update. If-Match is required; a mismatch is 412 carrying the current representation.",
+		},
+		{
+			OpID: "deletePractitioner", Method: http.MethodDelete, Path: onePractitioner,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Delete a practitioner. If-Match is required. Every referencing record survives with the reference cleared.",
+		},
+		{
+			OpID: "listFacilities", Method: http.MethodGet, Path: facilities,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "The account's directory of places of care, cursor-paginated. Also the type-ahead behind every facility picker.",
+		},
+		{
+			OpID: "createFacility", Method: http.MethodPost, Path: facilities,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Add a facility to the account's directory.",
+		},
+		{
+			OpID: "getFacility", Method: http.MethodGet, Path: oneFacility,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "One facility, with usage. Another account's id answers 404.",
+		},
+		{
+			OpID: "updateFacility", Method: http.MethodPatch, Path: oneFacility,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Partial update. If-Match is required; a mismatch is 412 carrying the current representation.",
+		},
+		{
+			OpID: "deleteFacility", Method: http.MethodDelete, Path: oneFacility,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Delete a facility. If-Match is required. Every referencing record survives with the reference cleared.",
 		},
 	}
 }

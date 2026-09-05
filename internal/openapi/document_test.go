@@ -53,6 +53,23 @@ var contractInventory = []string{
 	"deletePatientPhoto",
 }
 
+// contracts/practitioners.md and contracts/facilities.md's ten operations
+// (phase 002-patient-core, US5), transcribed the same way and kept separate
+// from contractInventory: that literal is contracts/README.md's own count and
+// stays what phase 001 pinned.
+var directoryInventory = []string{
+	"listPractitioners",
+	"createPractitioner",
+	"getPractitioner",
+	"updatePractitioner",
+	"deletePractitioner",
+	"listFacilities",
+	"createFacility",
+	"getFacility",
+	"updateFacility",
+	"deleteFacility",
+}
+
 // The operations that resolve an id or a kind out of the stored data. For these
 // the authorization rule is not merely "a session is required": another
 // account's id and an id that never existed answer identically (FR-033).
@@ -71,6 +88,16 @@ var ownerScoped = []string{
 	"putPatientPhoto",
 	"getPatientPhoto",
 	"deletePatientPhoto",
+	"listPractitioners",
+	"createPractitioner",
+	"getPractitioner",
+	"updatePractitioner",
+	"deletePractitioner",
+	"listFacilities",
+	"createFacility",
+	"getFacility",
+	"updateFacility",
+	"deleteFacility",
 }
 
 func TestTheDocumentDeclaresOpenAPI31(t *testing.T) {
@@ -131,18 +158,19 @@ func TestTheAPIOperationsAreExactlyTheContractInventory(t *testing.T) {
 		found = append(found, opID)
 	}
 
-	assert.ElementsMatch(t, append(append([]string{}, contractInventory...), externals...), found)
+	expected := append(append([]string{}, contractInventory...), directoryInventory...)
+	assert.ElementsMatch(t, append(expected, externals...), found)
 }
 
 // kin-openapi does check operationId uniqueness — and returns on the FIRST
-// duplicate even under EnableMultiError, so with thirty-three operations a bulk
+// duplicate even under EnableMultiError, so with forty-three operations a bulk
 // rename can hide behind one report. operationsByID asserts every one.
 func TestEveryOperationIDIsUnique(t *testing.T) {
 	t.Parallel()
 
 	loaded := roundTrip(t, generate(t, twoKindInput()))
 
-	assert.Len(t, operationsByID(t, loaded), 40)
+	assert.Len(t, operationsByID(t, loaded), 50)
 }
 
 func TestEveryOperationCarriesItsAuthorizationRule(t *testing.T) {

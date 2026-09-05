@@ -38,6 +38,13 @@ async function patientNameOf(page: Page, id: string): Promise<string> {
   return `${patient.first_name} ${patient.last_name}`.trim();
 }
 
+async function nameOf(page: Page, url: string): Promise<string> {
+  const response = await page.request.get(url);
+  expect(response.ok(), `routes.gate: the API did not answer for ${url}`).toBe(true);
+
+  return ((await response.json()) as { name: string }).name;
+}
+
 // idOf reads the record id P5's SmokeURL is bound to, off the end of the URL
 // itself, so nothing here needs a second copy of the kind's URL segment.
 function idOf(smokeURL: string): string {
@@ -70,6 +77,12 @@ async function titleFor(route: PageRoute, page: Page): Promise<string> {
       return fixtures.title('People');
     case 'patientDetailPage':
       return fixtures.title(await patientNameOf(page, idOf(route.smokeURL)));
+    case 'facilityListPage':
+      return fixtures.title('Places of care');
+    case 'practitionerDetailPage':
+      return fixtures.title(await nameOf(page, `/api/v1/practitioners/${idOf(route.smokeURL)}`));
+    case 'facilityDetailPage':
+      return fixtures.title(await nameOf(page, `/api/v1/facilities/${idOf(route.smokeURL)}`));
     default:
       return fixtures.title(route.landmark.name);
   }

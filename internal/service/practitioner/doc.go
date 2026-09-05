@@ -1,4 +1,4 @@
-// Package practitioner decides who may see and change an account's directory
-// of clinicians. It is a service package: it talks to interfaces it declares
-// itself and never to PocketBase (Principle II).
+// Package practitioner decides the practitioner directory use cases: an
+// account-owned list of clinicians with no patient anchor, authorizing before
+// it reads or writes (contracts/practitioners.md, FR-032 … FR-042).
 package practitioner

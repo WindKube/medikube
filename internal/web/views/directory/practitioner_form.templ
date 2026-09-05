@@ -1,0 +1,119 @@
+package directory
+
+import (
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+	"medikube/internal/web/views/records"
+)
+
+const directoryCancelLabel = "Cancel"
+
+// PractitionerForm is both the create form and the edit form (FR-032,
+// FR-039): the same seven fields either way.
+templ PractitionerForm(props PractitionerFormProps) {
+	<form
+		id={ props.FormID }
+		aria-label={ props.Label() }
+		data-on:submit__prevent={ props.OnSubmit }
+		class="flex max-w-2xl flex-col gap-5"
+	>
+		@directoryText(props.FormID, FieldPractitionerName, "text", true, props.Practitioner.Value(FieldPractitionerName), props.Errors)
+		@directorySelect(props.FormID, FieldPractitionerSpecialty, props.Practitioner.SpecialtyOptions(), props.Practitioner.Value(FieldPractitionerSpecialty), props.Errors)
+		@directoryText(props.FormID, FieldPractitionerPhone, "text", false, props.Practitioner.Value(FieldPractitionerPhone), props.Errors)
+		@directoryText(props.FormID, FieldPractitionerEmail, "email", false, props.Practitioner.Value(FieldPractitionerEmail), props.Errors)
+		@directoryText(props.FormID, FieldPractitionerWebsite, "url", false, props.Practitioner.Value(FieldPractitionerWebsite), props.Errors)
+		@directoryTextarea(props.FormID, FieldPractitionerNotes, props.Practitioner.Value(FieldPractitionerNotes), props.Errors)
+		@directoryFormActions(props.SubmitLabel(), props.CancelHref)
+	</form>
+}
+
+templ directoryText(formID, field, inputType string, required bool, value string, errs FieldErrors) {
+	<div class="flex flex-col">
+		<label for={ ids.Field(formID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ fieldLabel(field) }</label>
+		<input
+			id={ ids.Field(formID, field) }
+			name={ field }
+			type={ inputType }
+			value={ value }
+			data-bind={ field }
+			required?={ required }
+			if errs.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(formID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		/>
+		@components.FieldError(ids.FieldError(formID, field), errs.Messages(field))
+	</div>
+}
+
+templ directorySelect(formID, field string, options []Option, value string, errs FieldErrors) {
+	<div class="flex flex-col">
+		<label for={ ids.Field(formID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ fieldLabel(field) }</label>
+		<select
+			id={ ids.Field(formID, field) }
+			name={ field }
+			data-bind={ field }
+			if errs.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(formID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		>
+			<option value="" selected?={ value == "" }>Not recorded</option>
+			for _, option := range options {
+				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+			}
+		</select>
+		@components.FieldError(ids.FieldError(formID, field), errs.Messages(field))
+	</div>
+}
+
+templ directoryTextarea(formID, field, value string, errs FieldErrors) {
+	<div class="flex flex-col">
+		<label for={ ids.Field(formID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ fieldLabel(field) }</label>
+		<textarea
+			id={ ids.Field(formID, field) }
+			name={ field }
+			rows="4"
+			data-bind={ field }
+			if errs.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(formID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		>{ value }</textarea>
+		@components.FieldError(ids.FieldError(formID, field), errs.Messages(field))
+	</div>
+}
+
+templ directoryFormActions(submitLabel, cancelHref string) {
+	<div class="flex flex-wrap items-center gap-3">
+		<button
+			type="submit"
+			class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+		>{ submitLabel }</button>
+		if cancelHref != "" {
+			<a
+				href={ cancelHref }
+				class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
+			>{ directoryCancelLabel }</a>
+		}
+	</div>
+}
+
+// Option is records.Option's twin so the two directory forms and the shared
+// picker do not each mint their own.
+type Option = records.Option
+
+func fieldLabel(field string) string {
+	if label, known := practitionerFieldLabels[field]; known {
+		return label
+	}
+
+	if label, known := facilityFieldLabels[field]; known {
+		return label
+	}
+
+	return field
+}

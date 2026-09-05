@@ -104,6 +104,8 @@ const (
 	PatientLastName   = "Mbeki-Thorvaldsen"
 	PatientAddress    = "14-asylum-lane-flat-9"
 	PhotoFilename     = "portrait-in-a-hospital-gown.png"
+	PractitionerName  = "Dr-Ngozi-Halvorsen-Adeyemi"
+	FacilityName      = "St-Wilgefortis-Oncology-Clinic"
 )
 
 // Sentinel is one planted value and what it stands for. The meaning is printed
@@ -138,6 +140,8 @@ func Sentinels() []Sentinel {
 		{PatientLastName, "their family name"},
 		{PatientAddress, "where they live"},
 		{PhotoFilename, "the name of the file their photograph came in as"},
+		{PractitionerName, "the clinician they see, which discloses a specialty"},
+		{FacilityName, "the place they are treated, which discloses a condition"},
 	}
 }
 
@@ -942,6 +946,7 @@ func drive(t testing.TB, c *client) {
 	drivePublicAuth(c)
 	driveRecords(c)
 	drivePatients(c)
+	driveDirectory(c)
 	drivePages(c)
 	driveNativePaths(c)
 	driveAccountLifecycle(c)
@@ -959,12 +964,8 @@ func drivePatients(c *client) {
 	}))
 	require.Equal(c.t, http.StatusCreated, created.Status, "the sentinel patient was not created: %s", created.Body)
 
-	var patient struct {
-		ID string `json:"id"`
-	}
-	require.NoError(c.t, json.Unmarshal([]byte(created.Body), &patient))
-
-	address := "/api/v1/patients/" + patient.ID
+	patientID := idOf(c.t, created.Body)
+	address := "/api/v1/patients/" + patientID
 
 	c.do(http.MethodGet, "/api/v1/patients", "")
 	c.do(http.MethodGet, address, "")
@@ -979,8 +980,55 @@ func drivePatients(c *client) {
 
 	c.bearer = ""
 	c.do(http.MethodGet, "/patients", "")
-	c.do(http.MethodGet, "/patients/"+patient.ID, "")
+	c.do(http.MethodGet, "/patients/"+patientID, "")
 	c.do(http.MethodGet, "/patients/"+missingRecordID, "")
+}
+
+// driveDirectory: the ten directory operations and their four pages.
+func driveDirectory(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	facility := c.do(http.MethodPost, "/api/v1/facilities", jsonBody(c.t, api.FacilityCreate{Kind: "hospital", Name: FacilityName}))
+	require.Equal(c.t, http.StatusCreated, facility.Status, "the sentinel facility was not created: %s", facility.Body)
+
+	practitioner := c.do(http.MethodPost, "/api/v1/practitioners", jsonBody(c.t, api.PractitionerCreate{Name: PractitionerName}))
+	require.Equal(c.t, http.StatusCreated, practitioner.Status, "the sentinel practitioner was not created: %s", practitioner.Body)
+
+	facilityID, practitionerID := idOf(c.t, facility.Body), idOf(c.t, practitioner.Body)
+
+	for _, path := range []string{
+		"/api/v1/facilities", "/api/v1/facilities?q=" + SearchTerm, "/api/v1/facilities?kind=hospital",
+		"/api/v1/facilities/" + facilityID, "/api/v1/facilities/" + missingRecordID,
+		"/api/v1/practitioners", "/api/v1/practitioners?q=" + SearchTerm,
+		"/api/v1/practitioners/" + practitionerID, "/api/v1/practitioners/" + missingRecordID,
+	} {
+		c.do(http.MethodGet, path, "")
+	}
+
+	c.do(http.MethodPatch, "/api/v1/facilities/"+facilityID, jsonBody(c.t, api.FacilityPatch{Name: ptr(FacilityName)}))
+	c.do(http.MethodPatch, "/api/v1/practitioners/"+practitionerID, jsonBody(c.t, api.PractitionerPatch{Name: ptr(PractitionerName)}))
+	c.do(http.MethodDelete, "/api/v1/practitioners/"+practitionerID, "")
+	c.do(http.MethodDelete, "/api/v1/facilities/"+facilityID, "")
+
+	c.bearer = ""
+
+	for _, path := range []string{
+		"/practitioners", "/practitioners/" + practitionerID, "/practitioners/" + missingRecordID,
+		"/facilities", "/facilities/" + facilityID, "/facilities/" + missingRecordID,
+	} {
+		c.do(http.MethodGet, path, "")
+	}
+}
+
+func idOf(t testing.TB, body string) string {
+	t.Helper()
+
+	var created struct {
+		ID string `json:"id"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(body), &created))
+
+	return created.ID
 }
 
 func photoUpload(t testing.TB) (string, string) {
