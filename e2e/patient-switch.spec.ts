@@ -129,4 +129,35 @@ test.describe('the active-patient switcher', () => {
 
     expect(median, `median switch time ${median}ms across ${JSON.stringify(samples)}`).toBeLessThanOrEqual(1000);
   });
+
+  // T164, SC-011: "managing 25 people can locate and choose a named one
+  // within ten seconds." Unlike the case above, this one does not already
+  // know the target's id — it finds the option by the name printed on it,
+  // the way a person reads the dropdown rather than one this test picked out
+  // of an array in advance.
+  test('locates and chooses a named person among 25 by name alone, within ten seconds (SC-011)', async ({ page }) => {
+    await newAccount(page);
+    await createPatients(page, 24);
+
+    const distinctive = await page.request.post('/api/v1/patients', {
+      data: {
+        first_name: 'Zephyrine',
+        last_name: 'Quetzalcoatl',
+        birth_date: '1980-05-05',
+        relationship_to_owner: 'other',
+      },
+    });
+    expect(distinctive.ok(), await distinctive.text()).toBe(true);
+    const target = (await distinctive.json()) as Patient;
+    const targetName = `${target.first_name} ${target.last_name}`;
+
+    await page.goto(patientsListPath);
+
+    const started = Date.now();
+    await page.getByRole('combobox', { name: 'Active patient' }).selectOption({ label: targetName });
+    await expect(page.getByText(targetName)).toBeVisible();
+    const elapsed = Date.now() - started;
+
+    expect(elapsed, `locating and choosing took ${elapsed}ms`).toBeLessThanOrEqual(10000);
+  });
 });
