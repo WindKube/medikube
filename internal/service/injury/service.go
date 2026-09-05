@@ -28,6 +28,11 @@ type Patch struct {
 	// replace the whole set (FR-056's replace-set semantics), including an
 	// empty, non-nil slice to clear it.
 	MedicationIDs *[]string
+
+	// Tags is data-model §0.8's universal field, replace-set (FR-064,
+	// FR-065): nil leaves the applied tags alone, non-nil (including empty)
+	// replaces the whole set.
+	Tags *[]string
 }
 
 const FieldPatient = "patient"
@@ -232,6 +237,10 @@ func (p Patch) applyTo(injury clinical.Injury) clinical.Injury {
 
 	if p.MedicationIDs != nil {
 		injury.MedicationIDs = *p.MedicationIDs
+	}
+
+	if p.Tags != nil {
+		injury.Tags = *p.Tags
 	}
 
 	return injury

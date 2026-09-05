@@ -32,6 +32,7 @@ func recordFromInjury(record *core.Record) (clinical.Injury, error) {
 		Status:         clinical.ConditionStatus(record.GetString(fieldStatus)),
 		RecoveryNotes:  record.GetString(fieldRecoveryNotes),
 		MedicationIDs:  record.GetStringSlice(fieldMedications),
+		Tags:           record.GetStringSlice(fieldTags),
 		CreatedAt:      recordInstant(record, fieldCreated),
 		UpdatedAt:      recordInstant(record, fieldUpdated),
 		Version:        store.Version(record),
@@ -51,6 +52,7 @@ func injuryToRecord(record *core.Record, entity clinical.Injury) error {
 	record.Set(fieldStatus, string(entity.Status))
 	record.Set(fieldRecoveryNotes, entity.RecoveryNotes)
 	record.Set(fieldMedications, entity.MedicationIDs)
+	record.Set(fieldTags, entity.Tags)
 
 	return nil
 }

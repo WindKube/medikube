@@ -75,28 +75,34 @@ type Equipment struct {
 	Supplier     string `json:"supplier,omitempty"`
 	Practitioner string `json:"practitioner,omitempty"`
 
-	Notes     string `json:"notes,omitempty"`
-	CreatedAt string `json:"created_at"`
+	Notes     string   `json:"notes,omitempty"`
+	Tags      []string `json:"tags,omitempty"`
+	CreatedAt string   `json:"created_at"`
 }
 
 // EquipmentCreate is the create body (FR-048): patient, name and type are
 // required; everything else is optional at creation.
 type EquipmentCreate struct {
-	Patient      string  `json:"patient"`
-	Name         string  `json:"name"`
-	Type         string  `json:"type"`
-	Manufacturer string  `json:"manufacturer,omitempty"`
-	Model        string  `json:"model,omitempty"`
-	Serial       string  `json:"serial,omitempty"`
-	PrescribedOn *string `json:"prescribed_on,omitempty"`
-	ServicedOn   *string `json:"serviced_on,omitempty"`
-	ServiceDueOn *string `json:"service_due_on,omitempty"`
-	Instructions string  `json:"instructions,omitempty"`
-	Status       string  `json:"status,omitempty"`
-	Supplier     *string `json:"supplier,omitempty"`
-	Practitioner *string `json:"practitioner,omitempty"`
-	Notes        string  `json:"notes,omitempty"`
+	Patient      string   `json:"patient"`
+	Name         string   `json:"name"`
+	Type         string   `json:"type"`
+	Manufacturer string   `json:"manufacturer,omitempty"`
+	Model        string   `json:"model,omitempty"`
+	Serial       string   `json:"serial,omitempty"`
+	PrescribedOn *string  `json:"prescribed_on,omitempty"`
+	ServicedOn   *string  `json:"serviced_on,omitempty"`
+	ServiceDueOn *string  `json:"service_due_on,omitempty"`
+	Instructions string   `json:"instructions,omitempty"`
+	Status       string   `json:"status,omitempty"`
+	Supplier     *string  `json:"supplier,omitempty"`
+	Practitioner *string  `json:"practitioner,omitempty"`
+	Notes        string   `json:"notes,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
 }
+
+// TagIDs implements records.Taggable: a create always supplies its tags,
+// even when that is none.
+func (c *EquipmentCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
 // EquipmentPatch is the partial update.
 type EquipmentPatch struct {
@@ -115,6 +121,20 @@ type EquipmentPatch struct {
 	Supplier     *string `json:"supplier,omitempty"`
 	Practitioner *string `json:"practitioner,omitempty"`
 	Notes        *string `json:"notes,omitempty"`
+
+	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
+	// applied tags alone, a non-nil one — including an empty array —
+	// replaces the whole set.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// TagIDs implements records.Taggable.
+func (p *EquipmentPatch) TagIDs() (ids []string, supplied bool) {
+	if p.Tags == nil {
+		return nil, false
+	}
+
+	return *p.Tags, true
 }
 
 // EquipmentCodec is the DTO boundary for equipment.
@@ -184,6 +204,7 @@ func (c EquipmentCodec) Detail(entity clinical.Equipment) any {
 		Supplier:         entity.SupplierID,
 		Practitioner:     entity.PractitionerID,
 		Notes:            entity.Notes,
+		Tags:             entity.Tags,
 		CreatedAt:        wireInstant(entity.CreatedAt),
 	}
 }
@@ -219,6 +240,7 @@ func (EquipmentCodec) Draft(body any) (clinical.Equipment, error) {
 		SupplierID:     deref(create.Supplier),
 		PractitionerID: deref(create.Practitioner),
 		Notes:          create.Notes,
+		Tags:           create.Tags,
 	}, nil
 }
 
@@ -244,6 +266,7 @@ func (EquipmentCodec) Patch(body any) (equipment.Patch, error) {
 		Notes:        incoming.Notes,
 		Supplier:     incoming.Supplier,
 		Practitioner: incoming.Practitioner,
+		Tags:         incoming.Tags,
 	}
 
 	if err := orderedRefusal2(&invalid, equipmentMembers); err != nil {

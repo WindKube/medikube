@@ -61,6 +61,8 @@ func (a *InjuryAdapter) List(ctx context.Context, actor access.Actor, query reco
 		Types:        injuryTypes(query.Filters[injury.FilterType]),
 		Lateralities: injuryLateralities(query.Filters[injury.FilterLaterality]),
 		Unresolved:   isUnresolved(query.Filters[injury.FilterUnresolved]),
+		Tags:         query.Filters[records.FilterTags],
+		Match:        matchOf(query.Filters[records.FilterMatch]),
 		Sort:         query.Sort,
 		Limit:        query.Limit,
 		Cursor:       query.Cursor,
@@ -215,6 +217,10 @@ func RegisterInjury(registry *records.Registry, wiring InjuryWiring) error {
 			Kind:    records.FilterEnum,
 			Allowed: []string{"true"},
 		},
+	}
+
+	for name, spec := range records.TagFilters() {
+		schema.Filters[name] = spec
 	}
 
 	return registry.Register(records.Registration{
