@@ -19,6 +19,8 @@ import (
 // rather than pass by asserting nothing.
 var expectedKinds = []kind.Kind{
 	kind.Medication,
+	kind.Immunization,
+	kind.Injury,
 }
 
 // TestEveryExpectedKindHasACompleteRegistration is T021: it walks
@@ -32,6 +34,8 @@ func TestEveryExpectedKindHasACompleteRegistration(t *testing.T) {
 
 	registry := records.NewRegistry()
 	require.NoError(t, registry.Register(recordstest.Registration(kind.Medication, audit.TargetKindMedication)))
+	require.NoError(t, registry.Register(recordstest.Registration(kind.Immunization, audit.TargetKindImmunization)))
+	require.NoError(t, registry.Register(recordstest.Registration(kind.Injury, audit.TargetKindInjury)))
 
 	require.NotEmpty(t, expectedKinds, "the expectation list itself is empty, so this test asserts nothing")
 

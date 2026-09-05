@@ -261,6 +261,23 @@ const (
 	columnNotes           = "notes"
 )
 
+const (
+	columnVaccineName    = "vaccine_name"
+	columnTradeName      = "trade_name"
+	columnAdministeredOn = "administered_on"
+	columnDoseNumber     = "dose_number"
+	columnLotNumber      = "lot_number"
+	columnManufacturer   = "manufacturer"
+	columnSite           = "site"
+	columnExpiresOn      = "expires_on"
+	columnBodyPart       = "body_part"
+	columnLaterality     = "laterality"
+	columnOccurredOn     = "occurred_on"
+	columnMechanism      = "mechanism"
+	columnSeverity       = "severity"
+	columnRecoveryNotes  = "recovery_notes"
+)
+
 // Apply writes the whole fixture and is safe to run twice: every record is
 // addressed by its own identifier and updated in place if it is already there,
 // so a second run changes the updated timestamps and nothing else (FR-060).
@@ -294,6 +311,14 @@ func Apply(app core.App) error {
 		// have to exist first, or the relation this collection now requires
 		// would refuse every row.
 		if err := applyMedications(tx); err != nil {
+			return err
+		}
+
+		if err := applyImmunizations(tx); err != nil {
+			return err
+		}
+
+		if err := applyInjuries(tx); err != nil {
 			return err
 		}
 
@@ -420,6 +445,143 @@ func applyMedications(app core.App) error {
 		if err := IndexRecord(app, kind.Medication, medication.ID, medication.PatientID,
 			medication.Name, medication.Indication, medication.StartedOn); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+// The two immunization rows data-model §4.8 names individually.
+const (
+	// ImmunizationSampleID is account A's one recorded vaccination.
+	ImmunizationSampleID = "mkimmamara00001"
+)
+
+// Immunizations is account A's two rows. Account C is left without any, on
+// purpose (T116, contracts/pages.md §5): the empty-state path needs a seeded
+// account whose /immunizations has nothing to show.
+func Immunizations() []clinical.Immunization {
+	dose := 1
+
+	return []clinical.Immunization{
+		{
+			ID: ImmunizationSampleID, PatientID: accountAPatientSelfID,
+			VaccineName: "Influenza", TradeName: "Fluarix",
+			AdministeredOn: date(2025, 10, 12), DoseNumber: &dose,
+			Site: clinical.ImmunizationSiteLeftArm, Route: clinical.ImmunizationRouteIntramuscular,
+		},
+		{
+			ID: "mkimmamara00002", PatientID: accountAPatientSelfID,
+			VaccineName: "Tetanus", AdministeredOn: date(2023, 6, 1),
+			ExpiresOn: date(2033, 6, 1),
+		},
+	}
+}
+
+func applyImmunizations(app core.App) error {
+	name := kind.Immunization.Collection()
+
+	collection, err := app.FindCollectionByNameOrId(name)
+	if err != nil {
+		return fmt.Errorf("finding %s: %w", name, err)
+	}
+
+	if err := requireColumns(collection,
+		columnPatient, columnVaccineName, columnTradeName, columnAdministeredOn,
+		columnDoseNumber, columnLotNumber, columnManufacturer, columnSite, columnRoute, columnExpiresOn,
+	); err != nil {
+		return err
+	}
+
+	for _, immunization := range Immunizations() {
+		if err := immunization.Validate(); err != nil {
+			return fmt.Errorf("seeding %s: %w", immunization.ID, err)
+		}
+
+		record, err := findOrNew(app, collection, immunization.ID)
+		if err != nil {
+			return err
+		}
+
+		record.Set(columnPatient, immunization.PatientID)
+		record.Set(columnVaccineName, immunization.VaccineName)
+		record.Set(columnTradeName, immunization.TradeName)
+		record.Set(columnAdministeredOn, immunization.AdministeredOn.UTC())
+		if immunization.DoseNumber != nil {
+			record.Set(columnDoseNumber, *immunization.DoseNumber)
+		}
+		record.Set(columnLotNumber, immunization.LotNumber)
+		record.Set(columnManufacturer, immunization.Manufacturer)
+		record.Set(columnSite, string(immunization.Site))
+		record.Set(columnRoute, string(immunization.Route))
+		record.Set(columnExpiresOn, immunization.ExpiresOn.UTC())
+
+		if err := app.Save(record); err != nil {
+			return fmt.Errorf("seeding %s: %w", immunization.ID, err)
+		}
+	}
+
+	return nil
+}
+
+// Injuries is account A's two rows, one active and one resolved.
+func Injuries() []clinical.Injury {
+	return []clinical.Injury{
+		{
+			ID: "mkinjamara00001", PatientID: accountAPatientSelfID,
+			Name: "Sprained ankle", Type: clinical.InjuryTypeSprain,
+			BodyPart: "ankle", Laterality: clinical.LateralityRight,
+			OccurredOn: date(2025, 8, 20), Mechanism: "fell while running",
+			Severity: clinical.SeverityModerate, Status: clinical.ConditionStatusHealing,
+		},
+		{
+			ID: "mkinjamara00002", PatientID: accountAPatientSelfID,
+			Name: "Cut on hand", Type: clinical.InjuryTypeLaceration,
+			BodyPart: "hand", Laterality: clinical.LateralityLeft,
+			OccurredOn: date(2024, 2, 3), Severity: clinical.SeverityMild,
+			Status: clinical.ConditionStatusResolved, RecoveryNotes: "healed without complication",
+		},
+	}
+}
+
+func applyInjuries(app core.App) error {
+	name := kind.Injury.Collection()
+
+	collection, err := app.FindCollectionByNameOrId(name)
+	if err != nil {
+		return fmt.Errorf("finding %s: %w", name, err)
+	}
+
+	if err := requireColumns(collection,
+		columnPatient, columnName, columnType, columnBodyPart, columnLaterality,
+		columnOccurredOn, columnMechanism, columnSeverity, columnStatus, columnRecoveryNotes,
+	); err != nil {
+		return err
+	}
+
+	for _, injury := range Injuries() {
+		if err := injury.Validate(); err != nil {
+			return fmt.Errorf("seeding %s: %w", injury.ID, err)
+		}
+
+		record, err := findOrNew(app, collection, injury.ID)
+		if err != nil {
+			return err
+		}
+
+		record.Set(columnPatient, injury.PatientID)
+		record.Set(columnName, injury.Name)
+		record.Set(columnType, string(injury.Type))
+		record.Set(columnBodyPart, injury.BodyPart)
+		record.Set(columnLaterality, string(injury.Laterality))
+		record.Set(columnOccurredOn, injury.OccurredOn.UTC())
+		record.Set(columnMechanism, injury.Mechanism)
+		record.Set(columnSeverity, string(injury.Severity))
+		record.Set(columnStatus, string(injury.Status))
+		record.Set(columnRecoveryNotes, injury.RecoveryNotes)
+
+		if err := app.Save(record); err != nil {
+			return fmt.Errorf("seeding %s: %w", injury.ID, err)
 		}
 	}
 
