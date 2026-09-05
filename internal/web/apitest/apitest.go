@@ -55,7 +55,10 @@ import (
 	"medikube/internal/service/symptom"
 	"medikube/internal/service/vitals"
 	"medikube/internal/store"
+	storeallergy "medikube/internal/store/allergy"
 	auditstore "medikube/internal/store/audit"
+	storecondition "medikube/internal/store/condition"
+	storeemergencycontact "medikube/internal/store/emergencycontact"
 	storeequipment "medikube/internal/store/equipment"
 	facilitystore "medikube/internal/store/facility"
 	storeidentity "medikube/internal/store/identity"
@@ -610,6 +613,72 @@ func registerKinds(
 		Views:        views,
 		SearchFields: api.MedicationSearchFields,
 		Basis:        api.MedicationBasis,
+	}); registerErr != nil {
+		return nil, nil, nil, nil, registerErr
+	}
+
+	allergyViews, err := page.NewAllergyViews()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	allergyRepo, err := storeallergy.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if registerErr := kinds.RegisterAllergy(registry, kinds.AllergyWiring{
+		Repository:   allergyRepo,
+		Authorizer:   authorizer,
+		Codec:        api.AllergyCodec{},
+		Schema:       api.AllergySchema(),
+		Views:        allergyViews,
+		SearchFields: api.AllergySearchFields,
+		Basis:        api.AllergyBasis,
+	}); registerErr != nil {
+		return nil, nil, nil, nil, registerErr
+	}
+
+	conditionViews, err := page.NewConditionViews()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	conditionRepo, err := storecondition.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if registerErr := kinds.RegisterCondition(registry, kinds.ConditionWiring{
+		Repository:   conditionRepo,
+		Authorizer:   authorizer,
+		Codec:        api.ConditionCodec{},
+		Schema:       api.ConditionSchema(),
+		Views:        conditionViews,
+		SearchFields: api.ConditionSearchFields,
+		Basis:        api.ConditionBasis,
+	}); registerErr != nil {
+		return nil, nil, nil, nil, registerErr
+	}
+
+	emergencyContactViews, err := page.NewEmergencyContactViews()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	emergencyContactRepo, err := storeemergencycontact.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if registerErr := kinds.RegisterEmergencyContact(registry, kinds.EmergencyContactWiring{
+		Repository:   emergencyContactRepo,
+		Authorizer:   authorizer,
+		Codec:        api.EmergencyContactCodec{},
+		Schema:       api.EmergencyContactSchema(),
+		Views:        emergencyContactViews,
+		SearchFields: api.EmergencyContactSearchFields,
+		Basis:        api.EmergencyContactBasis,
 	}); registerErr != nil {
 		return nil, nil, nil, nil, registerErr
 	}

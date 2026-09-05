@@ -199,14 +199,3 @@ func Register(registry *records.Registry, wiring Wiring) error {
 		SeedFixtureID: SeedFixtureID,
 	})
 }
-
-func joinWords(words []string) string {
-	switch len(words) {
-	case 1:
-		return words[0]
-	case 2:
-		return words[0] + " and no " + words[1]
-	default:
-		return words[0] + ", no " + joinWords(words[1:])
-	}
-}

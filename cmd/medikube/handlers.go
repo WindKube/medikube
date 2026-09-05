@@ -34,7 +34,10 @@ import (
 	"medikube/internal/service/symptom"
 	"medikube/internal/service/vitals"
 	"medikube/internal/store"
+	allergystore "medikube/internal/store/allergy"
 	auditstore "medikube/internal/store/audit"
+	conditionstore "medikube/internal/store/condition"
+	emergencycontactstore "medikube/internal/store/emergencycontact"
 	equipmentstore "medikube/internal/store/equipment"
 	facilitystore "medikube/internal/store/facility"
 	storeidentity "medikube/internal/store/identity"
@@ -624,6 +627,72 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Views:        equipmentViews,
 		SearchFields: api.EquipmentSearchFields,
 		Basis:        api.EquipmentBasis,
+	}); err != nil {
+		return err
+	}
+
+	allergyViews, err := page.NewAllergyViews()
+	if err != nil {
+		return err
+	}
+
+	allergyRepo, err := allergystore.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	if err = kinds.RegisterAllergy(registry, kinds.AllergyWiring{
+		Repository:   allergyRepo,
+		Authorizer:   authorizer,
+		Codec:        api.AllergyCodec{},
+		Schema:       api.AllergySchema(),
+		Views:        allergyViews,
+		SearchFields: api.AllergySearchFields,
+		Basis:        api.AllergyBasis,
+	}); err != nil {
+		return err
+	}
+
+	conditionViews, err := page.NewConditionViews()
+	if err != nil {
+		return err
+	}
+
+	conditionRepo, err := conditionstore.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	if err = kinds.RegisterCondition(registry, kinds.ConditionWiring{
+		Repository:   conditionRepo,
+		Authorizer:   authorizer,
+		Codec:        api.ConditionCodec{},
+		Schema:       api.ConditionSchema(),
+		Views:        conditionViews,
+		SearchFields: api.ConditionSearchFields,
+		Basis:        api.ConditionBasis,
+	}); err != nil {
+		return err
+	}
+
+	emergencyContactViews, err := page.NewEmergencyContactViews()
+	if err != nil {
+		return err
+	}
+
+	emergencyContactRepo, err := emergencycontactstore.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	if err = kinds.RegisterEmergencyContact(registry, kinds.EmergencyContactWiring{
+		Repository:   emergencyContactRepo,
+		Authorizer:   authorizer,
+		Codec:        api.EmergencyContactCodec{},
+		Schema:       api.EmergencyContactSchema(),
+		Views:        emergencyContactViews,
+		SearchFields: api.EmergencyContactSearchFields,
+		Basis:        api.EmergencyContactBasis,
 	}); err != nil {
 		return err
 	}

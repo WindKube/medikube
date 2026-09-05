@@ -305,28 +305,6 @@ func isUnresolved(values []string) bool {
 	return false
 }
 
-func conditionStatusStrings() []string {
-	statuses := clinical.ConditionStatuses()
-	values := make([]string, 0, len(statuses))
-
-	for _, status := range statuses {
-		values = append(values, string(status))
-	}
-
-	return values
-}
-
-func severityStrings() []string {
-	severities := clinical.Severities()
-	values := make([]string, 0, len(severities))
-
-	for _, severity := range severities {
-		values = append(values, string(severity))
-	}
-
-	return values
-}
-
 func injuryTypeStrings() []string {
 	types := clinical.InjuryTypes()
 	values := make([]string, 0, len(types))

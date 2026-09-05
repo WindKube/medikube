@@ -91,21 +91,6 @@ var (
 		clinical.LateralityBilateral:     "Both sides",
 		clinical.LateralityNotApplicable: "Not applicable",
 	}
-
-	severityLabels = map[clinical.Severity]string{
-		clinical.SeverityMild:            "Mild",
-		clinical.SeverityModerate:        "Moderate",
-		clinical.SeveritySevere:          "Severe",
-		clinical.SeverityLifeThreatening: "Life-threatening",
-	}
-
-	conditionStatusLabels = map[clinical.ConditionStatus]string{
-		clinical.ConditionStatusActive:   "Active",
-		clinical.ConditionStatusHealing:  "Healing",
-		clinical.ConditionStatusInactive: "Inactive",
-		clinical.ConditionStatusResolved: "Resolved",
-		clinical.ConditionStatusChronic:  "Chronic",
-	}
 )
 
 func InjuryTypeLabel(value clinical.InjuryType) string {
@@ -114,14 +99,6 @@ func InjuryTypeLabel(value clinical.InjuryType) string {
 
 func LateralityLabel(value clinical.Laterality) string {
 	return label(string(value), lateralityLabels[value])
-}
-
-func SeverityLabel(value clinical.Severity) string {
-	return label(string(value), severityLabels[value])
-}
-
-func ConditionStatusLabel(value clinical.ConditionStatus) string {
-	return label(string(value), conditionStatusLabels[value])
 }
 
 // InjuryTypeOptions and the three below it walk the domain's own published
@@ -149,36 +126,6 @@ func LateralityOptions(selected clinical.Laterality) []Option {
 		options = append(options, Option{
 			Value:    string(value),
 			Label:    LateralityLabel(value),
-			Selected: value == selected,
-		})
-	}
-
-	return options
-}
-
-func SeverityOptions(selected clinical.Severity) []Option {
-	published := clinical.Severities()
-	options := make([]Option, 0, len(published))
-
-	for _, value := range published {
-		options = append(options, Option{
-			Value:    string(value),
-			Label:    SeverityLabel(value),
-			Selected: value == selected,
-		})
-	}
-
-	return options
-}
-
-func ConditionStatusOptions(selected clinical.ConditionStatus) []Option {
-	published := clinical.ConditionStatuses()
-	options := make([]Option, 0, len(published))
-
-	for _, value := range published {
-		options = append(options, Option{
-			Value:    string(value),
-			Label:    ConditionStatusLabel(value),
 			Selected: value == selected,
 		})
 	}

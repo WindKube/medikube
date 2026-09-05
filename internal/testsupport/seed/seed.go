@@ -274,8 +274,8 @@ const (
 	columnLaterality     = "laterality"
 	columnOccurredOn     = "occurred_on"
 	columnMechanism      = "mechanism"
-	columnSeverity       = "severity"
 	columnRecoveryNotes  = "recovery_notes"
+	columnSeverity       = "severity"
 )
 
 // Apply writes the whole fixture and is safe to run twice: every record is
@@ -311,6 +311,18 @@ func Apply(app core.App) error {
 		// have to exist first, or the relation this collection now requires
 		// would refuse every row.
 		if err := applyMedications(tx); err != nil {
+			return err
+		}
+
+		if err := applyAllergies(tx); err != nil {
+			return err
+		}
+
+		if err := applyConditions(tx); err != nil {
+			return err
+		}
+
+		if err := applyEmergencyContacts(tx); err != nil {
 			return err
 		}
 

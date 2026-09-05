@@ -8,17 +8,16 @@ import (
 // FieldType, FieldStatus and FieldNotes (already declared in medication.go,
 // this package's first kind).
 const (
-	FieldCompany       = "company"
-	FieldPlanName      = "plan_name"
-	FieldEmployerGroup = "employer_group"
-	FieldMemberName    = "member_name"
-	FieldMemberID      = "member_id"
-	FieldGroupNumber   = "group_number"
-	FieldHolderName    = "holder_name"
-	FieldRelationship  = "relationship_to_holder"
-	FieldEffectiveOn   = "effective_on"
-	FieldExpiresOn     = "expires_on"
-	FieldIsPrimary     = "is_primary"
+	FieldCompany              = "company"
+	FieldPlanName             = "plan_name"
+	FieldEmployerGroup        = "employer_group"
+	FieldMemberName           = "member_name"
+	FieldMemberID             = "member_id"
+	FieldGroupNumber          = "group_number"
+	FieldHolderName           = "holder_name"
+	FieldRelationshipToHolder = "relationship_to_holder"
+	FieldEffectiveOn          = "effective_on"
+	FieldExpiresOn            = "expires_on"
 )
 
 var insuranceFields = []string{
@@ -30,7 +29,7 @@ var insuranceFields = []string{
 	FieldMemberID,
 	FieldGroupNumber,
 	FieldHolderName,
-	FieldRelationship,
+	FieldRelationshipToHolder,
 	FieldEffectiveOn,
 	FieldExpiresOn,
 	FieldStatus,
@@ -50,7 +49,7 @@ func init() {
 	fieldLabels[FieldMemberID] = "Member ID"
 	fieldLabels[FieldGroupNumber] = "Group number"
 	fieldLabels[FieldHolderName] = "Policy holder"
-	fieldLabels[FieldRelationship] = "Relationship to holder"
+	fieldLabels[FieldRelationshipToHolder] = "Relationship to holder"
 	fieldLabels[FieldEffectiveOn] = "Cover starts"
 	fieldLabels[FieldExpiresOn] = "Cover ends"
 	fieldLabels[FieldIsPrimary] = "Primary policy"
@@ -209,7 +208,7 @@ func (v InsuranceView) Entries() []DetailEntry {
 		{Field: FieldMemberID, Value: v.MemberID},
 		{Field: FieldGroupNumber, Value: v.GroupNumber},
 		{Field: FieldHolderName, Value: v.HolderName},
-		{Field: FieldRelationship, Value: v.Relationship},
+		{Field: FieldRelationshipToHolder, Value: v.Relationship},
 		{Field: FieldEffectiveOn, Value: v.EffectiveOn, Datetime: v.EffectiveOn},
 		{Field: FieldExpiresOn, Value: v.ExpiresOn, Datetime: v.ExpiresOn},
 		{Field: FieldStatus, Value: v.Status},
@@ -307,7 +306,7 @@ func (v InsuranceView) Value(field string) string {
 		return v.GroupNumber
 	case FieldHolderName:
 		return v.HolderName
-	case FieldRelationship:
+	case FieldRelationshipToHolder:
 		return v.RelationshipValue
 	case FieldEffectiveOn:
 		return v.EffectiveOn

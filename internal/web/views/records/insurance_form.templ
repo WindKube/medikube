@@ -24,7 +24,7 @@ templ InsuranceForm(props InsuranceFormProps) {
 		@insuranceTextControl(props, FieldMemberID, "text", true)
 		@insuranceTextControl(props, FieldGroupNumber, "text", false)
 		@insuranceTextControl(props, FieldHolderName, "text", false)
-		@insuranceSelectControl(props, FieldRelationship, props.Insurance.RelationshipOptions(), true)
+		@insuranceSelectControl(props, FieldRelationshipToHolder, props.Insurance.RelationshipOptions(), true)
 		@insuranceTextControl(props, FieldEffectiveOn, "date", true)
 		@insuranceTextControl(props, FieldExpiresOn, "date", false)
 		@insuranceSelectControl(props, FieldStatus, props.Insurance.StatusOptions(), true)
