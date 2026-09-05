@@ -265,13 +265,13 @@ func (l patientLinks) of(id string) string {
 
 // submitExpression mirrors medicationLinks' own (medications.go): a create
 // posts to the collection, a change patches the record and carries the ETag
-// the detail page rendered into $etag as If-Match.
+// the detail page rendered into $_etag as If-Match.
 func (l patientLinks) submitExpression(view patients.PatientView) string {
 	if view.ID == "" {
 		return "@post(" + quote(l.collection) + ")"
 	}
 
-	return "@patch(" + quote(view.Links.Record) + ", {headers: {'If-Match': $etag}})"
+	return "@patch(" + quote(view.Links.Record) + ", {headers: {'If-Match': $_etag}})"
 }
 
 func (l patientLinks) cancelHref(view patients.PatientView) string {

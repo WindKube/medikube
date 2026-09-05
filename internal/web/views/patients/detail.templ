@@ -118,11 +118,11 @@ templ PatientDetail(props PatientDetailProps) {
 	</section>
 }
 
-// patientDetailSignals is the edit form's $etag (FR-011) plus the delete
+// patientDetailSignals is the edit form's $_etag (FR-011) plus the delete
 // confirmation's own signal for everyone but the self-record, which carries
 // no delete confirmation to reveal.
 func patientDetailSignals(patient PatientView) string {
-	etag := "etag: " + strconv.Quote(patient.Version)
+	etag := "_etag: " + strconv.Quote(patient.Version)
 
 	if patient.IsSelfRecord {
 		return "{" + etag + "}"

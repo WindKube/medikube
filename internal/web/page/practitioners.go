@@ -204,14 +204,14 @@ func (l practitionerLinks) of(id string) directory.PractitionerLinks {
 
 // submitExpression and cancelHref mirror medicationLinks' own (medications.go):
 // a create posts to the collection, a change patches the record carrying
-// $etag as If-Match, and cancelling returns to the detail page it came from
+// $_etag as If-Match, and cancelling returns to the detail page it came from
 // or the list when there is none yet.
 func (l practitionerLinks) submitExpression(view directory.PractitionerView) string {
 	if view.ID == "" {
 		return "@post(" + quote(l.collection) + ")"
 	}
 
-	return "@patch(" + quote(view.Links.Record) + ", {headers: {'If-Match': $etag}})"
+	return "@patch(" + quote(view.Links.Record) + ", {headers: {'If-Match': $_etag}})"
 }
 
 func (l practitionerLinks) cancelHref(view directory.PractitionerView) string {
