@@ -13,6 +13,7 @@ import (
 	"medikube/internal/domain/audit"
 	"medikube/internal/domain/kind"
 	"medikube/internal/obs"
+	"medikube/internal/store"
 )
 
 // The hook ids, so a second Bind replaces rather than appends. PocketBase's
@@ -137,6 +138,21 @@ func (c RecordAudit) event(e *core.RecordEvent, action audit.Action, target audi
 		RequestID:  c.requestID(e.Context),
 	}
 
+	// store.RecordPatientField is the column every registered kind carries
+	// its person in (data-model §6), which is what lets the chart summary's
+	// recent activity find this row without a hook per kind. A delete
+	// cascading from the patient's own deletion (US6) runs in the same
+	// transaction, and by the time this AFTER hook fires the patient row is
+	// genuinely gone — the relation field cannot validate against it, so
+	// this row is left with no patient exactly as the patient's own delete
+	// audit row is (research D-25/FR-029). A medication deleted on its own,
+	// patient still very much alive, keeps it.
+	if patientID := e.Record.GetString(store.RecordPatientField); patientID != "" {
+		if action != audit.ActionDelete || c.patientExists(e, patientID) {
+			event.PatientID = patientID
+		}
+	}
+
 	actor, present := c.actor(e.Context)
 	if !present || !actor.Authenticated() {
 		return event
@@ -151,6 +167,16 @@ func (c RecordAudit) event(e *core.RecordEvent, action audit.Action, target audi
 	}
 
 	return event
+}
+
+// patientExists is only ever asked during a delete, and only when the
+// deleted record still names one: a false here means this delete is riding a
+// cascade from the patient's own deletion, the one case the relation field
+// cannot validate against (see event's comment above).
+func (c RecordAudit) patientExists(e *core.RecordEvent, patientID string) bool {
+	_, err := e.App.FindRecordById(store.PatientCollection, patientID)
+
+	return err == nil
 }
 
 func (c RecordAudit) actor(ctx context.Context) (access.Actor, bool) {

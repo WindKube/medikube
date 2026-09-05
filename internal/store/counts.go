@@ -8,11 +8,12 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// recordPatientField is every registered kind's own anchor (data-model §6):
+// RecordPatientField is every registered kind's own anchor (data-model §6):
 // one column, spelled identically in every clinical collection, which is what
 // lets the chart summary's per-kind count be one query shape rather than one
-// per kind (contracts/patient-chart.md).
-const recordPatientField = "patient"
+// per kind (contracts/patient-chart.md), and lets the record audit hook read
+// a patient id off any of them without switching on kind.
+const RecordPatientField = "patient"
 
 // CountByPatient is the chart summary's one indexed `COUNT(*) WHERE patient =
 // ?` per registered kind (FR-028, SC-007). It switches on nothing: collection
@@ -22,7 +23,7 @@ func CountByPatient(ctx context.Context, app core.App, collection, patientID str
 
 	err := app.RecordQuery(collection).
 		Select("count(*)").
-		AndWhere(dbx.HashExp{recordPatientField: patientID}).
+		AndWhere(dbx.HashExp{RecordPatientField: patientID}).
 		WithContext(ctx).
 		Row(&total)
 	if err != nil {

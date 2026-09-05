@@ -18,6 +18,9 @@ type Chart struct {
 	RecentActivity []domainaudit.Event
 }
 
+// recentActivityLimit is contracts/patient-chart.md's "last ten".
+const recentActivityLimit = 10
+
 // Summary answers one patient's chart, authorized against the person rather
 // than a kind (research D-05), exactly as Get is.
 func (s *Service) Summary(ctx context.Context, actor access.Actor, id string) (Chart, error) {
@@ -40,7 +43,7 @@ func (s *Service) Summary(ctx context.Context, actor access.Actor, id string) (C
 		total += entry.Count
 	}
 
-	recent, err := s.activity.RecentForPatient(ctx, id, 0)
+	recent, err := s.activity.RecentForPatient(ctx, id, recentActivityLimit)
 	if err != nil {
 		return Chart{}, err
 	}
