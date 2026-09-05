@@ -47,12 +47,23 @@ type FacilityResolve func() (*facilitysvc.Service, error)
 // ErrNoPractitioners is a build whose practitioner service was never resolved.
 var ErrNoPractitioners = errors.New("api: the practitioner operations were wired without a way to resolve the service")
 
+// PractitionerForms is PatientForms' twin for the practitioner directory: a
+// nil value means "JSON only".
+type PractitionerForms interface {
+	Invalid(ctx context.Context, actor access.Actor, submitted directory.Practitioner, isNew bool, invalid *domain.ValidationError) (web.Component, error)
+	Stale(ctx context.Context, actor access.Actor, current directory.Practitioner) (web.Component, error)
+	Created(ctx context.Context, actor access.Actor, created directory.Practitioner) (web.Component, error)
+	Updated(ctx context.Context, actor access.Actor, updated directory.Practitioner) (web.Component, error)
+}
+
 // PractitionerDeps is what the five practitioner handlers need.
 type PractitionerDeps struct {
 	Resolve PractitionerResolve
 	// Facilities is optional in shape only: a nil value makes every facility
 	// reference render as null rather than fail the request.
 	Facilities FacilityResolve
+	// Forms is optional too: a nil value serves JSON only.
+	Forms PractitionerForms
 }
 
 func (d PractitionerDeps) validate() error {
@@ -147,12 +158,45 @@ func (h *practitionerHandlers) create(e *core.RequestEvent, actor access.Actor) 
 		return decodeErr
 	}
 
-	created, err := service.Create(e.Request.Context(), actor, practitionerDraft(body))
+	draft := practitionerDraft(body)
+
+	created, err := service.Create(e.Request.Context(), actor, draft)
 	if err != nil {
-		return web.OwnerScoped(err)
+		return h.invalid(e, actor, draft, true, err)
+	}
+
+	if wantsFormPatch(e) && h.deps.Forms != nil {
+		component, formErr := h.deps.Forms.Created(e.Request.Context(), actor, created)
+		if formErr != nil {
+			return formErr
+		}
+
+		return web.Patch(e, component, web.ByElementID())
 	}
 
 	return h.writeDetail(e, actor, service, http.StatusCreated, created, true)
+}
+
+// invalid answers a rejected create or update with the form re-rendered from
+// what was submitted, patched into place by its own id.
+func (h *practitionerHandlers) invalid(
+	e *core.RequestEvent, actor access.Actor, submitted directory.Practitioner, isNew bool, err error,
+) error {
+	var invalid *domain.ValidationError
+	if !errors.As(err, &invalid) {
+		return web.OwnerScoped(err)
+	}
+
+	if !wantsFormPatch(e) || h.deps.Forms == nil {
+		return web.OwnerScoped(err)
+	}
+
+	component, formErr := h.deps.Forms.Invalid(e.Request.Context(), actor, submitted, isNew, invalid)
+	if formErr != nil {
+		return formErr
+	}
+
+	return web.Patch(e, component, web.ByElementID())
 }
 
 func (h *practitionerHandlers) get(e *core.RequestEvent, actor access.Actor) error {
@@ -189,10 +233,46 @@ func (h *practitionerHandlers) update(e *core.RequestEvent, actor access.Actor) 
 
 	updated, err := service.Update(e.Request.Context(), actor, id, version, practitionerPatch(body))
 	if err != nil {
-		return h.stale(e, actor, service, id, err)
+		if errors.Is(err, domain.ErrVersionMismatch) {
+			return h.stale(e, actor, service, id, err)
+		}
+
+		return h.invalidUpdate(e, actor, service, id, err)
+	}
+
+	if wantsFormPatch(e) && h.deps.Forms != nil {
+		component, formErr := h.deps.Forms.Updated(e.Request.Context(), actor, updated)
+		if formErr != nil {
+			return formErr
+		}
+
+		return web.Patch(e, component, web.ByElementID())
 	}
 
 	return h.writeDetail(e, actor, service, http.StatusOK, updated, false)
+}
+
+// invalidUpdate re-reads the record rather than overlaying the submitted
+// patch onto it: a patch is partial by design and the fields it left
+// untouched have no submitted value to show.
+func (h *practitionerHandlers) invalidUpdate(
+	e *core.RequestEvent, actor access.Actor, service *practitionersvc.Service, id string, err error,
+) error {
+	var invalid *domain.ValidationError
+	if !errors.As(err, &invalid) {
+		return web.OwnerScoped(err)
+	}
+
+	if !wantsFormPatch(e) || h.deps.Forms == nil {
+		return web.OwnerScoped(err)
+	}
+
+	current, readErr := service.Get(e.Request.Context(), actor, id)
+	if readErr != nil {
+		return web.OwnerScoped(readErr)
+	}
+
+	return h.invalid(e, actor, current, false, err)
 }
 
 func (h *practitionerHandlers) remove(e *core.RequestEvent, actor access.Actor) error {
@@ -230,6 +310,17 @@ func (h *practitionerHandlers) stale(
 	current, readErr := service.Get(e.Request.Context(), actor, id)
 	if readErr != nil {
 		return web.OwnerScoped(readErr)
+	}
+
+	if wantsFormPatch(e) && h.deps.Forms != nil {
+		component, formErr := h.deps.Forms.Stale(e.Request.Context(), actor, current)
+		if formErr != nil {
+			return formErr
+		}
+
+		web.SetETag(e, current.Version)
+
+		return web.Patch(e, component, web.ByElementID())
 	}
 
 	ref, refErr := h.facilityRef(e.Request.Context(), actor, current.FacilityID)

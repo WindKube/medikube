@@ -49,6 +49,12 @@ type Service struct {
 	auditor    Auditor
 	counter    RecordCounter
 	activity   RecentActivityReader
+
+	// metrics and tracer are optional, wired post-construction by
+	// SetMetrics/SetTracer: see telemetry.go for why New's signature does not
+	// grow a seventh required dependency for them.
+	metrics Metrics
+	tracer  Tracer
 }
 
 // New refuses an incomplete service rather than returning one (mirrors
@@ -133,6 +139,15 @@ func (s *Service) Get(ctx context.Context, actor access.Actor, id string) (perso
 // this is where that absence becomes the stored fact regardless of what an
 // internal caller passed in.
 func (s *Service) Create(ctx context.Context, actor access.Actor, draft person.Patient) (person.Patient, error) {
+	ctx, end := s.span(ctx, "service.patient.Create", map[string]string{"medikube.kind": "patient"})
+
+	created, err := s.create(ctx, actor, draft)
+	end(err)
+
+	return created, err
+}
+
+func (s *Service) create(ctx context.Context, actor access.Actor, draft person.Patient) (person.Patient, error) {
 	if !actor.Authenticated() {
 		return person.Patient{}, domain.ErrUnauthenticated
 	}
@@ -146,7 +161,12 @@ func (s *Service) Create(ctx context.Context, actor access.Actor, draft person.P
 		return person.Patient{}, err
 	}
 
-	return s.repository.Create(ctx, draft)
+	created, err := s.repository.Create(ctx, draft)
+	if err == nil {
+		s.metricsOrNoop().RecordCreated("patient")
+	}
+
+	return created, err
 }
 
 // Update applies the supplied fields and nothing else, over the patient as it

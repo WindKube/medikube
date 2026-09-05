@@ -9,7 +9,7 @@ import (
 
 // DeleteConfirmSignal is the Datastar signal PatientDetail's own delete
 // button flips, shared here so the two stay one spelling.
-const DeleteConfirmSignal = "confirming_delete"
+const DeleteConfirmSignal = "_confirming_delete"
 
 const (
 	deleteConfirmTitle = "Delete this person?"
@@ -29,7 +29,7 @@ templ DeleteConfirm(props DeleteConfirmProps) {
 		Subject:      props.Name,
 		Consequence:  props.Consequence(),
 		ConfirmLabel: deleteConfirmLabel,
-		ConfirmOn:    "@delete(" + strconv.Quote(props.DeleteHref) + ", {headers: {'If-Match': $etag}}).then(() => window.location = " + strconv.Quote("/patients") + ")",
+		ConfirmOn:    "@delete(" + strconv.Quote(props.DeleteHref) + ", {headers: {'If-Match': $_etag}}).then(() => window.location = " + strconv.Quote("/patients") + ")",
 		CancelLabel:  deleteConfirmCancel,
 	})
 }

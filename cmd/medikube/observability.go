@@ -73,7 +73,15 @@ func startSinks(ctx context.Context, cfg config.Config, log zerolog.Logger) (*si
 		return nil, fmt.Errorf("start the error reporter: %w", err)
 	}
 
-	return &sinks{tracing: tracing, sentry: reporter}, nil
+	// Built here, before the route table exists, and not in startMetrics:
+	// this phase's counters (RecordCreated, PatientSwitch, ...) are wired
+	// into the service and store layers while the route table is still being
+	// assembled, and PublishRoutes adds the route-pattern allowlist once it
+	// is. The registry answers scrapes with an empty route allowlist for the
+	// brief window before that — never with no registry at all.
+	measurements := obs.NewMetrics()
+
+	return &sinks{tracing: tracing, sentry: reporter, measurements: measurements}, nil
 }
 
 // startMetrics binds the measurement listener, which can only happen once the
@@ -91,14 +99,13 @@ func (s *sinks) startMetrics(ctx context.Context, cfg config.MetricsConfig, regi
 		patterns = append(patterns, route.Pattern())
 	}
 
-	measurements := obs.NewMetrics(patterns...)
+	s.measurements.PublishRoutes(patterns...)
 
-	server, err := obs.StartMetrics(ctx, cfg, measurements, log)
+	server, err := obs.StartMetrics(ctx, cfg, s.measurements, log)
 	if err != nil {
 		return fmt.Errorf("start the measurements listener: %w", err)
 	}
 
-	s.measurements = measurements
 	s.metrics = server
 
 	return nil

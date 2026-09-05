@@ -61,6 +61,27 @@ func draft(name string) directory.Facility {
 	return directory.Facility{Kind: directory.FacilityKindPractice, Name: name}
 }
 
+// fakeMetrics is a hand-written fake (Principle III): anything with a
+// RecordCreated(string) method satisfies facility.Metrics, the same way
+// *obs.Metrics does in production with no import of it here.
+type fakeMetrics struct{ created []string }
+
+func (f *fakeMetrics) RecordCreated(kind string) { f.created = append(f.created, kind) }
+
+// T160: a successful create reports medikube_records_total{kind="facility"}.
+func TestCreateReportsTheRecordCreatedMetric(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+	metrics := &fakeMetrics{}
+	h.service.SetMetrics(metrics)
+
+	_, err := h.service.Create(t.Context(), actor(), draft("Riverside Practice"))
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"facility"}, metrics.created)
+}
+
 // TestCreateRequiresAKind is FR-034: kind is required, and its absence is a
 // 422 shaped as domain.ValidationError with the required code.
 func TestCreateRequiresAKind(t *testing.T) {
@@ -187,6 +208,12 @@ func TestEveryMethodAuthorizesBeforeItReachesTheStore(t *testing.T) {
 
 	for i := range serviceType.NumMethod() {
 		method := serviceType.Method(i)
+
+		// SetMetrics is a wiring setter (T160), not a use case: it carries no
+		// context and no actor, so there is nothing for it to authorize.
+		if method.Name == "SetMetrics" {
+			continue
+		}
 
 		t.Run(method.Name, func(t *testing.T) {
 			t.Parallel()

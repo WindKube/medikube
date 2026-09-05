@@ -270,6 +270,16 @@ tasks:
     cmds:
       - go test -tags=phileak -count=1 ./internal/testsupport/phileak/...
 
+  test:netgate:
+    desc: "The egress gate — proves nothing dials out with no destination configured (FR-047)"
+    # Build-tagged and therefore invisible to `task test`, same as
+    # test:phileak: it boots a real instance and drives every endpoint this
+    # phase adds. Phases 003, 005 and 006 extend this exercise rather than
+    # declaring a second one.
+    deps: [gen]
+    cmds:
+      - go test -tags=netgate -count=1 ./internal/testsupport/netgate/...
+
   test:sselive:
     desc: The >5-minute SSE liveness gate (SC-007, risk R7)
     # Build-tagged and therefore invisible to `task test`: it holds one stream

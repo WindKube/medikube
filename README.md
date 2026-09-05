@@ -116,6 +116,21 @@ Secrets never reach the log stream: the boot line is written by an allowlist
 (`internal/config/redact.go`), so a DSN or a token is reported as present or absent and never as a
 value (FR-041).
 
+## Patients
+
+An account can hold more than one person's records (a self-record plus dependants), and three
+rules keep that from turning into leaked or lost data:
+
+- **Patient scope is explicit.** Every record and every API call names the patient it belongs to.
+  There is no implicit "current patient" the server infers on your behalf.
+- **The person in view is never authorization.** `users.active_patient` — the switcher's pointer —
+  is what a screen displays, nothing more. Access is decided from account ownership alone, so a
+  stale or tampered pointer can misdirect a screen but can never leak another account's records.
+- **Records are hard deleted.** Deleting a patient, a practitioner or a facility removes the row
+  outright — no `deleted_at`, no tombstone. Constitution VII reserves soft delete for files alone,
+  and phase 002's patient photo does not use it: replacing or losing a photo removes the old file
+  and its thumbnails the same way, immediately.
+
 ## Layout
 
 | Path | What it is |

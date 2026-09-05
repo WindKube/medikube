@@ -28,7 +28,8 @@ func TestProbeTrafficAppearsInNeitherTheLogNorTheMetrics(t *testing.T) {
 
 	var logs strings.Builder
 	log := logging.NewTo(&logs, config.LogConfig{Level: "debug"}, "test")
-	metrics := obs.NewMetrics("GET /x/ok")
+	metrics := obs.NewMetrics()
+	metrics.PublishRoutes("GET /x/ok")
 	reporter, err := obs.StartSentry(config.SentryConfig{}, "test", log)
 	require.NoError(t, err)
 

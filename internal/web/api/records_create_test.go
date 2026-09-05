@@ -12,6 +12,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/testsupport"
 	"medikube/internal/web"
+	"medikube/internal/web/views/ids"
 )
 
 // T143, FR-015. A create answers 201 with the address of what it made and the
@@ -195,4 +196,57 @@ func derefOr(value *string) string {
 	}
 
 	return *value
+}
+
+// TestACreateOverDatastarAnswersHTML mirrors patients_test.go's own: a
+// Datastar submit gets the form back as text/html on 200 (the list already
+// refreshes through the record stream for this kind), and every other caller
+// keeps today's JSON exactly (422/201).
+func TestACreateOverDatastarAnswersHTML(t *testing.T) {
+	t.Parallel()
+
+	datastar := map[string]string{"Datastar-Request": "true"}
+
+	t.Run("an invalid create over Datastar answers 200 text/html with the form and the field error", func(t *testing.T) {
+		t.Parallel()
+
+		caller := newCaller(t)
+
+		answer := caller.do(http.MethodPost, collectionURL(),
+			`{"patient":"`+testsupport.AccountAPatientSelfID+`"}`, datastar)
+		require.Equal(t, http.StatusOK, answer.Status, answer.Body)
+		assert.Contains(t, answer.Body, ids.RecordForm(kind.Medication, ""))
+		assert.Contains(t, answer.Body, "a name is required")
+	})
+
+	t.Run("the same invalid create with no Datastar-Request header still answers 422 JSON", func(t *testing.T) {
+		t.Parallel()
+
+		caller := newCaller(t)
+
+		answer := caller.post(collectionURL(), `{"patient":"`+testsupport.AccountAPatientSelfID+`"}`)
+		assert.Equal(t, http.StatusUnprocessableEntity, answer.Status, answer.Body)
+		assert.Contains(t, answer.Body, `"code":"`+domain.CodeValidationFailed+`"`)
+	})
+
+	t.Run("a valid create over Datastar answers 200 text/html with the blank form", func(t *testing.T) {
+		t.Parallel()
+
+		caller := newCaller(t)
+
+		answer := caller.do(http.MethodPost, collectionURL(),
+			`{"patient":"`+testsupport.AccountAPatientSelfID+`","name":"Datastar Amoxicillin"}`, datastar)
+		require.Equal(t, http.StatusOK, answer.Status, answer.Body)
+		assert.Contains(t, answer.Body, ids.RecordForm(kind.Medication, ""))
+	})
+
+	t.Run("the same valid create with no Datastar-Request header still answers 201 JSON", func(t *testing.T) {
+		t.Parallel()
+
+		caller := newCaller(t)
+
+		answer := caller.post(collectionURL(),
+			`{"patient":"`+testsupport.AccountAPatientSelfID+`","name":"Plain Amoxicillin"}`)
+		assert.Equal(t, http.StatusCreated, answer.Status, answer.Body)
+	})
 }

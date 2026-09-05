@@ -131,6 +131,39 @@ func (h *Handler) Create(ctx context.Context, actor access.Actor, segment string
 	return entry.Service.Create(ctx, actor, decoded)
 }
 
+// DecodeCreate and DecodePatch decode a request body into the kind's own
+// create/patch shape without calling the service. Create and Update discard
+// the decoded value on every path that does not end in a save, and a caller
+// that must re-render a rejected submission — the Datastar form patch —
+// needs what was typed rather than what was saved.
+func (h *Handler) DecodeCreate(segment string, body []byte) (Entry, any, error) {
+	entry, err := h.Dispatch(segment)
+	if err != nil {
+		return Entry{}, nil, err
+	}
+
+	decoded := entry.Schema.NewCreate()
+	if err := decode(body, decoded); err != nil {
+		return entry, nil, err
+	}
+
+	return entry, decoded, nil
+}
+
+func (h *Handler) DecodePatch(segment string, body []byte) (Entry, any, error) {
+	entry, err := h.Dispatch(segment)
+	if err != nil {
+		return Entry{}, nil, err
+	}
+
+	decoded := entry.Schema.NewPatch()
+	if err := decode(body, decoded); err != nil {
+		return entry, nil, err
+	}
+
+	return entry, decoded, nil
+}
+
 func (h *Handler) Get(ctx context.Context, actor access.Actor, segment, id string) (Record, error) {
 	entry, err := h.Dispatch(segment)
 	if err != nil {

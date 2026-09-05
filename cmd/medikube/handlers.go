@@ -55,6 +55,8 @@ func operations(
 	registry *records.Registry,
 	resolveDirectory func() (directoryServices, error),
 	hub *realtime.Hub,
+	measurements *obs.Metrics,
+	tracing *obs.Tracing,
 	health api.HealthDeps,
 ) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
@@ -76,7 +78,7 @@ func operations(
 	// that reads it — wired()'s medication pages need it for the context
 	// header and the redirect, and the account surface needs it so
 	// registration can provision the self-record FR-005 requires.
-	patientResolve, photoResolve := patientFamily(app, cfg, registry)
+	patientResolve, photoResolve := patientFamily(app, cfg, registry, measurements, tracing)
 
 	// The real ones win. This is the only line each later group touches.
 	served, err := wired(resolve, patientResolve, hub)
@@ -135,7 +137,18 @@ func operations(
 
 	maps.Copy(table, accountPages)
 
-	patientOps, err := api.PatientHandlers(patientResolve, unitSystemOf(accounts.Service), resolve)
+	patientDeps := page.PatientDeps{
+		Resolve: patientResolve,
+		UnitOf:  unitSystemOf(accounts.Service),
+		Records: resolve,
+	}
+
+	patientForms, err := page.NewPatientForms(patientDeps)
+	if err != nil {
+		return nil, err
+	}
+
+	patientOps, err := api.PatientHandlers(patientResolve, unitSystemOf(accounts.Service), resolve, patientForms)
 	if err != nil {
 		return nil, err
 	}
@@ -156,11 +169,7 @@ func operations(
 
 	maps.Copy(table, activePatientOps)
 
-	patientPages, err := page.PatientPages(page.PatientDeps{
-		Resolve: patientResolve,
-		UnitOf:  unitSystemOf(accounts.Service),
-		Records: resolve,
-	})
+	patientPages, err := page.PatientPages(patientDeps)
 	if err != nil {
 		return nil, err
 	}
@@ -194,15 +203,26 @@ func operations(
 		return services.Facility, resolveErr
 	})
 
+	practitionerForms, err := page.NewPractitionerForms(practitionerResolve, facilityResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	facilityForms, err := page.NewFacilityForms(facilityResolve)
+	if err != nil {
+		return nil, err
+	}
+
 	practitionerOps, err := api.PractitionerHandlers(api.PractitionerDeps{
 		Resolve:    practitionerResolve,
 		Facilities: facilityResolve,
+		Forms:      practitionerForms,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	facilityOps, err := api.FacilityHandlers(api.FacilityDeps{Resolve: facilityResolve})
+	facilityOps, err := api.FacilityHandlers(api.FacilityDeps{Resolve: facilityResolve, Forms: facilityForms})
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +327,9 @@ type patientStack struct {
 // rather than switching on kind, and this is what lets a request-time read of
 // it be correct regardless of which of the two families' OnceValues runs
 // first — the boot gate forces both before anything serves.
-func patientFamily(app core.App, cfg config.Config, registry *records.Registry) (api.PatientResolve, api.PatientPhotoResolve) {
+func patientFamily(
+	app core.App, cfg config.Config, registry *records.Registry, measurements *obs.Metrics, tracing *obs.Tracing,
+) (api.PatientResolve, api.PatientPhotoResolve) {
 	once := sync.OnceValues(func() (patientStack, error) {
 		secret, err := store.CursorSecret(app, "")
 		if err != nil {
@@ -339,6 +361,8 @@ func patientFamily(app core.App, cfg config.Config, registry *records.Registry) 
 			return patientStack{}, err
 		}
 
+		repository.SetTracer(obs.NewSpanTracer(tracing.TracerProvider(), "store.patients"))
+
 		authorizer, err := accessservice.New(owners, accessservice.WithPatients(repository, auditor))
 		if err != nil {
 			return patientStack{}, err
@@ -348,6 +372,8 @@ func patientFamily(app core.App, cfg config.Config, registry *records.Registry) 
 		if err != nil {
 			return patientStack{}, err
 		}
+
+		photos.SetMetrics(measurements)
 
 		activePatient, err := patientstore.NewActivePatientRepo(app)
 		if err != nil {
@@ -370,6 +396,9 @@ func patientFamily(app core.App, cfg config.Config, registry *records.Registry) 
 		if err != nil {
 			return patientStack{}, err
 		}
+
+		service.SetMetrics(measurements)
+		service.SetTracer(obs.NewSpanTracer(tracing.TracerProvider(), "service.patient"))
 
 		return patientStack{service: service, photos: photos}, nil
 	})
@@ -526,16 +555,16 @@ type directoryServices struct {
 // cursor codec, and the codec is keyed from a secret the migrations have only
 // just created (store.CursorSecret), which does not exist until apis.Serve's
 // OnServe has run.
-func directoryFamily(app core.App) func() (directoryServices, error) {
+func directoryFamily(app core.App, measurements *obs.Metrics) func() (directoryServices, error) {
 	return sync.OnceValues(func() (directoryServices, error) {
-		return registerDirectory(app)
+		return registerDirectory(app, measurements)
 	})
 }
 
 // registerDirectory builds both directory services and binds their audit
 // hooks. One call, no route: practitioners and facilities are not a
 // kind.Kind (research D-05), so neither goes through registerKinds.
-func registerDirectory(app core.App) (directoryServices, error) {
+func registerDirectory(app core.App, measurements *obs.Metrics) (directoryServices, error) {
 	secret, err := store.CursorSecret(app, "")
 	if err != nil {
 		return directoryServices{}, err
@@ -566,6 +595,8 @@ func registerDirectory(app core.App) (directoryServices, error) {
 		return directoryServices{}, err
 	}
 
+	practitionerService.SetMetrics(measurements)
+
 	facilityRepo, err := facilitystore.New(app, cursors)
 	if err != nil {
 		return directoryServices{}, err
@@ -575,6 +606,8 @@ func registerDirectory(app core.App) (directoryServices, error) {
 	if err != nil {
 		return directoryServices{}, err
 	}
+
+	facilityService.SetMetrics(measurements)
 
 	if err := pb.BindDirectoryAudit(app, pb.DirectoryAudit{
 		Trail: auditor,

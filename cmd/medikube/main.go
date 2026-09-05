@@ -239,12 +239,12 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 	// open stream's watcher goroutine parked until the process exits.
 	kindRegistry := records.NewRegistry()
 	resolve := recordFamily(app, kindRegistry, container.Hub())
-	resolveDirectory := directoryFamily(app)
+	resolveDirectory := directoryFamily(app, destinations.measurements)
 
 	readiness := obs.NewReadiness()
 	startedAt := time.Now()
 
-	table, err := operations(app, cfg, resolve, kindRegistry, resolveDirectory, container.Hub(), api.HealthDeps{
+	table, err := operations(app, cfg, resolve, kindRegistry, resolveDirectory, container.Hub(), destinations.measurements, destinations.tracing, api.HealthDeps{
 		Version:   version,
 		StartedAt: startedAt,
 		Readiness: readiness,

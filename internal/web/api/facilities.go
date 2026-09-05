@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -28,9 +29,20 @@ const (
 // ErrNoFacilities is a build whose facility service was never resolved.
 var ErrNoFacilities = errors.New("api: the facility operations were wired without a way to resolve the service")
 
+// FacilityForms is PatientForms' twin for the facility directory: a nil
+// value means "JSON only".
+type FacilityForms interface {
+	Invalid(ctx context.Context, actor access.Actor, submitted directory.Facility, isNew bool, invalid *domain.ValidationError) (web.Component, error)
+	Stale(ctx context.Context, actor access.Actor, current directory.Facility) (web.Component, error)
+	Created(ctx context.Context, actor access.Actor, created directory.Facility) (web.Component, error)
+	Updated(ctx context.Context, actor access.Actor, updated directory.Facility) (web.Component, error)
+}
+
 // FacilityDeps is what the five facility handlers need.
 type FacilityDeps struct {
 	Resolve FacilityResolve
+	// Forms is optional: a nil value serves JSON only.
+	Forms FacilityForms
 }
 
 func (d FacilityDeps) validate() error {
@@ -115,12 +127,45 @@ func (h *facilityHandlers) create(e *core.RequestEvent, actor access.Actor) erro
 		return decodeErr
 	}
 
-	created, err := service.Create(e.Request.Context(), actor, facilityDraft(body))
+	draft := facilityDraft(body)
+
+	created, err := service.Create(e.Request.Context(), actor, draft)
 	if err != nil {
-		return web.OwnerScoped(err)
+		return h.invalid(e, actor, draft, true, err)
+	}
+
+	if wantsFormPatch(e) && h.deps.Forms != nil {
+		component, formErr := h.deps.Forms.Created(e.Request.Context(), actor, created)
+		if formErr != nil {
+			return formErr
+		}
+
+		return web.Patch(e, component, web.ByElementID())
 	}
 
 	return h.writeDetail(e, actor, service, http.StatusCreated, created, true)
+}
+
+// invalid answers a rejected create or update with the form re-rendered from
+// what was submitted, patched into place by its own id.
+func (h *facilityHandlers) invalid(
+	e *core.RequestEvent, actor access.Actor, submitted directory.Facility, isNew bool, err error,
+) error {
+	var invalid *domain.ValidationError
+	if !errors.As(err, &invalid) {
+		return web.OwnerScoped(err)
+	}
+
+	if !wantsFormPatch(e) || h.deps.Forms == nil {
+		return web.OwnerScoped(err)
+	}
+
+	component, formErr := h.deps.Forms.Invalid(e.Request.Context(), actor, submitted, isNew, invalid)
+	if formErr != nil {
+		return formErr
+	}
+
+	return web.Patch(e, component, web.ByElementID())
 }
 
 func (h *facilityHandlers) get(e *core.RequestEvent, actor access.Actor) error {
@@ -157,10 +202,46 @@ func (h *facilityHandlers) update(e *core.RequestEvent, actor access.Actor) erro
 
 	updated, err := service.Update(e.Request.Context(), actor, id, version, facilityPatch(body))
 	if err != nil {
-		return h.stale(e, actor, service, id, err)
+		if errors.Is(err, domain.ErrVersionMismatch) {
+			return h.stale(e, actor, service, id, err)
+		}
+
+		return h.invalidUpdate(e, actor, service, id, err)
+	}
+
+	if wantsFormPatch(e) && h.deps.Forms != nil {
+		component, formErr := h.deps.Forms.Updated(e.Request.Context(), actor, updated)
+		if formErr != nil {
+			return formErr
+		}
+
+		return web.Patch(e, component, web.ByElementID())
 	}
 
 	return h.writeDetail(e, actor, service, http.StatusOK, updated, false)
+}
+
+// invalidUpdate re-reads the record rather than overlaying the submitted
+// patch onto it: a patch is partial by design and the fields it left
+// untouched have no submitted value to show.
+func (h *facilityHandlers) invalidUpdate(
+	e *core.RequestEvent, actor access.Actor, service *facilitysvc.Service, id string, err error,
+) error {
+	var invalid *domain.ValidationError
+	if !errors.As(err, &invalid) {
+		return web.OwnerScoped(err)
+	}
+
+	if !wantsFormPatch(e) || h.deps.Forms == nil {
+		return web.OwnerScoped(err)
+	}
+
+	current, readErr := service.Get(e.Request.Context(), actor, id)
+	if readErr != nil {
+		return web.OwnerScoped(readErr)
+	}
+
+	return h.invalid(e, actor, current, false, err)
 }
 
 func (h *facilityHandlers) remove(e *core.RequestEvent, actor access.Actor) error {
@@ -195,6 +276,17 @@ func (h *facilityHandlers) stale(
 	current, readErr := service.Get(e.Request.Context(), actor, id)
 	if readErr != nil {
 		return web.OwnerScoped(readErr)
+	}
+
+	if wantsFormPatch(e) && h.deps.Forms != nil {
+		component, formErr := h.deps.Forms.Stale(e.Request.Context(), actor, current)
+		if formErr != nil {
+			return formErr
+		}
+
+		web.SetETag(e, current.Version)
+
+		return web.Patch(e, component, web.ByElementID())
 	}
 
 	usage, usageErr := service.Usage(e.Request.Context(), actor, id)

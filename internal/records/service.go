@@ -97,7 +97,10 @@ type Views interface {
 	List(page domain.Page[Record]) Renderer
 	Row(record Record) Renderer
 	Detail(record Record) Renderer
-	Form(record Record, invalid *domain.ValidationError) Renderer
+	// notice is a stale If-Match's explanation, rendered inside the form
+	// alongside the record's current values (research D-24); every other
+	// caller passes the empty string.
+	Form(record Record, invalid *domain.ValidationError, notice string) Renderer
 }
 
 // StreamFilter decides which of a kind's changes a subscriber may be told

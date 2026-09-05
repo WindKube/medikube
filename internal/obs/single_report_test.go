@@ -32,7 +32,8 @@ func TestOneFailureReachesEachSinkExactlyOnce(t *testing.T) {
 	var captured strings.Builder
 	base := logging.NewTo(&captured, config.LogConfig{Level: "debug"}, "test")
 
-	metrics := obs.NewMetrics("GET /x/boom")
+	metrics := obs.NewMetrics()
+	metrics.PublishRoutes("GET /x/boom")
 
 	transport := new(phileak.SentryTransport)
 	reporter, err := obs.StartSentryWithTransport(config.SentryConfig{

@@ -29,17 +29,10 @@ npx playwright install --with-deps chromium
 
 ## 1. Build and bring it up
 
-```bash
-task gen        # templ generate + tailwind; vet/lint/test/build all depend on this
-task build
-task seed       # deterministic demo data — same accounts, same ids, every time
-task run
-```
-
-`task run` needs the environment. The minimum for a local instance:
+`task migrate`, `task seed` and `task run` all read the configuration below, so export it first:
 
 ```bash
-export MEDIKUBE_ENV=dev
+export MEDIKUBE_ENV=development
 export MEDIKUBE_DEV=true
 export MEDIKUBE_DATA_DIR=./pb_data
 export MEDIKUBE_HTTP_ADDR=127.0.0.1:8090
@@ -48,6 +41,14 @@ export MEDIKUBE_LOG_LEVEL=debug
 export MEDIKUBE_LOG_PRETTY=true
 export MEDIKUBE_AUTH_REGISTRATION_OPEN=true    # the seed opens it so the sign-up path is exercised
 export MEDIKUBE_FILES_PHOTO_MAX_BYTES=15728640 # 15 MiB; PocketBase's own default is 5 MiB
+```
+
+```bash
+task gen        # templ generate + tailwind; vet/lint/test/build all depend on this
+task build
+task migrate    # applies the six migrations; task seed fails without this first
+task seed       # deterministic demo data — same accounts, same ids, every time
+task run
 ```
 
 **Two things you should see at boot, and one you should not.**

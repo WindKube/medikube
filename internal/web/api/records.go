@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -242,6 +243,10 @@ func KindQuery(e *core.RequestEvent, entry records.Entry) (records.Query, error)
 	}, nil
 }
 
+// create decodes and saves the submission itself, rather than calling
+// Handler.Create, because a rejected submission's Datastar form patch needs
+// the decoded value Create discards on every path that does not end in a
+// save.
 func (h *recordHandlers) create(e *core.RequestEvent, actor access.Actor) error {
 	handler, err := h.resolve()
 	if err != nil {
@@ -255,9 +260,28 @@ func (h *recordHandlers) create(e *core.RequestEvent, actor access.Actor) error 
 		return err
 	}
 
-	created, err := handler.Create(e.Request.Context(), actor, segment, body)
+	entry, decoded, err := handler.DecodeCreate(segment, body)
 	if err != nil {
+		if invalid := asValidation(err); invalid != nil && wantsFormPatch(e) {
+			return h.renderInvalid(e, entry, decoded, invalid)
+		}
+
+		return err
+	}
+
+	created, err := entry.Service.Create(e.Request.Context(), actor, decoded)
+	if err != nil {
+		if invalid := asValidation(err); invalid != nil && wantsFormPatch(e) {
+			return h.renderInvalid(e, entry, decoded, invalid)
+		}
+
 		return web.OwnerScoped(err)
+	}
+
+	if wantsFormPatch(e) {
+		blank := records.Record{Kind: entry.Kind, Body: blankBody(entry, decoded)}
+
+		return web.Patch(e, entry.Views.Form(blank, nil, ""), web.ByElementID())
 	}
 
 	e.Response.Header().Set("Location", h.location(segment, created.ID))
@@ -307,12 +331,71 @@ func (h *recordHandlers) update(e *core.RequestEvent, actor access.Actor) error 
 		return err
 	}
 
-	updated, err := handler.Update(e.Request.Context(), actor, segment, id, version, body)
+	entry, decoded, err := handler.DecodePatch(segment, body)
 	if err != nil {
-		return h.stale(e, actor, segment, id, err)
+		if invalid := asValidation(err); invalid != nil && wantsFormPatch(e) {
+			return h.renderInvalidUpdate(e, actor, entry, id, invalid)
+		}
+
+		return err
+	}
+
+	updated, err := entry.Service.Update(e.Request.Context(), actor, id, version, decoded)
+	if err != nil {
+		return h.updateFailure(e, actor, entry, id, err)
+	}
+
+	if wantsFormPatch(e) {
+		component := formComponents{entry.Views.Detail(updated), entry.Views.Form(updated, nil, "")}
+
+		return web.Patch(e, component, web.ByElementID())
 	}
 
 	return h.writeRecord(e, http.StatusOK, updated)
+}
+
+// updateFailure answers a stale If-Match as `stale` does and a validation
+// failure the same way create's own does: a Datastar submit gets the form
+// re-rendered, patched into place; anything else and everyone else keeps
+// today's JSON.
+func (h *recordHandlers) updateFailure(e *core.RequestEvent, actor access.Actor, entry records.Entry, id string, err error) error {
+	if errors.Is(err, domain.ErrVersionMismatch) {
+		current, readErr := entry.Service.Get(e.Request.Context(), actor, id)
+		if readErr != nil {
+			return web.OwnerScoped(readErr)
+		}
+
+		e.Response.Header().Set("Cache-Control", recordCacheControl)
+
+		if wantsFormPatch(e) {
+			web.SetETag(e, current.Version)
+			component := formComponents{entry.Views.Detail(current), entry.Views.Form(current, nil, staleNotice)}
+
+			return web.Patch(e, component, web.ByElementID())
+		}
+
+		return web.WriteVersionMismatch(e, obs.CorrelationID(e.Request.Context()), current.Version, current.Body)
+	}
+
+	if invalid := asValidation(err); invalid != nil && wantsFormPatch(e) {
+		return h.renderInvalidUpdate(e, actor, entry, id, invalid)
+	}
+
+	return web.OwnerScoped(err)
+}
+
+// renderInvalidUpdate re-reads the record rather than overlaying the
+// submitted patch onto it: a patch is partial by design and the fields it
+// left untouched have no submitted value to show.
+func (h *recordHandlers) renderInvalidUpdate(
+	e *core.RequestEvent, actor access.Actor, entry records.Entry, id string, invalid *domain.ValidationError,
+) error {
+	current, err := entry.Service.Get(e.Request.Context(), actor, id)
+	if err != nil {
+		return web.OwnerScoped(err)
+	}
+
+	return h.renderInvalid(e, entry, current.Body, invalid)
 }
 
 func (h *recordHandlers) remove(e *core.RequestEvent, actor access.Actor) error {
@@ -370,6 +453,61 @@ func (h *recordHandlers) writeRecord(e *core.RequestEvent, status int, record re
 	web.SetETag(e, record.Version)
 
 	return web.WriteJSON(e, status, record.Body)
+}
+
+// staleNotice is the stale If-Match's explanation, rendered inside the
+// re-populated form (research D-24).
+const staleNotice = "This record changed since you loaded it; the current values are shown."
+
+// renderInvalid answers a rejected submission with the form re-rendered from
+// what was submitted, patched into place by its own id.
+func (h *recordHandlers) renderInvalid(e *core.RequestEvent, entry records.Entry, submitted any, invalid *domain.ValidationError) error {
+	record := records.Record{Kind: entry.Kind, Body: submitted}
+
+	return web.Patch(e, entry.Views.Form(record, invalid, ""), web.ByElementID())
+}
+
+// asValidation reports the *domain.ValidationError err wraps, or nil for
+// anything else.
+func asValidation(err error) *domain.ValidationError {
+	var invalid *domain.ValidationError
+	if errors.As(err, &invalid) {
+		return invalid
+	}
+
+	return nil
+}
+
+// blankBody is the form a create success clears back to. Medications keep
+// the patient the create was scoped to — the hidden field a fresh submission
+// still needs — because that is the one kind this build registers; any other
+// kind gets its own Schema's zero value, which is what a kind with no such
+// scoping needs.
+func blankBody(entry records.Entry, submitted any) any {
+	if create, ok := submitted.(*MedicationCreate); ok {
+		return &MedicationCreate{Patient: create.Patient}
+	}
+
+	return entry.Schema.NewCreate()
+}
+
+// formComponents renders several fragments as one Datastar patch, each
+// morphed by its own id (web.ByElementID) rather than needing a wrapper
+// element the runtime would have nowhere to put.
+type formComponents []records.Renderer
+
+func (c formComponents) Render(ctx context.Context, w io.Writer) error {
+	for _, one := range c {
+		if one == nil {
+			continue
+		}
+
+		if err := one.Render(ctx, w); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // writePage writes the list envelope. The items are the kinds' own DTOs, so the

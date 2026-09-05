@@ -69,7 +69,7 @@ var wired = map[string]func(t *testing.T, registry *records.Registry, entry reco
 		assert.Equal(t, recordstest.RenderedRow, render(t, entry.Views.Row(records.Record{ID: "r1", Kind: kind.Medication})))
 		assert.Equal(t, recordstest.RenderedDetail, render(t, entry.Views.Detail(records.Record{ID: "r1", Kind: kind.Medication})))
 		assert.Equal(t, recordstest.RenderedList, render(t, entry.Views.List(domain.NewPage([]records.Record{}, nil))))
-		assert.Equal(t, recordstest.RenderedForm, render(t, entry.Views.Form(records.Record{}, nil)))
+		assert.Equal(t, recordstest.RenderedForm, render(t, entry.Views.Form(records.Record{}, nil, "")))
 	},
 
 	records.ConsumerStream: func(t *testing.T, _ *records.Registry, entry records.Entry) {

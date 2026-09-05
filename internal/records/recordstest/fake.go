@@ -318,7 +318,7 @@ func (Views) List(domain.Page[records.Record]) records.Renderer { return static(
 func (Views) Row(records.Record) records.Renderer               { return static(RenderedRow) }
 func (Views) Detail(records.Record) records.Renderer            { return static(RenderedDetail) }
 
-func (Views) Form(records.Record, *domain.ValidationError) records.Renderer {
+func (Views) Form(records.Record, *domain.ValidationError, string) records.Renderer {
 	return static(RenderedForm)
 }
 

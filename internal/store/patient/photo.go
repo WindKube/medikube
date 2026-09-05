@@ -10,11 +10,13 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 
 	"medikube/internal/domain"
+	"medikube/internal/obs"
 	service "medikube/internal/service/patient"
 	"medikube/internal/store"
 )
@@ -32,6 +34,11 @@ const SizeOriginal = "original"
 type PhotoStore struct {
 	app    core.App
 	thumbs []string
+
+	// metrics is optional, wired post-construction by SetMetrics. *obs.Metrics
+	// is nil-safe on every method this file calls, so a nil value here is
+	// exactly a build with no destination configured, never a special case.
+	metrics *obs.Metrics
 }
 
 var _ service.PhotoStore = (*PhotoStore)(nil)
@@ -48,6 +55,13 @@ func NewPhotoStore(app core.App, thumbs []string) (*PhotoStore, error) {
 	}
 
 	return &PhotoStore{app: app, thumbs: thumbs}, nil
+}
+
+// SetMetrics wires medikube_files_photo_bytes and
+// medikube_files_thumb_duration_seconds. Optional, the same way
+// Repo.SetTracer is: a store nobody calls this on keeps observing nothing.
+func (p *PhotoStore) SetMetrics(metrics *obs.Metrics) {
+	p.metrics = metrics
 }
 
 // Put stores the upload as the patient's one photograph (FR-008), replacing
@@ -68,6 +82,8 @@ func (p *PhotoStore) Put(ctx context.Context, ownerID, patientID string, upload 
 	if err != nil {
 		return meta, fmt.Errorf("reading the uploaded photo: %w", err)
 	}
+
+	p.metrics.ObservePhotoBytes(len(raw))
 
 	file, err := filesystem.NewFileFromBytes(raw, upload.Name)
 	if err != nil {
@@ -225,7 +241,11 @@ func (p *PhotoStore) createThumbs(basePath, filename string) error {
 	for _, size := range p.thumbs {
 		thumbKey := basePath + "/thumbs_" + filename + "/" + size + "_" + filename
 
-		if err := fsys.CreateThumb(original, thumbKey, size); err != nil {
+		started := time.Now()
+		err := fsys.CreateThumb(original, thumbKey, size)
+		p.metrics.ObserveThumbDuration(size, time.Since(started))
+
+		if err != nil {
 			return fmt.Errorf("creating the %s thumbnail: %w", size, err)
 		}
 	}

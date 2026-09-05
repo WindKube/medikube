@@ -120,7 +120,7 @@ func (v MedicationViews) Detail(record recordfamily.Record) recordfamily.Rendere
 
 // Form is the create form and the edit form, re-rendered from the submitted
 // values plus the field errors and never cleared (FR-027).
-func (v MedicationViews) Form(record recordfamily.Record, invalid *domain.ValidationError) recordfamily.Renderer {
+func (v MedicationViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {
 	medication := v.view(record)
 	fresh := medication.ID == ""
 
@@ -131,6 +131,7 @@ func (v MedicationViews) Form(record recordfamily.Record, invalid *domain.Valida
 		CancelHref: v.cancelHref(medication),
 		Medication: medication,
 		Errors:     views.NewFieldErrors(invalid),
+		Notice:     notice,
 	})
 }
 
@@ -243,7 +244,7 @@ func (p *medicationPages) list(e *core.RequestEvent, actor access.Actor) error {
 	return p.render(e, actor, medicationListTitle, sequence{
 		context,
 		p.views.ListOfPage(listing, nextPageHref(e, listing)),
-		entry.Views.Form(blank, nil),
+		entry.Views.Form(blank, nil, ""),
 	})
 }
 
@@ -350,7 +351,7 @@ func (p *medicationPages) detail(e *core.RequestEvent, actor access.Actor) error
 	return p.render(e, actor, p.views.view(found).Name, sequence{
 		context,
 		entry.Views.Detail(found),
-		entry.Views.Form(found, nil),
+		entry.Views.Form(found, nil, ""),
 	})
 }
 

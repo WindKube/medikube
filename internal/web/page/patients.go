@@ -15,6 +15,7 @@ import (
 	"medikube/internal/service/patient"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
+	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/patients"
 	"medikube/internal/web/views/shell"
 )
@@ -102,11 +103,24 @@ func (p *patientPages) list(e *core.RequestEvent, actor access.Actor) error {
 		total = *page.Total
 	}
 
-	main := patients.PatientList(patients.PatientListProps{
-		Patients: views,
-		Total:    total,
-		Notice:   noticeFor(e.Request.URL.Query().Get("notice")),
-	})
+	blank := patients.PatientView{}
+
+	main := sequence{
+		patients.PatientList(patients.PatientListProps{
+			Patients:   views,
+			Total:      total,
+			CreateHref: "#" + ids.PatientForm(""),
+			Notice:     noticeFor(e.Request.URL.Query().Get("notice")),
+		}),
+		patients.PatientForm(patients.PatientFormProps{
+			FormID:     ids.PatientForm(""),
+			New:        true,
+			OnSubmit:   p.links.submitExpression(blank),
+			CancelHref: p.links.cancelHref(blank),
+			Patient:    blank,
+			Errors:     patients.NewFieldErrors(nil),
+		}),
+	}
 
 	return RenderPage(e, http.StatusOK, patientListTitle, p.nav(e, actor), main)
 }
@@ -170,12 +184,22 @@ func (p *patientPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		})
 	}
 
-	main := patients.PatientDetail(patients.PatientDetailProps{
-		Patient:      view,
-		Tiles:        patients.NewChartTiles(view.ID, tiles),
-		Activity:     patients.NewActivityItems(events, func(string, string) string { return "" }),
-		TotalRecords: chart.TotalRecords,
-	})
+	main := sequence{
+		patients.PatientDetail(patients.PatientDetailProps{
+			Patient:      view,
+			Tiles:        patients.NewChartTiles(view.ID, tiles),
+			Activity:     patients.NewActivityItems(events, func(string, string) string { return "" }),
+			TotalRecords: chart.TotalRecords,
+		}),
+		patients.PatientForm(patients.PatientFormProps{
+			FormID:     ids.PatientForm(view.ID),
+			New:        false,
+			OnSubmit:   p.links.submitExpression(view),
+			CancelHref: p.links.cancelHref(view),
+			Patient:    view,
+			Errors:     patients.NewFieldErrors(nil),
+		}),
+	}
 
 	return RenderPage(e, http.StatusOK, view.FullName(), p.nav(e, actor), main)
 }
@@ -211,6 +235,7 @@ type patientLinks struct {
 	detailPage      string
 	settingsPage    string
 	medicationsPage string
+	collection      string
 }
 
 func newPatientLinks() (patientLinks, error) {
@@ -219,6 +244,7 @@ func newPatientLinks() (patientLinks, error) {
 		OpPatientDetailPage:  "",
 		OpSettingsPage:       "",
 		OpMedicationListPage: "",
+		api.OpCreatePatient:  "",
 	})
 	if err != nil {
 		return patientLinks{}, err
@@ -229,11 +255,31 @@ func newPatientLinks() (patientLinks, error) {
 		detailPage:      paths[OpPatientDetailPage],
 		settingsPage:    paths[OpSettingsPage],
 		medicationsPage: paths[OpMedicationListPage],
+		collection:      paths[api.OpCreatePatient],
 	}, nil
 }
 
 func (l patientLinks) of(id string) string {
 	return strings.ReplaceAll(l.detailPage, "{"+api.PathPatientID+"}", id)
+}
+
+// submitExpression mirrors medicationLinks' own (medications.go): a create
+// posts to the collection, a change patches the record and carries the ETag
+// the detail page rendered into $_etag as If-Match.
+func (l patientLinks) submitExpression(view patients.PatientView) string {
+	if view.ID == "" {
+		return "@post(" + quote(l.collection) + ")"
+	}
+
+	return "@patch(" + quote(view.Links.Record) + ", {headers: {'If-Match': $_etag}})"
+}
+
+func (l patientLinks) cancelHref(view patients.PatientView) string {
+	if view.Links.Detail != "" {
+		return view.Links.Detail
+	}
+
+	return l.listPage
 }
 
 // nav mirrors medicationLinks.nav's own reasoning: FR-050 requires every

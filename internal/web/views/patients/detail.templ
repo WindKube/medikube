@@ -16,9 +16,7 @@ templ PatientDetail(props PatientDetailProps) {
 	<section
 		id={ ids.PatientDetail(props.Patient.ID) }
 		aria-label={ patientChartRegion }
-		if !props.Patient.IsSelfRecord {
-			data-signals={ "{" + DeleteConfirmSignal + ": false, _etag: " + strconv.Quote(props.Patient.Version) + "}" }
-		}
+		data-signals={ patientDetailSignals(props.Patient) }
 		class="flex flex-col gap-4"
 	>
 		<div class="flex items-center justify-between gap-4">
@@ -40,13 +38,19 @@ templ PatientDetail(props PatientDetailProps) {
 					}
 				</div>
 			</div>
-			if !props.Patient.IsSelfRecord {
-				<button
-					type="button"
-					data-on:click={ "$" + DeleteConfirmSignal + " = true" }
-					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-				>Delete</button>
-			}
+			<div class="flex flex-wrap gap-2">
+				<a
+					href={ "#" + ids.PatientForm(props.Patient.ID) }
+					class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+				>Edit</a>
+				if !props.Patient.IsSelfRecord {
+					<button
+						type="button"
+						data-on:click={ "$" + DeleteConfirmSignal + " = true" }
+						class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
+					>Delete</button>
+				}
+			</div>
 		</div>
 		if !props.Patient.IsSelfRecord {
 			@DeleteConfirm(DeleteConfirmProps{
@@ -112,4 +116,17 @@ templ PatientDetail(props PatientDetailProps) {
 			}
 		}
 	</section>
+}
+
+// patientDetailSignals is the edit form's $_etag (FR-011) plus the delete
+// confirmation's own signal for everyone but the self-record, which carries
+// no delete confirmation to reveal.
+func patientDetailSignals(patient PatientView) string {
+	etag := "_etag: " + strconv.Quote(patient.Version)
+
+	if patient.IsSelfRecord {
+		return "{" + etag + "}"
+	}
+
+	return "{" + DeleteConfirmSignal + ": false, " + etag + "}"
 }

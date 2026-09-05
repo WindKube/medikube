@@ -145,3 +145,11 @@ const switcherPropsLimit = 100
 func wantsHTML(e *core.RequestEvent) bool {
 	return strings.Contains(e.Request.Header.Get("Accept"), "text/html")
 }
+
+// wantsFormPatch is a form's own negotiation, and it is not wantsHTML's:
+// every @post/@patch the runtime sends carries Datastar-Request regardless of
+// Accept, so a create, update or patient form keys on the header the runtime
+// always sets rather than one only some of its calls do.
+func wantsFormPatch(e *core.RequestEvent) bool {
+	return web.IsDatastarRequest(e)
+}

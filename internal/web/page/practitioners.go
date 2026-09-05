@@ -75,12 +75,25 @@ func (p *practitionerPages) list(e *core.RequestEvent, actor access.Actor) error
 		views = append(views, directory.NewPractitionerView(item, p.facilityName(e, actor, item.FacilityID), p.links.of(item.ID)))
 	}
 
-	return RenderPage(e, http.StatusOK, practitionerListTitle,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)},
+	blank := directory.PractitionerView{}
+
+	main := sequence{
 		directory.PractitionerList(directory.PractitionerListProps{
 			Practitioners: views,
 			CreateHref:    p.links.listPage + "#" + ids.DirectoryForm(directory.PractitionerSegment, ""),
-		}))
+		}),
+		directory.PractitionerForm(directory.PractitionerFormProps{
+			FormID:       ids.DirectoryForm(directory.PractitionerSegment, ""),
+			New:          true,
+			OnSubmit:     p.links.submitExpression(blank),
+			CancelHref:   p.links.cancelHref(blank),
+			Practitioner: blank,
+			Errors:       directory.NewFieldErrors(nil),
+		}),
+	}
+
+	return RenderPage(e, http.StatusOK, practitionerListTitle,
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
 }
 
 func (p *practitionerPages) detail(e *core.RequestEvent, actor access.Actor) error {
@@ -109,9 +122,20 @@ func (p *practitionerPages) detail(e *core.RequestEvent, actor access.Actor) err
 	view.UsagePatients = usage.Patients
 	view.UsageRecords = usage.Records
 
+	main := sequence{
+		directory.PractitionerDetail(directory.PractitionerDetailProps{Practitioner: view}),
+		directory.PractitionerForm(directory.PractitionerFormProps{
+			FormID:       ids.DirectoryForm(directory.PractitionerSegment, view.ID),
+			New:          false,
+			OnSubmit:     p.links.submitExpression(view),
+			CancelHref:   p.links.cancelHref(view),
+			Practitioner: view,
+			Errors:       directory.NewFieldErrors(nil),
+		}),
+	}
+
 	return RenderPage(e, http.StatusOK, view.Name,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)},
-		directory.PractitionerDetail(directory.PractitionerDetailProps{Practitioner: view}))
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
 }
 
 func (p *practitionerPages) facilityName(e *core.RequestEvent, actor access.Actor, facilityID string) string {
@@ -176,6 +200,26 @@ func (l practitionerLinks) of(id string) directory.PractitionerLinks {
 		Detail: strings.ReplaceAll(l.detailPage, "{"+api.PathID+"}", id),
 		Record: strings.ReplaceAll(l.record, "{"+api.PathID+"}", id),
 	}
+}
+
+// submitExpression and cancelHref mirror medicationLinks' own (medications.go):
+// a create posts to the collection, a change patches the record carrying
+// $_etag as If-Match, and cancelling returns to the detail page it came from
+// or the list when there is none yet.
+func (l practitionerLinks) submitExpression(view directory.PractitionerView) string {
+	if view.ID == "" {
+		return "@post(" + quote(l.collection) + ")"
+	}
+
+	return "@patch(" + quote(view.Links.Record) + ", {headers: {'If-Match': $_etag}})"
+}
+
+func (l practitionerLinks) cancelHref(view directory.PractitionerView) string {
+	if view.Links.Detail != "" {
+		return view.Links.Detail
+	}
+
+	return l.listPage
 }
 
 func (l practitionerLinks) nav(current string) []shell.NavLink {
