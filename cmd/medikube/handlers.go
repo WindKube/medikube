@@ -23,17 +23,21 @@ import (
 	"medikube/internal/records/kinds"
 	accessservice "medikube/internal/service/access"
 	auditservice "medikube/internal/service/audit"
+	"medikube/internal/service/equipment"
 	facilitysvc "medikube/internal/service/facility"
 	serviceidentity "medikube/internal/service/identity"
+	"medikube/internal/service/insurance"
 	"medikube/internal/service/medication"
 	"medikube/internal/service/patient"
 	practitionersvc "medikube/internal/service/practitioner"
 	searchsvc "medikube/internal/service/search"
 	"medikube/internal/store"
 	auditstore "medikube/internal/store/audit"
+	equipmentstore "medikube/internal/store/equipment"
 	facilitystore "medikube/internal/store/facility"
 	storeimmunization "medikube/internal/store/immunization"
 	storeinjury "medikube/internal/store/injury"
+	insurancestore "medikube/internal/store/insurance"
 	medicationstore "medikube/internal/store/medication"
 	patientstore "medikube/internal/store/patient"
 	practitionerstore "medikube/internal/store/practitioner"
@@ -293,7 +297,17 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 		return nil, err
 	}
 
+	insurancePages, err := page.InsuranceHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
 	injuryPages, err := page.InjuryHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
+	equipmentPages, err := page.EquipmentHandlers(resolve, patients)
 	if err != nil {
 		return nil, err
 	}
@@ -307,6 +321,8 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 	maps.Copy(table, pages)
 	maps.Copy(table, immunizationPages)
 	maps.Copy(table, injuryPages)
+	maps.Copy(table, insurancePages)
+	maps.Copy(table, equipmentPages)
 	maps.Copy(table, streams)
 
 	return table, nil
@@ -524,7 +540,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	registry.SetIndexer(indexer)
 	registry.SetSearchReader(searchRepo)
 
-	if err = medication.Register(registry, medication.Wiring{
+	err = medication.Register(registry, medication.Wiring{
 		Repository:   repository,
 		Authorizer:   authorizer,
 		Codec:        api.MedicationCodec{},
@@ -532,6 +548,52 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Views:        views,
 		SearchFields: api.MedicationSearchFields,
 		Basis:        api.MedicationBasis,
+	})
+	if err != nil {
+		return err
+	}
+
+	insuranceViews, err := page.NewInsuranceViews()
+	if err != nil {
+		return err
+	}
+
+	insuranceRepository, err := insurancestore.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	err = insurance.Register(registry, insurance.Wiring{
+		Repository:   insuranceRepository,
+		Authorizer:   authorizer,
+		Codec:        api.InsuranceCodec{},
+		Schema:       api.InsuranceSchema(),
+		Views:        insuranceViews,
+		SearchFields: api.InsuranceSearchFields,
+		Basis:        api.InsuranceBasis,
+	})
+	if err != nil {
+		return err
+	}
+
+	equipmentViews, err := page.NewEquipmentViews()
+	if err != nil {
+		return err
+	}
+
+	equipmentRepository, err := equipmentstore.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	if err = equipment.Register(registry, equipment.Wiring{
+		Repository:   equipmentRepository,
+		Authorizer:   authorizer,
+		Codec:        api.EquipmentCodec{},
+		Schema:       api.EquipmentSchema(),
+		Views:        equipmentViews,
+		SearchFields: api.EquipmentSearchFields,
+		Basis:        api.EquipmentBasis,
 	}); err != nil {
 		return err
 	}
@@ -568,7 +630,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		return err
 	}
 
-	if err := kinds.RegisterInjury(registry, kinds.InjuryWiring{
+	if err = kinds.RegisterInjury(registry, kinds.InjuryWiring{
 		Repository:   injuryRepo,
 		Authorizer:   authorizer,
 		Codec:        api.InjuryCodec{},

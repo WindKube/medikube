@@ -322,6 +322,14 @@ func Apply(app core.App) error {
 			return err
 		}
 
+		if err := applyInsurances(tx); err != nil {
+			return err
+		}
+
+		if err := applyEquipment(tx); err != nil {
+			return err
+		}
+
 		return applyActivePatients(tx)
 	})
 }

@@ -1,0 +1,105 @@
+package records
+
+import (
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
+
+templ EquipmentForm(props EquipmentFormProps) {
+	<form
+		id={ props.FormID }
+		aria-label={ props.Label() }
+		data-on:submit__prevent={ props.OnSubmit }
+		class="flex max-w-2xl flex-col gap-5"
+	>
+		if props.Notice != "" {
+			<p role="alert" class="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{ props.Notice }</p>
+		}
+		<input type="hidden" name="patient" data-bind="patient" value={ props.Equipment.PatientID }/>
+		@equipmentTextControl(props, FieldName, "text", true)
+		@equipmentSelectControl(props, FieldType, props.Equipment.TypeOptions(), true)
+		@equipmentTextControl(props, FieldManufacturer, "text", false)
+		@equipmentTextControl(props, FieldModel, "text", false)
+		@equipmentTextControl(props, FieldSerial, "text", false)
+		@equipmentTextControl(props, FieldPrescribedOn, "date", false)
+		@equipmentTextControl(props, FieldServicedOn, "date", false)
+		@equipmentTextControl(props, FieldServiceDueOn, "date", false)
+		@equipmentTextareaControl(props, FieldInstructions)
+		@equipmentSelectControl(props, FieldStatus, props.Equipment.StatusOptions(), true)
+		@equipmentTextareaControl(props, FieldNotes)
+		<div class="flex flex-wrap items-center gap-3">
+			<button
+				type="submit"
+				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ props.SubmitLabel() }</button>
+			if props.CancelHref != "" {
+				<a
+					href={ props.CancelHref }
+					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
+				>{ cancelLabel }</a>
+			}
+		</div>
+	</form>
+}
+
+templ equipmentTextControl(props EquipmentFormProps, field, inputType string, required bool) {
+	<div class="flex flex-col">
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<input
+			id={ ids.Field(props.FormID, field) }
+			name={ field }
+			type={ inputType }
+			value={ props.Equipment.Value(field) }
+			data-bind={ field }
+			required?={ required }
+			if props.Errors.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(props.FormID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		/>
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+	</div>
+}
+
+templ equipmentSelectControl(props EquipmentFormProps, field string, options []Option, optional bool) {
+	<div class="flex flex-col">
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<select
+			id={ ids.Field(props.FormID, field) }
+			name={ field }
+			data-bind={ field }
+			if props.Errors.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(props.FormID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		>
+			if optional {
+				<option value="" selected?={ props.Equipment.Value(field) == "" }>{ notRecorded }</option>
+			}
+			for _, option := range options {
+				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+			}
+		</select>
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+	</div>
+}
+
+templ equipmentTextareaControl(props EquipmentFormProps, field string) {
+	<div class="flex flex-col">
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<textarea
+			id={ ids.Field(props.FormID, field) }
+			name={ field }
+			rows={ textareaRows }
+			data-bind={ field }
+			if props.Errors.Has(field) {
+				aria-invalid="true"
+				aria-describedby={ ids.FieldError(props.FormID, field) }
+			}
+			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		>{ props.Equipment.Value(field) }</textarea>
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+	</div>
+}

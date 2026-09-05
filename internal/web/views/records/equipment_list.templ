@@ -1,0 +1,70 @@
+package records
+
+import (
+	"medikube/internal/domain/kind"
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
+
+const (
+	equipmentEmptyTitle  = "Nothing recorded yet"
+	equipmentEmptyBody   = "Record the first item and it will be listed here, with everything you noted about it."
+	equipmentCreateLabel = "Record equipment"
+	equipmentListTitle   = "Equipment"
+)
+
+templ EquipmentList(props EquipmentListProps) {
+	<section
+		id={ ids.RecordList(kind.Equipment) }
+		aria-label={ equipmentListTitle }
+		class="flex flex-col"
+	>
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<h1
+				id={ ids.RecordListHeading(kind.Equipment) }
+				tabindex="-1"
+				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ equipmentListTitle }</h1>
+			if props.CreateHref != "" {
+				<a
+					href={ props.CreateHref }
+					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+				>{ equipmentCreateLabel }</a>
+			}
+		</div>
+		if len(props.Equipment) == 0 {
+			<div class="mt-6">
+				@components.EmptyState(components.EmptyStateProps{
+					ID:          ids.RecordEmpty(kind.Equipment),
+					Title:       equipmentEmptyTitle,
+					Body:        equipmentEmptyBody,
+					ActionHref:  props.CreateHref,
+					ActionLabel: equipmentCreateLabel,
+				})
+			</div>
+		} else {
+			<div class="mt-4 overflow-x-auto">
+				<table class="w-full border-collapse text-left text-sm">
+					<thead>
+						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldName) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldType) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldStatus) }</th>
+							<th scope="col" class="pb-2 font-medium">{ FieldLabel(FieldServiceDueOn) }</th>
+						</tr>
+					</thead>
+					<tbody id={ ids.RecordRows(kind.Equipment) }>
+						for _, item := range props.Equipment {
+							@EquipmentRow(item)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		@components.Pagination(components.PaginationProps{
+			ID:           ids.RecordPager(kind.Equipment),
+			PreviousHref: props.PreviousHref,
+			NextHref:     props.NextHref,
+		})
+	</section>
+}

@@ -56,8 +56,10 @@
       "Record": {
         "discriminator": {
           "mapping": {
+            "equipment": "#/components/schemas/Record_equipment",
             "immunization": "#/components/schemas/Record_immunizations",
             "injury": "#/components/schemas/Record_injuries",
+            "insurance": "#/components/schemas/Record_insurance",
             "medication": "#/components/schemas/Record_medications"
           },
           "propertyName": "kind"
@@ -71,6 +73,12 @@
           },
           {
             "$ref": "#/components/schemas/Record_injuries"
+          },
+          {
+            "$ref": "#/components/schemas/Record_insurance"
+          },
+          {
+            "$ref": "#/components/schemas/Record_equipment"
           }
         ]
       },
@@ -84,8 +92,67 @@
           },
           {
             "$ref": "#/components/schemas/RecordCreate_injuries"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_insurance"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_equipment"
           }
         ]
+      },
+      "RecordCreate_equipment": {
+        "additionalProperties": false,
+        "properties": {
+          "instructions": {
+            "type": "string"
+          },
+          "manufacturer": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "prescribed_on": {
+            "type": "string"
+          },
+          "serial": {
+            "type": "string"
+          },
+          "service_due_on": {
+            "type": "string"
+          },
+          "serviced_on": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "supplier": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "patient",
+          "type"
+        ],
+        "type": "object"
       },
       "RecordCreate_immunizations": {
         "additionalProperties": false,
@@ -182,6 +249,113 @@
         ],
         "type": "object"
       },
+      "RecordCreate_insurance": {
+        "additionalProperties": false,
+        "properties": {
+          "company": {
+            "type": "string"
+          },
+          "contact": {
+            "additionalProperties": false,
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "claims_phone": {
+                "type": "string"
+              },
+              "phone": {
+                "type": "string"
+              },
+              "portal_url": {
+                "type": "string"
+              },
+              "website": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "coverage": {
+            "additionalProperties": false,
+            "properties": {
+              "coinsurance_pct": {
+                "type": "number"
+              },
+              "copay_er": {
+                "type": "string"
+              },
+              "copay_primary": {
+                "type": "string"
+              },
+              "copay_specialist": {
+                "type": "string"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "deductible": {
+                "type": "string"
+              },
+              "oop_max": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "effective_on": {
+            "type": "string"
+          },
+          "employer_group": {
+            "type": "string"
+          },
+          "expires_on": {
+            "type": "string"
+          },
+          "group_number": {
+            "type": "string"
+          },
+          "holder_name": {
+            "type": "string"
+          },
+          "is_primary": {
+            "type": "boolean"
+          },
+          "member_id": {
+            "type": "string"
+          },
+          "member_name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "plan_name": {
+            "type": "string"
+          },
+          "relationship_to_holder": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "company",
+          "effective_on",
+          "member_id",
+          "member_name",
+          "patient",
+          "type"
+        ],
+        "type": "object"
+      },
       "RecordCreate_medications": {
         "additionalProperties": false,
         "properties": {
@@ -247,8 +421,68 @@
           },
           {
             "$ref": "#/components/schemas/RecordPatch_injuries"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_insurance"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_equipment"
           }
         ]
+      },
+      "RecordPatch_equipment": {
+        "additionalProperties": false,
+        "properties": {
+          "instructions": {
+            "type": "string"
+          },
+          "manufacturer": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "prescribed_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "serial": {
+            "type": "string"
+          },
+          "service_due_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "serviced_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "supplier": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
       },
       "RecordPatch_immunizations": {
         "additionalProperties": false,
@@ -340,6 +574,108 @@
         },
         "type": "object"
       },
+      "RecordPatch_insurance": {
+        "additionalProperties": false,
+        "properties": {
+          "company": {
+            "type": "string"
+          },
+          "contact": {
+            "additionalProperties": false,
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "claims_phone": {
+                "type": "string"
+              },
+              "phone": {
+                "type": "string"
+              },
+              "portal_url": {
+                "type": "string"
+              },
+              "website": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "coverage": {
+            "additionalProperties": false,
+            "properties": {
+              "coinsurance_pct": {
+                "type": "number"
+              },
+              "copay_er": {
+                "type": "string"
+              },
+              "copay_primary": {
+                "type": "string"
+              },
+              "copay_specialist": {
+                "type": "string"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "deductible": {
+                "type": "string"
+              },
+              "oop_max": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "effective_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "employer_group": {
+            "type": "string"
+          },
+          "expires_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "group_number": {
+            "type": "string"
+          },
+          "holder_name": {
+            "type": "string"
+          },
+          "is_primary": {
+            "type": "boolean"
+          },
+          "member_id": {
+            "type": "string"
+          },
+          "member_name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "plan_name": {
+            "type": "string"
+          },
+          "relationship_to_holder": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "RecordPatch_medications": {
         "additionalProperties": false,
         "properties": {
@@ -397,8 +733,10 @@
       "RecordSummary": {
         "discriminator": {
           "mapping": {
+            "equipment": "#/components/schemas/RecordSummary_equipment",
             "immunization": "#/components/schemas/RecordSummary_immunizations",
             "injury": "#/components/schemas/RecordSummary_injuries",
+            "insurance": "#/components/schemas/RecordSummary_insurance",
             "medication": "#/components/schemas/RecordSummary_medications"
           },
           "propertyName": "kind"
@@ -412,6 +750,12 @@
           },
           {
             "$ref": "#/components/schemas/RecordSummary_injuries"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_insurance"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_equipment"
           }
         ]
       },
@@ -437,6 +781,53 @@
         "required": [
           "items",
           "next_cursor"
+        ],
+        "type": "object"
+      },
+      "RecordSummary_equipment": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "equipment"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "service_due_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "service_due_on",
+          "type",
+          "updated_at"
         ],
         "type": "object"
       },
@@ -521,6 +912,57 @@
         ],
         "type": "object"
       },
+      "RecordSummary_insurance": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "company": {
+            "type": "string"
+          },
+          "expires_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "is_primary": {
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "insurance"
+            ],
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "company",
+          "expires_on",
+          "id",
+          "is_primary",
+          "kind",
+          "type",
+          "updated_at"
+        ],
+        "type": "object"
+      },
       "RecordSummary_medications": {
         "additionalProperties": false,
         "properties": {
@@ -561,6 +1003,96 @@
           "name",
           "started_on",
           "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "Record_equipment": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "equipment"
+            ],
+            "type": "string"
+          },
+          "manufacturer": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "prescribed_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "serial": {
+            "type": "string"
+          },
+          "service_due_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "serviced_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "supplier": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "id",
+          "kind",
+          "name",
+          "patient",
+          "prescribed_on",
+          "service_due_on",
+          "serviced_on",
+          "type",
           "updated_at"
         ],
         "type": "object"
@@ -707,6 +1239,157 @@
           "occurred_on",
           "patient",
           "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "Record_insurance": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "company": {
+            "type": "string"
+          },
+          "contact": {
+            "additionalProperties": false,
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "claims_phone": {
+                "type": "string"
+              },
+              "phone": {
+                "type": "string"
+              },
+              "portal_url": {
+                "type": "string"
+              },
+              "website": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "coverage": {
+            "additionalProperties": false,
+            "properties": {
+              "coinsurance_pct": {
+                "type": "number"
+              },
+              "copay_er": {
+                "type": "string"
+              },
+              "copay_primary": {
+                "type": "string"
+              },
+              "copay_specialist": {
+                "type": "string"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "deductible": {
+                "type": "string"
+              },
+              "oop_max": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "displaced": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "kind"
+            ],
+            "type": "object"
+          },
+          "effective_on": {
+            "type": "string"
+          },
+          "employer_group": {
+            "type": "string"
+          },
+          "expires_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "group_number": {
+            "type": "string"
+          },
+          "holder_name": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "is_primary": {
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "insurance"
+            ],
+            "type": "string"
+          },
+          "member_id": {
+            "type": "string"
+          },
+          "member_name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "plan_name": {
+            "type": "string"
+          },
+          "relationship_to_holder": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "company",
+          "created_at",
+          "effective_on",
+          "expires_on",
+          "id",
+          "is_primary",
+          "kind",
+          "patient",
+          "type",
           "updated_at"
         ],
         "type": "object"
@@ -3326,7 +4009,9 @@
               "enum": [
                 "medications",
                 "immunizations",
-                "injuries"
+                "injuries",
+                "insurance",
+                "equipment"
               ],
               "type": "string"
             }
@@ -3464,7 +4149,9 @@
               "enum": [
                 "medications",
                 "immunizations",
-                "injuries"
+                "injuries",
+                "insurance",
+                "equipment"
               ],
               "type": "string"
             }
@@ -3568,7 +4255,9 @@
               "enum": [
                 "medications",
                 "immunizations",
-                "injuries"
+                "injuries",
+                "insurance",
+                "equipment"
               ],
               "type": "string"
             }
@@ -3667,7 +4356,9 @@
               "enum": [
                 "medications",
                 "immunizations",
-                "injuries"
+                "injuries",
+                "insurance",
+                "equipment"
               ],
               "type": "string"
             }
@@ -3752,7 +4443,9 @@
               "enum": [
                 "medications",
                 "immunizations",
-                "injuries"
+                "injuries",
+                "insurance",
+                "equipment"
               ],
               "type": "string"
             }

@@ -445,6 +445,12 @@ func pageRoutes() []Route {
 	list := "/" + kind.Medication.Segment()
 	detail := list + "/{id}"
 
+	insuranceList := "/" + kind.Insurance.Segment()
+	insuranceDetail := insuranceList + "/{id}"
+
+	equipmentList := "/" + kind.Equipment.Segment()
+	equipmentDetail := equipmentList + "/{id}"
+
 	return []Route{
 		{
 			OpID: "loginPage", Method: http.MethodGet, Path: "/login",
@@ -512,6 +518,30 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "One record, every value it holds and the time it last changed.",
 			Landmark: `article[name="Injury"]`, SmokeURL: "/" + kind.Injury.Segment() + "/mkinjamara00001",
+		},
+		{
+			OpID: "insuranceListPage", Method: http.MethodGet, Path: insuranceList,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "US5's insurance list, with its empty state inside the landmark rather than instead of it.",
+			Landmark: `region[name="Insurance"]`, SmokeURL: insuranceList + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			OpID: "insuranceDetailPage", Method: http.MethodGet, Path: insuranceDetail,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "One policy, every value it holds and the time it last changed.",
+			Landmark: `article[name="Insurance"]`, SmokeURL: insuranceList + "/" + seed.InsurancePrimaryID,
+		},
+		{
+			OpID: "equipmentListPage", Method: http.MethodGet, Path: equipmentList,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "US5's equipment list, with its empty state inside the landmark rather than instead of it.",
+			Landmark: `region[name="Equipment"]`, SmokeURL: equipmentList + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			OpID: "equipmentDetailPage", Method: http.MethodGet, Path: equipmentDetail,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "One piece of equipment, every value it holds and the time it last changed.",
+			Landmark: `article[name="Equipment"]`, SmokeURL: equipmentList + "/" + seed.EquipmentOverdueID,
 		},
 		{
 			OpID: "practitionerListPage", Method: http.MethodGet, Path: "/practitioners",

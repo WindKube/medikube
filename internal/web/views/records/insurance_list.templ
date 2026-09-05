@@ -1,0 +1,70 @@
+package records
+
+import (
+	"medikube/internal/domain/kind"
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
+
+const (
+	insuranceEmptyTitle  = "Nothing recorded yet"
+	insuranceEmptyBody   = "Record the first policy and it will be listed here, with everything you noted about it."
+	insuranceCreateLabel = "Record a policy"
+	insuranceListTitle   = "Insurance"
+)
+
+templ InsuranceList(props InsuranceListProps) {
+	<section
+		id={ ids.RecordList(kind.Insurance) }
+		aria-label={ insuranceListTitle }
+		class="flex flex-col"
+	>
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<h1
+				id={ ids.RecordListHeading(kind.Insurance) }
+				tabindex="-1"
+				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ insuranceListTitle }</h1>
+			if props.CreateHref != "" {
+				<a
+					href={ props.CreateHref }
+					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+				>{ insuranceCreateLabel }</a>
+			}
+		</div>
+		if len(props.Policies) == 0 {
+			<div class="mt-6">
+				@components.EmptyState(components.EmptyStateProps{
+					ID:          ids.RecordEmpty(kind.Insurance),
+					Title:       insuranceEmptyTitle,
+					Body:        insuranceEmptyBody,
+					ActionHref:  props.CreateHref,
+					ActionLabel: insuranceCreateLabel,
+				})
+			</div>
+		} else {
+			<div class="mt-4 overflow-x-auto">
+				<table class="w-full border-collapse text-left text-sm">
+					<thead>
+						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldCompany) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldType) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldStatus) }</th>
+							<th scope="col" class="pb-2 font-medium">{ FieldLabel(FieldExpiresOn) }</th>
+						</tr>
+					</thead>
+					<tbody id={ ids.RecordRows(kind.Insurance) }>
+						for _, policy := range props.Policies {
+							@InsuranceRow(policy)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		@components.Pagination(components.PaginationProps{
+			ID:           ids.RecordPager(kind.Insurance),
+			PreviousHref: props.PreviousHref,
+			NextHref:     props.NextHref,
+		})
+	</section>
+}

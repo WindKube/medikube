@@ -71,6 +71,22 @@ func openAPIInput() (openapi.Input, error) {
 				Create:  api.InjurySchema().NewCreate(),
 				Patch:   api.InjurySchema().NewPatch(),
 			},
+			{
+				Enum:    kind.Insurance.Enum(),
+				Segment: kind.Insurance.Segment(),
+				Summary: api.InsuranceSchema().NewSummary(),
+				Detail:  api.InsuranceSchema().NewDetail(),
+				Create:  api.InsuranceSchema().NewCreate(),
+				Patch:   api.InsuranceSchema().NewPatch(),
+			},
+			{
+				Enum:    kind.Equipment.Enum(),
+				Segment: kind.Equipment.Segment(),
+				Summary: api.EquipmentSchema().NewSummary(),
+				Detail:  api.EquipmentSchema().NewDetail(),
+				Create:  api.EquipmentSchema().NewCreate(),
+				Patch:   api.EquipmentSchema().NewPatch(),
+			},
 		},
 		Envelope: web.Envelope{},
 	}, nil

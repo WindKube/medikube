@@ -327,12 +327,16 @@ func TestTheCascadePublishesOneEventPerMedicationAndNoneForTheAccount(t *testing
 		kind.Immunization.Collection(): true, kind.Injury.Collection(): true,
 	}
 
-	var medications, accounts int
+	var medications, insurances, equipment, accounts int
 
 	for _, collection := range deleted {
 		switch collection {
 		case kind.Medication.Collection():
 			medications++
+		case kind.Insurance.Collection():
+			insurances++
+		case kind.Equipment.Collection():
+			equipment++
 		case store.AccountCollection:
 			accounts++
 		default:
@@ -342,5 +346,7 @@ func TestTheCascadePublishesOneEventPerMedicationAndNoneForTheAccount(t *testing
 
 	assert.Equal(t, testsupport.AccountAMedicationCount, medications,
 		"the cascade did not delete one medication at a time, so the record stream tells nobody their list changed")
+	assert.Equal(t, testsupport.AccountAInsuranceCount, insurances)
+	assert.Equal(t, testsupport.AccountAEquipmentCount, equipment)
 	assert.Equal(t, 1, accounts)
 }
