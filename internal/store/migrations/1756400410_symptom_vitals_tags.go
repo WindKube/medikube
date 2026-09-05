@@ -32,7 +32,7 @@ func symptomVitalsTagsUp(app core.App) error {
 
 		collection.Fields.Add(&core.RelationField{
 			Name:         symptomVitalsFieldTags,
-			MaxSelect:    0,
+			MaxSelect:    unlimitedTags,
 			CollectionId: tags.Id,
 		})
 

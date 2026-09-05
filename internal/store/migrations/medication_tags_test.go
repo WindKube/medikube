@@ -19,7 +19,7 @@ func TestMedicationsCarriesATagsRelation(t *testing.T) {
 
 	relation, err := relationField(medications, medicationFieldTags)
 	require.NoError(t, err)
-	assert.Equal(t, 0, relation.MaxSelect, "any number of tags")
+	assert.Equal(t, unlimitedTags, relation.MaxSelect, "any number of tags: PocketBase reads MaxSelect<=1 as single-select, so this cannot be 0")
 	assert.False(t, relation.Required)
 }
 

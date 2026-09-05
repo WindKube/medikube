@@ -30,7 +30,7 @@ func medicationTagsUp(app core.App) error {
 
 	medications.Fields.Add(&core.RelationField{
 		Name:         medicationFieldTags,
-		MaxSelect:    0,
+		MaxSelect:    unlimitedTags,
 		CollectionId: tags.Id,
 	})
 

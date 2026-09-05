@@ -1,3 +1,4 @@
+// Package tag is data-model §5.1's account-owned tag vocabulary.
 package tag
 
 import (

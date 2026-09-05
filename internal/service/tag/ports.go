@@ -13,8 +13,8 @@ import (
 // against.
 const FieldName = "name"
 
-// SortName and SortUsageDesc are contracts/tags.md §1's `sort` values: `name`
-// (default) and `-usage`, the only two the list publishes.
+// Sorts is contracts/tags.md §1's `sort` values: `name` (default) and
+// `-usage`, the only two the list publishes.
 func Sorts() []domain.SortKey {
 	return []domain.SortKey{{Field: FieldName}, {Field: "usage", Desc: true}}
 }

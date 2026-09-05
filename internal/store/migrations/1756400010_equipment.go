@@ -112,7 +112,7 @@ func equipmentUp(app core.App) error {
 	collection.Fields.Add(&core.TextField{Name: equipmentFieldNotes, Max: equipmentNotesMax})
 	collection.Fields.Add(&core.RelationField{
 		Name:         equipmentFieldTags,
-		MaxSelect:    0,
+		MaxSelect:    unlimitedTags,
 		CollectionId: tags.Id,
 	})
 	collection.Fields.Add(&core.AutodateField{Name: fieldCreated, OnCreate: true})

@@ -62,7 +62,7 @@ func immunizationSchema() store.Schema {
 			},
 		},
 		store.Column{Name: fieldAdministered, AbsentLast: true},
-		// FilterOnly: `?tags=` narrows, but a MaxSelect:0 relation's JSON
+		// FilterOnly: `?tags=` narrows, but a multi-select relation's JSON
 		// column is never an ordering (research D-05's cursor-disclosure
 		// rule, the same reason alternative_name is FilterOnly above).
 		store.Column{Name: fieldTags, FilterOnly: true},
