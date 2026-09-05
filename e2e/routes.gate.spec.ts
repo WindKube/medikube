@@ -100,6 +100,17 @@ for (const route of pageRoutes) {
         status: 200,
       });
     });
+
+    // FR-014, ANALYSIS/SHARED-DESIGN §3.0: every authenticated page carries the
+    // patient switcher, forever — this reads the inventory's own auth column
+    // rather than naming pages, so a phase-003+ page that registers with
+    // auth: user inherits the assertion the day it ships, with no edit here.
+    if (route.auth === 'user') {
+      test('carries the "Active patient" switcher (FR-014)', async ({ page }) => {
+        await page.goto(route.smokeURL);
+        await expect(page.getByRole('combobox', { name: 'Active patient' })).toBeVisible();
+      });
+    }
   });
 }
 
