@@ -104,6 +104,14 @@ const (
 	VitalsSixID   = "mkvitlamara0006"
 )
 
+// US1's one seeded row per kind: a critical allergy, a resolved condition and
+// a primary emergency contact, each on account A's self-record.
+const (
+	CriticalAllergyID   = "mkalgamara00001"
+	ResolvedConditionID = "mkcndamara00001"
+	PrimaryContactID    = "mkcntamara00001"
+)
+
 // Whether each seeded account's address is confirmed (FR-075).
 //
 // Account C's false is load-bearing, exactly as its zero medication count is:
