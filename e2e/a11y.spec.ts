@@ -111,21 +111,45 @@ test.describe('T163 — the switcher, the create drawers and the delete confirma
     expect(style, 'Delete permanently shows no focus indicator').toBe(true);
   });
 
-  test.fixme(
-    'reaches every field of the create-patient, create-practitioner and create-facility forms by keyboard, with a visible focus indicator',
-    async () => {
-      // Not skipped because it is hard: skipped because the three "Add a ..."
-      // forms (internal/web/views/patients/form.templ,
-      // internal/web/views/directory/practitioner_form.templ,
-      // internal/web/views/directory/facility_form.templ) are not mounted
-      // anywhere yet. Every list page's CreateHref already points at a
-      // fragment id (ids.PatientForm / ids.DirectoryForm), but nothing in
-      // the shipped markup renders a form at that id — that wiring is
-      // T159a-T162, in progress on another branch as of this writing. Once
-      // it lands, this case opens each list page, follows "Add a
-      // person"/"Add a practitioner"/"Add a facility", and asserts the same
-      // two things as every other case in this file: every field reachable
-      // by Tab, in document order, with a visible focus indicator.
-    },
-  );
+  // T159a-T162: the three "Add a ..." forms (internal/web/views/patients/form.templ,
+  // internal/web/views/directory/practitioner_form.templ,
+  // internal/web/views/directory/facility_form.templ) are now mounted on
+  // their list pages, at the fragment id CreateHref already pointed at
+  // (ids.PatientForm / ids.DirectoryForm). Each case opens the list page,
+  // follows the "Add a ..." link, and asserts every field of the form is
+  // reachable by Tab, in document order, with a visible focus indicator.
+  const createForms: Array<{ label: string; path: string; formSelector: string }> = [
+    { label: 'Add a person', path: '/patients', formSelector: '#patient-form' },
+    { label: 'Add a practitioner', path: '/practitioners', formSelector: '#practitioners-form' },
+    { label: 'Add a facility', path: '/facilities', formSelector: '#facilities-form' },
+  ];
+
+  for (const form of createForms) {
+    test(`reaches every field of the ${form.label} form by keyboard, with a visible focus indicator`, async ({
+      page,
+    }) => {
+      await newAccount(page);
+      await page.goto(form.path);
+      // A brand-new account's practitioner and facility lists are empty, so
+      // the empty state's own action repeats this same label — .first()
+      // picks the header's link, which is the one every account sees.
+      await page.getByRole('link', { name: form.label, exact: true }).first().click();
+
+      const expectedInForm = await focusableControls(page, form.formSelector);
+      expect(expectedInForm.length, `${form.label}: the form offers no focusable controls at all`).toBeGreaterThan(0);
+
+      // Steps cover the whole document, not only the form: it renders after
+      // the list on the page (T159a-T162), so Tab reaches its own controls
+      // only after the skip link, the nav, the list and its pagination.
+      const expectedOnPage = await focusableControls(page, 'body');
+      const walk = await tabThrough(page, expectedOnPage.length + 8);
+      const remaining = reached(walk, expectedInForm);
+
+      expect(remaining, `${form.label}: never reached by Tab, in order: ${remaining.join(', ')}`).toEqual([]);
+
+      for (const control of walk.filter((candidate) => expectedInForm.includes(describe(candidate)))) {
+        expect(control.indicator, `${form.label}: no focus indicator on ${describe(control)}`).toBe(true);
+      }
+    });
+  }
 });

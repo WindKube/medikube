@@ -73,12 +73,25 @@ func (p *facilityPages) list(e *core.RequestEvent, actor access.Actor) error {
 		views = append(views, directory.NewFacilityView(item, p.links.of(item.ID)))
 	}
 
-	return RenderPage(e, http.StatusOK, facilityListTitle,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)},
+	blank := directory.FacilityView{}
+
+	main := sequence{
 		directory.FacilityList(directory.FacilityListProps{
 			Facilities: views,
 			CreateHref: p.links.listPage + "#" + ids.DirectoryForm(directory.FacilitySegment, ""),
-		}))
+		}),
+		directory.FacilityForm(directory.FacilityFormProps{
+			FormID:     ids.DirectoryForm(directory.FacilitySegment, ""),
+			New:        true,
+			OnSubmit:   p.links.submitExpression(blank),
+			CancelHref: p.links.cancelHref(blank),
+			Facility:   blank,
+			Errors:     directory.NewFieldErrors(nil),
+		}),
+	}
+
+	return RenderPage(e, http.StatusOK, facilityListTitle,
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
 }
 
 func (p *facilityPages) detail(e *core.RequestEvent, actor access.Actor) error {
@@ -107,9 +120,20 @@ func (p *facilityPages) detail(e *core.RequestEvent, actor access.Actor) error {
 	view.UsagePractitioners = usage.Practitioners
 	view.UsageRecords = usage.Records
 
+	main := sequence{
+		directory.FacilityDetail(directory.FacilityDetailProps{Facility: view}),
+		directory.FacilityForm(directory.FacilityFormProps{
+			FormID:     ids.DirectoryForm(directory.FacilitySegment, view.ID),
+			New:        false,
+			OnSubmit:   p.links.submitExpression(view),
+			CancelHref: p.links.cancelHref(view),
+			Facility:   view,
+			Errors:     directory.NewFieldErrors(nil),
+		}),
+	}
+
 	return RenderPage(e, http.StatusOK, view.Name,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)},
-		directory.FacilityDetail(directory.FacilityDetailProps{Facility: view}))
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
 }
 
 type facilityLinks struct {
@@ -156,6 +180,26 @@ func (l facilityLinks) of(id string) directory.FacilityLinks {
 		Detail: strings.ReplaceAll(l.detailPage, "{"+api.PathID+"}", id),
 		Record: strings.ReplaceAll(l.record, "{"+api.PathID+"}", id),
 	}
+}
+
+// submitExpression and cancelHref mirror medicationLinks' own (medications.go):
+// a create posts to the collection, a change patches the record carrying
+// $etag as If-Match, and cancelling returns to the detail page it came from
+// or the list when there is none yet.
+func (l facilityLinks) submitExpression(view directory.FacilityView) string {
+	if view.ID == "" {
+		return "@post(" + quote(l.collection) + ")"
+	}
+
+	return "@patch(" + quote(view.Links.Record) + ", {headers: {'If-Match': $etag}})"
+}
+
+func (l facilityLinks) cancelHref(view directory.FacilityView) string {
+	if view.Links.Detail != "" {
+		return view.Links.Detail
+	}
+
+	return l.listPage
 }
 
 func (l facilityLinks) nav(current string) []shell.NavLink {
