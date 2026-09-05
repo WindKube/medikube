@@ -533,7 +533,7 @@ test.describe('SC-014 — the keyboard', () => {
     const expected = await focusableControls(page, 'main');
     expect(expected.length, 'the page offers no controls at all').toBeGreaterThan(12);
 
-    const walk = await tabThrough(page, expected.length + 8);
+    const walk = await tabThrough(page, (await focusableControls(page, 'body')).length + 2);
 
     expect(walk[0]?.label, 'the first Tab does not reach the skip link').toBe('Skip to content');
     reached(walk, expected);
@@ -551,7 +551,7 @@ test.describe('SC-014 — the keyboard', () => {
     await expect(article.getByRole('link', { name: 'Edit' })).toBeVisible();
 
     const expected = await focusableControls(page, 'main');
-    const walk = await tabThrough(page, expected.length + 8);
+    const walk = await tabThrough(page, (await focusableControls(page, 'body')).length + 2);
 
     reached(walk, expected);
 
