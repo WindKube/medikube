@@ -161,6 +161,7 @@ var neverEchoed = map[string]string{
 	CookieCrumb:       "a cookie the exercise attaches to every request; no operation reads it and nothing may reflect it (T235)",
 	HeaderCrumb:       "a header the exercise attaches to every request; same rule (T235)",
 	BodyCrumb:         "the value of a body member no operation declares; the decoder's refusal names the member and must not quote what was in it (T235)",
+	PhotoFilename:     "the uploaded file's name is discarded at the edge; the photograph is stored and served under a name the instance minted (contracts/patient-photo.md)",
 }
 
 // assertSentinelsWereStored is the other half of planted-ness: for everything

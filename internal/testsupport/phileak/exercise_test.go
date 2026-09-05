@@ -35,10 +35,13 @@
 package phileak
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -97,6 +100,10 @@ const (
 	CookieCrumb       = "a-crumb-a-browser-carried"
 	HeaderCrumb       = "a-value-a-proxy-added"
 	BodyCrumb         = "a-member-no-operation-declares"
+	PatientFirstName  = "Oluwaseun-Ekaterina"
+	PatientLastName   = "Mbeki-Thorvaldsen"
+	PatientAddress    = "14-asylum-lane-flat-9"
+	PhotoFilename     = "portrait-in-a-hospital-gown.png"
 )
 
 // Sentinel is one planted value and what it stands for. The meaning is printed
@@ -127,6 +134,10 @@ func Sentinels() []Sentinel {
 		{CookieCrumb, "a value carried in a cookie"},
 		{HeaderCrumb, "a value added by something in front of the process"},
 		{BodyCrumb, "a member of a request body no operation declares"},
+		{PatientFirstName, "the first name of a person whose health is recorded"},
+		{PatientLastName, "their family name"},
+		{PatientAddress, "where they live"},
+		{PhotoFilename, "the name of the file their photograph came in as"},
 	}
 }
 
@@ -907,9 +918,63 @@ func drive(t testing.TB, c *client) {
 	driveHealth(c)
 	drivePublicAuth(c)
 	driveRecords(c)
+	drivePatients(c)
 	drivePages(c)
 	driveNativePaths(c)
 	driveAccountLifecycle(c)
+}
+
+const onePixelPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+
+// drivePatients: the seven patient operations and both patient pages, with a
+// person's names, address and photograph filename as the sentinels.
+func drivePatients(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	created := c.do(http.MethodPost, "/api/v1/patients", jsonBody(c.t, api.PatientCreate{
+		FirstName: PatientFirstName, LastName: PatientLastName, BirthDate: "1990-01-01", Address: PatientAddress,
+	}))
+	require.Equal(c.t, http.StatusCreated, created.Status, "the sentinel patient was not created: %s", created.Body)
+
+	var patient struct {
+		ID string `json:"id"`
+	}
+	require.NoError(c.t, json.Unmarshal([]byte(created.Body), &patient))
+
+	address := "/api/v1/patients/" + patient.ID
+
+	c.do(http.MethodGet, "/api/v1/patients", "")
+	c.do(http.MethodGet, address, "")
+	c.do(http.MethodPatch, address, jsonBody(c.t, api.PatientPatch{Address: ptr(PatientAddress)}))
+	c.do(http.MethodGet, "/api/v1/patients/"+missingRecordID, "")
+
+	body, contentType := photoUpload(c.t)
+	c.doWith(http.MethodPut, address+"/photo", body, map[string]string{"Content-Type": contentType})
+	c.do(http.MethodGet, address+"/photo", "")
+	c.do(http.MethodGet, address+"/photo?size=original", "")
+	c.do(http.MethodDelete, address+"/photo", "")
+
+	c.bearer = ""
+	c.do(http.MethodGet, "/patients", "")
+	c.do(http.MethodGet, "/patients/"+patient.ID, "")
+	c.do(http.MethodGet, "/patients/"+missingRecordID, "")
+}
+
+func photoUpload(t testing.TB) (string, string) {
+	t.Helper()
+
+	raw, err := base64.StdEncoding.DecodeString(onePixelPNG)
+	require.NoError(t, err)
+
+	var buffer bytes.Buffer
+	form := multipart.NewWriter(&buffer)
+	part, err := form.CreateFormFile("photo", PhotoFilename)
+	require.NoError(t, err)
+	_, err = part.Write(raw)
+	require.NoError(t, err)
+	require.NoError(t, form.Close())
+
+	return buffer.String(), form.FormDataContentType()
 }
 
 // driveHealth: both operations an operator has, both deliberately incurious.
