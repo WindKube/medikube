@@ -141,6 +141,13 @@ const (
 	AccountAEquipmentCount = 2
 )
 
+// US2's one name-only row per kind.
+const (
+	EncounterNameOnlyID = "mkencamara00001"
+	ProcedureNameOnlyID = "mkprcamara00001"
+	TreatmentNameOnlyID = "mktrtamara00001"
+)
+
 // AuthToken mints a PocketBase auth token for a seeded account, which is what
 // an HTTP test presents as the caller.
 //

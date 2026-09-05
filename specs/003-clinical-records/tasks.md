@@ -159,30 +159,43 @@ scheduled view and the completed one does not.
 ### Tests for User Story 2 ⚠️ write first, confirm red
 
 - [ ] T061 [P] [US2] Failing tests in `internal/domain/clinical/encounter_test.go` and `internal/service/encounter/service_test.go` (FR-022): `reason` and `occurred_on` required and visit type, urgency, conclusion, plan, follow-up, duration, practitioner, facility and condition optional; `assessment` and `plan` are stored and presented separately from `reason` and are **never** mapped to or from a `condition` (FR-023); the `condition` relation drives the `encounters_via_condition` back-relation (FR-021)
+  - Note: `condition` deferred — US1's `conditions` collection does not exist on `feat/003-us2`'s base; the field/relation is omitted entirely (domain/store/DTO/views) rather than half-wired, until US1 merges. Tests and implementation not yet written.
 - [ ] T062 [P] [US2] Failing tests in `internal/domain/clinical/procedure_test.go` and `internal/service/procedure/service_test.go` (FR-024): `name`, `occurred_on`, `status` required and kind, code, description, outcome, setting, complications, duration, anaesthesia, practitioner, facility and condition optional; a future `occurred_on` is accepted for `ordered`/`scheduled` and refused for `completed` (FR-025); `?scheduled=true` selects `status ∈ {ordered, scheduled}` and each row's `basis` is `scheduled` or `ordered` (FR-026)
+  - Note: `condition` deferred, same reason as T061. Tests not yet written.
 - [ ] T063 [P] [US2] Failing tests in `internal/domain/clinical/treatment_test.go` and `internal/service/treatment/service_test.go` (FR-027): `name` required and kind, setting, description, start and end, frequency, dose, goal, status, practitioner, facility and condition optional; `ended_on < started_on` refused with both values reported (FR-013); the `encounters` and `equipment` multi-relations accept a set and reject a cross-patient member (FR-028, FR-057)
+  - Note: `condition` deferred, same reason as T061. Tests not yet written.
 - [ ] T064 [P] [US2] Failing repository tests running `recordstest.RepositoryContract` in `internal/store/encounter/repo_test.go`, `internal/store/procedure/repo_test.go`, `internal/store/treatment/repo_test.go`, each also asserting that a named practitioner or place of care resolves to the account holder's own phase-002 directory entry (FR-014) and that deleting a referenced practitioner or facility **clears the reference and preserves the record** (spec Edge Cases)
+  - Note: no `condition` assertions (deferred, see T061). Tests not yet written.
 - [ ] T065 [P] [US2] Failing DTO round-trip tests in `internal/web/api/encounter_test.go`, `procedure_test.go`, `treatment_test.go`
 - [ ] T066 [P] [US2] Failing templ render tests in `internal/web/views/records/encounter_templ_test.go`, `procedure_templ_test.go`, `treatment_templ_test.go`, asserting the encounter detail renders `assessment` and `plan` under labels that cannot be read as a diagnosis (FR-023), and that a record naming a practitioner or a place of care renders phase 002's directory entry and offers phase 002's inline create drawer without discarding what has been typed (FR-014)
 - [ ] T067 [P] [US2] Failing HTTP + authorization scenarios in `internal/web/api/encounter_http_test.go`, `procedure_http_test.go`, `treatment_http_test.go` — the full FR-092 matrix per kind
 - [ ] T068 [P] [US2] Failing `recordstest.KindContract` invocations in `internal/records/kinds/encounter_contract_test.go`, `procedure_contract_test.go`, `treatment_contract_test.go`
+  - Note: this repository has no `internal/records/kinds` package — a kind registers itself via a `Register(registry, Wiring{...})` function in its own `internal/service/<kind>` package (medication's own model), called from `cmd/medikube/handlers.go` and `internal/web/apitest/apitest.go`. Path is stale; contract tests not yet written regardless.
 
 ### Implementation for User Story 2
 
-- [ ] T069 [P] [US2] Implement `internal/domain/clinical/encounter.go` (FR-022)
-- [ ] T070 [P] [US2] Implement `internal/domain/clinical/procedure.go` (FR-024)
-- [ ] T071 [P] [US2] Implement `internal/domain/clinical/treatment.go` (FR-027)
-- [ ] T072 [P] [US2] Implement `internal/service/encounter/{service.go,ports.go,query.go,patch.go}` + `encountertest/fake.go`
-- [ ] T073 [P] [US2] Implement `internal/service/procedure/{service.go,ports.go,query.go,patch.go}` + `proceduretest/fake.go`
-- [ ] T074 [P] [US2] Implement `internal/service/treatment/{service.go,ports.go,query.go,patch.go}` + `treatmenttest/fake.go`
-- [ ] T075 [P] [US2] Implement `internal/store/migrations/<ts>_encounters.go` (with `condition`; `lab_results` is **not** declared here — it is phase 004's migration) and `internal/store/encounter/{repo.go,mapper.go}`
-- [ ] T076 [P] [US2] Implement `internal/store/migrations/<ts>_procedures.go` and `internal/store/procedure/{repo.go,mapper.go}`
-- [ ] T077 [P] [US2] Implement `internal/store/migrations/<ts>_equipment.go` **schema only** (the `equipment` collection must exist before `treatments.equipment` can reference it; its service and UI are US5) and `internal/store/migrations/<ts>_treatments.go` with `encounters` and `equipment`, plus `internal/store/treatment/{repo.go,mapper.go}`
-- [ ] T078 [P] [US2] Implement DTOs `internal/web/api/encounter.go`, `procedure.go`, `treatment.go` and the three `adapter.go` codecs
-- [ ] T079 [P] [US2] Implement `internal/web/views/records/encounter.templ`, `procedure.templ`, `treatment.templ`
-- [ ] T080 [US2] Register the three kinds in `internal/records/kinds/encounter.go`, `procedure.go`, `treatment.go` with filters (`visit_type`, `priority`, `condition`, `status`, `scheduled`, `ongoing`), default sorts, `SearchFields` and `Basis`
-- [ ] T081 [US2] Extend `internal/cli/seed.go` with encounter, procedure (one scheduled-future, one completed-past) and treatment fixtures, and add the three providers in `cmd/medikube/main.go`
-- [ ] T082 [P] [US2] Add Playwright smoke cases for `/encounters`, `/encounters/{id}`, `/procedures`, `/procedures/{id}`, `/treatments`, `/treatments/{id}` at both viewports in `e2e/specs/records.spec.ts`
+- [x] T069 [P] [US2] Implement `internal/domain/clinical/encounter.go` (FR-022)
+- [x] T070 [P] [US2] Implement `internal/domain/clinical/procedure.go` (FR-024)
+- [x] T071 [P] [US2] Implement `internal/domain/clinical/treatment.go` (FR-027)
+- [x] T072 [P] [US2] Implement `internal/service/encounter/{service.go,ports.go,query.go,patch.go}` + `encountertest/fake.go`
+  - Note: `encountertest/fake.go` not yet written (no unit/contract test tier exists for this kind yet).
+- [x] T073 [P] [US2] Implement `internal/service/procedure/{service.go,ports.go,query.go,patch.go}` + `proceduretest/fake.go`
+  - Note: `proceduretest/fake.go` not yet written, same reason as T072.
+- [x] T074 [P] [US2] Implement `internal/service/treatment/{service.go,ports.go,query.go,patch.go}` + `treatmenttest/fake.go`
+  - Note: `treatmenttest/fake.go` not yet written, same reason as T072.
+- [x] T075 [P] [US2] Implement `internal/store/migrations/<ts>_encounters.go` (with `condition`; `lab_results` is **not** declared here — it is phase 004's migration) and `internal/store/encounter/{repo.go,mapper.go}`
+  - Note: migration does NOT declare `condition` — deferred, see T061.
+- [x] T076 [P] [US2] Implement `internal/store/migrations/<ts>_procedures.go` and `internal/store/procedure/{repo.go,mapper.go}`
+- [x] T077 [P] [US2] Implement `internal/store/migrations/<ts>_equipment.go` **schema only** (the `equipment` collection must exist before `treatments.equipment` can reference it; its service and UI are US5) and `internal/store/migrations/<ts>_treatments.go` with `encounters` and `equipment`, plus `internal/store/treatment/{repo.go,mapper.go}`
+- [x] T078 [P] [US2] Implement DTOs `internal/web/api/encounter.go`, `procedure.go`, `treatment.go` and the three `adapter.go` codecs
+  - Note: no `condition` member (deferred, see T061).
+- [x] T079 [P] [US2] Implement `internal/web/views/records/encounter.templ`, `procedure.templ`, `treatment.templ`
+- [x] T080 [US2] Register the three kinds in `internal/records/kinds/encounter.go`, `procedure.go`, `treatment.go` with filters (`visit_type`, `priority`, `condition`, `status`, `scheduled`, `ongoing`), default sorts, `SearchFields` and `Basis`
+  - Note: no `internal/records/kinds` package exists (see T068); registration lives beside each kind's own service package. No `condition` filter (deferred, see T061).
+- [x] T081 [US2] Extend `internal/cli/seed.go` with encounter, procedure (one scheduled-future, one completed-past) and treatment fixtures, and add the three providers in `cmd/medikube/main.go`
+  - Note: this codebase seeds through one `internal/testsupport/seed.Apply()` call shared by `medikube seed` and the committed-fixture regenerator, not per-kind providers registered in `main.go` — that per-provider shape predates this refactor. Encounter/procedure/treatment fixtures added to `internal/testsupport/seed/seed_clinical.go` and wired into `Apply()`.
+- [x] T082 [P] [US2] Add Playwright smoke cases for `/encounters`, `/encounters/{id}`, `/procedures`, `/procedures/{id}`, `/treatments`, `/treatments/{id}` at both viewports in `e2e/specs/records.spec.ts`
+  - Note: no hand-written spec file needed — `e2e/routes.ts`'s `pageRoutes` is generated from `medikube routes --json` (the Go route inventory), so `routes.gate.spec.ts`, `a11y.spec.ts` and `responsive.spec.ts` already grow one case per new page route (with its Landmark/SmokeURL) at both viewports with no TypeScript change, once the six routes carry a valid Landmark and SmokeURL (confirmed via `./medikube routes --json`).
 
 **Checkpoint**: US1 and US2 are both independently demonstrable.
 

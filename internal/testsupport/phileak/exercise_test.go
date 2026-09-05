@@ -1000,6 +1000,12 @@ func symptomPageOfKind() string { return "/" + kind.Symptom.Segment() }
 
 func vitalsPageOfKind() string { return "/" + kind.Vitals.Segment() }
 
+func encounterPageOfKind() string { return "/" + kind.Encounter.Segment() }
+
+func procedurePageOfKind() string { return "/" + kind.Procedure.Segment() }
+
+func treatmentPageOfKind() string { return "/" + kind.Treatment.Segment() }
+
 // drive walks the whole inventory.
 //
 // The order is a person's, not a route table's: an account is created before it
@@ -1824,7 +1830,7 @@ func (c *client) openStream(window time.Duration, patientID string) <-chan struc
 // are pointers.
 func ptr[T any](value T) *T { return &value }
 
-// drivePages walks contracts/pages.md's nine pages and the two error views a
+// drivePages walks contracts/pages.md's pages and the two error views a
 // URL can produce, each with the credential a browser would actually carry.
 //
 // A page is driven with the session COOKIE and never with a bearer token: the
@@ -1869,6 +1875,12 @@ func drivePages(c *client) {
 		symptomPageOfKind() + "/" + testsupport.SymptomHeadacheOneID,
 		vitalsPageOfKind(),
 		vitalsPageOfKind() + "/" + testsupport.VitalsOneID,
+		encounterPageOfKind(),
+		encounterPageOfKind() + "/" + testsupport.EncounterNameOnlyID,
+		procedurePageOfKind(),
+		procedurePageOfKind() + "/" + testsupport.ProcedureNameOnlyID,
+		treatmentPageOfKind(),
+		treatmentPageOfKind() + "/" + testsupport.TreatmentNameOnlyID,
 		"/settings",
 	} {
 		c.do(http.MethodGet, path, "")
