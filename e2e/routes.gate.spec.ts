@@ -53,6 +53,13 @@ async function fieldOf(page: Page, url: string, field: string): Promise<string> 
   expect(response.ok(), `routes.gate: the API did not answer for ${url}`).toBe(true);
 
   return ((await response.json()) as Record<string, string>)[field];
+// insuranceCompanyOf: insurance titles its detail page after the insurer
+// (the "company" member), not "name" — the one field nameOf's shape assumes.
+async function insuranceCompanyOf(page: Page, id: string): Promise<string> {
+  const response = await page.request.get(`/api/v1/records/insurance/${id}`);
+  expect(response.ok(), `routes.gate: the API did not answer for insurance ${id}`).toBe(true);
+
+  return ((await response.json()) as { company: string }).company;
 }
 
 // idOf reads the record id P5's SmokeURL is bound to, off the end of the URL
@@ -89,6 +96,10 @@ async function titleFor(route: PageRoute, page: Page): Promise<string> {
       );
     case 'injuryDetailPage':
       return fixtures.title(await fieldOf(page, `/api/v1/records/injuries/${idOf(route.smokeURL)}`, 'name'));
+    case 'insuranceDetailPage':
+      return fixtures.title(await insuranceCompanyOf(page, idOf(route.smokeURL)));
+    case 'equipmentDetailPage':
+      return fixtures.title(await nameOf(page, `/api/v1/records/equipment/${idOf(route.smokeURL)}`));
     case 'patientListPage':
       return fixtures.title('People');
     case 'patientDetailPage':
