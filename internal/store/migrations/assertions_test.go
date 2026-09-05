@@ -122,6 +122,24 @@ func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 			relation:    relationRule{collection: kind.Injury.Collection(), field: injuryFieldPractitioner, required: false, cascadeDelete: false},
 			target:      practitioners.Id,
 			consequence: "deleting a practitioner must unset an injury's own reference, not delete the injury",
+			relation:    relationRule{collection: kind.Equipment.Collection(), field: equipmentFieldPatient, required: true, cascadeDelete: true},
+			target:      patients.Id,
+			consequence: "deleting a patient must delete every equipment row filed against them",
+		},
+		{
+			relation:    relationRule{collection: kind.Equipment.Collection(), field: equipmentFieldSupplier, required: false, cascadeDelete: false},
+			target:      facilities.Id,
+			consequence: "deleting a facility must unset equipment's supplier reference, not delete the row",
+		},
+		{
+			relation:    relationRule{collection: kind.Equipment.Collection(), field: equipmentFieldPractitioner, required: false, cascadeDelete: false},
+			target:      practitioners.Id,
+			consequence: "deleting a practitioner must unset equipment's prescriber reference, not delete the row",
+		},
+		{
+			relation:    relationRule{collection: kind.Insurance.Collection(), field: insuranceFieldPatient, required: true, cascadeDelete: true},
+			target:      patients.Id,
+			consequence: "deleting a patient must delete every insurance policy filed against them",
 		},
 	}
 

@@ -46,7 +46,13 @@ func TestTagsDownRemovesTheCollectionCleanly(t *testing.T) {
 	// here so this test exercises tagsDown in the state it actually runs in.
 	require.NoError(t, injuriesDown(app))
 	require.NoError(t, immunizationsDown(app))
+	// search_index.tags, medications.tags, equipment.tags and insurances.tags
+	// are later migrations' relations to this collection; unwinding in the
+	// real migration runner removes them first. Reproduced here so this test
+	// exercises tagsDown in the state it actually runs in.
 	require.NoError(t, medicationTagsDown(app))
+	require.NoError(t, equipmentDown(app))
+	require.NoError(t, insurancesDown(app))
 	require.NoError(t, searchIndexDown(app))
 	require.NoError(t, tagsDown(app))
 

@@ -38,6 +38,8 @@ func TestTheAppliedMigrationSetEqualsTheRegisteredSet(t *testing.T) {
 		"1756300030_audit_vocab.go",
 		"1756400100_" + kind.Immunization.Collection() + ".go",
 		"1756400200_" + kind.Injury.Collection() + ".go",
+		"1756400010_" + kind.Equipment.Collection() + ".go",
+		"1756400020_" + kind.Insurance.Collection() + ".go",
 	}
 
 	require.Equal(t, expected, Files(),
