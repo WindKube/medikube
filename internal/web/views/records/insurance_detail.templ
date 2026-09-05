@@ -1,0 +1,66 @@
+package records
+
+import (
+	"medikube/internal/domain/kind"
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
+
+const insuranceConfirmSignal = "_confirming_delete"
+
+const (
+	insuranceDetailArticle      = "Insurance"
+	insuranceConfirmTitle       = "Delete this policy?"
+	insuranceConfirmConsequence = "This is permanent. There is no recycle bin and no undo, so everything recorded here goes with it."
+	insuranceConfirmLabel      = "Delete permanently"
+	insuranceConfirmCancel     = "Keep it"
+	insuranceEditLabel         = "Edit"
+	insuranceDeleteLabel       = "Delete"
+)
+
+templ InsuranceDetail(props InsuranceDetailProps) {
+	<article
+		id={ ids.RecordDetail(kind.Insurance, props.Insurance.ID) }
+		aria-label={ insuranceDetailArticle }
+		data-signals={ "{" + insuranceConfirmSignal + ": false, _etag: " + jsLiteral(props.Insurance.Version) + "}" }
+		data-status={ props.Insurance.StatusValue }
+		class="flex flex-col"
+	>
+		<header class="flex flex-wrap items-start justify-between gap-3">
+			<h1
+				id={ ids.RecordDetailHeading(kind.Insurance, props.Insurance.ID) }
+				tabindex="-1"
+				class="break-words text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ props.Insurance.Company }</h1>
+			<div class="flex flex-wrap gap-2">
+				if props.Insurance.Links.Edit != "" {
+					<a
+						href={ props.Insurance.Links.Edit }
+						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+					>{ insuranceEditLabel }</a>
+				}
+				<button
+					type="button"
+					data-on:click={ "$" + insuranceConfirmSignal + " = true" }
+					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
+				>{ insuranceDeleteLabel }</button>
+			</div>
+		</header>
+		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+			for _, entry := range props.Insurance.Entries() {
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				@detailValue(entry)
+			}
+		</dl>
+		@components.Confirm(components.ConfirmProps{
+			ID:           ids.RecordConfirm(kind.Insurance, props.Insurance.ID),
+			Signal:       insuranceConfirmSignal,
+			Title:        insuranceConfirmTitle,
+			Subject:      props.Insurance.Company,
+			Consequence:  insuranceConfirmConsequence,
+			ConfirmLabel: insuranceConfirmLabel,
+			ConfirmOn:    insuranceDeleteExpression(props.Insurance),
+			CancelLabel:  insuranceConfirmCancel,
+		})
+	</article>
+}
