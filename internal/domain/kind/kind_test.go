@@ -21,7 +21,41 @@ var wantSpellings = map[Kind]struct {
 	segment    string
 	collection string
 }{
-	Medication: {enum: "medication", segment: "medications", collection: "medications"},
+	Medication:       {enum: "medication", segment: "medications", collection: "medications"},
+	Allergy:          {enum: "allergy", segment: "allergies", collection: "allergies"},
+	Condition:        {enum: "condition", segment: "conditions", collection: "conditions"},
+	Encounter:        {enum: "encounter", segment: "encounters", collection: "encounters"},
+	Procedure:        {enum: "procedure", segment: "procedures", collection: "procedures"},
+	Treatment:        {enum: "treatment", segment: "treatments", collection: "treatments"},
+	Symptom:          {enum: "symptom", segment: "symptoms", collection: "symptoms"},
+	Vitals:           {enum: "vitals", segment: "vitals", collection: "vitals"},
+	Immunization:     {enum: "immunization", segment: "immunizations", collection: "immunizations"},
+	Injury:           {enum: "injury", segment: "injuries", collection: "injuries"},
+	Insurance:        {enum: "insurance", segment: "insurance", collection: "insurances"},
+	Equipment:        {enum: "equipment", segment: "equipment", collection: "equipment"},
+	EmergencyContact: {enum: "emergency_contact", segment: "emergency-contacts", collection: "emergency_contacts"},
+	FamilyMember:     {enum: "family_member", segment: "family-history", collection: "family_members"},
+}
+
+// data-model §3 and contracts/pages.md §2: `insurance` and `family-history` are
+// not mechanical plurals of their enum, and `vitals`/`equipment` are already
+// plural — the reason the segment is declared rather than derived.
+func TestInsuranceAndFamilyHistorySegmentsAreDeclaredNotDerived(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "insurance", Insurance.Segment())
+	assert.Equal(t, "family-history", FamilyMember.Segment())
+	assert.Equal(t, "vitals", Vitals.Segment())
+	assert.Equal(t, "equipment", Equipment.Segment())
+}
+
+func TestEveryKindPublishesBothARIALandmarks(t *testing.T) {
+	t.Parallel()
+
+	for _, k := range Kinds() {
+		assert.NotEmptyf(t, k.ListLandmark(), "%s has no list landmark", k)
+		assert.NotEmptyf(t, k.DetailLandmark(), "%s has no detail landmark", k)
+	}
 }
 
 func TestTheDeclaredSpellingsAreTheDocumentedOnes(t *testing.T) {
@@ -151,7 +185,7 @@ func TestNothingButADeclaredKindResolves(t *testing.T) {
 	t.Run("an undeclared Kind carries no spellings", func(t *testing.T) {
 		t.Parallel()
 
-		invented := Kind("family_member")
+		invented := Kind("no_such_kind")
 
 		assert.False(t, invented.Valid())
 		assert.Empty(t, invented.Segment())

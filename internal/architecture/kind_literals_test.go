@@ -33,6 +33,15 @@ var kindLiteralExempt = map[string]string{
 	"internal/domain/kind/kind_test.go": "the golden table: the one place that pins each kind's plural spelling, which is finding H1's fix",
 	"internal/domain/audit/enums_test.go": "the near-miss list: it asserts the plural is refused as an audit target kind, " +
 		"which is the same drift caught from the other side",
+	"internal/domain/audit/enums.go": "declares audit.TargetKind, its own vocabulary of the kind's enum spelling — " +
+		"pinning that spelling is the whole point of the file, exactly as kind.go pins the other three",
+	"internal/store/migrations/1756100300_audit_events.go": "the migration that writes audit_events.target_kind's " +
+		"select values: the complete vocabulary is pinned here deliberately (data-model §5.4) and is asserted " +
+		"against kind.Kinds() by audit_vocab_test.go, not derived from it",
+	"internal/testsupport/phileak/exercise_test.go": "a false positive: the flagged literal is the English word " +
+		"\"precondition\", which merely contains condition's collection name as a substring",
+	"internal/architecture/enum_slices_test.go": "a false positive: two flagged identifiers in enumSlices name a " +
+		"per-kind vocabulary slice whose own name happens to contain a kind's spelling as a substring",
 }
 
 func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {
