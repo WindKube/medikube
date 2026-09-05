@@ -43,7 +43,7 @@ var kindLiteralExempt = map[string]string{
 	"internal/architecture/enum_slices_test.go": "a false positive: two flagged identifiers in enumSlices name a " +
 		"per-kind vocabulary slice whose own name happens to contain a kind's spelling as a substring",
 	"internal/architecture/kind_literals_test.go": "this file's own exemption map necessarily spells every " +
-		"exempted path and reason below as a literal",
+		"exempted path and reason below as a literal, including the vitals ones",
 
 	// Equipment and insurance are the first two kinds whose segment and
 	// collection are an uncountable noun spelled identically to the kind's
@@ -61,7 +61,8 @@ var kindLiteralExempt = map[string]string{
 	"internal/domain/clinical/insurancecoverage.go":        "false positive: coverage.Validate's field-error messages name insurance's own coverage/contact fields in prose",
 	"internal/domain/clinical/insurancecoverage_test.go":   "false positive, asserting the same messages",
 	"internal/httproute/routes.go":                         "false positive: the two kinds' route summaries and landmark names say what the page is about in prose",
-	"internal/service/access/exhaustive_test.go":           "false positive: the checkpoint-package exemption reasons name the two kinds' own test packages in prose",
+	"internal/service/access/exhaustive_test.go": "false positive: the checkpoint-package exemption reasons name " +
+		"equipment's, insurance's and vitals's own test packages in prose",
 	"internal/service/equipment/adapter.go":                "false positive: wiring-error messages and the audit inventory summary name the kind in prose",
 	"internal/service/equipment/equipmenttest/fake.go":     "false positive: the fake's own error messages name the kind in prose",
 	"internal/service/equipment/service.go":                "false positive: the service's wiring-error messages name the kind in prose",
@@ -95,6 +96,12 @@ var kindLiteralExempt = map[string]string{
 	"internal/httproute/routes_test.go": "false positive: the opID and landmark literals for these two kinds' " +
 		"pages spell the kind's own name (e.g. \"insuranceListPage\") because the segment equals the kind's " +
 		"ordinary English name; every other kind's opID is a distinct plural so this table never needed the exemption before",
+	"internal/web/views/records/vitals_list_templ.go": "a false positive: templ embeds its own source " +
+		"filename as a literal for its error reporting, and vitals is a mass noun whose singular file " +
+		"name (vitals_list.templ) is already its plural collection spelling",
+	"internal/web/views/records/vitals_row_templ.go":    "the same, for vitals_row.templ",
+	"internal/web/views/records/vitals_detail_templ.go": "the same, for vitals_detail.templ",
+	"internal/web/views/records/vitals_form_templ.go":   "the same, for vitals_form.templ",
 }
 
 func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {
@@ -135,6 +142,18 @@ func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {
 		file, err := parser.ParseFile(fset, filepath.Join(root, rel), nil, parser.SkipObjectResolution)
 		require.NoErrorf(t, err, "parsing %s", rel)
 
+		// Import paths are exempt from the walk below: a package legitimately
+		// named after its own kind (internal/store/vitals, say) is imported
+		// under that exact path in every file that uses it, and a kind whose
+		// segment is a mass noun (vitals, insurance, equipment — singular and
+		// plural the same word) makes that path contain the spelling by
+		// construction. Nobody hand-writes a route or a collection name as an
+		// import path, so this walk has nothing to catch there.
+		imports := make(map[*ast.BasicLit]bool, len(file.Imports))
+		for _, spec := range file.Imports {
+			imports[spec.Path] = true
+		}
+
 		ast.Inspect(file, func(node ast.Node) bool {
 			// An import path is a Go module path, not a route or a collection
 			// name, and no kind whose package is named after its own segment
@@ -147,6 +166,10 @@ func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {
 
 			literal, ok := node.(*ast.BasicLit)
 			if !ok || literal.Kind != token.STRING {
+				return true
+			}
+
+			if imports[literal] {
 				return true
 			}
 

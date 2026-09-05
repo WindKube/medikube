@@ -86,6 +86,8 @@ var checkpointPackagesOutsideTheRule = map[string]string{
 	"internal/service/patient/patienttest":           "the patient contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, for the same reason",
 	"internal/service/equipment/equipmenttest":       "the equipment contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, for the same reason",
 	"internal/service/insurance/insurancetest":       "the insurance contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, for the same reason",
+	"internal/service/symptom/symptomtest":           "the symptom contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, for the same reason",
+	"internal/service/vitals/vitalstest":             "the vitals contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, for the same reason",
 }
 
 // exemption is one method the rule does not reach, and why.

@@ -52,10 +52,13 @@ import (
 	"medikube/internal/service/patient"
 	practitionersvc "medikube/internal/service/practitioner"
 	searchsvc "medikube/internal/service/search"
+	"medikube/internal/service/symptom"
+	"medikube/internal/service/vitals"
 	"medikube/internal/store"
 	auditstore "medikube/internal/store/audit"
 	storeequipment "medikube/internal/store/equipment"
 	facilitystore "medikube/internal/store/facility"
+	storeidentity "medikube/internal/store/identity"
 	storeimmunization "medikube/internal/store/immunization"
 	storeinjury "medikube/internal/store/injury"
 	storeinsurance "medikube/internal/store/insurance"
@@ -63,6 +66,8 @@ import (
 	patientstore "medikube/internal/store/patient"
 	practitionerstore "medikube/internal/store/practitioner"
 	searchstore "medikube/internal/store/search"
+	storesymptom "medikube/internal/store/symptom"
+	storevitals "medikube/internal/store/vitals"
 	"medikube/internal/testsupport"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -396,6 +401,16 @@ func handlerTable(
 		return nil, err
 	}
 
+	symptomPageOps, err := page.SymptomHandlers(resolve, patientResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	vitalsPageOps, err := page.VitalsHandlers(resolve, patientResolve)
+	if err != nil {
+		return nil, err
+	}
+
 	streamOps, err := stream.Handlers(stream.Deps{
 		Resolve:   resolve,
 		Hub:       hub,
@@ -473,7 +488,7 @@ func handlerTable(
 	}
 
 	groups := []httproute.Handlers{
-		recordOps, pageOps, streamOps, accountOps, accountPages, overviewPage, assets,
+		recordOps, pageOps, symptomPageOps, vitalsPageOps, streamOps, accountOps, accountPages, overviewPage, assets,
 		patientOps, photoOps, activePatientOps, patientPages, directoryOps, injuryPageOps, immunizationPageOps,
 		insurancePageOps, equipmentPageOps,
 	}
@@ -490,6 +505,17 @@ func handlerTable(
 // unitSystemOf mirrors cmd/medikube's own: the patient surface's Display
 // rendering (FR-007) reads the same account row contracts/account.md does.
 func unitSystemOf(accounts *serviceidentity.Service) api.UnitSystemOf {
+	return func(ctx context.Context, actor access.Actor) (identity.UnitSystem, error) {
+		user, err := accounts.Me(ctx, actor)
+		if err != nil {
+			return "", err
+		}
+
+		return user.UnitSystem, nil
+	}
+}
+
+func vitalsUnitSystemOf(accounts *serviceidentity.Service) vitals.UnitSystemOf {
 	return func(ctx context.Context, actor access.Actor) (identity.UnitSystem, error) {
 		user, err := accounts.Me(ctx, actor)
 		if err != nil {
@@ -672,6 +698,77 @@ func registerKinds(
 		Views:        equipmentViews,
 		SearchFields: api.EquipmentSearchFields,
 		Basis:        api.EquipmentBasis,
+	}); registerErr != nil {
+		return nil, nil, nil, nil, registerErr
+	}
+
+	symptomViews, err := page.NewSymptomViews()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	symptomRepo, err := storesymptom.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if registerErr := symptom.Register(registry, symptom.Wiring{
+		Repository:   symptomRepo,
+		Authorizer:   authorizer,
+		Codec:        api.SymptomCodec{},
+		Schema:       api.SymptomSchema(),
+		Views:        symptomViews,
+		SearchFields: api.SymptomSearchFields,
+		Basis:        api.SymptomBasis,
+	}); registerErr != nil {
+		return nil, nil, nil, nil, registerErr
+	}
+
+	identityRepo, err := storeidentity.NewRepository(app)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	identityAuth, err := storeidentity.NewAuthenticator(app)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	mailer, err := pb.NewMailer(app)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	identityService, err := serviceidentity.New(serviceidentity.Config{
+		Repository:    identityRepo,
+		Authenticator: identityAuth,
+		Mailer:        mailer,
+		Auditor:       auditor,
+		Clock:         serviceidentity.SystemClock{},
+	})
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	vitalsViews, err := page.NewVitalsViews()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	vitalsRepo, err := storevitals.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if registerErr := vitals.Register(registry, vitals.Wiring{
+		Repository:   vitalsRepo,
+		Authorizer:   authorizer,
+		Codec:        api.VitalsCodec{},
+		UnitSystemOf: vitalsUnitSystemOf(identityService),
+		Schema:       api.VitalsSchema(),
+		Views:        vitalsViews,
+		SearchFields: api.VitalsSearchFields,
+		Basis:        api.VitalsBasis,
 	}); registerErr != nil {
 		return nil, nil, nil, nil, registerErr
 	}
