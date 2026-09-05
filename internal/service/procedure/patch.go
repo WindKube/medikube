@@ -22,6 +22,7 @@ type Patch struct {
 
 	Practitioner *string
 	Facility     *string
+	Condition    *string
 
 	Notes *string
 }
@@ -41,6 +42,7 @@ func (p Patch) applyTo(e clinical.Procedure) clinical.Procedure {
 	assign(&e.AnesthesiaNotes, p.AnesthesiaNotes)
 	assign(&e.PractitionerID, p.Practitioner)
 	assign(&e.FacilityID, p.Facility)
+	assign(&e.ConditionID, p.Condition)
 	assign(&e.Notes, p.Notes)
 
 	return e

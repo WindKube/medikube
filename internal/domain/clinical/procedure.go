@@ -8,8 +8,7 @@ import (
 	"medikube/internal/domain"
 )
 
-// Procedure is one procedure (FR-024, data-model §4.4). The condition
-// relation follows US1's conditions collection (see encounter.go's own note).
+// Procedure is one procedure (FR-024, data-model §4.4).
 type Procedure struct {
 	ID        string
 	PatientID string
@@ -29,6 +28,7 @@ type Procedure struct {
 
 	PractitionerID string
 	FacilityID     string
+	ConditionID    string
 
 	Notes string
 

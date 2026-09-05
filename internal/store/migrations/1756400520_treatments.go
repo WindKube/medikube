@@ -48,9 +48,10 @@ func init() {
 	register(treatmentsUp, treatmentsDown)
 }
 
-// treatmentsUp does not declare `condition` (see encounters.go's own note) or
-// `lab_results` (phase 004's own migration). `encounters` and `equipment` are
-// both wired: both target collections are this story's own.
+// treatmentsUp does not declare `condition` (see encounters.go's own note on
+// 1756400530_care_conditions.go) or `lab_results` (phase 004's own
+// migration). `encounters` and `equipment` are both wired: both target
+// collections are this story's own.
 func treatmentsUp(app core.App) error {
 	patients, err := app.FindCollectionByNameOrId(patientsCollection)
 	if err != nil {

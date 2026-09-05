@@ -32,6 +32,7 @@ func Encounters() []clinical.Encounter {
 			VisitType: clinical.VisitTypeOffice, Priority: clinical.VisitPriorityRoutine,
 			Assessment: "Blood pressure well controlled", Plan: "Continue current medication",
 			FollowUp: "Review in six months", DurationMin: 20,
+			ConditionID: ResolvedConditionID,
 		},
 		{
 			ID: "mkencamara00003", PatientID: accountAPatientSelfID,
@@ -113,7 +114,6 @@ func Treatments() []clinical.Treatment {
 
 const (
 	columnReason          = "reason"
-	columnOccurredOn      = "occurred_on"
 	columnVisitType       = "visit_type"
 	columnPriority        = "priority"
 	columnAssessment      = "assessment"
@@ -128,6 +128,7 @@ const (
 	columnAnesthesia      = "anesthesia"
 	columnAnesthesiaNotes = "anesthesia_notes"
 	columnExpectedOutcome = "expected_outcome"
+	columnCondition       = "condition"
 )
 
 // Named after the collections they relate to, per data-model §4.5 (FR-028),
@@ -148,7 +149,7 @@ func applyEncounters(app core.App) error {
 	if err := requireColumns(collection,
 		columnPatient, columnReason, columnOccurredOn, columnVisitType, columnPriority,
 		columnAssessment, columnPlan, columnFollowUp, columnDurationMin,
-		columnPractitioner, columnFacility, columnNotes,
+		columnPractitioner, columnFacility, columnCondition, columnNotes,
 	); err != nil {
 		return err
 	}
@@ -174,6 +175,7 @@ func applyEncounters(app core.App) error {
 		record.Set(columnDurationMin, encounter.DurationMin)
 		record.Set(columnPractitioner, encounter.PractitionerID)
 		record.Set(columnFacility, encounter.FacilityID)
+		record.Set(columnCondition, encounter.ConditionID)
 		record.Set(columnNotes, encounter.Notes)
 
 		if err := app.Save(record); err != nil {
@@ -200,7 +202,7 @@ func applyProcedures(app core.App) error {
 	if err := requireColumns(collection,
 		columnPatient, columnName, columnType, columnCode, columnDescription, columnOccurredOn,
 		columnStatus, columnOutcome, columnSetting, columnComplications, columnDurationMin,
-		columnAnesthesia, columnAnesthesiaNotes, columnPractitioner, columnFacility, columnNotes,
+		columnAnesthesia, columnAnesthesiaNotes, columnPractitioner, columnFacility, columnCondition, columnNotes,
 	); err != nil {
 		return err
 	}
@@ -230,6 +232,7 @@ func applyProcedures(app core.App) error {
 		record.Set(columnAnesthesiaNotes, procedure.AnesthesiaNotes)
 		record.Set(columnPractitioner, procedure.PractitionerID)
 		record.Set(columnFacility, procedure.FacilityID)
+		record.Set(columnCondition, procedure.ConditionID)
 		record.Set(columnNotes, procedure.Notes)
 
 		if err := app.Save(record); err != nil {
@@ -256,7 +259,7 @@ func applyTreatments(app core.App) error {
 	if err := requireColumns(collection,
 		columnPatient, columnName, columnType, columnSetting, columnDescription,
 		columnStartedOn, columnEndedOn, columnFrequency, columnDosage, columnExpectedOutcome,
-		columnStatus, columnPractitioner, columnFacility, columnEncounters, columnEquipment, columnNotes,
+		columnStatus, columnPractitioner, columnFacility, columnCondition, columnEncounters, columnEquipment, columnNotes,
 	); err != nil {
 		return err
 	}
@@ -284,6 +287,7 @@ func applyTreatments(app core.App) error {
 		record.Set(columnStatus, string(treatment.Status))
 		record.Set(columnPractitioner, treatment.PractitionerID)
 		record.Set(columnFacility, treatment.FacilityID)
+		record.Set(columnCondition, treatment.ConditionID)
 		record.Set(columnEncounters, treatment.Encounters)
 		record.Set(columnEquipment, treatment.Equipment)
 		record.Set(columnNotes, treatment.Notes)

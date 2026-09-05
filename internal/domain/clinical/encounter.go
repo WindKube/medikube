@@ -9,10 +9,6 @@ import (
 )
 
 // Encounter is one visit (FR-022, data-model §4.3).
-//
-// It carries no relation to a condition yet: US1's conditions collection has
-// not merged onto this branch. The field, its column and its back-relation
-// follow in a dedicated commit once it has (see tasks.md T061/T075/T078).
 type Encounter struct {
 	ID        string
 	PatientID string
@@ -28,6 +24,7 @@ type Encounter struct {
 
 	PractitionerID string
 	FacilityID     string
+	ConditionID    string
 
 	Notes string
 
@@ -50,8 +47,8 @@ const (
 
 // Validate reports every offending field at once, in data-model §4.3's column
 // order (FR-022's "assessment and plan are never mapped to or from a
-// diagnosed condition" is satisfied by shape: this struct has no condition
-// field to conflate them with).
+// diagnosed condition" is satisfied by shape: ConditionID is a plain
+// reference, never read from or written into Assessment or Plan).
 func (e Encounter) Validate() error {
 	var invalid domain.ValidationError
 

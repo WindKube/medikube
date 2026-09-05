@@ -19,6 +19,7 @@ type Patch struct {
 
 	Practitioner *string
 	Facility     *string
+	Condition    *string
 
 	// Encounters and Equipment replace the whole set when supplied (FR-056);
 	// nil leaves the stored set alone.
@@ -41,6 +42,7 @@ func (p Patch) applyTo(e clinical.Treatment) clinical.Treatment {
 	assign(&e.Status, p.Status)
 	assign(&e.PractitionerID, p.Practitioner)
 	assign(&e.FacilityID, p.Facility)
+	assign(&e.ConditionID, p.Condition)
 	assign(&e.Notes, p.Notes)
 
 	if p.Encounters != nil {

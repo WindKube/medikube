@@ -23,6 +23,7 @@ const (
 	EncounterMemberDurationMin  = "duration_minutes"
 	EncounterMemberPractitioner = "practitioner"
 	EncounterMemberFacility     = "facility"
+	EncounterMemberCondition    = "condition"
 	EncounterMemberNotes        = "notes"
 )
 
@@ -30,7 +31,7 @@ var encounterMembers = []string{
 	EncounterMemberReason, EncounterMemberOccurredOn, EncounterMemberVisitType,
 	EncounterMemberPriority, EncounterMemberAssessment, EncounterMemberPlan,
 	EncounterMemberFollowUp, EncounterMemberDurationMin,
-	EncounterMemberPractitioner, EncounterMemberFacility, EncounterMemberNotes,
+	EncounterMemberPractitioner, EncounterMemberFacility, EncounterMemberCondition, EncounterMemberNotes,
 }
 
 // EncounterSummary is what the list operations return.
@@ -60,6 +61,7 @@ type Encounter struct {
 
 	Practitioner string `json:"practitioner,omitempty"`
 	Facility     string `json:"facility,omitempty"`
+	Condition    string `json:"condition,omitempty"`
 
 	Notes     string `json:"notes,omitempty"`
 	CreatedAt string `json:"created_at"`
@@ -79,6 +81,7 @@ type EncounterCreate struct {
 
 	Practitioner *string `json:"practitioner,omitempty"`
 	Facility     *string `json:"facility,omitempty"`
+	Condition    *string `json:"condition,omitempty"`
 }
 
 type EncounterPatch struct {
@@ -94,6 +97,7 @@ type EncounterPatch struct {
 
 	Practitioner *string `json:"practitioner,omitempty"`
 	Facility     *string `json:"facility,omitempty"`
+	Condition    *string `json:"condition,omitempty"`
 }
 
 type EncounterCodec struct{}
@@ -147,6 +151,7 @@ func (c EncounterCodec) Detail(e clinical.Encounter) any {
 		DurationMin:      e.DurationMin,
 		Practitioner:     e.PractitionerID,
 		Facility:         e.FacilityID,
+		Condition:        e.ConditionID,
 		Notes:            e.Notes,
 		CreatedAt:        wireInstant(e.CreatedAt),
 	}
@@ -179,6 +184,7 @@ func (EncounterCodec) Draft(body any) (clinical.Encounter, error) {
 		Notes:          create.Notes,
 		PractitionerID: deref(create.Practitioner),
 		FacilityID:     deref(create.Facility),
+		ConditionID:    deref(create.Condition),
 	}, nil
 }
 
@@ -202,6 +208,7 @@ func (EncounterCodec) Patch(body any) (encounter.Patch, error) {
 		Notes:        incoming.Notes,
 		Practitioner: incoming.Practitioner,
 		Facility:     incoming.Facility,
+		Condition:    incoming.Condition,
 	}
 
 	if err := orderedEncounterRefusal(&invalid); err != nil {

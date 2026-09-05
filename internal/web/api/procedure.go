@@ -27,6 +27,7 @@ const (
 	ProcedureMemberAnesthesiaNotes = "anesthesia_notes"
 	ProcedureMemberPractitioner    = "practitioner"
 	ProcedureMemberFacility        = "facility"
+	ProcedureMemberCondition       = "condition"
 	ProcedureMemberNotes           = "notes"
 )
 
@@ -34,7 +35,8 @@ var procedureMembers = []string{
 	ProcedureMemberName, ProcedureMemberType, ProcedureMemberCode, ProcedureMemberDescription,
 	ProcedureMemberOccurredOn, ProcedureMemberStatus, ProcedureMemberOutcome, ProcedureMemberSetting,
 	ProcedureMemberComplications, ProcedureMemberDurationMin, ProcedureMemberAnesthesia,
-	ProcedureMemberAnesthesiaNotes, ProcedureMemberPractitioner, ProcedureMemberFacility, ProcedureMemberNotes,
+	ProcedureMemberAnesthesiaNotes, ProcedureMemberPractitioner, ProcedureMemberFacility, ProcedureMemberCondition,
+	ProcedureMemberNotes,
 }
 
 type ProcedureSummary struct {
@@ -64,6 +66,7 @@ type Procedure struct {
 
 	Practitioner string `json:"practitioner,omitempty"`
 	Facility     string `json:"facility,omitempty"`
+	Condition    string `json:"condition,omitempty"`
 
 	Notes     string `json:"notes,omitempty"`
 	CreatedAt string `json:"created_at"`
@@ -87,6 +90,7 @@ type ProcedureCreate struct {
 
 	Practitioner *string `json:"practitioner,omitempty"`
 	Facility     *string `json:"facility,omitempty"`
+	Condition    *string `json:"condition,omitempty"`
 }
 
 type ProcedurePatch struct {
@@ -106,6 +110,7 @@ type ProcedurePatch struct {
 
 	Practitioner *string `json:"practitioner,omitempty"`
 	Facility     *string `json:"facility,omitempty"`
+	Condition    *string `json:"condition,omitempty"`
 }
 
 type ProcedureCodec struct{}
@@ -172,6 +177,7 @@ func (c ProcedureCodec) Detail(p clinical.Procedure) any {
 		AnesthesiaNotes:  p.AnesthesiaNotes,
 		Practitioner:     p.PractitionerID,
 		Facility:         p.FacilityID,
+		Condition:        p.ConditionID,
 		Notes:            p.Notes,
 		CreatedAt:        wireInstant(p.CreatedAt),
 	}
@@ -208,6 +214,7 @@ func (ProcedureCodec) Draft(body any) (clinical.Procedure, error) {
 		Notes:           create.Notes,
 		PractitionerID:  deref(create.Practitioner),
 		FacilityID:      deref(create.Facility),
+		ConditionID:     deref(create.Condition),
 	}, nil
 }
 
@@ -235,6 +242,7 @@ func (ProcedureCodec) Patch(body any) (procedure.Patch, error) {
 		Notes:           incoming.Notes,
 		Practitioner:    incoming.Practitioner,
 		Facility:        incoming.Facility,
+		Condition:       incoming.Condition,
 	}
 
 	if err := orderedProcedureRefusal(&invalid); err != nil {

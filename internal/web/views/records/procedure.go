@@ -36,6 +36,7 @@ type ProcedureView struct {
 	AnesthesiaNotes string
 	Practitioner    string
 	Facility        string
+	Condition       string
 	Notes           string
 
 	Created     Timestamp
@@ -68,6 +69,7 @@ func NewProcedureView(p clinical.Procedure, links ProcedureLinks) ProcedureView 
 		AnesthesiaNotes: p.AnesthesiaNotes,
 		Practitioner:    p.PractitionerID,
 		Facility:        p.FacilityID,
+		Condition:       p.ConditionID,
 		Notes:           p.Notes,
 		Created:         NewTimestamp(p.CreatedAt),
 		LastChanged:     NewTimestamp(p.UpdatedAt),
@@ -91,6 +93,7 @@ func (p ProcedureView) Entries() []DetailEntry {
 		{Field: FieldAnesthesiaNote, Value: p.AnesthesiaNotes, Multiline: true},
 		{Field: FieldPractitioner, Value: p.Practitioner},
 		{Field: FieldFacility, Value: p.Facility},
+		{Field: FieldCondition, Value: p.Condition},
 		{Field: FieldNotes, Value: p.Notes, Multiline: true},
 		{Field: FieldCreated, Value: p.Created.Human, Datetime: p.Created.Machine},
 		{Field: FieldLastChanged, Value: p.LastChanged.Human, Datetime: p.LastChanged.Machine},

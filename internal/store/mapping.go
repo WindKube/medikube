@@ -332,9 +332,8 @@ func MedicationToRecord(record *core.Record, medication clinical.Medication) err
 	return nil
 }
 
-// data-model §4.3's encounter columns, less `condition` and `lab_results`
-// (both follow once their target collections exist — see the migration's own
-// note).
+// data-model §4.3's encounter columns, less `lab_results` (phase 004's own
+// migration).
 const (
 	encounterFieldPatient      = "patient"
 	encounterFieldReason       = "reason"
@@ -347,6 +346,7 @@ const (
 	encounterFieldDurationMin  = "duration_minutes"
 	encounterFieldPractitioner = "practitioner"
 	encounterFieldFacility     = "facility"
+	encounterFieldCondition    = "condition"
 	encounterFieldNotes        = "notes"
 )
 
@@ -375,6 +375,7 @@ func EncounterFromRecord(record *core.Record) (clinical.Encounter, error) {
 		DurationMin:    record.GetInt(encounterFieldDurationMin),
 		PractitionerID: record.GetString(encounterFieldPractitioner),
 		FacilityID:     record.GetString(encounterFieldFacility),
+		ConditionID:    record.GetString(encounterFieldCondition),
 		Notes:          record.GetString(encounterFieldNotes),
 		CreatedAt:      recordInstant(record, fieldCreated),
 		UpdatedAt:      recordInstant(record, fieldUpdated),
@@ -399,12 +400,13 @@ func EncounterToRecord(record *core.Record, e clinical.Encounter) error {
 	record.Set(encounterFieldDurationMin, e.DurationMin)
 	record.Set(encounterFieldPractitioner, e.PractitionerID)
 	record.Set(encounterFieldFacility, e.FacilityID)
+	record.Set(encounterFieldCondition, e.ConditionID)
 	record.Set(encounterFieldNotes, e.Notes)
 
 	return nil
 }
 
-// data-model §4.4's procedure columns, less `condition`.
+// data-model §4.4's procedure columns.
 const (
 	procedureFieldPatient         = "patient"
 	procedureFieldName            = "name"
@@ -421,6 +423,7 @@ const (
 	procedureFieldAnesthesiaNotes = "anesthesia_notes"
 	procedureFieldPractitioner    = "practitioner"
 	procedureFieldFacility        = "facility"
+	procedureFieldCondition       = "condition"
 	procedureFieldNotes           = "notes"
 )
 
@@ -451,6 +454,7 @@ func ProcedureFromRecord(record *core.Record) (clinical.Procedure, error) {
 		AnesthesiaNotes: record.GetString(procedureFieldAnesthesiaNotes),
 		PractitionerID:  record.GetString(procedureFieldPractitioner),
 		FacilityID:      record.GetString(procedureFieldFacility),
+		ConditionID:     record.GetString(procedureFieldCondition),
 		Notes:           record.GetString(procedureFieldNotes),
 		CreatedAt:       recordInstant(record, fieldCreated),
 		UpdatedAt:       recordInstant(record, fieldUpdated),
@@ -478,12 +482,14 @@ func ProcedureToRecord(record *core.Record, p clinical.Procedure) error {
 	record.Set(procedureFieldAnesthesiaNotes, p.AnesthesiaNotes)
 	record.Set(procedureFieldPractitioner, p.PractitionerID)
 	record.Set(procedureFieldFacility, p.FacilityID)
+	record.Set(procedureFieldCondition, p.ConditionID)
 	record.Set(procedureFieldNotes, p.Notes)
 
 	return nil
 }
 
-// data-model §4.5's treatment columns, less `condition` and `lab_results`.
+// data-model §4.5's treatment columns, less `lab_results` (phase 004's own
+// migration).
 const (
 	treatmentFieldPatient         = "patient"
 	treatmentFieldName            = "name"
@@ -498,6 +504,7 @@ const (
 	treatmentFieldStatus          = "status"
 	treatmentFieldPractitioner    = "practitioner"
 	treatmentFieldFacility        = "facility"
+	treatmentFieldCondition       = "condition"
 	treatmentFieldNotes           = "notes"
 )
 
@@ -538,6 +545,7 @@ func TreatmentFromRecord(record *core.Record) (clinical.Treatment, error) {
 		Status:          clinical.TherapyStatus(record.GetString(treatmentFieldStatus)),
 		PractitionerID:  record.GetString(treatmentFieldPractitioner),
 		FacilityID:      record.GetString(treatmentFieldFacility),
+		ConditionID:     record.GetString(treatmentFieldCondition),
 		Encounters:      record.GetStringSlice(treatmentFieldEncounters),
 		Equipment:       record.GetStringSlice(treatmentFieldEquipment),
 		Notes:           record.GetString(treatmentFieldNotes),
@@ -565,6 +573,7 @@ func TreatmentToRecord(record *core.Record, t clinical.Treatment) error {
 	record.Set(treatmentFieldStatus, string(t.Status))
 	record.Set(treatmentFieldPractitioner, t.PractitionerID)
 	record.Set(treatmentFieldFacility, t.FacilityID)
+	record.Set(treatmentFieldCondition, t.ConditionID)
 	record.Set(treatmentFieldEncounters, t.Encounters)
 	record.Set(treatmentFieldEquipment, t.Equipment)
 	record.Set(treatmentFieldNotes, t.Notes)

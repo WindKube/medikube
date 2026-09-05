@@ -14,7 +14,7 @@ const (
 var encounterFields = []string{
 	FieldReason, FieldOccurredOn, FieldVisitType, FieldPriority,
 	FieldAssessment, FieldPlan, FieldFollowUp, FieldDurationMin,
-	FieldPractitioner, FieldFacility, FieldNotes,
+	FieldPractitioner, FieldFacility, FieldCondition, FieldNotes,
 }
 
 func EncounterFields() []string { return append([]string(nil), encounterFields...) }
@@ -43,6 +43,7 @@ type EncounterView struct {
 	DurationMin  int
 	Practitioner string
 	Facility     string
+	Condition    string
 	Notes        string
 
 	Created     Timestamp
@@ -68,6 +69,7 @@ func NewEncounterView(e clinical.Encounter, links EncounterLinks) EncounterView 
 		DurationMin:  e.DurationMin,
 		Practitioner: e.PractitionerID,
 		Facility:     e.FacilityID,
+		Condition:    e.ConditionID,
 		Notes:        e.Notes,
 		Created:      NewTimestamp(e.CreatedAt),
 		LastChanged:  NewTimestamp(e.UpdatedAt),
@@ -89,6 +91,7 @@ func (e EncounterView) Entries() []DetailEntry {
 		{Field: FieldDurationMin, Value: durationString(e.DurationMin)},
 		{Field: FieldPractitioner, Value: e.Practitioner},
 		{Field: FieldFacility, Value: e.Facility},
+		{Field: FieldCondition, Value: e.Condition},
 		{Field: FieldNotes, Value: e.Notes, Multiline: true},
 		{Field: FieldCreated, Value: e.Created.Human, Datetime: e.Created.Machine},
 		{Field: FieldLastChanged, Value: e.LastChanged.Human, Datetime: e.LastChanged.Machine},

@@ -25,6 +25,7 @@ const (
 	TreatmentMemberStatus          = "status"
 	TreatmentMemberPractitioner    = "practitioner"
 	TreatmentMemberFacility        = "facility"
+	TreatmentMemberCondition       = "condition"
 	TreatmentMemberNotes           = "notes"
 )
 
@@ -39,7 +40,8 @@ var treatmentMembers = []string{
 	TreatmentMemberName, TreatmentMemberType, TreatmentMemberSetting, TreatmentMemberDescription,
 	TreatmentMemberStartedOn, TreatmentMemberEndedOn, TreatmentMemberFrequency, TreatmentMemberDosage,
 	TreatmentMemberExpectedOutcome, TreatmentMemberStatus, TreatmentMemberPractitioner,
-	TreatmentMemberFacility, TreatmentMemberEncounters, TreatmentMemberEquipment, TreatmentMemberNotes,
+	TreatmentMemberFacility, TreatmentMemberCondition, TreatmentMemberEncounters, TreatmentMemberEquipment,
+	TreatmentMemberNotes,
 }
 
 type TreatmentSummary struct {
@@ -67,6 +69,7 @@ type Treatment struct {
 
 	Practitioner string   `json:"practitioner,omitempty"`
 	Facility     string   `json:"facility,omitempty"`
+	Condition    string   `json:"condition,omitempty"`
 	Encounters   []string `json:"encounters"`
 	Equipment    []string `json:"equipment"`
 
@@ -90,6 +93,7 @@ type TreatmentCreate struct {
 
 	Practitioner *string  `json:"practitioner,omitempty"`
 	Facility     *string  `json:"facility,omitempty"`
+	Condition    *string  `json:"condition,omitempty"`
 	Encounters   []string `json:"encounters,omitempty"`
 	Equipment    []string `json:"equipment,omitempty"`
 }
@@ -109,6 +113,7 @@ type TreatmentPatch struct {
 
 	Practitioner *string   `json:"practitioner,omitempty"`
 	Facility     *string   `json:"facility,omitempty"`
+	Condition    *string   `json:"condition,omitempty"`
 	Encounters   *[]string `json:"encounters,omitempty"`
 	Equipment    *[]string `json:"equipment,omitempty"`
 }
@@ -166,6 +171,7 @@ func (c TreatmentCodec) Detail(t clinical.Treatment) any {
 		ExpectedOutcome:  t.ExpectedOutcome,
 		Practitioner:     t.PractitionerID,
 		Facility:         t.FacilityID,
+		Condition:        t.ConditionID,
 		Encounters:       nonNil(t.Encounters),
 		Equipment:        nonNil(t.Equipment),
 		Notes:            t.Notes,
@@ -203,6 +209,7 @@ func (TreatmentCodec) Draft(body any) (clinical.Treatment, error) {
 		Notes:           create.Notes,
 		PractitionerID:  deref(create.Practitioner),
 		FacilityID:      deref(create.Facility),
+		ConditionID:     deref(create.Condition),
 		Encounters:      create.Encounters,
 		Equipment:       create.Equipment,
 	}, nil
@@ -230,6 +237,7 @@ func (TreatmentCodec) Patch(body any) (treatment.Patch, error) {
 		Notes:           incoming.Notes,
 		Practitioner:    incoming.Practitioner,
 		Facility:        incoming.Facility,
+		Condition:       incoming.Condition,
 		Encounters:      incoming.Encounters,
 		Equipment:       incoming.Equipment,
 	}

@@ -35,6 +35,7 @@ type TreatmentView struct {
 	StatusVal       string
 	Practitioner    string
 	Facility        string
+	Condition       string
 	Encounters      []string
 	Equipment       []string
 	Notes           string
@@ -64,6 +65,7 @@ func NewTreatmentView(t clinical.Treatment, links TreatmentLinks) TreatmentView 
 		StatusVal:       string(t.Status),
 		Practitioner:    t.PractitionerID,
 		Facility:        t.FacilityID,
+		Condition:       t.ConditionID,
 		Encounters:      t.Encounters,
 		Equipment:       t.Equipment,
 		Notes:           t.Notes,
@@ -87,6 +89,7 @@ func (t TreatmentView) Entries() []DetailEntry {
 		{Field: FieldStatus, Value: t.Status},
 		{Field: FieldPractitioner, Value: t.Practitioner},
 		{Field: FieldFacility, Value: t.Facility},
+		{Field: FieldCondition, Value: t.Condition},
 		{Field: FieldEncounters, Value: strings.Join(t.Encounters, ", ")},
 		{Field: FieldEquipment, Value: strings.Join(t.Equipment, ", ")},
 		{Field: FieldNotes, Value: t.Notes, Multiline: true},

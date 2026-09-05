@@ -43,7 +43,8 @@ func init() {
 	register(proceduresUp, proceduresDown)
 }
 
-// proceduresUp does not declare `condition` (see encounters.go's own note).
+// proceduresUp does not declare `condition` (see encounters.go's own note on
+// 1756400530_care_conditions.go).
 func proceduresUp(app core.App) error {
 	patients, err := app.FindCollectionByNameOrId(patientsCollection)
 	if err != nil {

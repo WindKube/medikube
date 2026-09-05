@@ -37,6 +37,8 @@ func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 	require.NoError(t, err)
 	patients, err := app.FindCollectionByNameOrId(patientsCollection)
 	require.NoError(t, err)
+	conditions, err := app.FindCollectionByNameOrId(kind.Condition.Collection())
+	require.NoError(t, err)
 
 	cases := []struct {
 		relation    relationRule
@@ -157,6 +159,21 @@ func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 			relation:    relationRule{collection: kind.Vitals.Collection(), field: vitalsFieldPractitioner, required: false, cascadeDelete: false},
 			target:      practitioners.Id,
 			consequence: "deleting a practitioner must unset a measurement set's reference to it, not delete the measurement set",
+		},
+		{
+			relation:    relationRule{collection: kind.Encounter.Collection(), field: careFieldCondition, required: false, cascadeDelete: false},
+			target:      conditions.Id,
+			consequence: "deleting a condition must unset an encounter's reference to it, not delete the encounter",
+		},
+		{
+			relation:    relationRule{collection: kind.Procedure.Collection(), field: careFieldCondition, required: false, cascadeDelete: false},
+			target:      conditions.Id,
+			consequence: "deleting a condition must unset a procedure's reference to it, not delete the procedure",
+		},
+		{
+			relation:    relationRule{collection: kind.Treatment.Collection(), field: careFieldCondition, required: false, cascadeDelete: false},
+			target:      conditions.Id,
+			consequence: "deleting a condition must unset a treatment's reference to it, not delete the treatment",
 		},
 	}
 

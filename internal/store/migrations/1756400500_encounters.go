@@ -37,9 +37,9 @@ func init() {
 	register(encountersUp, encountersDown)
 }
 
-// encountersUp does not declare `condition` (US1's conditions collection has
-// not merged onto this branch) or `lab_results` (phase 004's own migration).
-// Both follow in dedicated migrations once their target collections exist.
+// encountersUp does not declare `condition` (added by
+// 1756400530_care_conditions.go once US1's conditions collection exists) or
+// `lab_results` (phase 004's own migration).
 func encountersUp(app core.App) error {
 	patients, err := app.FindCollectionByNameOrId(patientsCollection)
 	if err != nil {

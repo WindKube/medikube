@@ -25,6 +25,7 @@ const (
 	FieldExpectedOutcome = "expected_outcome"
 	FieldPractitioner    = "practitioner"
 	FieldFacility        = "facility"
+	FieldCondition       = "condition"
 )
 
 // Named after the collections they relate to, per data-model §4.5 (FR-028),
@@ -58,6 +59,7 @@ func init() {
 		FieldExpectedOutcome: "Expected outcome",
 		FieldPractitioner:    "Practitioner",
 		FieldFacility:        "Place of care",
+		FieldCondition:       "Related condition",
 		FieldEncounters:      "Related visits",
 		FieldEquipment:       "Related devices",
 	} {

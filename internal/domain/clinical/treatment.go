@@ -8,10 +8,9 @@ import (
 	"medikube/internal/domain"
 )
 
-// Treatment is one course of treatment (FR-027, data-model §4.5). The
-// condition relation follows US1's conditions collection (see encounter.go's
-// own note); Encounters and Equipment are FR-028's two multi-relations and are
-// wired here since both targets are this story's own kinds.
+// Treatment is one course of treatment (FR-027, data-model §4.5). Encounters
+// and Equipment are FR-028's two multi-relations and are wired here since both
+// targets are this story's own kinds.
 type Treatment struct {
 	ID        string
 	PatientID string
@@ -29,6 +28,7 @@ type Treatment struct {
 
 	PractitionerID string
 	FacilityID     string
+	ConditionID    string
 
 	// Encounters and Equipment are FR-028's multi-relations: a set of ids, not
 	// an order. LinkSet is what compares two sets for FR-056's idempotent-add;
