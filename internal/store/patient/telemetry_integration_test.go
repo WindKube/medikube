@@ -75,7 +75,7 @@ func TestRepoCreateUpdateDeleteOpenTheirOwnSpans(t *testing.T) {
 
 	require.NoError(t, repo.Delete(t.Context(), ownerID, updated.ID, updated.Version))
 
-	var names []string
+	names := make([]string, 0, len(recorder.ended))
 	for _, span := range recorder.ended {
 		names = append(names, span.Name())
 	}

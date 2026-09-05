@@ -234,9 +234,9 @@ func (r *Repo) Update(ctx context.Context, patient person.Patient, expectedVersi
 	var updated person.Patient
 
 	write := func(txApp core.App) error {
-		record, err := r.owned(ctx, txApp, patient.OwnerID, patient.ID)
-		if err != nil {
-			return err
+		record, ownedErr := r.owned(ctx, txApp, patient.OwnerID, patient.ID)
+		if ownedErr != nil {
+			return ownedErr
 		}
 
 		if versionErr := expectVersion(record, patient.ID, expectedVersion); versionErr != nil {
@@ -301,9 +301,9 @@ func (r *Repo) Delete(ctx context.Context, ownerID, id, expectedVersion string) 
 	defer func() { end(err) }()
 
 	err = store.RunInTransaction(r.app, func(txApp core.App) error {
-		record, err := r.owned(ctx, txApp, ownerID, id)
-		if err != nil {
-			return err
+		record, ownedErr := r.owned(ctx, txApp, ownerID, id)
+		if ownedErr != nil {
+			return ownedErr
 		}
 
 		if versionErr := expectVersion(record, id, expectedVersion); versionErr != nil {
