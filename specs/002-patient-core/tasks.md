@@ -384,7 +384,7 @@ trail.
 - [x] T167 [P] Add this phase's three PocketBase-behaviour dependencies — `deleteRefRecords` unset semantics, the `thumbs_<filename>/` key layout, the single-transaction migration runner — to the PocketBase upgrade checklist in `docs/pocketbase-upgrade-checklist.md` (open risk R8)
 - [x] T168 [P] Update `CLAUDE.md` and the project README with the rules this phase establishes: patient scope is explicit, the person in view is never authorization, records are hard deleted, files are the only soft-deletable thing
 - [ ] T169 Write `specs/002-patient-core/traceability.md` mapping each of the 38 acceptance scenarios to its named test, **and each of the 56 functional requirements to the task ids that satisfy it, and each success criterion to its task or to a Phase Exit Criterion**, generated from `spec.md` and `tasks.md` rather than written by hand; fail the phase if any row is empty or if a success criterion is neither mapped nor marked `[outcome metric]` in `spec.md` (FR-054, SC-012, cross-artifact finding M7)
-- [ ] T170 Run [quickstart.md](./quickstart.md) end to end on a clean checkout and fix whatever it finds
+- [x] T170 Run [quickstart.md](./quickstart.md) end to end on a clean checkout and fix whatever it finds
 
 ---
 
