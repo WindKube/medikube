@@ -88,3 +88,23 @@ func checkLength(invalid *domain.ValidationError, field, label, value string, li
 		invalid.Addf(field, domain.CodeTooLong, "%s accepts at most %d characters", label, limit)
 	}
 }
+
+// requireText is checkLength plus the "required, trimmed" half phase 003's
+// kinds share with Medication.Name: a field of spaces is not a value, and the
+// length is measured on the trimmed text.
+func requireText(invalid *domain.ValidationError, field, label, value string, minLen, maxLen int) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		invalid.Add(field, domain.CodeRequired, label+" is required")
+
+		return
+	}
+
+	if utf8.RuneCountInString(trimmed) < minLen {
+		invalid.Addf(field, domain.CodeTooShort, "%s needs at least %d characters", label, minLen)
+
+		return
+	}
+
+	checkLength(invalid, field, label, trimmed, maxLen)
+}

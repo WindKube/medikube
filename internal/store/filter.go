@@ -367,6 +367,75 @@ func MedicationSchema() Schema {
 	)
 }
 
+// EncounterSchema is the encounter list's query surface.
+func EncounterSchema() Schema {
+	return NewSchema(kind.Encounter.Collection(),
+		Column{Name: encounterFieldPatient},
+		Column{Name: encounterFieldVisitType},
+		Column{Name: encounterFieldPriority},
+		Column{Name: encounterFieldOccurredOn, AbsentLast: true},
+		Column{Name: fieldCreated},
+		Column{Name: fieldUpdated},
+	)
+}
+
+// ProcedureSchema is the procedure list's query surface.
+func ProcedureSchema() Schema {
+	return NewSchema(kind.Procedure.Collection(),
+		Column{Name: procedureFieldPatient},
+		Column{
+			Name:       procedureFieldName,
+			Expr:       "LOWER(" + quoteColumn(procedureFieldName) + ")",
+			Searchable: true,
+			Value: func(record *core.Record) string {
+				return asciiLower(record.GetString(procedureFieldName))
+			},
+		},
+		Column{Name: procedureFieldStatus},
+		Column{Name: procedureFieldOccurredOn, AbsentLast: true},
+		Column{Name: fieldCreated},
+		Column{Name: fieldUpdated},
+	)
+}
+
+// TreatmentSchema is the treatment list's query surface.
+func TreatmentSchema() Schema {
+	return NewSchema(kind.Treatment.Collection(),
+		Column{Name: treatmentFieldPatient},
+		Column{
+			Name:       treatmentFieldName,
+			Expr:       "LOWER(" + quoteColumn(treatmentFieldName) + ")",
+			Searchable: true,
+			Value: func(record *core.Record) string {
+				return asciiLower(record.GetString(treatmentFieldName))
+			},
+		},
+		Column{Name: treatmentFieldStatus},
+		Column{Name: treatmentFieldStartedOn, AbsentLast: true},
+		Column{Name: fieldCreated},
+		Column{Name: fieldUpdated},
+	)
+}
+
+// The columns each of this story's three repositories name when it builds a
+// store.Query (mirrors MedicationPatient etc. above).
+const (
+	EncounterPatient    = encounterFieldPatient
+	EncounterVisitType  = encounterFieldVisitType
+	EncounterPriority   = encounterFieldPriority
+	EncounterOccurredOn = encounterFieldOccurredOn
+
+	ProcedurePatient    = procedureFieldPatient
+	ProcedureName       = procedureFieldName
+	ProcedureStatus     = procedureFieldStatus
+	ProcedureOccurredOn = procedureFieldOccurredOn
+
+	TreatmentPatient   = treatmentFieldPatient
+	TreatmentName      = treatmentFieldName
+	TreatmentStatus    = treatmentFieldStatus
+	TreatmentStartedOn = treatmentFieldStartedOn
+)
+
 // PatientsSchema is the patient list's query surface (research D-29): last
 // name, first name and id, matching web.PatientsSort's published ordering,
 // plus first and last name searchable for `?q=` (contracts/patients.md).
