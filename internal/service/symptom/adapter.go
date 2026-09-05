@@ -55,6 +55,8 @@ func (a *Adapter) List(ctx context.Context, actor access.Actor, query records.Qu
 		Severities: severities(query.Filters[FilterSeverity]),
 		Statuses:   statuses(query.Filters[FilterStatus]),
 		IsChronic:  isChronic(query.Filters[FilterIsChronic]),
+		Tags:       query.Filters[records.FilterTags],
+		Match:      matchOf(query.Filters[records.FilterMatch]),
 		Sort:       query.Sort,
 		Limit:      query.Limit,
 		Cursor:     query.Cursor,
@@ -173,6 +175,16 @@ func isChronic(values []string) *bool {
 	return &v
 }
 
+// matchOf reads the resolved `?match=` filter value, defaulting to "any" the
+// same way records.TagFilters' FilterSpec.Default does.
+func matchOf(values []string) string {
+	if len(values) == 0 {
+		return records.MatchAny
+	}
+
+	return values[0]
+}
+
 // StreamFilter admits every change that names a record and a patient.
 type StreamFilter struct{}
 
@@ -217,6 +229,10 @@ func Register(registry *records.Registry, wiring Wiring) error {
 		FilterSeverity:  {Name: FilterSeverity, Kind: records.FilterEnum, Allowed: severityStrings()},
 		FilterStatus:    {Name: FilterStatus, Kind: records.FilterEnum, Allowed: statusStrings()},
 		FilterIsChronic: {Name: FilterIsChronic, Kind: records.FilterEnum, Allowed: []string{"true", "false"}},
+	}
+
+	for name, spec := range records.TagFilters() {
+		schema.Filters[name] = spec
 	}
 
 	return registry.Register(records.Registration{

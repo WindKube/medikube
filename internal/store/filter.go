@@ -362,6 +362,10 @@ func MedicationSchema() Schema {
 		Column{Name: medicationFieldStatus},
 		Column{Name: medicationFieldStartedOn, AbsentLast: true},
 		Column{Name: medicationFieldEndedOn},
+		// FilterOnly: `?tags=` narrows, but a MaxSelect:0 relation's JSON
+		// column is never an ordering (research D-05's cursor-disclosure
+		// rule).
+		Column{Name: medicationFieldTags, FilterOnly: true},
 		Column{Name: fieldCreated},
 		Column{Name: fieldUpdated},
 	)
@@ -527,6 +531,7 @@ const (
 	MedicationName            = medicationFieldName
 	MedicationAlternativeName = medicationFieldAlternativeName
 	MedicationStatus          = medicationFieldStatus
+	MedicationTags            = medicationFieldTags
 )
 
 // Build turns the query into SQL.

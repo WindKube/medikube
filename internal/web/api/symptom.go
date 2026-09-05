@@ -64,6 +64,7 @@ type Symptom struct {
 	Impact          string   `json:"impact,omitempty"`
 	ResolvedAt      *string  `json:"resolved_at"`
 	IsChronic       bool     `json:"is_chronic"`
+	Tags            []string `json:"tags,omitempty"`
 }
 
 type SymptomCreate struct {
@@ -81,7 +82,12 @@ type SymptomCreate struct {
 	ResolvedAt      *string  `json:"resolved_at,omitempty"`
 	IsChronic       bool     `json:"is_chronic,omitempty"`
 	Status          string   `json:"status,omitempty"`
+	Tags            []string `json:"tags,omitempty"`
 }
+
+// TagIDs implements records.Taggable: a create always supplies its tags,
+// even when that is none.
+func (c *SymptomCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
 type SymptomPatch struct {
 	Name       *string `json:"name,omitempty"`
@@ -101,6 +107,20 @@ type SymptomPatch struct {
 
 	IsChronic *bool   `json:"is_chronic,omitempty"`
 	Status    *string `json:"status,omitempty"`
+
+	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
+	// applied tags alone, a non-nil one — including an empty array —
+	// replaces the whole set.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// TagIDs implements records.Taggable.
+func (p *SymptomPatch) TagIDs() (ids []string, supplied bool) {
+	if p.Tags == nil {
+		return nil, false
+	}
+
+	return *p.Tags, true
 }
 
 // SymptomCodec is the DTO boundary for symptom episodes.
@@ -165,6 +185,7 @@ func (c SymptomCodec) Detail(s clinical.Symptom) any {
 		Impact:          string(s.Impact),
 		ResolvedAt:      wireClinicalInstantPtr(s.ResolvedAt),
 		IsChronic:       s.IsChronic,
+		Tags:            s.Tags,
 	}
 }
 
@@ -198,6 +219,7 @@ func (SymptomCodec) Draft(body any) (clinical.Symptom, error) {
 		ResolvedAt:      resolvedAt,
 		IsChronic:       create.IsChronic,
 		Status:          clinical.ConditionStatus(create.Status),
+		Tags:            create.Tags,
 	}, nil
 }
 
@@ -223,6 +245,7 @@ func (SymptomCodec) Patch(body any) (symptom.Patch, error) {
 		ResolvedAt:      readOptionalClinicalInstantPtr(&invalid, MemberSymptomResolvedAt, incoming.ResolvedAt),
 		IsChronic:       incoming.IsChronic,
 		Status:          convert[clinical.ConditionStatus](incoming.Status),
+		Tags:            incoming.Tags,
 	}
 
 	if err := orderedSymptomRefusal(&invalid); err != nil {

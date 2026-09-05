@@ -32,6 +32,7 @@ const (
 	fieldCoverage      = "coverage"
 	fieldContact       = "contact"
 	fieldNotes         = "notes"
+	fieldTags          = "tags"
 	fieldCreated       = "created"
 	fieldUpdated       = "updated"
 )
@@ -63,6 +64,10 @@ func Schema() store.Schema {
 		store.Column{Name: fieldIsPrimary, FilterOnly: true},
 		store.Column{Name: fieldEffectiveOn, AbsentLast: true},
 		store.Column{Name: fieldExpiresOn},
+		// FilterOnly: `?tags=` narrows, but a MaxSelect:0 relation's JSON
+		// column is never an ordering (research D-05's cursor-disclosure
+		// rule).
+		store.Column{Name: fieldTags, FilterOnly: true},
 		store.Column{Name: fieldCreated},
 		store.Column{Name: fieldUpdated},
 	)
@@ -151,6 +156,7 @@ func FromRecord(record *core.Record) (clinical.Insurance, error) {
 		Coverage:      coverage,
 		Contact:       readContact(record),
 		Notes:         record.GetString(fieldNotes),
+		Tags:          record.GetStringSlice(fieldTags),
 		CreatedAt:     recordInstant(record, fieldCreated),
 		UpdatedAt:     recordInstant(record, fieldUpdated),
 		Version:       store.Version(record),
@@ -183,6 +189,7 @@ func ToRecord(record *core.Record, entity clinical.Insurance) error {
 
 	writeContact(record, entity.Contact)
 	record.Set(fieldNotes, entity.Notes)
+	record.Set(fieldTags, entity.Tags)
 
 	return nil
 }

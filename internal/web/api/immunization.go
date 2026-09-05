@@ -72,32 +72,32 @@ type Immunization struct {
 	Practitioner string `json:"practitioner,omitempty"`
 	Facility     string `json:"facility,omitempty"`
 
-	TradeName    string  `json:"trade_name,omitempty"`
-	LotNumber    string  `json:"lot_number,omitempty"`
-	Manufacturer string  `json:"manufacturer,omitempty"`
-	Site         string  `json:"site,omitempty"`
-	Route        string  `json:"route,omitempty"`
-	ExpiresOn    *string `json:"expires_on"`
+	TradeName    string   `json:"trade_name,omitempty"`
+	LotNumber    string   `json:"lot_number,omitempty"`
+	Manufacturer string   `json:"manufacturer,omitempty"`
+	Site         string   `json:"site,omitempty"`
+	Route        string   `json:"route,omitempty"`
+	ExpiresOn    *string  `json:"expires_on"`
 	Tags         []string `json:"tags,omitempty"`
-	CreatedAt    string  `json:"created_at"`
+	CreatedAt    string   `json:"created_at"`
 }
 
 // ImmunizationCreate is the create body. FR-039: DoseNumber is a plain *int —
 // absent means "not recorded", and a supplied zero or negative is refused by
 // clinical.Immunization.Validate, not by this decoder.
 type ImmunizationCreate struct {
-	Patient        string  `json:"patient"`
-	VaccineName    string  `json:"vaccine_name"`
-	TradeName      string  `json:"trade_name,omitempty"`
-	AdministeredOn *string `json:"administered_on,omitempty"`
-	DoseNumber     *int    `json:"dose_number,omitempty"`
-	LotNumber      string  `json:"lot_number,omitempty"`
-	Manufacturer   string  `json:"manufacturer,omitempty"`
-	Site           string  `json:"site,omitempty"`
-	Route          string  `json:"route,omitempty"`
-	ExpiresOn      *string `json:"expires_on,omitempty"`
-	Practitioner   *string `json:"practitioner,omitempty"`
-	Facility       *string `json:"facility,omitempty"`
+	Patient        string   `json:"patient"`
+	VaccineName    string   `json:"vaccine_name"`
+	TradeName      string   `json:"trade_name,omitempty"`
+	AdministeredOn *string  `json:"administered_on,omitempty"`
+	DoseNumber     *int     `json:"dose_number,omitempty"`
+	LotNumber      string   `json:"lot_number,omitempty"`
+	Manufacturer   string   `json:"manufacturer,omitempty"`
+	Site           string   `json:"site,omitempty"`
+	Route          string   `json:"route,omitempty"`
+	ExpiresOn      *string  `json:"expires_on,omitempty"`
+	Practitioner   *string  `json:"practitioner,omitempty"`
+	Facility       *string  `json:"facility,omitempty"`
 	Tags           []string `json:"tags,omitempty"`
 }
 

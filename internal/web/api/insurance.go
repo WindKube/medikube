@@ -117,8 +117,9 @@ type Insurance struct {
 	Coverage *CoverageDTO `json:"coverage,omitempty"`
 	Contact  *ContactDTO  `json:"contact,omitempty"`
 
-	Notes     string `json:"notes,omitempty"`
-	CreatedAt string `json:"created_at"`
+	Notes     string   `json:"notes,omitempty"`
+	Tags      []string `json:"tags,omitempty"`
+	CreatedAt string   `json:"created_at"`
 
 	// Displaced is FR-045's result: set only on the write that caused a
 	// displacement, nil on every plain read.
@@ -147,8 +148,13 @@ type InsuranceCreate struct {
 	Coverage *CoverageDTO `json:"coverage,omitempty"`
 	Contact  *ContactDTO  `json:"contact,omitempty"`
 
-	Notes string `json:"notes,omitempty"`
+	Notes string   `json:"notes,omitempty"`
+	Tags  []string `json:"tags,omitempty"`
 }
+
+// TagIDs implements records.Taggable: a create always supplies its tags,
+// even when that is none.
+func (c *InsuranceCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
 // InsurancePatch is the partial update. Coverage and Contact replace the whole
 // nested object when supplied: FR-045's own transaction is what a partial
@@ -175,6 +181,20 @@ type InsurancePatch struct {
 	Contact  *ContactDTO  `json:"contact,omitempty"`
 
 	Notes *string `json:"notes,omitempty"`
+
+	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
+	// applied tags alone, a non-nil one — including an empty array —
+	// replaces the whole set.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// TagIDs implements records.Taggable.
+func (p *InsurancePatch) TagIDs() (ids []string, supplied bool) {
+	if p.Tags == nil {
+		return nil, false
+	}
+
+	return *p.Tags, true
 }
 
 // InsuranceCodec is the DTO boundary for insurance.
@@ -253,6 +273,7 @@ func (c InsuranceCodec) Detail(entity clinical.Insurance, displaced *insurance.D
 		Coverage:         wireCoverage(entity.Coverage),
 		Contact:          wireContact(entity.Contact),
 		Notes:            entity.Notes,
+		Tags:             entity.Tags,
 		CreatedAt:        wireInstant(entity.CreatedAt),
 		Displaced:        displacedDTO,
 	}
@@ -292,6 +313,7 @@ func (InsuranceCodec) Draft(body any) (clinical.Insurance, error) {
 		Coverage:      coverage,
 		Contact:       readContact(create.Contact),
 		Notes:         create.Notes,
+		Tags:          create.Tags,
 	}, nil
 }
 
@@ -318,6 +340,7 @@ func (InsuranceCodec) Patch(body any) (insurance.Patch, error) {
 		Status:        convert[clinical.InsuranceStatus](incoming.Status),
 		IsPrimary:     incoming.IsPrimary,
 		Notes:         incoming.Notes,
+		Tags:          incoming.Tags,
 	}
 
 	if incoming.Coverage != nil {

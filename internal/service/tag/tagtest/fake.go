@@ -43,9 +43,9 @@ func NewRepository() *Repository {
 }
 
 var (
-	_ svc.Repository    = (*Repository)(nil)
-	_ svc.Ownership     = (*Repository)(nil)
-	_ svc.UsageCounter  = (*Repository)(nil)
+	_ svc.Repository   = (*Repository)(nil)
+	_ svc.Ownership    = (*Repository)(nil)
+	_ svc.UsageCounter = (*Repository)(nil)
 )
 
 // SetUsage is the fake's own extra: a test sets what Counts answers for an

@@ -578,6 +578,7 @@ func TestTheQueryableColumnsAreExactlyTheOnesTheRequirementsName(t *testing.T) {
 		medicationFieldStatus,
 		medicationFieldStartedOn,
 		medicationFieldEndedOn,
+		medicationFieldTags,
 		fieldCreated,
 		fieldUpdated,
 	}, MedicationSchema().Columns())

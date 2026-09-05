@@ -39,6 +39,11 @@ type Patch struct {
 	// impossible by shape, and a field added here would put it back.
 	Practitioner *string
 	Pharmacy     *string
+
+	// Tags is data-model §0.8's universal field, replace-set (FR-064,
+	// FR-065): nil leaves the applied tags alone, non-nil (including empty)
+	// replaces the whole set.
+	Tags *[]string
 }
 
 // FieldPatient is the field a create's missing patient is reported against.
@@ -280,6 +285,10 @@ func (p Patch) applyTo(medication clinical.Medication) clinical.Medication {
 	assign(&medication.Notes, p.Notes)
 	assign(&medication.PractitionerID, p.Practitioner)
 	assign(&medication.PharmacyID, p.Pharmacy)
+
+	if p.Tags != nil {
+		medication.Tags = *p.Tags
+	}
 
 	return medication
 }

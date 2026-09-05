@@ -129,6 +129,7 @@ const (
 	medicationFieldStatus          = "status"
 	medicationFieldSideEffects     = "side_effects"
 	medicationFieldNotes           = "notes"
+	medicationFieldTags            = "tags"
 )
 
 // patientsCollection is phase 002's central entity (data-model §3). Published
@@ -296,6 +297,7 @@ func MedicationFromRecord(record *core.Record) (clinical.Medication, error) {
 		Status:          clinical.TherapyStatus(record.GetString(medicationFieldStatus)),
 		SideEffects:     record.GetString(medicationFieldSideEffects),
 		Notes:           record.GetString(medicationFieldNotes),
+		Tags:            record.GetStringSlice(medicationFieldTags),
 		CreatedAt:       recordInstant(record, fieldCreated),
 		UpdatedAt:       recordInstant(record, fieldUpdated),
 		Version:         Version(record),
@@ -328,6 +330,7 @@ func MedicationToRecord(record *core.Record, medication clinical.Medication) err
 	record.Set(medicationFieldStatus, string(medication.Status))
 	record.Set(medicationFieldSideEffects, medication.SideEffects)
 	record.Set(medicationFieldNotes, medication.Notes)
+	record.Set(medicationFieldTags, medication.Tags)
 
 	return nil
 }
@@ -718,7 +721,7 @@ func AssertMappedFields(app core.App) error {
 			medicationFieldType, medicationFieldDosage, medicationFieldFrequency,
 			medicationFieldRoute, medicationFieldIndication, medicationFieldStartedOn,
 			medicationFieldEndedOn, medicationFieldStatus, medicationFieldSideEffects,
-			medicationFieldNotes,
+			medicationFieldNotes, medicationFieldTags,
 		},
 		auditCollection: {
 			fieldID, fieldCreated, fieldUpdated,

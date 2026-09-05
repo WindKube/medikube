@@ -25,6 +25,14 @@ const (
 
 const ParamSort = "sort"
 
+// MatchAny and MatchAll are `?tags=&match=` (FR-067, research D-10),
+// mirroring internal/records.MatchAny/MatchAll: this package does not import
+// internal/records, so it carries its own copy of the two spellings.
+const (
+	MatchAny = "any"
+	MatchAll = "all"
+)
+
 // Sorts is the published ordering allowlist. The first entry is the default:
 // most recently occurred first, matching idx_symptoms_patient_at.
 func Sorts() []domain.SortKey {
@@ -46,10 +54,15 @@ type Query struct {
 	Severities []clinical.Severity
 	Statuses   []clinical.ConditionStatus
 	IsChronic  *bool
-	Sort       []domain.SortKey
-	Limit      int
-	Cursor     string
-	Count      bool
+
+	// Tags and Match are `?tags=a,b&match=any|all` (FR-067).
+	Tags  []string
+	Match string
+
+	Sort   []domain.SortKey
+	Limit  int
+	Cursor string
+	Count  bool
 }
 
 // Repository is the storage seam. List and Get both answer episodes with

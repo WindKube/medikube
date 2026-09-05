@@ -98,14 +98,15 @@ type Medication struct {
 	Practitioner string `json:"practitioner,omitempty"`
 	Pharmacy     string `json:"pharmacy,omitempty"`
 
-	AlternativeName string  `json:"alternative_name,omitempty"`
-	Type            string  `json:"type,omitempty"`
-	Route           string  `json:"route,omitempty"`
-	Indication      string  `json:"indication,omitempty"`
-	EndedOn         *string `json:"ended_on"`
-	SideEffects     string  `json:"side_effects,omitempty"`
-	Notes           string  `json:"notes,omitempty"`
-	CreatedAt       string  `json:"created_at"`
+	AlternativeName string   `json:"alternative_name,omitempty"`
+	Type            string   `json:"type,omitempty"`
+	Route           string   `json:"route,omitempty"`
+	Indication      string   `json:"indication,omitempty"`
+	EndedOn         *string  `json:"ended_on"`
+	SideEffects     string   `json:"side_effects,omitempty"`
+	Notes           string   `json:"notes,omitempty"`
+	Tags            []string `json:"tags,omitempty"`
+	CreatedAt       string   `json:"created_at"`
 }
 
 // MedicationCreate is the create body. It has no `owner`, no `id` and no
@@ -118,22 +119,27 @@ type Medication struct {
 // fallback to anybody's active patient. `Practitioner` and `Pharmacy` are
 // phase 002's optional attributions (US5).
 type MedicationCreate struct {
-	Patient         string  `json:"patient"`
-	Name            string  `json:"name"`
-	AlternativeName string  `json:"alternative_name,omitempty"`
-	Type            string  `json:"type,omitempty"`
-	Dosage          string  `json:"dosage,omitempty"`
-	Frequency       string  `json:"frequency,omitempty"`
-	Route           string  `json:"route,omitempty"`
-	Indication      string  `json:"indication,omitempty"`
-	StartedOn       *string `json:"started_on,omitempty"`
-	EndedOn         *string `json:"ended_on,omitempty"`
-	Status          string  `json:"status,omitempty"`
-	SideEffects     string  `json:"side_effects,omitempty"`
-	Notes           string  `json:"notes,omitempty"`
-	Practitioner    *string `json:"practitioner,omitempty"`
-	Pharmacy        *string `json:"pharmacy,omitempty"`
+	Patient         string   `json:"patient"`
+	Name            string   `json:"name"`
+	AlternativeName string   `json:"alternative_name,omitempty"`
+	Type            string   `json:"type,omitempty"`
+	Dosage          string   `json:"dosage,omitempty"`
+	Frequency       string   `json:"frequency,omitempty"`
+	Route           string   `json:"route,omitempty"`
+	Indication      string   `json:"indication,omitempty"`
+	StartedOn       *string  `json:"started_on,omitempty"`
+	EndedOn         *string  `json:"ended_on,omitempty"`
+	Status          string   `json:"status,omitempty"`
+	SideEffects     string   `json:"side_effects,omitempty"`
+	Notes           string   `json:"notes,omitempty"`
+	Practitioner    *string  `json:"practitioner,omitempty"`
+	Pharmacy        *string  `json:"pharmacy,omitempty"`
+	Tags            []string `json:"tags,omitempty"`
 }
+
+// TagIDs implements records.Taggable: a create always supplies its tags,
+// even when that is none.
+func (c *MedicationCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
 // MedicationPatch is the partial update. Only supplied members change.
 //
@@ -170,6 +176,20 @@ type MedicationPatch struct {
 	// is refused by DTO shape rather than a runtime check.
 	Practitioner *string `json:"practitioner,omitempty"`
 	Pharmacy     *string `json:"pharmacy,omitempty"`
+
+	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
+	// applied tags alone, a non-nil one — including an empty array —
+	// replaces the whole set.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// TagIDs implements records.Taggable.
+func (p *MedicationPatch) TagIDs() (ids []string, supplied bool) {
+	if p.Tags == nil {
+		return nil, false
+	}
+
+	return *p.Tags, true
 }
 
 // ErrWrongBodyType is a decoded body that is not the type this kind minted.
@@ -257,6 +277,7 @@ func (c MedicationCodec) Detail(m clinical.Medication) any {
 		EndedOn:           wireDate(m.EndedOn),
 		SideEffects:       m.SideEffects,
 		Notes:             m.Notes,
+		Tags:              m.Tags,
 		CreatedAt:         wireInstant(m.CreatedAt),
 	}
 }
@@ -298,6 +319,7 @@ func (MedicationCodec) Draft(body any) (clinical.Medication, error) {
 		Notes:           create.Notes,
 		PractitionerID:  deref(create.Practitioner),
 		PharmacyID:      deref(create.Pharmacy),
+		Tags:            create.Tags,
 	}, nil
 }
 
@@ -341,6 +363,7 @@ func (MedicationCodec) Patch(body any) (medication.Patch, error) {
 		Notes:           incoming.Notes,
 		Practitioner:    incoming.Practitioner,
 		Pharmacy:        incoming.Pharmacy,
+		Tags:            incoming.Tags,
 	}
 
 	if err := orderedRefusal(&invalid); err != nil {

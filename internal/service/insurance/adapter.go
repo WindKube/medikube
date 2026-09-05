@@ -60,6 +60,8 @@ func (a *Adapter) List(ctx context.Context, actor access.Actor, query records.Qu
 		Statuses:           statuses(query.Filters[FilterStatus]),
 		IsPrimary:          boolFilter(query.Filters[FilterIsPrimary]),
 		ExpiringWithinDays: withinDays(query.Filters[ParamExpiringWithin]),
+		Tags:               query.Filters[records.FilterTags],
+		Match:              matchOf(query.Filters[records.FilterMatch]),
 		Sort:               query.Sort,
 		Limit:              query.Limit,
 		Cursor:             query.Cursor,
@@ -196,6 +198,16 @@ func withinDays(values []string) *int {
 	return &days
 }
 
+// matchOf reads the resolved `?match=` filter value, defaulting to "any" the
+// same way records.TagFilters' FilterSpec.Default does.
+func matchOf(values []string) string {
+	if len(values) == 0 {
+		return records.MatchAny
+	}
+
+	return values[0]
+}
+
 // StreamFilter is which of this kind's changes may reach a live view.
 type StreamFilter struct{}
 
@@ -256,6 +268,10 @@ func Register(registry *records.Registry, wiring Wiring) error {
 			Kind:    records.FilterFreeform,
 			Default: strconv.Itoa(DefaultExpiringWithinDays),
 		},
+	}
+
+	for name, spec := range records.TagFilters() {
+		schema.Filters[name] = spec
 	}
 
 	return registry.Register(records.Registration{

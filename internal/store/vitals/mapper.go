@@ -29,6 +29,7 @@ const (
 	fieldPainScale      = "pain_scale"
 	fieldDevice         = "device"
 	fieldPractitioner   = "practitioner"
+	fieldTags           = "tags"
 	fieldCreated        = "created"
 	fieldUpdated        = "updated"
 )
@@ -63,6 +64,7 @@ func FromRecord(record *core.Record) (clinical.Vitals, error) {
 		Hba1cPct:           recordFloatPtr(record, fieldHba1c),
 		PainScale:          recordFloatPtr(record, fieldPainScale),
 		Device:             record.GetString(fieldDevice),
+		Tags:               record.GetStringSlice(fieldTags),
 		PractitionerID:     record.GetString(fieldPractitioner),
 		CreatedAt:          record.GetDateTime(fieldCreated).Time().UTC().Truncate(time.Millisecond),
 		UpdatedAt:          record.GetDateTime(fieldUpdated).Time().UTC().Truncate(time.Millisecond),
@@ -92,6 +94,7 @@ func ToRecord(record *core.Record, v clinical.Vitals) error {
 	setFloatPtr(record, fieldHba1c, v.Hba1cPct)
 	setFloatPtr(record, fieldPainScale, v.PainScale)
 	record.Set(fieldDevice, v.Device)
+	record.Set(fieldTags, v.Tags)
 	record.Set(fieldPractitioner, v.PractitionerID)
 
 	return nil

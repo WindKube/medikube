@@ -31,6 +31,14 @@ const FilterStatus = "status"
 // query parameter's own name, because that is what the caller has to change.
 const ParamSort = "sort"
 
+// MatchAny and MatchAll are `?tags=&match=` (FR-067, research D-10),
+// mirroring internal/records.MatchAny/MatchAll: this package does not import
+// internal/records, so it carries its own copy of the two spellings.
+const (
+	MatchAny = "any"
+	MatchAll = "all"
+)
+
 // Sorts is the published ordering allowlist, in the order OpenAPI publishes it.
 // The first entry is the default, and contracts/records.md fixes it as most
 // recently started.
@@ -67,6 +75,10 @@ type Query struct {
 	// published vocabulary is refused rather than dropped: a dropped term
 	// narrows to everything and looks like a list that is simply long.
 	Statuses []clinical.TherapyStatus
+
+	// Tags and Match are `?tags=a,b&match=any|all` (FR-067).
+	Tags  []string
+	Match string
 
 	// Sort is the resolved ordering, checked against Sorts() before the
 	// repository sees it. The identity tiebreaker is the repository's and is
