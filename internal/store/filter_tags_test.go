@@ -13,8 +13,34 @@ import (
 	"medikube/internal/testsupport/seed"
 )
 
+// taggedFixture is the one seeded row and tag internal/testsupport/seed/
+// tags.go applies for a given kind (FR-085): both are needed to prove the
+// narrowing, so this is data rather than something derivable from the kind
+// table alone.
+var taggedFixture = map[kind.Kind]struct {
+	recordID string
+	tag      string
+}{
+	kind.Medication:       {seed.NameOnlyID, seed.TagChronicID},
+	kind.Immunization:     {seed.ImmunizationSampleID, seed.TagFlaggedID},
+	kind.Injury:           {seed.InjuryAnkleID, seed.TagFollowUpID},
+	kind.Insurance:        {seed.InsurancePrimaryID, seed.TagChronicID},
+	kind.Equipment:        {seed.EquipmentOverdueID, seed.TagFlaggedID},
+	kind.Symptom:          {seed.SymptomHeadacheOne, seed.TagFollowUpID},
+	kind.Vitals:           {seed.VitalsOne, seed.TagChronicID},
+	kind.Allergy:          {seed.CriticalAllergyID, seed.TagFlaggedID},
+	kind.Condition:        {seed.ResolvedConditionID, seed.TagChronicID},
+	kind.EmergencyContact: {seed.PrimaryContactID, seed.TagFollowUpID},
+	kind.Encounter:        {seed.EncounterNameOnlyID, seed.TagChronicID},
+	kind.Procedure:        {seed.ProcedureNameOnlyID, seed.TagFlaggedID},
+	kind.Treatment:        {seed.TreatmentNameOnlyID, seed.TagFollowUpID},
+	kind.FamilyMember:     {seed.FamilyMemberGrandmotherID, seed.TagChronicID},
+}
+
 // T156, FR-067: `?tags=a,b&match=any|all` narrows correctly on every kind
-// this build registers. The fixture already carries the FR-085 wiring
+// this build registers. It iterates kind.Kinds() rather than a hand list, so
+// a fifteenth kind that forgets its row in taggedFixture fails loudly instead
+// of silently going untested. The fixture already carries the FR-085 wiring
 // (internal/testsupport/seed/tags.go) — one seeded row of every registered
 // kind carries at least one of account A's three tags — so this asserts the
 // narrowing against real rows rather than against a schema built for the
@@ -24,29 +50,18 @@ func TestTagsNarrowEveryRegisteredKind(t *testing.T) {
 
 	app := testsupport.NewApp(t)
 
-	cases := []struct {
-		kind     kind.Kind
-		recordID string
-		tag      string
-	}{
-		{kind.Medication, seed.NameOnlyID, seed.TagChronicID},
-		{kind.Immunization, seed.ImmunizationSampleID, seed.TagFlaggedID},
-		{kind.Injury, seed.InjuryAnkleID, seed.TagFollowUpID},
-		{kind.Insurance, seed.InsurancePrimaryID, seed.TagChronicID},
-		{kind.Equipment, seed.EquipmentOverdueID, seed.TagFlaggedID},
-		{kind.Symptom, seed.SymptomHeadacheOne, seed.TagFollowUpID},
-		{kind.Vitals, seed.VitalsOne, seed.TagChronicID},
-	}
-
-	for _, testCase := range cases {
-		t.Run(testCase.kind.Enum(), func(t *testing.T) {
+	for _, k := range kind.Kinds() {
+		t.Run(k.Enum(), func(t *testing.T) {
 			t.Parallel()
 
-			ids := tagQuery(t, app, testCase.kind.Collection(), store.AnyOf("tags", testCase.tag))
-			assert.Contains(t, ids, testCase.recordID)
+			fixture, declared := taggedFixture[k]
+			require.True(t, declared, "%s has no row in taggedFixture", k.Enum())
 
-			ids = tagQuery(t, app, testCase.kind.Collection(), store.AnyOf("tags", "no-such-tag-id"))
-			assert.NotContains(t, ids, testCase.recordID)
+			ids := tagQuery(t, app, k.Collection(), store.AnyOf("tags", fixture.tag))
+			assert.Contains(t, ids, fixture.recordID)
+
+			ids = tagQuery(t, app, k.Collection(), store.AnyOf("tags", "no-such-tag-id"))
+			assert.NotContains(t, ids, fixture.recordID)
 		})
 	}
 }

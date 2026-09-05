@@ -62,6 +62,8 @@ func (a *allergyAdapter) List(ctx context.Context, actor access.Actor, query rec
 		Statuses:   conditionStatuses(query.Filters[allergy.FilterStatus]),
 		Severities: severities(query.Filters[allergy.FilterSeverity]),
 		Critical:   boolFilter(query.Filters[allergy.FilterCritical]),
+		Tags:       query.Filters[records.FilterTags],
+		Match:      matchOf(query.Filters[records.FilterMatch]),
 		Sort:       query.Sort,
 		Limit:      query.Limit,
 		Cursor:     query.Cursor,
@@ -195,6 +197,10 @@ func RegisterAllergy(registry *records.Registry, wiring AllergyWiring) error {
 			Kind:    records.FilterEnum,
 			Allowed: boolStrings(),
 		},
+	}
+
+	for name, spec := range records.TagFilters() {
+		schema.Filters[name] = spec
 	}
 
 	return registry.Register(records.Registration{

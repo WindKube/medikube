@@ -103,7 +103,7 @@ func proceduresUp(app core.App) error {
 		Name: procedureFieldFacility, MaxSelect: 1, CollectionId: facilities.Id,
 	})
 	collection.Fields.Add(&core.TextField{Name: procedureFieldNotes, Max: procedureNotesMax})
-	collection.Fields.Add(&core.RelationField{Name: procedureFieldTags, MaxSelect: 0, CollectionId: tags.Id})
+	collection.Fields.Add(&core.RelationField{Name: procedureFieldTags, MaxSelect: unlimitedTags, CollectionId: tags.Id})
 	collection.Fields.Add(&core.AutodateField{Name: fieldCreated, OnCreate: true})
 	collection.Fields.Add(&core.AutodateField{Name: fieldUpdated, OnCreate: true, OnUpdate: true})
 

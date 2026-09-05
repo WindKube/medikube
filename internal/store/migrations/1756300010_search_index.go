@@ -85,7 +85,7 @@ func searchIndexUp(app core.App) error {
 	collection.Fields.Add(&core.DateField{Name: searchFieldOccurredOn})
 	collection.Fields.Add(&core.RelationField{
 		Name:         searchFieldTags,
-		MaxSelect:    0,
+		MaxSelect:    unlimitedTags,
 		CollectionId: tags.Id,
 	})
 	collection.Fields.Add(&core.AutodateField{Name: fieldCreated, OnCreate: true})

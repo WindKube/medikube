@@ -94,7 +94,7 @@ func conditionsUp(app core.App) error {
 	collection.Fields.Add(&core.TextField{Name: conditionFieldNotes, Max: conditionNotesMax})
 	collection.Fields.Add(&core.RelationField{
 		Name:         conditionFieldTags,
-		MaxSelect:    0,
+		MaxSelect:    unlimitedTags,
 		CollectionId: tags.Id,
 	})
 	collection.Fields.Add(&core.AutodateField{Name: fieldCreated, OnCreate: true})

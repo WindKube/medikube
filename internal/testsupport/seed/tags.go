@@ -9,11 +9,9 @@ import (
 )
 
 // Three tags account A holds, applied across every registered kind's own
-// seeded rows (US7). Phase 003 currently registers seven kinds
-// (medication, immunization, injury, insurance, equipment, symptom,
-// vitals); T163 asks for at least eight, and there is no eighth kind on
-// this branch to carry one — every kind this build has gets at least one
-// of these three.
+// seeded rows (US7). Phase 003 registers fourteen kinds; T163 asks for at
+// least eight to carry one of these three, and every kind this build has
+// gets at least one.
 const (
 	TagChronicID  = "mktagamara00001"
 	TagFollowUpID = "mktagamara00002"
@@ -53,6 +51,13 @@ func applyTags(app core.App) error {
 		{kind.Equipment.Collection(), EquipmentOverdueID, []string{TagFlaggedID, TagChronicID}},
 		{kind.Symptom.Collection(), SymptomHeadacheOne, []string{TagFollowUpID}},
 		{kind.Vitals.Collection(), VitalsOne, []string{TagChronicID}},
+		{kind.Allergy.Collection(), CriticalAllergyID, []string{TagFlaggedID}},
+		{kind.Condition.Collection(), ResolvedConditionID, []string{TagChronicID}},
+		{kind.EmergencyContact.Collection(), PrimaryContactID, []string{TagFollowUpID}},
+		{kind.Encounter.Collection(), EncounterNameOnlyID, []string{TagChronicID}},
+		{kind.Procedure.Collection(), ProcedureNameOnlyID, []string{TagFlaggedID}},
+		{kind.Treatment.Collection(), TreatmentNameOnlyID, []string{TagFollowUpID}},
+		{kind.FamilyMember.Collection(), FamilyMemberGrandmotherID, []string{TagChronicID}},
 	}
 
 	for _, target := range targets {

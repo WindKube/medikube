@@ -63,8 +63,9 @@ type Encounter struct {
 	Facility     string `json:"facility,omitempty"`
 	Condition    string `json:"condition,omitempty"`
 
-	Notes     string `json:"notes,omitempty"`
-	CreatedAt string `json:"created_at"`
+	Notes     string   `json:"notes,omitempty"`
+	Tags      []string `json:"tags,omitempty"`
+	CreatedAt string   `json:"created_at"`
 }
 
 type EncounterCreate struct {
@@ -79,10 +80,15 @@ type EncounterCreate struct {
 	DurationMin int     `json:"duration_minutes,omitempty"`
 	Notes       string  `json:"notes,omitempty"`
 
-	Practitioner *string `json:"practitioner,omitempty"`
-	Facility     *string `json:"facility,omitempty"`
-	Condition    *string `json:"condition,omitempty"`
+	Practitioner *string  `json:"practitioner,omitempty"`
+	Facility     *string  `json:"facility,omitempty"`
+	Condition    *string  `json:"condition,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
 }
+
+// TagIDs implements records.Taggable: a create always supplies its tags,
+// even when that is none.
+func (c *EncounterCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
 type EncounterPatch struct {
 	Reason      *string              `json:"reason,omitempty"`
@@ -98,6 +104,20 @@ type EncounterPatch struct {
 	Practitioner *string `json:"practitioner,omitempty"`
 	Facility     *string `json:"facility,omitempty"`
 	Condition    *string `json:"condition,omitempty"`
+
+	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
+	// applied tags alone, a non-nil one — including an empty array —
+	// replaces the whole set.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// TagIDs implements records.Taggable.
+func (p *EncounterPatch) TagIDs() (ids []string, supplied bool) {
+	if p.Tags == nil {
+		return nil, false
+	}
+
+	return *p.Tags, true
 }
 
 type EncounterCodec struct{}
@@ -153,6 +173,7 @@ func (c EncounterCodec) Detail(e clinical.Encounter) any {
 		Facility:         e.FacilityID,
 		Condition:        e.ConditionID,
 		Notes:            e.Notes,
+		Tags:             e.Tags,
 		CreatedAt:        wireInstant(e.CreatedAt),
 	}
 }
@@ -185,6 +206,7 @@ func (EncounterCodec) Draft(body any) (clinical.Encounter, error) {
 		PractitionerID: deref(create.Practitioner),
 		FacilityID:     deref(create.Facility),
 		ConditionID:    deref(create.Condition),
+		Tags:           create.Tags,
 	}, nil
 }
 
@@ -209,6 +231,7 @@ func (EncounterCodec) Patch(body any) (encounter.Patch, error) {
 		Practitioner: incoming.Practitioner,
 		Facility:     incoming.Facility,
 		Condition:    incoming.Condition,
+		Tags:         incoming.Tags,
 	}
 
 	if err := orderedEncounterRefusal(&invalid); err != nil {

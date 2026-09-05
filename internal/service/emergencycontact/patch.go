@@ -13,6 +13,11 @@ type Patch struct {
 	IsPrimary    *bool
 	IsActive     *bool
 	Notes        *string
+
+	// Tags is data-model §0.8's universal field, replace-set (FR-064,
+	// FR-065): nil leaves the applied tags alone, non-nil (including empty)
+	// replaces the whole set.
+	Tags *[]string
 }
 
 func (p Patch) applyTo(entity clinical.EmergencyContact) clinical.EmergencyContact {
@@ -25,6 +30,10 @@ func (p Patch) applyTo(entity clinical.EmergencyContact) clinical.EmergencyConta
 	assign(&entity.IsPrimary, p.IsPrimary)
 	assign(&entity.IsActive, p.IsActive)
 	assign(&entity.Notes, p.Notes)
+
+	if p.Tags != nil {
+		entity.Tags = *p.Tags
+	}
 
 	return entity
 }

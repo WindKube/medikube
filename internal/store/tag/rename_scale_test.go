@@ -28,12 +28,11 @@ import (
 // show the new name and 0 lose it; deletion removes it from 100% and
 // destroys 0 records.
 //
-// Phase 003 registers seven kinds on this branch, one short of the "≥8
-// kinds" the task names — there is no eighth to spread the 500 rows across.
-// apitest.Populate's bulk path is medication's own, so all 500 carriers here
-// are medications; internal/store/filter_tags_test.go and
-// internal/service/tag/service_test.go's own contract cover the derivation
-// working identically across every kind that does exist.
+// Phase 003 registers fourteen kinds on this branch, but apitest.Populate's
+// bulk path is medication's own, so all 500 carriers here are medications;
+// internal/store/filter_tags_test.go and internal/service/tag/service_test.go's
+// own contract cover the derivation working identically across every other
+// registered kind.
 func TestRenamingATagCarriedBy500RecordsTouchesOnlyTheTagRow(t *testing.T) {
 	const carriers = 500
 

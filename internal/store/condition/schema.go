@@ -20,6 +20,7 @@ const (
 	fieldSNOMEDCode   = "snomed_code"
 	fieldPractitioner = "practitioner"
 	fieldNotes        = "notes"
+	fieldTags         = "tags"
 	fieldCreated      = "created"
 	fieldUpdated      = "updated"
 )
@@ -49,6 +50,10 @@ func conditionSchema() store.Schema {
 		store.Column{Name: fieldStatus},
 		store.Column{Name: fieldSeverity},
 		store.Column{Name: fieldOnsetOn, AbsentLast: true},
+		// FilterOnly: `?tags=` narrows, but a MaxSelect:0 relation's JSON
+		// column is never an ordering (research D-05's cursor-disclosure
+		// rule).
+		store.Column{Name: fieldTags, FilterOnly: true},
 		store.Column{Name: fieldCreated},
 		store.Column{Name: fieldUpdated},
 	)

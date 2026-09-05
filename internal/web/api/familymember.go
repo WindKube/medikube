@@ -52,6 +52,7 @@ type FamilyMember struct {
 	DeathYear  *int              `json:"death_year,omitempty"`
 	IsDeceased bool              `json:"is_deceased,omitempty"`
 	Conditions []FamilyCondition `json:"conditions"`
+	Tags       []string          `json:"tags,omitempty"`
 
 	CreatedAt string `json:"created_at"`
 }
@@ -67,7 +68,12 @@ type FamilyMemberCreate struct {
 	DeathYear    *int              `json:"death_year,omitempty"`
 	IsDeceased   bool              `json:"is_deceased,omitempty"`
 	Conditions   []FamilyCondition `json:"conditions,omitempty"`
+	Tags         []string          `json:"tags,omitempty"`
 }
+
+// TagIDs implements records.Taggable: a create always supplies its tags,
+// even when that is none.
+func (c *FamilyMemberCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
 // FamilyMemberPatch is the partial update.
 type FamilyMemberPatch struct {
@@ -80,6 +86,20 @@ type FamilyMemberPatch struct {
 
 	IsDeceased *bool              `json:"is_deceased,omitempty"`
 	Conditions *[]FamilyCondition `json:"conditions,omitempty"`
+
+	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
+	// applied tags alone, a non-nil one — including an empty array —
+	// replaces the whole set.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// TagIDs implements records.Taggable.
+func (p *FamilyMemberPatch) TagIDs() (ids []string, supplied bool) {
+	if p.Tags == nil {
+		return nil, false
+	}
+
+	return *p.Tags, true
 }
 
 // FamilyMemberCodec is the DTO boundary for family history.
@@ -135,6 +155,7 @@ func (c FamilyMemberCodec) Detail(entity clinical.FamilyMember) any {
 		DeathYear:           entity.DeathYear,
 		IsDeceased:          entity.IsDeceased,
 		Conditions:          wireFamilyConditions(entity.Conditions),
+		Tags:                entity.Tags,
 		CreatedAt:           wireInstant(entity.CreatedAt),
 	}
 }
@@ -154,6 +175,7 @@ func (FamilyMemberCodec) Draft(body any) (clinical.FamilyMember, error) {
 		DeathYear:    create.DeathYear,
 		IsDeceased:   create.IsDeceased,
 		Conditions:   domainFamilyConditions(create.Conditions),
+		Tags:         create.Tags,
 	}, nil
 }
 
@@ -170,6 +192,7 @@ func (FamilyMemberCodec) Patch(body any) (familymember.Patch, error) {
 		BirthYear:    readOptionalIntPtr(incoming.BirthYear),
 		DeathYear:    readOptionalIntPtr(incoming.DeathYear),
 		IsDeceased:   incoming.IsDeceased,
+		Tags:         incoming.Tags,
 	}
 
 	if incoming.Conditions != nil {

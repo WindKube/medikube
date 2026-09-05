@@ -40,6 +40,20 @@ func TestSearchIndexPatientRelationCascades(t *testing.T) {
 	assert.Equal(t, 1, relation.MaxSelect)
 }
 
+func TestSearchIndexTagsRelationAllowsMoreThanOneTag(t *testing.T) {
+	t.Parallel()
+
+	app := newTestApp(t)
+
+	collection, err := app.FindCollectionByNameOrId(SearchIndexCollection)
+	require.NoError(t, err)
+
+	relation, err := relationField(collection, searchFieldTags)
+	require.NoError(t, err)
+	assert.Equal(t, unlimitedTags, relation.MaxSelect, "any number of tags: PocketBase reads MaxSelect<=1 as single-select, so this cannot be 0")
+	assert.False(t, relation.Required)
+}
+
 func TestSearchIndexPublishesEveryRegisteredKind(t *testing.T) {
 	t.Parallel()
 

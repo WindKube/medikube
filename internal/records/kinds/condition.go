@@ -57,6 +57,8 @@ func (a *conditionAdapter) List(ctx context.Context, actor access.Actor, query r
 		Statuses:   conditionStatuses(query.Filters[condition.FilterStatus]),
 		Severities: severities(query.Filters[condition.FilterSeverity]),
 		Active:     boolFilter(query.Filters[condition.FilterActive]),
+		Tags:       query.Filters[records.FilterTags],
+		Match:      matchOf(query.Filters[records.FilterMatch]),
 		Sort:       query.Sort,
 		Limit:      query.Limit,
 		Cursor:     query.Cursor,
@@ -188,6 +190,10 @@ func RegisterCondition(registry *records.Registry, wiring ConditionWiring) error
 			Kind:    records.FilterEnum,
 			Allowed: boolStrings(),
 		},
+	}
+
+	for name, spec := range records.TagFilters() {
+		schema.Filters[name] = spec
 	}
 
 	return registry.Register(records.Registration{

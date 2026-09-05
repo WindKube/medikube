@@ -50,6 +50,8 @@ func (a *Adapter) List(ctx context.Context, actor access.Actor, query records.Qu
 		Search:    query.Search,
 		Statuses:  statuses(query.Filters[FilterStatus]),
 		Ongoing:   ongoingFlag(query.Filters[FilterOngoing]),
+		Tags:      query.Filters[records.FilterTags],
+		Match:     matchOf(query.Filters[records.FilterMatch]),
 		Sort:      query.Sort,
 		Limit:     query.Limit,
 		Cursor:    query.Cursor,
@@ -146,6 +148,16 @@ func ongoingFlag(values []string) *bool {
 	return &flag
 }
 
+// matchOf reads the resolved `?match=` filter value, defaulting to "any" the
+// same way records.TagFilters' FilterSpec.Default does.
+func matchOf(values []string) string {
+	if len(values) == 0 {
+		return records.MatchAny
+	}
+
+	return values[0]
+}
+
 // StreamFilter admits every event that names a record and a patient.
 type StreamFilter struct{}
 
@@ -185,6 +197,10 @@ func Register(registry *records.Registry, wiring Wiring) error {
 	schema.Filters = map[string]records.FilterSpec{
 		FilterStatus:  {Name: FilterStatus, Kind: records.FilterEnum, Allowed: therapyStatusStrings()},
 		FilterOngoing: {Name: FilterOngoing, Kind: records.FilterEnum, Allowed: []string{"true", "false"}},
+	}
+
+	for name, spec := range records.TagFilters() {
+		schema.Filters[name] = spec
 	}
 
 	return registry.Register(records.Registration{

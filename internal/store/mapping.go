@@ -351,6 +351,7 @@ const (
 	encounterFieldFacility     = "facility"
 	encounterFieldCondition    = "condition"
 	encounterFieldNotes        = "notes"
+	encounterFieldTags         = "tags"
 )
 
 // EncounterFromRecord reads a stored row into the entity. It does not validate
@@ -380,6 +381,7 @@ func EncounterFromRecord(record *core.Record) (clinical.Encounter, error) {
 		FacilityID:     record.GetString(encounterFieldFacility),
 		ConditionID:    record.GetString(encounterFieldCondition),
 		Notes:          record.GetString(encounterFieldNotes),
+		Tags:           record.GetStringSlice(encounterFieldTags),
 		CreatedAt:      recordInstant(record, fieldCreated),
 		UpdatedAt:      recordInstant(record, fieldUpdated),
 		Version:        Version(record),
@@ -405,6 +407,7 @@ func EncounterToRecord(record *core.Record, e clinical.Encounter) error {
 	record.Set(encounterFieldFacility, e.FacilityID)
 	record.Set(encounterFieldCondition, e.ConditionID)
 	record.Set(encounterFieldNotes, e.Notes)
+	record.Set(encounterFieldTags, e.Tags)
 
 	return nil
 }
@@ -428,6 +431,7 @@ const (
 	procedureFieldFacility        = "facility"
 	procedureFieldCondition       = "condition"
 	procedureFieldNotes           = "notes"
+	procedureFieldTags            = "tags"
 )
 
 func ProcedureFromRecord(record *core.Record) (clinical.Procedure, error) {
@@ -459,6 +463,7 @@ func ProcedureFromRecord(record *core.Record) (clinical.Procedure, error) {
 		FacilityID:      record.GetString(procedureFieldFacility),
 		ConditionID:     record.GetString(procedureFieldCondition),
 		Notes:           record.GetString(procedureFieldNotes),
+		Tags:            record.GetStringSlice(procedureFieldTags),
 		CreatedAt:       recordInstant(record, fieldCreated),
 		UpdatedAt:       recordInstant(record, fieldUpdated),
 		Version:         Version(record),
@@ -487,6 +492,7 @@ func ProcedureToRecord(record *core.Record, p clinical.Procedure) error {
 	record.Set(procedureFieldFacility, p.FacilityID)
 	record.Set(procedureFieldCondition, p.ConditionID)
 	record.Set(procedureFieldNotes, p.Notes)
+	record.Set(procedureFieldTags, p.Tags)
 
 	return nil
 }
@@ -509,6 +515,7 @@ const (
 	treatmentFieldFacility        = "facility"
 	treatmentFieldCondition       = "condition"
 	treatmentFieldNotes           = "notes"
+	treatmentFieldTags            = "tags"
 )
 
 // Named after the collections they relate to, per data-model §4.5 (FR-028),
@@ -552,6 +559,7 @@ func TreatmentFromRecord(record *core.Record) (clinical.Treatment, error) {
 		Encounters:      record.GetStringSlice(treatmentFieldEncounters),
 		Equipment:       record.GetStringSlice(treatmentFieldEquipment),
 		Notes:           record.GetString(treatmentFieldNotes),
+		Tags:            record.GetStringSlice(treatmentFieldTags),
 		CreatedAt:       recordInstant(record, fieldCreated),
 		UpdatedAt:       recordInstant(record, fieldUpdated),
 		Version:         Version(record),
@@ -580,6 +588,7 @@ func TreatmentToRecord(record *core.Record, t clinical.Treatment) error {
 	record.Set(treatmentFieldEncounters, t.Encounters)
 	record.Set(treatmentFieldEquipment, t.Equipment)
 	record.Set(treatmentFieldNotes, t.Notes)
+	record.Set(treatmentFieldTags, t.Tags)
 
 	return nil
 }
@@ -742,7 +751,7 @@ func AssertMappedFields(app core.App) error {
 			encounterFieldPatient, encounterFieldReason, encounterFieldOccurredOn,
 			encounterFieldVisitType, encounterFieldPriority, encounterFieldAssessment,
 			encounterFieldPlan, encounterFieldFollowUp, encounterFieldDurationMin,
-			encounterFieldPractitioner, encounterFieldFacility, encounterFieldNotes,
+			encounterFieldPractitioner, encounterFieldFacility, encounterFieldNotes, encounterFieldTags,
 		},
 		kind.Procedure.Collection(): {
 			fieldID, fieldCreated, fieldUpdated,
@@ -751,7 +760,7 @@ func AssertMappedFields(app core.App) error {
 			procedureFieldStatus, procedureFieldOutcome, procedureFieldSetting,
 			procedureFieldComplications, procedureFieldDurationMin, procedureFieldAnesthesia,
 			procedureFieldAnesthesiaNotes, procedureFieldPractitioner, procedureFieldFacility,
-			procedureFieldNotes,
+			procedureFieldNotes, procedureFieldTags,
 		},
 		kind.Treatment.Collection(): {
 			fieldID, fieldCreated, fieldUpdated,
@@ -760,7 +769,7 @@ func AssertMappedFields(app core.App) error {
 			treatmentFieldEndedOn, treatmentFieldFrequency, treatmentFieldDosage,
 			treatmentFieldExpectedOutcome, treatmentFieldStatus, treatmentFieldPractitioner,
 			treatmentFieldFacility, treatmentFieldEncounters, treatmentFieldEquipment,
-			treatmentFieldNotes,
+			treatmentFieldNotes, treatmentFieldTags,
 		},
 	}
 

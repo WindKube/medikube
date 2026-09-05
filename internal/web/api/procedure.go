@@ -68,8 +68,9 @@ type Procedure struct {
 	Facility     string `json:"facility,omitempty"`
 	Condition    string `json:"condition,omitempty"`
 
-	Notes     string `json:"notes,omitempty"`
-	CreatedAt string `json:"created_at"`
+	Notes     string   `json:"notes,omitempty"`
+	Tags      []string `json:"tags,omitempty"`
+	CreatedAt string   `json:"created_at"`
 }
 
 type ProcedureCreate struct {
@@ -88,10 +89,15 @@ type ProcedureCreate struct {
 	AnesthesiaNotes string  `json:"anesthesia_notes,omitempty"`
 	Notes           string  `json:"notes,omitempty"`
 
-	Practitioner *string `json:"practitioner,omitempty"`
-	Facility     *string `json:"facility,omitempty"`
-	Condition    *string `json:"condition,omitempty"`
+	Practitioner *string  `json:"practitioner,omitempty"`
+	Facility     *string  `json:"facility,omitempty"`
+	Condition    *string  `json:"condition,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
 }
+
+// TagIDs implements records.Taggable: a create always supplies its tags,
+// even when that is none.
+func (c *ProcedureCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
 type ProcedurePatch struct {
 	Name            *string              `json:"name,omitempty"`
@@ -111,6 +117,20 @@ type ProcedurePatch struct {
 	Practitioner *string `json:"practitioner,omitempty"`
 	Facility     *string `json:"facility,omitempty"`
 	Condition    *string `json:"condition,omitempty"`
+
+	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
+	// applied tags alone, a non-nil one — including an empty array —
+	// replaces the whole set.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// TagIDs implements records.Taggable.
+func (p *ProcedurePatch) TagIDs() (ids []string, supplied bool) {
+	if p.Tags == nil {
+		return nil, false
+	}
+
+	return *p.Tags, true
 }
 
 type ProcedureCodec struct{}
@@ -179,6 +199,7 @@ func (c ProcedureCodec) Detail(p clinical.Procedure) any {
 		Facility:         p.FacilityID,
 		Condition:        p.ConditionID,
 		Notes:            p.Notes,
+		Tags:             p.Tags,
 		CreatedAt:        wireInstant(p.CreatedAt),
 	}
 }
@@ -215,6 +236,7 @@ func (ProcedureCodec) Draft(body any) (clinical.Procedure, error) {
 		PractitionerID:  deref(create.Practitioner),
 		FacilityID:      deref(create.Facility),
 		ConditionID:     deref(create.Condition),
+		Tags:            create.Tags,
 	}, nil
 }
 
@@ -243,6 +265,7 @@ func (ProcedureCodec) Patch(body any) (procedure.Patch, error) {
 		Practitioner:    incoming.Practitioner,
 		Facility:        incoming.Facility,
 		Condition:       incoming.Condition,
+		Tags:            incoming.Tags,
 	}
 
 	if err := orderedProcedureRefusal(&invalid); err != nil {

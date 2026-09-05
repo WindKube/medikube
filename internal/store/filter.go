@@ -395,6 +395,10 @@ func EncounterSchema() Schema {
 		Column{Name: encounterFieldVisitType},
 		Column{Name: encounterFieldPriority},
 		Column{Name: encounterFieldOccurredOn, AbsentLast: true},
+		// FilterOnly: `?tags=` narrows, but a MaxSelect:0 relation's JSON
+		// column is never an ordering (research D-05's cursor-disclosure
+		// rule).
+		Column{Name: encounterFieldTags, FilterOnly: true},
 		Column{Name: fieldCreated},
 		Column{Name: fieldUpdated},
 	)
@@ -414,6 +418,10 @@ func ProcedureSchema() Schema {
 		},
 		Column{Name: procedureFieldStatus},
 		Column{Name: procedureFieldOccurredOn, AbsentLast: true},
+		// FilterOnly: `?tags=` narrows, but a MaxSelect:0 relation's JSON
+		// column is never an ordering (research D-05's cursor-disclosure
+		// rule).
+		Column{Name: procedureFieldTags, FilterOnly: true},
 		Column{Name: fieldCreated},
 		Column{Name: fieldUpdated},
 	)
@@ -433,6 +441,10 @@ func TreatmentSchema() Schema {
 		},
 		Column{Name: treatmentFieldStatus},
 		Column{Name: treatmentFieldStartedOn, AbsentLast: true},
+		// FilterOnly: `?tags=` narrows, but a MaxSelect:0 relation's JSON
+		// column is never an ordering (research D-05's cursor-disclosure
+		// rule).
+		Column{Name: treatmentFieldTags, FilterOnly: true},
 		Column{Name: fieldCreated},
 		Column{Name: fieldUpdated},
 	)
@@ -445,16 +457,19 @@ const (
 	EncounterVisitType  = encounterFieldVisitType
 	EncounterPriority   = encounterFieldPriority
 	EncounterOccurredOn = encounterFieldOccurredOn
+	EncounterTags       = encounterFieldTags
 
 	ProcedurePatient    = procedureFieldPatient
 	ProcedureName       = procedureFieldName
 	ProcedureStatus     = procedureFieldStatus
 	ProcedureOccurredOn = procedureFieldOccurredOn
+	ProcedureTags       = procedureFieldTags
 
 	TreatmentPatient   = treatmentFieldPatient
 	TreatmentName      = treatmentFieldName
 	TreatmentStatus    = treatmentFieldStatus
 	TreatmentStartedOn = treatmentFieldStartedOn
+	TreatmentTags      = treatmentFieldTags
 )
 
 // PatientsSchema is the patient list's query surface (research D-29): last
