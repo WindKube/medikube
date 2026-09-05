@@ -239,24 +239,24 @@ extended in passing.
 
 ### Tests for User Story 4 ⚠️ write first, confirm red
 
-- [ ] T103 [P] [US4] Failing tests in `internal/domain/clinical/immunization_test.go` and `internal/service/immunization/service_test.go` (FR-038): `vaccine_name` and `administered_on` required and trade name, dose number, batch, manufacturer, site, route, expiry, practitioner and facility optional; `dose_number` must be a **positive integer** — 0, a negative and a fractional value are each refused (FR-039); `expires_on ≥ administered_on`; `administered_on` not future
-- [ ] T104 [P] [US4] Failing tests in `internal/domain/clinical/injury_test.go` and `internal/service/injury/service_test.go`: `name` and `body_part` required; `type` accepts only `InjuryType` values including `other` and there is **no code path that writes a new value** (FR-040, US4-3); `laterality` includes `not_applicable` (FR-041); `?unresolved=true` excludes `resolved`/`inactive` (US4-5)
-- [ ] T105 [P] [US4] Failing repository tests running `recordstest.RepositoryContract` in `internal/store/immunization/repo_test.go` and `internal/store/injury/repo_test.go`
-- [ ] T106 [P] [US4] Failing DTO round-trip tests in `internal/web/api/immunization_test.go` and `injury_test.go`
-- [ ] T107 [P] [US4] Failing templ render tests in `internal/web/views/records/immunization_templ_test.go` and `injury_templ_test.go`, asserting the laterality is shown wherever the injury is shown (FR-041, US4-4)
-- [ ] T108 [P] [US4] Failing HTTP + authorization scenarios in `internal/web/api/immunization_http_test.go` and `injury_http_test.go` — the full FR-092 matrix
-- [ ] T109 [P] [US4] Failing `recordstest.KindContract` invocations in `internal/records/kinds/immunization_contract_test.go` and `injury_contract_test.go`
+- [x] T103 [P] [US4] Failing tests in `internal/domain/clinical/immunization_test.go` and `internal/service/immunization/service_test.go` (FR-038): `vaccine_name` and `administered_on` required and trade name, dose number, batch, manufacturer, site, route, expiry, practitioner and facility optional; `dose_number` must be a **positive integer** — 0, a negative and a fractional value are each refused (FR-039); `expires_on ≥ administered_on`; `administered_on` not future
+- [x] T104 [P] [US4] Failing tests in `internal/domain/clinical/injury_test.go` and `internal/service/injury/service_test.go`: `name` and `body_part` required; `type` accepts only `InjuryType` values including `other` and there is **no code path that writes a new value** (FR-040, US4-3); `laterality` includes `not_applicable` (FR-041); `?unresolved=true` excludes `resolved`/`inactive` (US4-5)
+- [x] T105 [P] [US4] Failing repository tests running `recordstest.RepositoryContract` in `internal/store/immunization/repo_test.go` and `internal/store/injury/repo_test.go`
+- [x] T106 [P] [US4] Failing DTO round-trip tests in `internal/web/api/immunization_test.go` and `injury_test.go`
+- [x] T107 [P] [US4] Failing templ render tests in `internal/web/views/records/immunization_templ_test.go` and `injury_templ_test.go`, asserting the laterality is shown wherever the injury is shown (FR-041, US4-4)
+- [x] T108 [P] [US4] Failing HTTP + authorization scenarios in `internal/web/api/immunization_http_test.go` and `injury_http_test.go` — the full FR-092 matrix
+- [x] T109 [P] [US4] Failing `recordstest.KindContract` invocations in `internal/records/kinds/immunization_contract_test.go` and `injury_contract_test.go`
 
 ### Implementation for User Story 4
 
-- [ ] T110 [P] [US4] Implement `internal/domain/clinical/immunization.go` (FR-038) — **no `catalog_vaccine` field**; a standardised vaccine library is explicitly deferred (see `plan.md` Deviations)
-- [ ] T111 [P] [US4] Implement `internal/domain/clinical/injury.go`
-- [ ] T112 [P] [US4] Implement `internal/service/immunization/{service.go,ports.go,query.go,patch.go}` + `immunizationtest/fake.go`
-- [ ] T113 [P] [US4] Implement `internal/service/injury/{service.go,ports.go,query.go,patch.go}` + `injurytest/fake.go`
-- [ ] T114 [P] [US4] Implement `internal/store/migrations/<ts>_immunizations.go` + `internal/store/immunization/{repo.go,mapper.go}`, and `internal/store/migrations/<ts>_injuries.go` (including the four link fields to conditions, medications, procedures and treatments, FR-042) + `internal/store/injury/{repo.go,mapper.go}`
-- [ ] T115 [P] [US4] Implement DTOs `internal/web/api/immunization.go`, `injury.go`, their `adapter.go` codecs, and views `internal/web/views/records/immunization.templ`, `injury.templ`
-- [ ] T116 [US4] Register both kinds in `internal/records/kinds/immunization.go` and `injury.go` with their filters (`type`, `status`, `severity`, `laterality`, `unresolved`), extend `internal/cli/seed.go` — **leaving `/immunizations` empty on one seeded patient** so the empty-state path is exercised (`contracts/pages.md` §5) — and add the providers in `cmd/medikube/main.go`
-- [ ] T117 [P] [US4] Add Playwright smoke cases for `/immunizations`, `/immunizations/{id}`, `/injuries`, `/injuries/{id}` at both viewports in `e2e/specs/records.spec.ts`, including the empty-state assertion for `/immunizations`
+- [x] T110 [P] [US4] Implement `internal/domain/clinical/immunization.go` (FR-038) — **no `catalog_vaccine` field**; a standardised vaccine library is explicitly deferred (see `plan.md` Deviations)
+- [x] T111 [P] [US4] Implement `internal/domain/clinical/injury.go`
+- [x] T112 [P] [US4] Implement `internal/service/immunization/{service.go,ports.go,query.go,patch.go}` + `immunizationtest/fake.go`
+- [x] T113 [P] [US4] Implement `internal/service/injury/{service.go,ports.go,query.go,patch.go}` + `injurytest/fake.go`
+- [x] T114 [P] [US4] Implement `internal/store/migrations/<ts>_immunizations.go` + `internal/store/immunization/{repo.go,mapper.go}`, and `internal/store/migrations/<ts>_injuries.go` (including the four link fields to conditions, medications, procedures and treatments, FR-042) + `internal/store/injury/{repo.go,mapper.go}`
+- [x] T115 [P] [US4] Implement DTOs `internal/web/api/immunization.go`, `injury.go`, their `adapter.go` codecs, and views `internal/web/views/records/immunization.templ`, `injury.templ`
+- [x] T116 [US4] Register both kinds in `internal/records/kinds/immunization.go` and `injury.go` with their filters (`type`, `status`, `severity`, `laterality`, `unresolved`), extend `internal/cli/seed.go` — **leaving `/immunizations` empty on one seeded patient** so the empty-state path is exercised (`contracts/pages.md` §5) — and add the providers in `cmd/medikube/main.go`
+- [x] T117 [P] [US4] Add Playwright smoke cases for `/immunizations`, `/immunizations/{id}`, `/injuries`, `/injuries/{id}` at both viewports in `e2e/specs/records.spec.ts`, including the empty-state assertion for `/immunizations`
 
 **Checkpoint**: US1–US4 independently demonstrable.
 
