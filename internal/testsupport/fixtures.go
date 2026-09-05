@@ -84,6 +84,26 @@ const (
 	InjurySampleID = "mkinjamara00001"
 )
 
+// The symptom episode ids: four recordings of the same name (FR-030, FR-031),
+// so the derived episode_count and last_occurred_at have something to
+// aggregate.
+const (
+	SymptomHeadacheOneID   = "mksympamara0001"
+	SymptomHeadacheTwoID   = "mksympamara0002"
+	SymptomHeadacheThreeID = "mksympamara0003"
+	SymptomHeadacheFourID  = "mksympamara0004"
+)
+
+// The vitals measurement set ids, spanning two months.
+const (
+	VitalsOneID   = "mkvitlamara0001"
+	VitalsTwoID   = "mkvitlamara0002"
+	VitalsThreeID = "mkvitlamara0003"
+	VitalsFourID  = "mkvitlamara0004"
+	VitalsFiveID  = "mkvitlamara0005"
+	VitalsSixID   = "mkvitlamara0006"
+)
+
 // Whether each seeded account's address is confirmed (FR-075).
 //
 // Account C's false is load-bearing, exactly as its zero medication count is:

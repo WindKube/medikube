@@ -56,10 +56,25 @@ func (i *Instant) UnmarshalText(text []byte) error {
 
 	parsed, err := time.Parse(time.RFC3339, string(text))
 	if err != nil {
+		parsed, err = time.Parse(InputLayout, string(text))
+	}
+	if err != nil {
 		return err
 	}
 
 	*i = NewInstant(parsed)
 
 	return nil
+}
+
+// InputLayout is what a datetime-local control reads and writes: no seconds,
+// no zone. Both sides of the form treat it as UTC.
+const InputLayout = "2006-01-02T15:04"
+
+// Input is the instant in InputLayout, empty for the zero value.
+func (i Instant) Input() string {
+	if i.IsZero() {
+		return ""
+	}
+	return i.t.Format(InputLayout)
 }

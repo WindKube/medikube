@@ -544,6 +544,30 @@ func pageRoutes() []Route {
 			Landmark: `article[name="Equipment"]`, SmokeURL: equipmentList + "/" + seed.EquipmentOverdueID,
 		},
 		{
+			OpID: "symptomListPage", Method: http.MethodGet, Path: "/" + kind.Symptom.Segment(),
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "The symptom episode list, with its empty state inside the landmark rather than instead of it.",
+			Landmark: `region[name="Symptoms"]`, SmokeURL: "/" + kind.Symptom.Segment() + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			OpID: "symptomDetailPage", Method: http.MethodGet, Path: "/" + kind.Symptom.Segment() + "/{id}",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "One symptom episode, every value it holds and the aggregate over its own name.",
+			Landmark: `article[name="Symptom episode"]`, SmokeURL: "/" + kind.Symptom.Segment() + "/" + seed.SymptomHeadacheOne,
+		},
+		{
+			OpID: "measurementsListPage", Method: http.MethodGet, Path: "/" + kind.Vitals.Segment(),
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "The measurement set list, with its empty state inside the landmark rather than instead of it.",
+			Landmark: `region[name="Measurements"]`, SmokeURL: "/" + kind.Vitals.Segment() + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			OpID: "measurementsDetailPage", Method: http.MethodGet, Path: "/" + kind.Vitals.Segment() + "/{id}",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "One measurement set, only the values recorded and bmi when both height and weight are present.",
+			Landmark: `article[name="Measurement set"]`, SmokeURL: "/" + kind.Vitals.Segment() + "/" + seed.VitalsOne,
+		},
+		{
 			OpID: "practitionerListPage", Method: http.MethodGet, Path: "/practitioners",
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "contracts/pages.md P3: the account's practitioner directory.",

@@ -11,6 +11,8 @@ import (
 	"medikube/internal/records"
 	"medikube/internal/records/recordstest"
 	"medikube/internal/service/medication"
+	"medikube/internal/service/symptom"
+	"medikube/internal/service/vitals"
 	"medikube/internal/testsupport"
 	"medikube/internal/web/api"
 	"medikube/internal/web/apitest"
@@ -122,6 +124,178 @@ func entryFor(t *testing.T, instance *apitest.Instance) records.Entry {
 	require.NoError(t, err)
 
 	return entry
+}
+
+func entryForKind(t *testing.T, instance *apitest.Instance, k kind.Kind) records.Entry {
+	t.Helper()
+
+	entry, err := instance.Records.Dispatch(k.Segment())
+	require.NoError(t, err)
+
+	return entry
+}
+
+// TestSymptomSatisfiesTheSharedRecordContracts is T091's symptom half.
+func TestSymptomSatisfiesTheSharedRecordContracts(t *testing.T) {
+	t.Parallel()
+
+	fixture := recordstest.Fixture{
+		Minimal: func(patientID string) any {
+			return &api.SymptomCreate{
+				Patient: patientID, Name: "Headache", Severity: "moderate", OccurredAt: "2026-01-01T09:00:00Z",
+			}
+		},
+		Full: func(patientID string) any {
+			return &api.SymptomCreate{
+				Patient: patientID, Name: "Headache", Category: "pain", Severity: "moderate",
+				OccurredAt: "2026-01-01T09:00:00Z", BodySite: "temple", Impact: "moderate",
+			}
+		},
+	}
+
+	newHarness := func(t *testing.T) recordstest.RepositoryHarness {
+		t.Helper()
+
+		instance := apitest.New(t)
+
+		return recordstest.RepositoryHarness{
+			Service:   entryForKind(t, instance, kind.Symptom).Service,
+			Owner:     access.Actor{UserID: testsupport.AccountAID, RequestID: "req-1"},
+			PatientID: testsupport.AccountAPatientChildID,
+			Stranger:  access.Actor{UserID: testsupport.AccountBID, RequestID: "req-2"},
+		}
+	}
+
+	t.Run("RepositoryContract", func(t *testing.T) {
+		t.Parallel()
+
+		recordstest.RunRepositoryContract(t, recordstest.RepositoryContractOptions{
+			NewHarness: newHarness,
+			Fixture:    fixture,
+			NewPatch:   func() any { return &api.SymptomPatch{} },
+			Sort:       symptom.Sorts(),
+			NullPrimaryDateSkip: "occurred_at is required (FR-029): every symptom episode names when it " +
+				"happened, so there is no undated episode to construct",
+			CascadeSkip: "symptom's cascade-on-patient-delete is asserted against the real migrated " +
+				"schema by internal/store/migrations/assertions_test.go; this harness has no patient " +
+				"to delete without reaching past records.Service into the store directly",
+		})
+	})
+
+	t.Run("KindContract", func(t *testing.T) {
+		t.Parallel()
+
+		instance := apitest.New(t)
+		entry := entryForKind(t, instance, kind.Symptom)
+
+		recordstest.RunKindContract(t, recordstest.KindContractOptions{
+			NewHarness: func(t *testing.T) recordstest.RepositoryHarness {
+				t.Helper()
+
+				return recordstest.RepositoryHarness{
+					Service:   entry.Service,
+					Owner:     access.Actor{UserID: testsupport.AccountAID, RequestID: "req-1"},
+					PatientID: testsupport.AccountAPatientChildID,
+					Stranger:  access.Actor{UserID: testsupport.AccountBID, RequestID: "req-2"},
+				}
+			},
+			Entry:       entry,
+			Fixture:     fixture,
+			DefaultSort: symptom.Sorts()[0],
+			NoPatientSkip: "symptom.Patient is a plain string FR-029 requires structurally (there is " +
+				"no pointer to omit it with), so a body naming no patient does not decode at all",
+			SearchIndex: func(t *testing.T, k kind.Kind, recordID string) (bool, string) {
+				t.Helper()
+
+				title, found := searchRowFor(t, instance, k, recordID)
+
+				return found, title
+			},
+		})
+	})
+}
+
+// TestVitalsSatisfiesTheSharedRecordContracts is T091's vitals half.
+func TestVitalsSatisfiesTheSharedRecordContracts(t *testing.T) {
+	t.Parallel()
+
+	fixture := recordstest.Fixture{
+		Minimal: func(patientID string) any {
+			weight := 70.0
+
+			return &api.VitalsCreate{Patient: patientID, RecordedAt: "2026-01-01T09:00:00Z", WeightKg: &weight}
+		},
+		Full: func(patientID string) any {
+			weight, height, systolic, diastolic := 70.0, 175.0, 120.0, 80.0
+
+			return &api.VitalsCreate{
+				Patient: patientID, RecordedAt: "2026-01-01T09:00:00Z",
+				WeightKg: &weight, HeightCm: &height,
+				SystolicMmHg: &systolic, DiastolicMmHg: &diastolic,
+			}
+		},
+	}
+
+	newHarness := func(t *testing.T) recordstest.RepositoryHarness {
+		t.Helper()
+
+		instance := apitest.New(t)
+
+		return recordstest.RepositoryHarness{
+			Service:   entryForKind(t, instance, kind.Vitals).Service,
+			Owner:     access.Actor{UserID: testsupport.AccountAID, RequestID: "req-1"},
+			PatientID: testsupport.AccountAPatientChildID,
+			Stranger:  access.Actor{UserID: testsupport.AccountBID, RequestID: "req-2"},
+		}
+	}
+
+	t.Run("RepositoryContract", func(t *testing.T) {
+		t.Parallel()
+
+		recordstest.RunRepositoryContract(t, recordstest.RepositoryContractOptions{
+			NewHarness: newHarness,
+			Fixture:    fixture,
+			NewPatch:   func() any { return &api.VitalsPatch{} },
+			Sort:       vitals.Sorts(),
+			NullPrimaryDateSkip: "recorded_at is required (FR-033): every measurement set names when " +
+				"it was recorded, so there is no undated set to construct",
+			CascadeSkip: "measurements' cascade-on-patient-delete is asserted against the real migrated " +
+				"schema by internal/store/migrations/assertions_test.go; this harness has no patient " +
+				"to delete without reaching past records.Service into the store directly",
+		})
+	})
+
+	t.Run("KindContract", func(t *testing.T) {
+		t.Parallel()
+
+		instance := apitest.New(t)
+		entry := entryForKind(t, instance, kind.Vitals)
+
+		recordstest.RunKindContract(t, recordstest.KindContractOptions{
+			NewHarness: func(t *testing.T) recordstest.RepositoryHarness {
+				t.Helper()
+
+				return recordstest.RepositoryHarness{
+					Service:   entry.Service,
+					Owner:     access.Actor{UserID: testsupport.AccountAID, RequestID: "req-1"},
+					PatientID: testsupport.AccountAPatientChildID,
+					Stranger:  access.Actor{UserID: testsupport.AccountBID, RequestID: "req-2"},
+				}
+			},
+			Entry:       entry,
+			Fixture:     fixture,
+			DefaultSort: vitals.Sorts()[0],
+			NoPatientSkip: "the measurements kind's Patient is a plain string FR-033 requires structurally " +
+				"(there is no pointer to omit it with), so a body naming no patient does not decode at all",
+			SearchIndex: func(t *testing.T, k kind.Kind, recordID string) (bool, string) {
+				t.Helper()
+
+				title, found := searchRowFor(t, instance, k, recordID)
+
+				return found, title
+			},
+		})
+	})
 }
 
 // searchRowFor reads the search_index row back through the same real

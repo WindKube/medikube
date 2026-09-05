@@ -143,6 +143,21 @@ func TestTheCascadeMatrixIsExactlyWhatDataModelDeclares(t *testing.T) {
 			target:      patients.Id,
 			consequence: "deleting a patient must delete every insurance policy filed against them",
 		},
+		{
+			relation:    relationRule{collection: kind.Symptom.Collection(), field: symptomFieldPatient, required: true, cascadeDelete: true},
+			target:      patients.Id,
+			consequence: "deleting a patient must delete every symptom episode filed against them, and a row without a patient is unreachable",
+		},
+		{
+			relation:    relationRule{collection: kind.Vitals.Collection(), field: vitalsFieldPatient, required: true, cascadeDelete: true},
+			target:      patients.Id,
+			consequence: "deleting a patient must delete every measurement set filed against them, and a row without a patient is unreachable",
+		},
+		{
+			relation:    relationRule{collection: kind.Vitals.Collection(), field: vitalsFieldPractitioner, required: false, cascadeDelete: false},
+			target:      practitioners.Id,
+			consequence: "deleting a practitioner must unset a measurement set's reference to it, not delete the measurement set",
+		},
 	}
 
 	declared := make([]relationRule, 0, len(cases))

@@ -1,0 +1,68 @@
+package records
+
+import (
+	"medikube/internal/domain/kind"
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
+
+const (
+	vitalsEmptyTitle  = "Nothing recorded yet"
+	vitalsEmptyBody   = "Record the first set of measurements and it will be listed here."
+	vitalsCreateLabel = "Record measurements"
+	vitalsTitle       = "Measurements"
+)
+
+templ VitalsList(props VitalsListProps) {
+	<section
+		id={ ids.RecordList(kind.Vitals) }
+		aria-label={ vitalsTitle }
+		class="flex flex-col"
+	>
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<h1
+				id={ ids.RecordListHeading(kind.Vitals) }
+				tabindex="-1"
+				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ vitalsTitle }</h1>
+			if props.CreateHref != "" {
+				<a
+					href={ props.CreateHref }
+					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+				>{ vitalsCreateLabel }</a>
+			}
+		</div>
+		if len(props.Vitals) == 0 {
+			<div class="mt-6">
+				@components.EmptyState(components.EmptyStateProps{
+					ID:          ids.RecordEmpty(kind.Vitals),
+					Title:       vitalsEmptyTitle,
+					Body:        vitalsEmptyBody,
+					ActionHref:  props.CreateHref,
+					ActionLabel: vitalsCreateLabel,
+				})
+			</div>
+		} else {
+			<div class="mt-4 overflow-x-auto">
+				<table class="w-full border-collapse text-left text-sm">
+					<thead>
+						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
+							<th scope="col" class="pb-2 pr-4 font-medium">{ VitalsFieldLabel(VitalsFieldRecordedAt) }</th>
+							<th scope="col" class="pb-2 font-medium">Measurements</th>
+						</tr>
+					</thead>
+					<tbody id={ ids.RecordRows(kind.Vitals) }>
+						for _, v := range props.Vitals {
+							@VitalsRow(v)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		@components.Pagination(components.PaginationProps{
+			ID:           ids.RecordPager(kind.Vitals),
+			PreviousHref: props.PreviousHref,
+			NextHref:     props.NextHref,
+		})
+	</section>
+}

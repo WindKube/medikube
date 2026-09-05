@@ -64,3 +64,13 @@ func TestInstantNeverEmitsNullForANonPointer(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, "null", string(text))
 }
+
+func TestInstantReadsAndWritesTheDatetimeLocalLayout(t *testing.T) {
+	t.Parallel()
+
+	var parsed Instant
+	require.NoError(t, parsed.UnmarshalText([]byte("2026-03-01T09:30")))
+	assert.Equal(t, "2026-03-01T09:30:00Z", parsed.String())
+	assert.Equal(t, "2026-03-01T09:30", parsed.Input())
+	assert.Empty(t, Instant{}.Input())
+}

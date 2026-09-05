@@ -31,10 +31,13 @@ import (
 	"medikube/internal/service/patient"
 	practitionersvc "medikube/internal/service/practitioner"
 	searchsvc "medikube/internal/service/search"
+	"medikube/internal/service/symptom"
+	"medikube/internal/service/vitals"
 	"medikube/internal/store"
 	auditstore "medikube/internal/store/audit"
 	equipmentstore "medikube/internal/store/equipment"
 	facilitystore "medikube/internal/store/facility"
+	storeidentity "medikube/internal/store/identity"
 	storeimmunization "medikube/internal/store/immunization"
 	storeinjury "medikube/internal/store/injury"
 	insurancestore "medikube/internal/store/insurance"
@@ -42,6 +45,8 @@ import (
 	patientstore "medikube/internal/store/patient"
 	practitionerstore "medikube/internal/store/practitioner"
 	searchstore "medikube/internal/store/search"
+	symptomstore "medikube/internal/store/symptom"
+	vitalsstore "medikube/internal/store/vitals"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
 	"medikube/internal/web/page"
@@ -312,6 +317,16 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 		return nil, err
 	}
 
+	symptomPages, err := page.SymptomHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
+	vitalsPages, err := page.VitalsHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
 	streams, err := stream.Handlers(stream.Deps{Resolve: resolve, Hub: hub})
 	if err != nil {
 		return nil, err
@@ -323,6 +338,8 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 	maps.Copy(table, injuryPages)
 	maps.Copy(table, insurancePages)
 	maps.Copy(table, equipmentPages)
+	maps.Copy(table, symptomPages)
+	maps.Copy(table, vitalsPages)
 	maps.Copy(table, streams)
 
 	return table, nil
@@ -333,6 +350,20 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 // the same account row contracts/account.md does, rather than a second query
 // of its own.
 func unitSystemOf(accounts *serviceidentity.Service) api.UnitSystemOf {
+	return func(ctx context.Context, actor access.Actor) (identity.UnitSystem, error) {
+		user, err := accounts.Me(ctx, actor)
+		if err != nil {
+			return "", err
+		}
+
+		return user.UnitSystem, nil
+	}
+}
+
+// vitalsUnitSystemOf mirrors unitSystemOf for internal/service/vitals, which
+// declares its own UnitSystemOf type rather than importing internal/web/api's
+// (internal/service must not depend on internal/web).
+func vitalsUnitSystemOf(accounts *serviceidentity.Service) vitals.UnitSystemOf {
 	return func(ctx context.Context, actor access.Actor) (identity.UnitSystem, error) {
 		user, err := accounts.Me(ctx, actor)
 		if err != nil {
@@ -540,7 +571,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	registry.SetIndexer(indexer)
 	registry.SetSearchReader(searchRepo)
 
-	err = medication.Register(registry, medication.Wiring{
+	if medicationRegisterErr := medication.Register(registry, medication.Wiring{
 		Repository:   repository,
 		Authorizer:   authorizer,
 		Codec:        api.MedicationCodec{},
@@ -548,9 +579,8 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Views:        views,
 		SearchFields: api.MedicationSearchFields,
 		Basis:        api.MedicationBasis,
-	})
-	if err != nil {
-		return err
+	}); medicationRegisterErr != nil {
+		return medicationRegisterErr
 	}
 
 	insuranceViews, err := page.NewInsuranceViews()
@@ -640,6 +670,77 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Basis:        api.InjuryBasis,
 	}); err != nil {
 		return err
+	}
+
+	identityRepo, err := storeidentity.NewRepository(app)
+	if err != nil {
+		return err
+	}
+
+	identityAuth, err := storeidentity.NewAuthenticator(app)
+	if err != nil {
+		return err
+	}
+
+	mailer, err := pb.NewMailer(app)
+	if err != nil {
+		return err
+	}
+
+	identityService, err := serviceidentity.New(serviceidentity.Config{
+		Repository:    identityRepo,
+		Authenticator: identityAuth,
+		Mailer:        mailer,
+		Auditor:       auditor,
+		Clock:         serviceidentity.SystemClock{},
+	})
+	if err != nil {
+		return err
+	}
+
+	symptomViews, err := page.NewSymptomViews()
+	if err != nil {
+		return err
+	}
+
+	symptomRepo, err := symptomstore.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	if symptomRegisterErr := symptom.Register(registry, symptom.Wiring{
+		Repository:   symptomRepo,
+		Authorizer:   authorizer,
+		Codec:        api.SymptomCodec{},
+		Schema:       api.SymptomSchema(),
+		Views:        symptomViews,
+		SearchFields: api.SymptomSearchFields,
+		Basis:        api.SymptomBasis,
+	}); symptomRegisterErr != nil {
+		return symptomRegisterErr
+	}
+
+	vitalsViews, err := page.NewVitalsViews()
+	if err != nil {
+		return err
+	}
+
+	vitalsRepo, err := vitalsstore.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	if vitalsRegisterErr := vitals.Register(registry, vitals.Wiring{
+		Repository:   vitalsRepo,
+		Authorizer:   authorizer,
+		Codec:        api.VitalsCodec{},
+		UnitSystemOf: vitalsUnitSystemOf(identityService),
+		Schema:       api.VitalsSchema(),
+		Views:        vitalsViews,
+		SearchFields: api.VitalsSearchFields,
+		Basis:        api.VitalsBasis,
+	}); vitalsRegisterErr != nil {
+		return vitalsRegisterErr
 	}
 
 	// FR-036's three rows, written by the post-commit hooks and by no handler

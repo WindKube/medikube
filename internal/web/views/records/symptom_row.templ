@@ -1,0 +1,35 @@
+package records
+
+import (
+	"medikube/internal/domain/kind"
+	"medikube/internal/web/views/ids"
+)
+
+templ SymptomRow(symptom SymptomView) {
+	<tr
+		id={ ids.RecordRow(kind.Symptom, symptom.ID) }
+		data-status={ symptom.StatusValue }
+		class="border-b border-slate-200 last:border-b-0 dark:border-slate-800"
+	>
+		<th scope="row" class="py-3 pr-4 text-left align-top font-medium">
+			<a
+				href={ symptom.Links.Detail }
+				class="text-teal-800 underline underline-offset-2 hover:text-teal-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-teal-300 dark:hover:text-teal-200"
+			>{ symptom.Name }</a>
+		</th>
+		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
+			<span class="sr-only">{ SymptomFieldLabel(SymptomFieldSeverity) }</span>
+			{ symptom.Severity }
+		</td>
+		<td class="py-3 pr-4 align-top tabular-nums text-slate-700 dark:text-slate-300">
+			<span class="sr-only">Episodes</span>
+			{ itoa(symptom.EpisodeCount) }
+		</td>
+		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
+			if symptom.LastOccurredAt != "" {
+				<span class="sr-only">Most recent</span>
+				<time datetime={ symptom.LastOccurredAt }>{ symptom.LastOccurredAt }</time>
+			}
+		</td>
+	</tr>
+}

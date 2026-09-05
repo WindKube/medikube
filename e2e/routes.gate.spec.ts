@@ -136,6 +136,22 @@ async function titleFor(route: PageRoute, page: Page): Promise<string> {
       return fixtures.title(
         await nameOf(page, `/api/v1/records/equipment/${idOf(route.smokeURL)}`),
       );
+    case "symptomDetailPage":
+      return fixtures.title(
+        await fieldOf(
+          page,
+          `/api/v1/records/symptoms/${idOf(route.smokeURL)}`,
+          "name",
+        ),
+      );
+    case "measurementsDetailPage":
+      return fixtures.title(
+        await fieldOf(
+          page,
+          `/api/v1/records/vitals/${idOf(route.smokeURL)}`,
+          "recorded_at",
+        ),
+      );
     case "patientListPage":
       return fixtures.title("People");
     case "patientDetailPage":

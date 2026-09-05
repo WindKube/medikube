@@ -40,6 +40,8 @@ func TestTheAppliedMigrationSetEqualsTheRegisteredSet(t *testing.T) {
 		"1756400020_" + kind.Insurance.Collection() + ".go",
 		"1756400100_" + kind.Immunization.Collection() + ".go",
 		"1756400200_" + kind.Injury.Collection() + ".go",
+		"1756400300_" + kind.Symptom.Collection() + ".go",
+		"1756400400_" + kind.Vitals.Collection() + ".go",
 	}
 
 	require.Equal(t, expected, Files(),
@@ -63,7 +65,7 @@ func TestTheAppliedSetTracksWhatHasActuallyBeenApplied(t *testing.T) {
 	app := newTestApp(t)
 
 	items := core.AppMigrations.Items()
-	require.Len(t, items, 17)
+	require.Len(t, items, 19)
 
 	reverted, err := runnerFor(items)(app).Down(1)
 	require.NoError(t, err)
@@ -71,11 +73,11 @@ func TestTheAppliedSetTracksWhatHasActuallyBeenApplied(t *testing.T) {
 
 	applied, err := Applied(app)
 	require.NoError(t, err)
-	assert.Equal(t, Files()[:16], applied)
+	assert.Equal(t, Files()[:18], applied)
 
 	pending, err := Pending(app)
 	require.NoError(t, err)
-	assert.Equal(t, Files()[16:], pending,
+	assert.Equal(t, Files()[18:], pending,
 		"a reverted migration must read as pending, or readyz reports green on a half-migrated instance")
 
 	// PocketBase's own system migrations live in the same table. If they were

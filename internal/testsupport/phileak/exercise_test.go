@@ -118,6 +118,8 @@ const (
 	InsuranceMemberID = "member-number-8823-vandeleur"
 	InsuranceCompany  = "Halvorsen-Mutual-Underwriters"
 	EquipmentSerial   = "serial-number-9910-nebulizer"
+	SymptomBodySite   = "left-temple-and-behind-the-eye"
+	MeasurementDevice = "home-cuff-serial-88213X"
 )
 
 // Sentinel is one planted value and what it stands for. The meaning is printed
@@ -165,6 +167,8 @@ func Sentinels() []Sentinel {
 		{InsuranceMemberID, "an insurance policy's member number (FR-047, SC-012)"},
 		{InsuranceCompany, "the insurer they are covered by"},
 		{EquipmentSerial, "the serial number of a piece of medical equipment they use"},
+		{SymptomBodySite, "where on the body a symptom was felt"},
+		{MeasurementDevice, "the device a measurement was taken with"},
 	}
 }
 
@@ -936,6 +940,13 @@ func injuriesOfKind() string      { return "/api/v1/records/" + kind.Injury.Segm
 
 func immunizationPageOfKind() string { return "/" + kind.Immunization.Segment() }
 func injuryPageOfKind() string       { return "/" + kind.Injury.Segment() }
+func symptomsOfKind() string         { return "/api/v1/records/" + kind.Symptom.Segment() }
+
+func symptomAddress(id string) string { return symptomsOfKind() + "/" + id }
+
+func vitalsOfKind() string { return "/api/v1/records/" + kind.Vitals.Segment() }
+
+func vitalsAddress(id string) string { return vitalsOfKind() + "/" + id }
 
 // sentinelPatientFor plants one minimal patient for the given account,
 // directly against the database: the registration-time hook that provisions a
@@ -962,6 +973,10 @@ func sentinelPatientFor(c *client, email string) string {
 
 func pageOfKind() string { return "/" + kind.Medication.Segment() }
 
+func symptomPageOfKind() string { return "/" + kind.Symptom.Segment() }
+
+func vitalsPageOfKind() string { return "/" + kind.Vitals.Segment() }
+
 // drive walks the whole inventory.
 //
 // The order is a person's, not a route table's: an account is created before it
@@ -979,6 +994,8 @@ func drive(t testing.TB, c *client) {
 	driveInjuryRecords(c)
 	driveInsurance(c)
 	driveEquipment(c)
+	driveSymptoms(c)
+	driveVitals(c)
 	drivePatients(c)
 	driveDirectory(c)
 	drivePages(c)
@@ -1453,6 +1470,102 @@ func driveEquipment(c *client) {
 	c.doWith(http.MethodDelete, recordAddr, "", map[string]string{"If-Match": etag})
 }
 
+// sentinelSymptom plants the free-text sentinel a symptom episode carries.
+func sentinelSymptom(patientID string) api.SymptomCreate {
+	return api.SymptomCreate{
+		Patient:    patientID,
+		Name:       MedicationName,
+		Severity:   "moderate",
+		OccurredAt: "2026-01-01T09:00:00Z",
+		BodySite:   SymptomBodySite,
+	}
+}
+
+// sentinelVitals plants the free-text sentinel a measurement set carries.
+func sentinelVitals(patientID string) api.VitalsCreate {
+	weight := 70.0
+
+	return api.VitalsCreate{
+		Patient:    patientID,
+		RecordedAt: "2026-01-01T09:00:00Z",
+		WeightKg:   &weight,
+		Device:     MeasurementDevice,
+	}
+}
+
+// driveSymptoms walks the six generic operations against a symptom episode
+// carrying its own free-text sentinel, plus the refusals that construct an
+// error message: a stranger's read and a stale precondition.
+func driveSymptoms(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+
+	created := c.do(http.MethodPost, symptomsOfKind(), jsonBody(c.t, sentinelSymptom(patientID)))
+	require.Equal(c.t, http.StatusCreated, created.Status, "%s", created.Body)
+
+	id := decodedID(c.t, created.Body)
+	address := symptomAddress(id)
+
+	read := c.do(http.MethodGet, address, "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+
+	etag := read.Header.Get("ETag")
+	require.NotEmpty(c.t, etag, "no ETag, so the precondition step below would not be one")
+
+	c.do(http.MethodGet, symptomsOfKind()+"?patient="+patientID, "")
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, address, "")
+
+	c.token(testsupport.AccountAEmail)
+
+	patch := jsonBody(c.t, api.SymptomPatch{BodySite: ptr(SymptomBodySite)})
+	c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": `"not-the-current-version"`})
+
+	updated := c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": etag})
+	require.Equal(c.t, http.StatusOK, updated.Status, "%s", updated.Body)
+
+	current := updated.Header.Get("ETag")
+	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
+}
+
+// driveVitals walks the six generic operations against a measurement set
+// carrying its own free-text sentinel, the same way driveSymptoms does.
+func driveVitals(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+
+	created := c.do(http.MethodPost, vitalsOfKind(), jsonBody(c.t, sentinelVitals(patientID)))
+	require.Equal(c.t, http.StatusCreated, created.Status, "%s", created.Body)
+
+	id := decodedID(c.t, created.Body)
+	address := vitalsAddress(id)
+
+	read := c.do(http.MethodGet, address, "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+
+	etag := read.Header.Get("ETag")
+	require.NotEmpty(c.t, etag, "no ETag, so the precondition step below would not be one")
+
+	c.do(http.MethodGet, vitalsOfKind()+"?patient="+patientID, "")
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, address, "")
+
+	c.token(testsupport.AccountAEmail)
+
+	patch := jsonBody(c.t, api.VitalsPatch{Device: ptr(MeasurementDevice)})
+	c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": `"not-the-current-version"`})
+
+	updated := c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": etag})
+	require.Equal(c.t, http.StatusOK, updated.Status, "%s", updated.Body)
+
+	current := updated.Header.Get("ETag")
+	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
+}
+
 // decodedID reads the id out of a created record's body without asserting on
 // the rest of the shape, which is another suite's business.
 func decodedID(t testing.TB, body string) string {
@@ -1557,6 +1670,10 @@ func drivePages(c *client) {
 		immunizationPageOfKind() + "/" + testsupport.ImmunizationSampleID,
 		injuryPageOfKind() + "?patient=" + testsupport.AccountAPatientSelfID,
 		injuryPageOfKind() + "/" + testsupport.InjurySampleID,
+		symptomPageOfKind(),
+		symptomPageOfKind() + "/" + testsupport.SymptomHeadacheOneID,
+		vitalsPageOfKind(),
+		vitalsPageOfKind() + "/" + testsupport.VitalsOneID,
 		"/settings",
 	} {
 		c.do(http.MethodGet, path, "")
