@@ -42,3 +42,13 @@ func TestEmergencyContactReadIsOwnerScopedAndAnonymousRefused(t *testing.T) {
 	assert.NotContains(t, anon.Body, testsupport.AccountAPatientSelfID,
 		"an unauthenticated refusal named the patient it was asked about")
 }
+
+func TestEmergencyContactListWithoutASortUsesTheCompoundDefault(t *testing.T) {
+	t.Parallel()
+
+	owner := newCaller(t)
+
+	listed := owner.get("/api/v1/records/" + kind.EmergencyContact.Segment() + "?patient=" + testsupport.AccountAPatientSelfID)
+	require.Equal(t, http.StatusOK, listed.Status, listed.Body)
+	assert.Contains(t, listed.Body, seed.PrimaryContactID)
+}

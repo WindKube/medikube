@@ -232,11 +232,16 @@ func KindQuery(e *core.RequestEvent, entry records.Entry) (records.Query, error)
 		return records.Query{}, err
 	}
 
+	sort := params.Sort
+	if e.Request.URL.Query().Get(web.ParamSort) == "" && len(entry.Schema.DefaultSort) > 0 {
+		sort = entry.Schema.DefaultSort
+	}
+
 	return records.Query{
 		PatientID: patientID,
 		Search:    params.Search,
 		Filters:   filters(e),
-		Sort:      params.Sort,
+		Sort:      sort,
 		Limit:     params.Limit,
 		Cursor:    params.Cursor,
 		Count:     params.Count,

@@ -152,6 +152,30 @@ async function titleFor(route: PageRoute, page: Page): Promise<string> {
           "recorded_at",
         ),
       );
+    case "allergyDetailPage":
+      return fixtures.title(
+        await fieldOf(
+          page,
+          `/api/v1/records/allergies/${idOf(route.smokeURL)}`,
+          "allergen",
+        ),
+      );
+    case "conditionDetailPage":
+      return fixtures.title(
+        await fieldOf(
+          page,
+          `/api/v1/records/conditions/${idOf(route.smokeURL)}`,
+          "diagnosis",
+        ),
+      );
+    case "emergencyContactDetailPage":
+      return fixtures.title(
+        await fieldOf(
+          page,
+          `/api/v1/records/emergency-contacts/${idOf(route.smokeURL)}`,
+          "name",
+        ),
+      );
     case "patientListPage":
       return fixtures.title("People");
     case "patientDetailPage":
