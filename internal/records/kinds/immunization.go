@@ -58,6 +58,8 @@ func (a *Adapter) List(ctx context.Context, actor access.Actor, query records.Qu
 	page, err := a.service.List(ctx, actor, immunization.Query{
 		PatientID: query.PatientID,
 		Search:    query.Search,
+		Tags:      query.Filters[records.FilterTags],
+		Match:     matchOf(query.Filters[records.FilterMatch]),
 		Sort:      query.Sort,
 		Limit:     query.Limit,
 		Cursor:    query.Cursor,
@@ -180,7 +182,7 @@ func Register(registry *records.Registry, wiring Wiring) error {
 
 	schema := wiring.Schema
 	schema.Sorts = immunization.Sorts()
-	schema.Filters = map[string]records.FilterSpec{}
+	schema.Filters = records.TagFilters()
 
 	return registry.Register(records.Registration{
 		Kind:       kind.Immunization,

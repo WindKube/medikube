@@ -203,6 +203,12 @@ var checkpointExempt = map[string]exemption{
 	"internal/service/facility/facilitytest.Authorizer.Actor": {
 		reason: "the facility contract suite's fake Authorizer, for the same reason",
 	},
+	"internal/service/tag.actorAuthorizer.Actor": {
+		reason: "IS the tag checkpoint itself",
+	},
+	"internal/service/tag/tagtest.Authorizer.Actor": {
+		reason: "the tag contract suite's fake Authorizer, for the same reason",
+	},
 }
 
 func TestEveryServiceMethodThatTouchesARecordReachesTheCheckpoint(t *testing.T) {

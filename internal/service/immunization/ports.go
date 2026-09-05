@@ -20,6 +20,14 @@ const (
 // ParamSort is the field a refused ordering is reported against.
 const ParamSort = "sort"
 
+// MatchAny and MatchAll are `?tags=&match=` (FR-067, research D-10),
+// mirroring internal/records.MatchAny/MatchAll: this package does not import
+// internal/records, so it carries its own copy of the two spellings.
+const (
+	MatchAny = "any"
+	MatchAll = "all"
+)
+
 // Sorts is the published ordering allowlist, most recently administered
 // first by default (data-model §3).
 func Sorts() []domain.SortKey {
@@ -37,6 +45,12 @@ func Sorts() []domain.SortKey {
 type Query struct {
 	PatientID string
 	Search    string
+
+	// Tags and Match are `?tags=a,b&match=any|all` (FR-067). Tags empty
+	// means the narrowing is not applied; Match is MatchAny unless the
+	// caller asked for MatchAll.
+	Tags  []string
+	Match string
 
 	Sort   []domain.SortKey
 	Limit  int

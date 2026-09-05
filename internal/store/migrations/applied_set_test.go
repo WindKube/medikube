@@ -45,6 +45,7 @@ func TestTheAppliedMigrationSetEqualsTheRegisteredSet(t *testing.T) {
 		"1756400200_" + kind.Injury.Collection() + ".go",
 		"1756400300_" + kind.Symptom.Collection() + ".go",
 		"1756400400_" + kind.Vitals.Collection() + ".go",
+		"1756400410_symptom_vitals_tags.go",
 		"1756400500_" + kind.Encounter.Collection() + ".go",
 		"1756400510_" + kind.Procedure.Collection() + ".go",
 		"1756400520_" + kind.Treatment.Collection() + ".go",

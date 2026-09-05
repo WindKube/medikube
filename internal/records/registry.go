@@ -191,6 +191,13 @@ type Registry struct {
 	// every unit-level test that registers two kinds without one never
 	// exercises that path.
 	searchReader search.Reader
+
+	// tagChecker is FR-064's ownership check, wired into every kind
+	// registered from this point on (SetTagChecker). Nil is legitimate the
+	// same way indexer's is: a registry with no checker simply does not
+	// validate tag ownership, which is every fixture that has no tags
+	// collection to check against.
+	tagChecker TagChecker
 }
 
 // SetIndexer wires the search index's write side into every kind registered
@@ -262,6 +269,13 @@ func (r *Registry) add(registration Registration, segment, collection string, sy
 			indexer:      r.indexer,
 			kind:         registration.Kind,
 			searchFields: registration.SearchFields,
+		}
+	}
+
+	if r.tagChecker != nil {
+		registration.Service = &tagCheckingService{
+			Service: registration.Service,
+			checker: r.tagChecker,
 		}
 	}
 

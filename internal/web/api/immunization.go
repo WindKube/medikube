@@ -78,6 +78,7 @@ type Immunization struct {
 	Site         string  `json:"site,omitempty"`
 	Route        string  `json:"route,omitempty"`
 	ExpiresOn    *string `json:"expires_on"`
+	Tags         []string `json:"tags,omitempty"`
 	CreatedAt    string  `json:"created_at"`
 }
 
@@ -97,7 +98,12 @@ type ImmunizationCreate struct {
 	ExpiresOn      *string `json:"expires_on,omitempty"`
 	Practitioner   *string `json:"practitioner,omitempty"`
 	Facility       *string `json:"facility,omitempty"`
+	Tags           []string `json:"tags,omitempty"`
 }
+
+// TagIDs implements records.Taggable: a create always supplies its tags,
+// even when that is none.
+func (c *ImmunizationCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
 // ImmunizationPatch is the partial update. AdministeredOn and ExpiresOn go
 // through web.Optional the same way medication's two dates do (present with
@@ -120,6 +126,20 @@ type ImmunizationPatch struct {
 
 	Practitioner *string `json:"practitioner,omitempty"`
 	Facility     *string `json:"facility,omitempty"`
+
+	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
+	// applied tags alone, a non-nil one — including an empty array —
+	// replaces the whole set.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// TagIDs implements records.Taggable.
+func (p *ImmunizationPatch) TagIDs() (ids []string, supplied bool) {
+	if p.Tags == nil {
+		return nil, false
+	}
+
+	return *p.Tags, true
 }
 
 // ImmunizationCodec is the DTO boundary for immunizations: the only place a
@@ -189,6 +209,7 @@ func (c ImmunizationCodec) Detail(i clinical.Immunization) any {
 		Site:                string(i.Site),
 		Route:               string(i.Route),
 		ExpiresOn:           wireDate(i.ExpiresOn),
+		Tags:                i.Tags,
 		CreatedAt:           wireInstant(i.CreatedAt),
 	}
 }
@@ -222,6 +243,7 @@ func (ImmunizationCodec) Draft(body any) (clinical.Immunization, error) {
 		ExpiresOn:      expiresOn,
 		PractitionerID: deref(create.Practitioner),
 		FacilityID:     deref(create.Facility),
+		Tags:           create.Tags,
 	}, nil
 }
 
@@ -246,6 +268,7 @@ func (ImmunizationCodec) Patch(body any) (immunization.Patch, error) {
 		ExpiresOn:      readOptionalDate(&invalid, ImmunizationMemberExpiresOn, incoming.ExpiresOn),
 		Practitioner:   incoming.Practitioner,
 		Facility:       incoming.Facility,
+		Tags:           incoming.Tags,
 	}
 
 	if err := orderedImmunizationRefusal(&invalid); err != nil {
