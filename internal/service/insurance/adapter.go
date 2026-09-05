@@ -18,7 +18,9 @@ import (
 // research D-16) without records.Record growing a member every other kind
 // carries as an always-empty field.
 type Codec interface {
-	Summary(entity clinical.Insurance) any
+	// Summary's basis is FR-046's per-row "expiring" reason, nil when the
+	// list was not narrowed by ?expiring_within_days=.
+	Summary(entity clinical.Insurance, basis []string) any
 	Detail(entity clinical.Insurance, displaced *Displaced) any
 	Draft(body any) (clinical.Insurance, error)
 	Patch(body any) (Patch, error)
@@ -51,7 +53,7 @@ func NewAdapter(service *Service, codec Codec) (*Adapter, error) {
 }
 
 func (a *Adapter) List(ctx context.Context, actor access.Actor, query records.Query) (domain.Page[records.Record], error) {
-	page, err := a.service.List(ctx, actor, Query{
+	resolved := Query{
 		PatientID:          query.PatientID,
 		Search:             query.Search,
 		Types:              types(query.Filters[FilterType]),
@@ -62,14 +64,21 @@ func (a *Adapter) List(ctx context.Context, actor access.Actor, query records.Qu
 		Limit:              query.Limit,
 		Cursor:             query.Cursor,
 		Count:              query.Count,
-	})
+	}
+
+	page, err := a.service.List(ctx, actor, resolved)
 	if err != nil {
 		return domain.Page[records.Record]{}, err
 	}
 
 	items := make([]records.Record, 0, len(page.Items))
 	for _, item := range page.Items {
-		items = append(items, a.record(item, a.codec.Summary(item)))
+		var basis []string
+		if resolved.ExpiringWithinDays != nil {
+			basis = ExpiringBasis(item, *resolved.ExpiringWithinDays)
+		}
+
+		items = append(items, a.record(item, a.codec.Summary(item, basis)))
 	}
 
 	converted := domain.NewPage(items, page.NextCursor)

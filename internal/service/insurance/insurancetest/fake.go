@@ -418,9 +418,10 @@ func (a *Authorizer) Patient(_ context.Context, actor access.Actor, _ string, _ 
 // The stand-in DTOs, for a kind contract run without internal/web/api.
 type (
 	Summary struct {
-		ID   string
-		Kind string
-		Name string
+		ID    string
+		Kind  string
+		Name  string
+		Basis []string
 	}
 
 	Detail struct {
@@ -447,8 +448,8 @@ type Codec struct{}
 
 func NewCodec() Codec { return Codec{} }
 
-func (Codec) Summary(entity clinical.Insurance) any {
-	return &Summary{ID: entity.ID, Kind: kind.Insurance.Enum(), Name: entity.Company}
+func (Codec) Summary(entity clinical.Insurance, basis []string) any {
+	return &Summary{ID: entity.ID, Kind: kind.Insurance.Enum(), Name: entity.Company, Basis: basis}
 }
 
 func (Codec) Detail(entity clinical.Insurance, displaced *insurance.Displaced) any {

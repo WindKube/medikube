@@ -17,7 +17,10 @@ import (
 // place that needs it (medication.Codec's own doc comment explains why the
 // service hands `any` in both directions).
 type Codec interface {
-	Summary(entity clinical.Equipment) any
+	// Summary's basis is FR-049's per-row overdue/due_soon distinction
+	// (ServiceDueBasis), nil when the list was not narrowed by
+	// ?service_due_within_days=.
+	Summary(entity clinical.Equipment, basis []string) any
 	Detail(entity clinical.Equipment) any
 	Draft(body any) (clinical.Equipment, error)
 	Patch(body any) (Patch, error)
@@ -50,7 +53,7 @@ func NewAdapter(service *Service, codec Codec) (*Adapter, error) {
 }
 
 func (a *Adapter) List(ctx context.Context, actor access.Actor, query records.Query) (domain.Page[records.Record], error) {
-	page, err := a.service.List(ctx, actor, Query{
+	resolved := Query{
 		PatientID:            query.PatientID,
 		Search:               query.Search,
 		Types:                types(query.Filters[FilterType]),
@@ -60,14 +63,21 @@ func (a *Adapter) List(ctx context.Context, actor access.Actor, query records.Qu
 		Limit:                query.Limit,
 		Cursor:               query.Cursor,
 		Count:                query.Count,
-	})
+	}
+
+	page, err := a.service.List(ctx, actor, resolved)
 	if err != nil {
 		return domain.Page[records.Record]{}, err
 	}
 
 	items := make([]records.Record, 0, len(page.Items))
 	for _, item := range page.Items {
-		items = append(items, a.record(item, a.codec.Summary(item)))
+		var basis []string
+		if resolved.ServiceDueWithinDays != nil {
+			basis = ServiceDueBasis(item, *resolved.ServiceDueWithinDays)
+		}
+
+		items = append(items, a.record(item, a.codec.Summary(item, basis)))
 	}
 
 	converted := domain.NewPage(items, page.NextCursor)

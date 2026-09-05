@@ -388,9 +388,10 @@ func (a *Authorizer) Patient(_ context.Context, actor access.Actor, _ string, _ 
 // can be run without depending on internal/web/api.
 type (
 	Summary struct {
-		ID   string
-		Kind string
-		Name string
+		ID    string
+		Kind  string
+		Name  string
+		Basis []string
 	}
 
 	Detail struct {
@@ -416,8 +417,8 @@ type Codec struct{}
 
 func NewCodec() Codec { return Codec{} }
 
-func (Codec) Summary(entity clinical.Equipment) any {
-	return &Summary{ID: entity.ID, Kind: kind.Equipment.Enum(), Name: entity.Name}
+func (Codec) Summary(entity clinical.Equipment, basis []string) any {
+	return &Summary{ID: entity.ID, Kind: kind.Equipment.Enum(), Name: entity.Name, Basis: basis}
 }
 
 func (Codec) Detail(entity clinical.Equipment) any {
