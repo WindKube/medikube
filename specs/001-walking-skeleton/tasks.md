@@ -1086,21 +1086,21 @@ each break the build for the right reason.
 - [ ] T297 [US6] TEST — **the red-gate demonstration for a console error.** Add a deliberate
   `console.error` to one page, run `task smoke`, confirm it **fails**, record it, and revert
   (FR-072, SC-010).
-- [ ] T298 [P] [US6] TEST `internal/architecture/depguard_test.go` — a fixture package importing
+- [x] T298 [P] [US6] TEST `internal/architecture/depguard_test.go` — a fixture package importing
   `github.com/pocketbase/pocketbase/core` from `internal/domain` makes `task lint` fail. Demonstrate
   it once and record the output (Principle II).
-- [ ] T299 [P] [US6] TEST `internal/architecture/forbidigo_test.go` — an `app.Logger()` call outside
+- [x] T299 [P] [US6] TEST `internal/architecture/forbidigo_test.go` — an `app.Logger()` call outside
   `internal/logging` makes `task lint` fail, and an `OnRecordCreateRequest` binding outside
   `internal/platform/pb/hooks.go` does too (Principles VI, reconciliation C13).
-- [ ] T300 [US6] TEST `internal/architecture/scenarios_test.go` — a coverage test asserting that
+- [x] T300 [US6] TEST `internal/architecture/scenarios_test.go` — a coverage test asserting that
   **all 50** acceptance scenarios in `spec.md` have a named automated test, matched by a scenario
   identifier in the test name. A scenario without a test fails this test (FR-068, SC-004).
-- [ ] T301 [P] [US6] TEST `internal/architecture/scenario_ids_test.go` — every acceptance-scenario
+- [x] T301 [P] [US6] TEST `internal/architecture/scenario_ids_test.go` — every acceptance-scenario
   identifier is unique and every one is claimed by exactly one test, so two tests cannot both
   claim a scenario while another has none.
-- [ ] T302 [P] [US6] TEST `internal/architecture/authz_coverage_test.go` — every route in the
+- [x] T302 [P] [US6] TEST `internal/architecture/authz_coverage_test.go` — every route in the
   registry that touches clinical data appears in `RunOwnershipMatrix` (FR-069).
-- [ ] T303 [P] [US6] TEST `internal/architecture/ci_workflow_test.go` — the CI workflow contains
+- [x] T303 [P] [US6] TEST `internal/architecture/ci_workflow_test.go` — the CI workflow contains
   the `stream-liveness` job, does **not** set `GOTOOLCHAIN=local`, and runs every gate. A gate
   that exists but is not wired into CI is not a gate (FR-070).
 
@@ -1127,9 +1127,9 @@ scenarios pass.
   document until the ten-minute claim in SC-008 is true rather than aspirational.
 - [ ] T309 [P] Verify every one of the sixteen success criteria has a named test or a recorded
   measurement, and list where each is proven.
-- [ ] T310 [P] TEST `internal/web/api/errors_taxonomy_test.go` — every error code in
+- [x] T310 [P] TEST `internal/web/api/errors_taxonomy_test.go` — every error code in
   contracts/README.md's table is producible and no handler invents one outside it.
-- [ ] T311 [P] TEST `internal/web/api/unknown_field_test.go` — every write DTO rejects unknown
+- [x] T311 [P] TEST `internal/web/api/unknown_field_test.go` — every write DTO rejects unknown
   fields, asserted by reflection over the DTO set so a new DTO is covered by default.
 - [ ] T312 [P] Add the `medications` empty-state, single-row and full-list cases to the smoke run so
   the widest and the narrowest row are both exercised (research D-39).
@@ -1159,7 +1159,7 @@ scenarios pass.
 - [ ] T320 [P] Delete every scaffold `doc.go` that never acquired a package.
 - [ ] T321 [P] Re-run the full suite three times to catch order-dependence, and once with
   `-race`.
-- [ ] T322 [P] TEST `internal/architecture/test_isolation_test.go` — no test shares a
+- [x] T322 [P] TEST `internal/architecture/test_isolation_test.go` — no test shares a
   `tests.TestApp` with another, asserted by a source walk. The symptom of getting this wrong is a
   stack overflow, not a readable failure (reconciliation C14).
 - [ ] T323 [P] Verify `internal/testsupport/authz.go` and `internal/records/registry.go` read
