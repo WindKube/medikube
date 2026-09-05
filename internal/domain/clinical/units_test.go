@@ -1,7 +1,6 @@
 package clinical
 
 import (
-	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -49,7 +48,7 @@ func TestBMIDerivation(t *testing.T) {
 	t.Parallel()
 
 	got := BMI(70, 180)
-	want := 70 / math.Pow(1.8, 2)
+	want := 70 / (1.8 * 1.8)
 	assert.InDelta(t, want, got, 0.001)
 
 	assert.Zero(t, BMI(70, 0), "no height on file, no BMI to derive")
