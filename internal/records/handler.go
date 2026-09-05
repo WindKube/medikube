@@ -352,7 +352,11 @@ func resolveQuery(entry Entry, query Query) (Query, error) {
 	var invalid domain.ValidationError
 
 	if len(query.Sort) == 0 {
-		query.Sort = []domain.SortKey{entry.Schema.Sorts[0]}
+		if len(entry.Schema.DefaultSort) > 0 {
+			query.Sort = entry.Schema.DefaultSort
+		} else {
+			query.Sort = []domain.SortKey{entry.Schema.Sorts[0]}
+		}
 	}
 
 	for _, term := range query.Sort {

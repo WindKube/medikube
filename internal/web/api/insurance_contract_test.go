@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/kind"
 	"medikube/internal/records"
@@ -103,7 +104,7 @@ func TestInsuranceSatisfiesTheSharedRecordContracts(t *testing.T) {
 			},
 			Entry:       entry,
 			Fixture:     fixture,
-			DefaultSort: insurance.Sorts()[0],
+			DefaultSort: []domain.SortKey{insurance.Sorts()[0]},
 			NoPatientSkip: "insurance.Patient is a plain string FR-043 requires structurally " +
 				"(there is no pointer to omit it with), so a body naming no patient does not decode at all",
 			SearchIndex: func(t *testing.T, k kind.Kind, recordID string) (bool, string) {

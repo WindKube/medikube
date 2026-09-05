@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"strings"
 	"time"
@@ -55,10 +56,31 @@ func Handlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handl
 
 	pages := &medicationPages{resolve: resolve, patients: patients, links: links, views: MedicationViews{links: links}}
 
-	return httproute.Handlers{
+	table := httproute.Handlers{
 		OpMedicationListPage:   web.WithActor(pages.list),
 		OpMedicationDetailPage: web.WithActor(pages.detail),
-	}, nil
+	}
+
+	allergies, err := AllergyHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
+	conditions, err := ConditionHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
+	emergencyContacts, err := EmergencyContactHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, allergies)
+	maps.Copy(table, conditions)
+	maps.Copy(table, emergencyContacts)
+
+	return table, nil
 }
 
 // MedicationViews is the kind's rendering, as internal/records consumes it.

@@ -169,6 +169,12 @@ type Schema struct {
 	// list that looks right and is not (contracts/records.md).
 	Sorts []domain.SortKey
 
+	// DefaultSort overrides what an absent `?sort=` resolves to, for the kind
+	// whose ordering is one fixed compound and not several single-field
+	// alternatives (FR-051): Sorts[0] alone is not that ordering, the whole of
+	// Sorts is. Left nil, resolveQuery keeps defaulting to Sorts[0].
+	DefaultSort []domain.SortKey
+
 	// Filters are the kind's own named query parameters, keyed by name. It may
 	// be empty: a kind whose list takes nothing but the shared parameters is a
 	// legitimate registration, and requiring a value here would only make

@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/kind"
 	"medikube/internal/records"
@@ -102,7 +103,7 @@ func TestMedicationSatisfiesTheSharedRecordContracts(t *testing.T) {
 			},
 			Entry:       entry,
 			Fixture:     fixture,
-			DefaultSort: medication.Sorts()[0],
+			DefaultSort: []domain.SortKey{medication.Sorts()[0]},
 			NoPatientSkip: "medication.Patient is a plain string FR-002 requires structurally " +
 				"(there is no pointer to omit it with), so a body naming no patient does not " +
 				"decode at all; internal/web/api/medication_http_test.go proves the empty-string case",
@@ -201,7 +202,7 @@ func TestSymptomSatisfiesTheSharedRecordContracts(t *testing.T) {
 			},
 			Entry:       entry,
 			Fixture:     fixture,
-			DefaultSort: symptom.Sorts()[0],
+			DefaultSort: []domain.SortKey{symptom.Sorts()[0]},
 			NoPatientSkip: "symptom.Patient is a plain string FR-029 requires structurally (there is " +
 				"no pointer to omit it with), so a body naming no patient does not decode at all",
 			SearchIndex: func(t *testing.T, k kind.Kind, recordID string) (bool, string) {
@@ -284,7 +285,7 @@ func TestVitalsSatisfiesTheSharedRecordContracts(t *testing.T) {
 			},
 			Entry:       entry,
 			Fixture:     fixture,
-			DefaultSort: vitals.Sorts()[0],
+			DefaultSort: []domain.SortKey{vitals.Sorts()[0]},
 			NoPatientSkip: "the measurements kind's Patient is a plain string FR-033 requires structurally " +
 				"(there is no pointer to omit it with), so a body naming no patient does not decode at all",
 			SearchIndex: func(t *testing.T, k kind.Kind, recordID string) (bool, string) {

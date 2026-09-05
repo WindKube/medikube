@@ -306,7 +306,7 @@ test.describe('P6 — settings', () => {
 
 // A medication list is one person's (phase 002 FR-023): the page needs
 // ?patient=, so each account visits its own self-record's list.
-async function ownListPath(page: Page): Promise<string> {
+async function ownPathFor(page: Page, listPath: string): Promise<string> {
   const response = await page.request.get('/api/v1/patients');
   expect(response.ok(), 'the patient list did not answer').toBe(true);
 
@@ -314,7 +314,11 @@ async function ownListPath(page: Page): Promise<string> {
   const self = items.find((patient) => patient.is_self_record);
   expect(self, 'the account has no self-record').toBeDefined();
 
-  return `${fixtures.listPath}?patient=${self?.id}`;
+  return `${listPath}?patient=${self?.id}`;
+}
+
+async function ownListPath(page: Page): Promise<string> {
+  return ownPathFor(page, fixtures.listPath);
 }
 
 test.describe('P4 — the record list', () => {
@@ -434,6 +438,73 @@ async function nameOf(page: Page, id: string): Promise<string> {
 
   return ((await response.json()) as { name: string }).name;
 }
+
+// --- T059: US1's three other kinds ------------------------------------------
+//
+// One case per kind: the seeded row on its list, and its own detail landmark.
+// Each kind's detail page title is the field its page.go renders one by
+// (allergen, diagnosis, name), read back through the API the same way
+// nameOf reads medication's.
+async function fieldOf(page: Page, path: string, field: string): Promise<string> {
+  const response = await page.request.get(`/api/v1/records${path}`);
+  expect(response.ok(), `the API did not answer for ${path}`).toBe(true);
+
+  return ((await response.json()) as Record<string, string>)[field];
+}
+
+test.describe('US1 — allergies, conditions and emergency contacts', () => {
+  test('an allergy is on its list and renders its own detail landmark', async ({ page }) => {
+    const list = await open(page, {
+      path: await ownPathFor(page, fixtures.allergy.listPath),
+      title: fixtures.title('Allergies'),
+      landmark: { role: 'region', name: 'Allergies' },
+    });
+    await expect(list.locator(`a[href^="${fixtures.allergy.detailPath(fixtures.allergy.seededID)}"]`)).toBeVisible();
+
+    const allergen = await fieldOf(page, fixtures.allergy.detailPath(fixtures.allergy.seededID), 'allergen');
+    await open(page, {
+      path: fixtures.allergy.detailPath(fixtures.allergy.seededID),
+      title: fixtures.title(allergen),
+      landmark: { role: 'article', name: 'Allergy' },
+    });
+  });
+
+  test('a condition is on its list and renders its own detail landmark', async ({ page }) => {
+    const list = await open(page, {
+      path: await ownPathFor(page, fixtures.condition.listPath),
+      title: fixtures.title('Conditions'),
+      landmark: { role: 'region', name: 'Conditions' },
+    });
+    await expect(
+      list.locator(`a[href^="${fixtures.condition.detailPath(fixtures.condition.seededID)}"]`),
+    ).toBeVisible();
+
+    const diagnosis = await fieldOf(page, fixtures.condition.detailPath(fixtures.condition.seededID), 'diagnosis');
+    await open(page, {
+      path: fixtures.condition.detailPath(fixtures.condition.seededID),
+      title: fixtures.title(diagnosis),
+      landmark: { role: 'article', name: 'Condition' },
+    });
+  });
+
+  test('an emergency contact is on its list and renders its own detail landmark', async ({ page }) => {
+    const list = await open(page, {
+      path: await ownPathFor(page, fixtures.emergencyContact.listPath),
+      title: fixtures.title('Emergency contacts'),
+      landmark: { role: 'region', name: 'Emergency contacts' },
+    });
+    await expect(
+      list.locator(`a[href^="${fixtures.emergencyContact.detailPath(fixtures.emergencyContact.seededID)}"]`),
+    ).toBeVisible();
+
+    const name = await fieldOf(page, fixtures.emergencyContact.detailPath(fixtures.emergencyContact.seededID), 'name');
+    await open(page, {
+      path: fixtures.emergencyContact.detailPath(fixtures.emergencyContact.seededID),
+      title: fixtures.title(name),
+      landmark: { role: 'article', name: 'Emergency contact' },
+    });
+  });
+});
 
 // --- SC-014: the keyboard ---------------------------------------------------
 //

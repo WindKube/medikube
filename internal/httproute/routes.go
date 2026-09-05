@@ -444,6 +444,9 @@ func pageRoutes() []Route {
 	// D-05).
 	list := "/" + kind.Medication.Segment()
 	detail := list + "/{id}"
+	allergyList := "/" + kind.Allergy.Segment()
+	conditionList := "/" + kind.Condition.Segment()
+	emergencyContactList := "/" + kind.EmergencyContact.Segment()
 
 	insuranceList := "/" + kind.Insurance.Segment()
 	insuranceDetail := insuranceList + "/{id}"
@@ -491,6 +494,42 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "One record, every value it holds and the time it last changed.",
 			Landmark: `article[name="Medication"]`, SmokeURL: list + "/" + seed.NameOnlyID,
+		},
+		{
+			OpID: "allergyListPage", Method: http.MethodGet, Path: allergyList,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "US1's allergy list, with its empty state inside the landmark rather than instead of it.",
+			Landmark: kind.Allergy.ListLandmark(), SmokeURL: allergyList + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			OpID: "allergyDetailPage", Method: http.MethodGet, Path: allergyList + "/{id}",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "US1's allergy detail: every value it holds and the time it last changed.",
+			Landmark: kind.Allergy.DetailLandmark(), SmokeURL: allergyList + "/" + seed.CriticalAllergyID,
+		},
+		{
+			OpID: "conditionListPage", Method: http.MethodGet, Path: conditionList,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "US1's condition list, with its empty state inside the landmark rather than instead of it.",
+			Landmark: kind.Condition.ListLandmark(), SmokeURL: conditionList + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			OpID: "conditionDetailPage", Method: http.MethodGet, Path: conditionList + "/{id}",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "US1's condition detail: every value it holds and the time it last changed.",
+			Landmark: kind.Condition.DetailLandmark(), SmokeURL: conditionList + "/" + seed.ResolvedConditionID,
+		},
+		{
+			OpID: "emergencyContactListPage", Method: http.MethodGet, Path: emergencyContactList,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "US1's emergency contact list, with its empty state inside the landmark rather than instead of it.",
+			Landmark: kind.EmergencyContact.ListLandmark(), SmokeURL: emergencyContactList + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			OpID: "emergencyContactDetailPage", Method: http.MethodGet, Path: emergencyContactList + "/{id}",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "US1's emergency contact detail: every value it holds and the time it last changed.",
+			Landmark: kind.EmergencyContact.DetailLandmark(), SmokeURL: emergencyContactList + "/" + seed.PrimaryContactID,
 		},
 		{
 			// The smoke URL points at the patient whose /immunizations is

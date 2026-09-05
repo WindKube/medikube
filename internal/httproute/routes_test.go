@@ -143,12 +143,15 @@ func TestExactlyEightOperationsArePublic(t *testing.T) {
 // contracts/pages.md, "The pages". The landmark strings are what a Playwright
 // getByRole selector contains, so changing one is a breaking change to the gate
 // and has to break this test first.
-func TestTheTableCarriesTheTwentySevenPages(t *testing.T) {
+func TestTheTableCarriesTheThirtyThreePages(t *testing.T) {
 	t.Parallel()
 
 	segment := kind.Medication.Segment()
 	symptomSegment := kind.Symptom.Segment()
 	vitalsSegment := kind.Vitals.Segment()
+	allergySegment := kind.Allergy.Segment()
+	conditionSegment := kind.Condition.Segment()
+	contactSegment := kind.EmergencyContact.Segment()
 
 	want := []struct {
 		opID     string
@@ -210,6 +213,30 @@ func TestTheTableCarriesTheTwentySevenPages(t *testing.T) {
 			`region[name="Patient chart"]`, "/patients/" + seed.AccountAPatientSelfID,
 		},
 		{
+			"allergyListPage", "/" + allergySegment, httproute.AuthUser, kind.Allergy.ListLandmark(),
+			"/" + allergySegment + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			"allergyDetailPage", "/" + allergySegment + "/{id}", httproute.AuthUser,
+			kind.Allergy.DetailLandmark(), "/" + allergySegment + "/" + seed.CriticalAllergyID,
+		},
+		{
+			"conditionListPage", "/" + conditionSegment, httproute.AuthUser, kind.Condition.ListLandmark(),
+			"/" + conditionSegment + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			"conditionDetailPage", "/" + conditionSegment + "/{id}", httproute.AuthUser,
+			kind.Condition.DetailLandmark(), "/" + conditionSegment + "/" + seed.ResolvedConditionID,
+		},
+		{
+			"emergencyContactListPage", "/" + contactSegment, httproute.AuthUser, kind.EmergencyContact.ListLandmark(),
+			"/" + contactSegment + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			"emergencyContactDetailPage", "/" + contactSegment + "/{id}", httproute.AuthUser,
+			kind.EmergencyContact.DetailLandmark(), "/" + contactSegment + "/" + seed.PrimaryContactID,
+		},
+		{
 			"immunizationListPage", "/" + kind.Immunization.Segment(), httproute.AuthUser, `region[name="Vaccinations"]`,
 			"/" + kind.Immunization.Segment() + "?patient=" + seed.AccountAPatientParentID,
 		},
@@ -242,7 +269,7 @@ func TestTheTableCarriesTheTwentySevenPages(t *testing.T) {
 			`article[name="Equipment"]`, "/" + kind.Equipment.Segment() + "/" + seed.EquipmentOverdueID,
 		},
 	}
-	require.Len(t, want, 27)
+	require.Len(t, want, 33)
 
 	byOpID := inventoryByOpID(t)
 

@@ -56,6 +56,9 @@
       "Record": {
         "discriminator": {
           "mapping": {
+            "allergy": "#/components/schemas/Record_allergies",
+            "condition": "#/components/schemas/Record_conditions",
+            "emergency_contact": "#/components/schemas/Record_emergency-contacts",
             "equipment": "#/components/schemas/Record_equipment",
             "immunization": "#/components/schemas/Record_immunizations",
             "injury": "#/components/schemas/Record_injuries",
@@ -67,6 +70,15 @@
         "oneOf": [
           {
             "$ref": "#/components/schemas/Record_medications"
+          },
+          {
+            "$ref": "#/components/schemas/Record_allergies"
+          },
+          {
+            "$ref": "#/components/schemas/Record_conditions"
+          },
+          {
+            "$ref": "#/components/schemas/Record_emergency-contacts"
           },
           {
             "$ref": "#/components/schemas/Record_immunizations"
@@ -88,6 +100,15 @@
             "$ref": "#/components/schemas/RecordCreate_medications"
           },
           {
+            "$ref": "#/components/schemas/RecordCreate_allergies"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_conditions"
+          },
+          {
+            "$ref": "#/components/schemas/RecordCreate_emergency-contacts"
+          },
+          {
             "$ref": "#/components/schemas/RecordCreate_immunizations"
           },
           {
@@ -100,6 +121,121 @@
             "$ref": "#/components/schemas/RecordCreate_equipment"
           }
         ]
+      },
+      "RecordCreate_allergies": {
+        "additionalProperties": false,
+        "properties": {
+          "allergen": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "onset_on": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "reaction": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "allergen",
+          "patient",
+          "severity"
+        ],
+        "type": "object"
+      },
+      "RecordCreate_conditions": {
+        "additionalProperties": false,
+        "properties": {
+          "diagnosis": {
+            "type": "string"
+          },
+          "icd10_code": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "onset_on": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "resolved_on": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "snomed_code": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "diagnosis",
+          "patient",
+          "status"
+        ],
+        "type": "object"
+      },
+      "RecordCreate_emergency-contacts": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_primary": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "phone_alt": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "patient",
+          "phone",
+          "relationship"
+        ],
+        "type": "object"
       },
       "RecordCreate_equipment": {
         "additionalProperties": false,
@@ -417,6 +553,15 @@
             "$ref": "#/components/schemas/RecordPatch_medications"
           },
           {
+            "$ref": "#/components/schemas/RecordPatch_allergies"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_conditions"
+          },
+          {
+            "$ref": "#/components/schemas/RecordPatch_emergency-contacts"
+          },
+          {
             "$ref": "#/components/schemas/RecordPatch_immunizations"
           },
           {
@@ -429,6 +574,105 @@
             "$ref": "#/components/schemas/RecordPatch_equipment"
           }
         ]
+      },
+      "RecordPatch_allergies": {
+        "additionalProperties": false,
+        "properties": {
+          "allergen": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "onset_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reaction": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RecordPatch_conditions": {
+        "additionalProperties": false,
+        "properties": {
+          "diagnosis": {
+            "type": "string"
+          },
+          "icd10_code": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "onset_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "resolved_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "severity": {
+            "type": "string"
+          },
+          "snomed_code": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RecordPatch_emergency-contacts": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_primary": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "phone_alt": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          }
+        },
+        "type": "object"
       },
       "RecordPatch_equipment": {
         "additionalProperties": false,
@@ -733,6 +977,9 @@
       "RecordSummary": {
         "discriminator": {
           "mapping": {
+            "allergy": "#/components/schemas/RecordSummary_allergies",
+            "condition": "#/components/schemas/RecordSummary_conditions",
+            "emergency_contact": "#/components/schemas/RecordSummary_emergency-contacts",
             "equipment": "#/components/schemas/RecordSummary_equipment",
             "immunization": "#/components/schemas/RecordSummary_immunizations",
             "injury": "#/components/schemas/RecordSummary_injuries",
@@ -744,6 +991,15 @@
         "oneOf": [
           {
             "$ref": "#/components/schemas/RecordSummary_medications"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_allergies"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_conditions"
+          },
+          {
+            "$ref": "#/components/schemas/RecordSummary_emergency-contacts"
           },
           {
             "$ref": "#/components/schemas/RecordSummary_immunizations"
@@ -781,6 +1037,136 @@
         "required": [
           "items",
           "next_cursor"
+        ],
+        "type": "object"
+      },
+      "RecordSummary_allergies": {
+        "additionalProperties": false,
+        "properties": {
+          "allergen": {
+            "type": "string"
+          },
+          "critical": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "allergy"
+            ],
+            "type": "string"
+          },
+          "onset_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "allergen",
+          "critical",
+          "id",
+          "kind",
+          "onset_on",
+          "severity",
+          "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "RecordSummary_conditions": {
+        "additionalProperties": false,
+        "properties": {
+          "diagnosis": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "condition"
+            ],
+            "type": "string"
+          },
+          "onset_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "diagnosis",
+          "id",
+          "kind",
+          "onset_on",
+          "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "RecordSummary_emergency-contacts": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_primary": {
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "emergency_contact"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "is_active",
+          "is_primary",
+          "kind",
+          "name",
+          "phone",
+          "relationship",
+          "updated_at"
         ],
         "type": "object"
       },
@@ -1003,6 +1389,234 @@
           "name",
           "started_on",
           "status",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "Record_allergies": {
+        "additionalProperties": false,
+        "properties": {
+          "allergen": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "critical": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "allergy"
+            ],
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "onset_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "patient": {
+            "type": "string"
+          },
+          "reaction": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "allergen",
+          "created_at",
+          "critical",
+          "id",
+          "kind",
+          "onset_on",
+          "patient",
+          "severity",
+          "status",
+          "tags",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "Record_conditions": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "diagnosis": {
+            "type": "string"
+          },
+          "icd10_code": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "condition"
+            ],
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "onset_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "patient": {
+            "type": "string"
+          },
+          "practitioner": {
+            "type": "string"
+          },
+          "resolved_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "severity": {
+            "type": "string"
+          },
+          "snomed_code": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "diagnosis",
+          "id",
+          "kind",
+          "onset_on",
+          "patient",
+          "resolved_on",
+          "status",
+          "tags",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "Record_emergency-contacts": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "displaced": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "kind"
+            ],
+            "type": "object"
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_primary": {
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "emergency_contact"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "phone_alt": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "id",
+          "is_active",
+          "is_primary",
+          "kind",
+          "name",
+          "patient",
+          "phone",
+          "relationship",
+          "tags",
           "updated_at"
         ],
         "type": "object"
@@ -4008,6 +4622,9 @@
             "schema": {
               "enum": [
                 "medications",
+                "allergies",
+                "conditions",
+                "emergency-contacts",
                 "immunizations",
                 "injuries",
                 "insurance",
@@ -4148,6 +4765,9 @@
             "schema": {
               "enum": [
                 "medications",
+                "allergies",
+                "conditions",
+                "emergency-contacts",
                 "immunizations",
                 "injuries",
                 "insurance",
@@ -4254,6 +4874,9 @@
             "schema": {
               "enum": [
                 "medications",
+                "allergies",
+                "conditions",
+                "emergency-contacts",
                 "immunizations",
                 "injuries",
                 "insurance",
@@ -4355,6 +4978,9 @@
             "schema": {
               "enum": [
                 "medications",
+                "allergies",
+                "conditions",
+                "emergency-contacts",
                 "immunizations",
                 "injuries",
                 "insurance",
@@ -4442,6 +5068,9 @@
             "schema": {
               "enum": [
                 "medications",
+                "allergies",
+                "conditions",
+                "emergency-contacts",
                 "immunizations",
                 "injuries",
                 "insurance",

@@ -324,6 +324,7 @@ func TestTheCascadePublishesOneEventPerMedicationAndNoneForTheAccount(t *testing
 
 	owned := map[string]bool{
 		"patients": true, "practitioners": true, "facilities": true, "search_index": true,
+		kind.Allergy.Collection(): true, kind.Condition.Collection(): true, kind.EmergencyContact.Collection(): true,
 		kind.Immunization.Collection(): true, kind.Injury.Collection(): true,
 		kind.Symptom.Collection(): true, kind.Vitals.Collection(): true,
 	}

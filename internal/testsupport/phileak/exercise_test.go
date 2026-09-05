@@ -120,6 +120,14 @@ const (
 	EquipmentSerial   = "serial-number-9910-nebulizer"
 	SymptomBodySite   = "left-temple-and-behind-the-eye"
 	MeasurementDevice = "home-cuff-serial-88213X"
+
+	// US1's three kinds.
+	Allergen        = "Xantheline-Sulfate"
+	AllergyReaction = "throat-tightening-and-a-rash"
+	Diagnosis       = "a-condition-she-did-not-want-named"
+	ICD10Code       = "Z00.Y1"
+	ContactName     = "Thandiwe-Okonkwo-Nakamura"
+	ContactPhone    = "+1-555-0199-a-sentinel-number"
 )
 
 // Sentinel is one planted value and what it stands for. The meaning is printed
@@ -169,6 +177,12 @@ func Sentinels() []Sentinel {
 		{EquipmentSerial, "the serial number of a piece of medical equipment they use"},
 		{SymptomBodySite, "where on the body a symptom was felt"},
 		{MeasurementDevice, "the device a measurement was taken with"},
+		{Allergen, "what they are allergic to, which discloses a condition"},
+		{AllergyReaction, "what it does to them"},
+		{Diagnosis, "a condition, named outright"},
+		{ICD10Code, "the code for that condition"},
+		{ContactName, "who to call in an emergency, which names a relationship"},
+		{ContactPhone, "their emergency contact's phone number"},
 	}
 }
 
@@ -948,6 +962,15 @@ func vitalsOfKind() string { return "/api/v1/records/" + kind.Vitals.Segment() }
 
 func vitalsAddress(id string) string { return vitalsOfKind() + "/" + id }
 
+// recordsOf and recordAddressOf are recordsOfKind/recordAddress generalised to
+// US1's other kinds, which do not get medication's hardcoded segment.
+func recordsOf(k kind.Kind) string { return "/api/v1/records/" + k.Segment() }
+
+func recordAddressOf(k kind.Kind, id string) string { return recordsOf(k) + "/" + id }
+
+// pageOf is pageOfKind generalised the same way.
+func pageOf(k kind.Kind) string { return "/" + k.Segment() }
+
 // sentinelPatientFor plants one minimal patient for the given account,
 // directly against the database: the registration-time hook that provisions a
 // self-record automatically (FR-005) is a different story's work, so an
@@ -1001,6 +1024,9 @@ func drive(t testing.TB, c *client) {
 	drivePages(c)
 	driveNativePaths(c)
 	driveAccountLifecycle(c)
+	driveAllergies(c)
+	driveConditions(c)
+	driveEmergencyContacts(c)
 }
 
 const onePixelPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
@@ -1563,6 +1589,175 @@ func driveVitals(c *client) {
 	require.Equal(c.t, http.StatusOK, updated.Status, "%s", updated.Body)
 
 	current := updated.Header.Get("ETag")
+	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
+}
+
+// sentinelAllergy, sentinelCondition and sentinelEmergencyContact are US1's
+// own version of sentinelMedication above: every optional member filled, so
+// nothing left blank hides a sink.
+func sentinelAllergy(patientID string) api.AllergyCreate {
+	onset := "2024-01-01"
+
+	return api.AllergyCreate{
+		Patient:  patientID,
+		Allergen: Allergen,
+		Reaction: AllergyReaction,
+		Severity: string(clinical.SeveritySevere),
+		Status:   string(clinical.ConditionStatusActive),
+		OnsetOn:  &onset,
+		Notes:    Notes,
+	}
+}
+
+func sentinelCondition(patientID string) api.ConditionCreate {
+	onset := "2024-01-01"
+
+	return api.ConditionCreate{
+		Patient:   patientID,
+		Diagnosis: Diagnosis,
+		Status:    string(clinical.ConditionStatusActive),
+		Severity:  string(clinical.SeverityModerate),
+		OnsetOn:   &onset,
+		ICD10Code: ICD10Code,
+		Notes:     Notes,
+	}
+}
+
+func sentinelEmergencyContact(patientID string) api.EmergencyContactCreate {
+	return api.EmergencyContactCreate{
+		Patient:      patientID,
+		Name:         ContactName,
+		Relationship: "spouse",
+		Phone:        ContactPhone,
+		PhoneAlt:     ContactPhone,
+		Email:        "sentinel@example.test",
+		Address:      PatientAddress,
+		IsPrimary:    true,
+		IsActive:     ptr(true),
+		Notes:        Notes,
+	}
+}
+
+// driveAllergies, driveConditions and driveEmergencyContacts are US1's three
+// kinds, each walking the same operations driveRecords does above: the record
+// stream is common to every kind, so only medication's pass through it —
+// what matters here is that every kind's own sentinels reach a create, a
+// read, a list, a stranger's refusal, a missing-id read, an update and a
+// delete without any of them landing in a sink.
+func driveAllergies(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+	created := c.do(http.MethodPost, recordsOf(kind.Allergy), jsonBody(c.t, sentinelAllergy(patientID)))
+	require.Equal(c.t, http.StatusCreated, created.Status, "the sentinel allergy was not created: %s", created.Body)
+
+	id := decodedID(c.t, created.Body)
+	address := recordAddressOf(kind.Allergy, id)
+
+	read := c.do(http.MethodGet, address, "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+	etag := read.Header.Get("ETag")
+
+	c.do(http.MethodGet, recordsOf(kind.Allergy)+"?patient="+patientID, "")
+
+	c.bearer = ""
+	c.do(http.MethodGet, pageOf(kind.Allergy), "")
+	c.do(http.MethodGet, pageOf(kind.Allergy)+"/"+id, "")
+	c.do(http.MethodGet, pageOf(kind.Allergy)+"/"+missingRecordID, "")
+	c.token(testsupport.AccountAEmail)
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, address, "")
+
+	c.token(testsupport.AccountAEmail)
+	c.do(http.MethodGet, recordAddressOf(kind.Allergy, missingRecordID), "")
+
+	patch := jsonBody(c.t, api.AllergyPatch{Allergen: ptr(Allergen), Reaction: ptr(AllergyReaction), Notes: ptr(Notes)})
+	updated := c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": etag})
+	require.Equal(c.t, http.StatusOK, updated.Status, "%s", updated.Body)
+
+	current := updated.Header.Get("ETag")
+	c.doWith(http.MethodPatch, address, jsonBody(c.t, api.AllergyPatch{Severity: ptr("not-a-real-severity")}),
+		map[string]string{"Datastar-Request": "true", "If-Match": current})
+
+	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
+}
+
+func driveConditions(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+	created := c.do(http.MethodPost, recordsOf(kind.Condition), jsonBody(c.t, sentinelCondition(patientID)))
+	require.Equal(c.t, http.StatusCreated, created.Status, "the sentinel condition was not created: %s", created.Body)
+
+	id := decodedID(c.t, created.Body)
+	address := recordAddressOf(kind.Condition, id)
+
+	read := c.do(http.MethodGet, address, "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+	etag := read.Header.Get("ETag")
+
+	c.do(http.MethodGet, recordsOf(kind.Condition)+"?patient="+patientID, "")
+
+	c.bearer = ""
+	c.do(http.MethodGet, pageOf(kind.Condition), "")
+	c.do(http.MethodGet, pageOf(kind.Condition)+"/"+id, "")
+	c.do(http.MethodGet, pageOf(kind.Condition)+"/"+missingRecordID, "")
+	c.token(testsupport.AccountAEmail)
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, address, "")
+
+	c.token(testsupport.AccountAEmail)
+	c.do(http.MethodGet, recordAddressOf(kind.Condition, missingRecordID), "")
+
+	patch := jsonBody(c.t, api.ConditionPatch{Diagnosis: ptr(Diagnosis), ICD10Code: ptr(ICD10Code), Notes: ptr(Notes)})
+	updated := c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": etag})
+	require.Equal(c.t, http.StatusOK, updated.Status, "%s", updated.Body)
+
+	current := updated.Header.Get("ETag")
+	c.doWith(http.MethodPatch, address, jsonBody(c.t, api.ConditionPatch{Status: ptr("not-a-real-status")}),
+		map[string]string{"Datastar-Request": "true", "If-Match": current})
+
+	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
+}
+
+func driveEmergencyContacts(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+	created := c.do(http.MethodPost, recordsOf(kind.EmergencyContact), jsonBody(c.t, sentinelEmergencyContact(patientID)))
+	require.Equal(c.t, http.StatusCreated, created.Status, "the sentinel emergency contact was not created: %s", created.Body)
+
+	id := decodedID(c.t, created.Body)
+	address := recordAddressOf(kind.EmergencyContact, id)
+
+	read := c.do(http.MethodGet, address, "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+	etag := read.Header.Get("ETag")
+
+	c.do(http.MethodGet, recordsOf(kind.EmergencyContact)+"?patient="+patientID, "")
+
+	c.bearer = ""
+	c.do(http.MethodGet, pageOf(kind.EmergencyContact), "")
+	c.do(http.MethodGet, pageOf(kind.EmergencyContact)+"/"+id, "")
+	c.do(http.MethodGet, pageOf(kind.EmergencyContact)+"/"+missingRecordID, "")
+	c.token(testsupport.AccountAEmail)
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, address, "")
+
+	c.token(testsupport.AccountAEmail)
+	c.do(http.MethodGet, recordAddressOf(kind.EmergencyContact, missingRecordID), "")
+
+	patch := jsonBody(c.t, api.EmergencyContactPatch{Name: ptr(ContactName), Phone: ptr(ContactPhone), Notes: ptr(Notes)})
+	updated := c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": etag})
+	require.Equal(c.t, http.StatusOK, updated.Status, "%s", updated.Body)
+
+	current := updated.Header.Get("ETag")
+	c.doWith(http.MethodPatch, address, jsonBody(c.t, api.EmergencyContactPatch{Relationship: ptr("not-a-real-relationship")}),
+		map[string]string{"Datastar-Request": "true", "If-Match": current})
+
 	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
 }
 
