@@ -11,12 +11,8 @@ import (
 	"medikube/internal/domain/kind"
 )
 
-// TestDeleteUnsetsReferencesRatherThanCascading is T127 and research D-06:
-// deleting a facility clears practitioners.facility (and medications.pharmacy,
-// once that column exists) rather than destroying the rows that pointed at
-// it. contracts/facilities.md states this as a mandatory test: "a facility
-// referenced by a practitioner and by a medication's pharmacy is deleted, both
-// survive with an empty reference."
+// T127, research D-06: deleting a facility clears practitioners.facility and
+// medications.pharmacy rather than destroying the rows that pointed at it.
 func TestDeleteUnsetsReferencesRatherThanCascading(t *testing.T) {
 	t.Parallel()
 
@@ -33,31 +29,29 @@ func TestDeleteUnsetsReferencesRatherThanCascading(t *testing.T) {
 	practitioner.Set("facility", stored.ID)
 	require.NoError(t, h.app.Save(practitioner))
 
-	medications, medsErr := h.app.FindCollectionByNameOrId(kind.Medication.Collection())
-	require.NoError(t, medsErr)
+	patients, err := h.app.FindCollectionByNameOrId("patients")
+	require.NoError(t, err)
 
-	hasPharmacy := medications.Fields.GetByName("pharmacy") != nil
+	patient := core.NewRecord(patients)
+	patient.Set("owner", h.owner)
+	patient.Set("first_name", "Amara")
+	require.NoError(t, h.app.Save(patient))
 
-	var medication *core.Record
+	medications, err := h.app.FindCollectionByNameOrId(kind.Medication.Collection())
+	require.NoError(t, err)
 
-	if hasPharmacy {
-		medication = core.NewRecord(medications)
-		medication.Set("owner", h.owner)
-		medication.Set("name", "Amoxicillin")
-		medication.Set("status", "active")
-		medication.Set("pharmacy", stored.ID)
-		require.NoError(t, h.app.Save(medication))
-	} else {
-		t.Log("the pharmacy field does not exist on the medication collection yet in this worktree; skipping that half of this test")
-	}
+	medication := core.NewRecord(medications)
+	medication.Set("owner", h.owner)
+	medication.Set("patient", patient.Id)
+	medication.Set("name", "Amoxicillin")
+	medication.Set("status", "active")
+	medication.Set("pharmacy", stored.ID)
+	require.NoError(t, h.app.Save(medication))
 
 	usage, err := h.repo.Usage(t.Context(), h.owner, stored.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 1, usage.Practitioners, "usage must count the referencing practitioner before the delete")
-
-	if hasPharmacy {
-		assert.Equal(t, 1, usage.Records, "usage must count the referencing medication before the delete")
-	}
+	assert.Equal(t, 1, usage.Records, "usage must count the referencing medication before the delete")
 
 	require.NoError(t, h.repo.Delete(t.Context(), h.owner, stored.ID, stored.Version))
 
@@ -69,10 +63,8 @@ func TestDeleteUnsetsReferencesRatherThanCascading(t *testing.T) {
 	assert.Empty(t, survivingPractitioner.GetString("facility"),
 		"the practitioner's facility reference must be cleared, not left dangling")
 
-	if hasPharmacy {
-		survivingMedication, medErr := h.app.FindRecordById(kind.Medication.Collection(), medication.Id)
-		require.NoError(t, medErr, "the medication must survive the facility's deletion")
-		assert.Empty(t, survivingMedication.GetString("pharmacy"),
-			"the medication's pharmacy reference must be cleared, not left dangling")
-	}
+	survivingMedication, err := h.app.FindRecordById(kind.Medication.Collection(), medication.Id)
+	require.NoError(t, err, "the medication must survive the facility's deletion")
+	assert.Empty(t, survivingMedication.GetString("pharmacy"),
+		"the medication's pharmacy reference must be cleared, not left dangling")
 }
