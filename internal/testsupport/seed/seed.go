@@ -264,7 +264,23 @@ func Apply(app core.App) error {
 			return err
 		}
 
-		return applyMedications(tx)
+		if err := applyMedications(tx); err != nil {
+			return err
+		}
+
+		if err := applyFacilities(tx); err != nil {
+			return err
+		}
+
+		if err := applyPractitioners(tx); err != nil {
+			return err
+		}
+
+		if err := applyPatients(tx); err != nil {
+			return err
+		}
+
+		return applyActivePatients(tx)
 	})
 }
 

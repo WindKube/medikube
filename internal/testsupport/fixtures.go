@@ -41,6 +41,22 @@ const (
 	AccountCName = "Chidi Eze"
 )
 
+// Phase 002's cast (data-model §9). Account C carries no patients at all —
+// that is what proves FR-005's automatic self-record provisioning is the
+// application's doing and not the seed's.
+const (
+	AccountAPatientSelfID   = "mkpatamara00001"
+	AccountAPatientChildID  = "mkpatamara00002"
+	AccountAPatientParentID = "mkpatamara00003"
+	AccountBPatientSelfID   = "mkpatboris00001"
+
+	AccountAPractitionerID = "mkprcamara00001"
+	AccountBPractitionerID = "mkprcboris00001"
+
+	AccountAFacilityPracticeID = "mkfacamara00001"
+	AccountAFacilityPharmacyID = "mkfacamara00002"
+)
+
 // Password is what every seeded account signs in with. It is published in
 // quickstart.md on purpose — a demo credential nobody can look up is a demo
 // nobody can run — and the command that writes it refuses to run in production.

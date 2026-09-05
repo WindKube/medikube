@@ -83,6 +83,48 @@ func TestEveryExportedFixtureIdentifierNamesASeededRecord(t *testing.T) {
 	}
 }
 
+// T036/data-model §9's cast. Every id the constants publish must resolve to a
+// real row, the same way the account ids above are checked against the seed.
+func TestEveryPhase002FixtureIdentifierNamesASeededRecord(t *testing.T) {
+	t.Parallel()
+
+	app := NewApp(t)
+
+	facilities := []string{AccountAFacilityPracticeID, AccountAFacilityPharmacyID}
+	for _, id := range facilities {
+		_, err := app.FindRecordById("facilities", id)
+		require.NoError(t, err, "no facility %s: the seed and the constants have drifted", id)
+	}
+
+	practitioners := []string{AccountAPractitionerID, AccountBPractitionerID}
+	for _, id := range practitioners {
+		_, err := app.FindRecordById("practitioners", id)
+		require.NoError(t, err, "no practitioner %s: the seed and the constants have drifted", id)
+	}
+
+	patients := []string{
+		AccountAPatientSelfID, AccountAPatientChildID, AccountAPatientParentID, AccountBPatientSelfID,
+	}
+	for _, id := range patients {
+		_, err := app.FindRecordById("patients", id)
+		require.NoError(t, err, "no patient %s: the seed and the constants have drifted", id)
+	}
+
+	self, err := app.FindRecordById("patients", AccountAPatientSelfID)
+	require.NoError(t, err)
+	assert.NotEmpty(t, self.GetString("photo"), "Account A's self-record should carry the seeded photo (data-model §9)")
+
+	for accountID, patientID := range map[string]string{
+		AccountAID: AccountAPatientSelfID,
+		AccountBID: AccountBPatientSelfID,
+	} {
+		record, err := app.FindRecordById(usersCollection, accountID)
+		require.NoError(t, err)
+		assert.Equal(t, patientID, record.GetString("active_patient"),
+			"%s's active_patient does not point at its own self-record", accountID)
+	}
+}
+
 // T222 and FR-075. One seeded account has an unconfirmed address and at least
 // one has a confirmed one, so BOTH states of the settings page are reachable
 // from the fixture and neither is a branch nothing ever renders.
@@ -271,12 +313,22 @@ func snapshot(t *testing.T, app core.App) []string {
 	}{
 		{usersCollection, []string{
 			"email", "verified", "name", "role",
-			"unit_system", "locale", "date_format", "theme",
+			"unit_system", "locale", "date_format", "theme", "active_patient",
 		}},
 		{kind.Medication.Collection(), []string{
 			"owner", "name", "alternative_name", "type", "dosage", "frequency",
 			"route", "indication", "started_on", "ended_on", "status",
 			"side_effects", "notes",
+		}},
+		{"facilities", []string{
+			"owner", "kind", "name", "brand", "city", "country", "phone",
+		}},
+		{"practitioners", []string{
+			"owner", "name", "specialty", "facility", "phone", "email", "website", "notes",
+		}},
+		{"patients", []string{
+			"owner", "first_name", "last_name", "birth_date", "sex", "blood_type",
+			"relationship_to_owner", "primary_practitioner", "is_self_record",
 		}},
 	} {
 		records, err := app.FindAllRecords(collection.name)
