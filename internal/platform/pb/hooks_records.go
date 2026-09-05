@@ -147,8 +147,16 @@ func (c RecordAudit) event(e *core.RecordEvent, action audit.Action, target audi
 	// this row is left with no patient exactly as the patient's own delete
 	// audit row is (research D-25/FR-029). A medication deleted on its own,
 	// patient still very much alive, keeps it.
+	//
+	// The same race reaches an UPDATE, not only a DELETE, once a kind carries
+	// a multi-relation to another per-patient kind (US2's treatment.encounters,
+	// FR-028): the patient's own cascade delete removes the encounter first,
+	// which clears the stale id out of the treatment's encounters field as an
+	// update PocketBase issues for the treatment record — after the patient
+	// row is already gone. So the existence check runs for every action, not
+	// only delete.
 	if patientID := e.Record.GetString(store.RecordPatientField); patientID != "" {
-		if action != audit.ActionDelete || c.patientExists(e, patientID) {
+		if c.patientExists(e, patientID) {
 			event.PatientID = patientID
 		}
 	}
@@ -169,10 +177,9 @@ func (c RecordAudit) event(e *core.RecordEvent, action audit.Action, target audi
 	return event
 }
 
-// patientExists is only ever asked during a delete, and only when the
-// deleted record still names one: a false here means this delete is riding a
-// cascade from the patient's own deletion, the one case the relation field
-// cannot validate against (see event's comment above).
+// patientExists is asked whenever the record still names one: a false here
+// means this write is riding a cascade from the patient's own deletion, the
+// case the relation field cannot validate against (see event's comment above).
 func (c RecordAudit) patientExists(e *core.RecordEvent, patientID string) bool {
 	_, err := e.App.FindRecordById(store.PatientCollection, patientID)
 

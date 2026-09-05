@@ -143,7 +143,7 @@ func TestExactlyEightOperationsArePublic(t *testing.T) {
 // contracts/pages.md, "The pages". The landmark strings are what a Playwright
 // getByRole selector contains, so changing one is a breaking change to the gate
 // and has to break this test first.
-func TestTheTableCarriesTheThirtyThreePages(t *testing.T) {
+func TestTheTableCarriesTheThirtyNinePages(t *testing.T) {
 	t.Parallel()
 
 	segment := kind.Medication.Segment()
@@ -186,6 +186,30 @@ func TestTheTableCarriesTheThirtyThreePages(t *testing.T) {
 		{
 			"measurementsDetailPage", "/" + vitalsSegment + "/{id}", httproute.AuthUser,
 			`article[name="Measurement set"]`, "/" + vitalsSegment + "/" + seed.VitalsOne,
+		},
+		{
+			"encounterListPage", "/" + kind.Encounter.Segment(), httproute.AuthUser, `region[name="Encounters"]`,
+			"/" + kind.Encounter.Segment() + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			"encounterDetailPage", "/" + kind.Encounter.Segment() + "/{id}", httproute.AuthUser,
+			`article[name="Encounter"]`, "/" + kind.Encounter.Segment() + "/" + seed.EncounterNameOnlyID,
+		},
+		{
+			"procedureListPage", "/" + kind.Procedure.Segment(), httproute.AuthUser, `region[name="Procedures"]`,
+			"/" + kind.Procedure.Segment() + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			"procedureDetailPage", "/" + kind.Procedure.Segment() + "/{id}", httproute.AuthUser,
+			`article[name="Procedure"]`, "/" + kind.Procedure.Segment() + "/" + seed.ProcedureNameOnlyID,
+		},
+		{
+			"treatmentListPage", "/" + kind.Treatment.Segment(), httproute.AuthUser, `region[name="Treatments"]`,
+			"/" + kind.Treatment.Segment() + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			"treatmentDetailPage", "/" + kind.Treatment.Segment() + "/{id}", httproute.AuthUser,
+			`article[name="Treatment"]`, "/" + kind.Treatment.Segment() + "/" + seed.TreatmentNameOnlyID,
 		},
 		{"practitionerListPage", "/practitioners", httproute.AuthUser, `region[name="Practitioners"]`, "/practitioners"},
 		{
@@ -269,7 +293,7 @@ func TestTheTableCarriesTheThirtyThreePages(t *testing.T) {
 			`article[name="Equipment"]`, "/" + kind.Equipment.Segment() + "/" + seed.EquipmentOverdueID,
 		},
 	}
-	require.Len(t, want, 33)
+	require.Len(t, want, 39)
 
 	byOpID := inventoryByOpID(t)
 

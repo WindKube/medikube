@@ -141,6 +141,18 @@ const (
 	AccountAEquipmentCount = 2
 )
 
+// US2's one name-only row per kind, and US2's three kinds are account A only
+// (internal/testsupport/seed/care.go).
+const (
+	EncounterNameOnlyID = "mkencamara00001"
+	ProcedureNameOnlyID = "mkprcamara00001"
+	TreatmentNameOnlyID = "mktrtamara00001"
+
+	AccountAEncounterCount = 4
+	AccountAProcedureCount = 4
+	AccountATreatmentCount = 3
+)
+
 // AuthToken mints a PocketBase auth token for a seeded account, which is what
 // an HTTP test presents as the caller.
 //

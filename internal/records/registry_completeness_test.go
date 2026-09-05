@@ -9,6 +9,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/records"
 	"medikube/internal/records/recordstest"
+	"medikube/internal/web/api"
 )
 
 // expectedKinds is every kind this build's registry is expected to carry a
@@ -28,6 +29,9 @@ var expectedKinds = []kind.Kind{
 	kind.Equipment,
 	kind.Symptom,
 	kind.Vitals,
+	kind.Encounter,
+	kind.Procedure,
+	kind.Treatment,
 }
 
 // TestEveryExpectedKindHasACompleteRegistration is T021: it walks
@@ -50,6 +54,9 @@ func TestEveryExpectedKindHasACompleteRegistration(t *testing.T) {
 	require.NoError(t, registry.Register(recordstest.Registration(kind.Equipment, audit.TargetKindEquipment)))
 	require.NoError(t, registry.Register(recordstest.Registration(kind.Symptom, audit.TargetKindSymptom)))
 	require.NoError(t, registry.Register(recordstest.Registration(kind.Vitals, audit.TargetKindVitals)))
+	require.NoError(t, registry.Register(recordstest.Registration(kind.Encounter, audit.TargetKindEncounter)))
+	require.NoError(t, registry.Register(recordstest.Registration(kind.Procedure, audit.TargetKindProcedure)))
+	require.NoError(t, registry.Register(recordstest.Registration(kind.Treatment, audit.TargetKindTreatment)))
 
 	require.NotEmpty(t, expectedKinds, "the expectation list itself is empty, so this test asserts nothing")
 
@@ -62,5 +69,18 @@ func TestEveryExpectedKindHasACompleteRegistration(t *testing.T) {
 
 			recordstest.AssertRegistrationComplete(t, entry)
 		})
+	}
+}
+
+func TestEveryExpectedKindIsDocumentedInTheOpenAPIInput(t *testing.T) {
+	t.Parallel()
+
+	documented := map[string]bool{}
+	for _, k := range api.OpenAPIKinds() {
+		documented[k.Enum] = true
+	}
+
+	for _, k := range expectedKinds {
+		require.True(t, documented[k.Enum()], "%s has no OpenAPI DTO set", k)
 	}
 }

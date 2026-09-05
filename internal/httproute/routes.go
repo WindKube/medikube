@@ -454,6 +454,15 @@ func pageRoutes() []Route {
 	equipmentList := "/" + kind.Equipment.Segment()
 	equipmentDetail := equipmentList + "/{id}"
 
+	encounterList := "/" + kind.Encounter.Segment()
+	encounterDetail := encounterList + "/{id}"
+
+	procedureList := "/" + kind.Procedure.Segment()
+	procedureDetail := procedureList + "/{id}"
+
+	treatmentList := "/" + kind.Treatment.Segment()
+	treatmentDetail := treatmentList + "/{id}"
+
 	return []Route{
 		{
 			OpID: "loginPage", Method: http.MethodGet, Path: "/login",
@@ -605,6 +614,42 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "One measurement set, only the values recorded and bmi when both height and weight are present.",
 			Landmark: `article[name="Measurement set"]`, SmokeURL: "/" + kind.Vitals.Segment() + "/" + seed.VitalsOne,
+		},
+		{
+			OpID: "encounterListPage", Method: http.MethodGet, Path: encounterList,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "The encounter list, with its empty state inside the landmark rather than instead of it.",
+			Landmark: `region[name="Encounters"]`, SmokeURL: encounterList + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			OpID: "encounterDetailPage", Method: http.MethodGet, Path: encounterDetail,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "One encounter, every value it holds and the time it last changed.",
+			Landmark: `article[name="Encounter"]`, SmokeURL: encounterList + "/" + seed.EncounterNameOnlyID,
+		},
+		{
+			OpID: "procedureListPage", Method: http.MethodGet, Path: procedureList,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "The procedure list, with its empty state inside the landmark rather than instead of it.",
+			Landmark: `region[name="Procedures"]`, SmokeURL: procedureList + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			OpID: "procedureDetailPage", Method: http.MethodGet, Path: procedureDetail,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "One procedure, every value it holds and the time it last changed.",
+			Landmark: `article[name="Procedure"]`, SmokeURL: procedureList + "/" + seed.ProcedureNameOnlyID,
+		},
+		{
+			OpID: "treatmentListPage", Method: http.MethodGet, Path: treatmentList,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "The treatment list, with its empty state inside the landmark rather than instead of it.",
+			Landmark: `region[name="Treatments"]`, SmokeURL: treatmentList + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			OpID: "treatmentDetailPage", Method: http.MethodGet, Path: treatmentDetail,
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "One treatment, every value it holds and the time it last changed.",
+			Landmark: `article[name="Treatment"]`, SmokeURL: treatmentList + "/" + seed.TreatmentNameOnlyID,
 		},
 		{
 			OpID: "practitionerListPage", Method: http.MethodGet, Path: "/practitioners",

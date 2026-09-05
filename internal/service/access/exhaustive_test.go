@@ -88,6 +88,9 @@ var checkpointPackagesOutsideTheRule = map[string]string{
 	"internal/service/insurance/insurancetest":       "the insurance contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, for the same reason",
 	"internal/service/symptom/symptomtest":           "the symptom contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, for the same reason",
 	"internal/service/vitals/vitalstest":             "the vitals contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, for the same reason",
+	"internal/service/encounter/encountertest":       "the encounter contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, and its repository fake answers from a map",
+	"internal/service/procedure/proceduretest":       "the procedure contract suite and its in-memory fake, for the same reason",
+	"internal/service/treatment/treatmenttest":       "the treatment contract suite and its in-memory fake, for the same reason",
 
 	"internal/service/allergy/allergytest":                   "the allergy contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, for the same reason",
 	"internal/service/condition/conditiontest":               "the condition contract suite and its in-memory fake. Its Authorizer IS a stub checkpoint, for the same reason",

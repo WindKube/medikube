@@ -23,6 +23,7 @@ import (
 	"medikube/internal/records/kinds"
 	accessservice "medikube/internal/service/access"
 	auditservice "medikube/internal/service/audit"
+	"medikube/internal/service/encounter"
 	"medikube/internal/service/equipment"
 	facilitysvc "medikube/internal/service/facility"
 	serviceidentity "medikube/internal/service/identity"
@@ -30,14 +31,17 @@ import (
 	"medikube/internal/service/medication"
 	"medikube/internal/service/patient"
 	practitionersvc "medikube/internal/service/practitioner"
+	"medikube/internal/service/procedure"
 	searchsvc "medikube/internal/service/search"
 	"medikube/internal/service/symptom"
+	"medikube/internal/service/treatment"
 	"medikube/internal/service/vitals"
 	"medikube/internal/store"
 	allergystore "medikube/internal/store/allergy"
 	auditstore "medikube/internal/store/audit"
 	conditionstore "medikube/internal/store/condition"
 	emergencycontactstore "medikube/internal/store/emergencycontact"
+	encounterstore "medikube/internal/store/encounter"
 	equipmentstore "medikube/internal/store/equipment"
 	facilitystore "medikube/internal/store/facility"
 	storeidentity "medikube/internal/store/identity"
@@ -47,8 +51,10 @@ import (
 	medicationstore "medikube/internal/store/medication"
 	patientstore "medikube/internal/store/patient"
 	practitionerstore "medikube/internal/store/practitioner"
+	procedurestore "medikube/internal/store/procedure"
 	searchstore "medikube/internal/store/search"
 	symptomstore "medikube/internal/store/symptom"
+	treatmentstore "medikube/internal/store/treatment"
 	vitalsstore "medikube/internal/store/vitals"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -330,6 +336,21 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 		return nil, err
 	}
 
+	encounterPages, err := page.EncounterHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
+	procedurePages, err := page.ProcedureHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
+	treatmentPages, err := page.TreatmentHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
 	streams, err := stream.Handlers(stream.Deps{Resolve: resolve, Hub: hub})
 	if err != nil {
 		return nil, err
@@ -343,6 +364,9 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 	maps.Copy(table, equipmentPages)
 	maps.Copy(table, symptomPages)
 	maps.Copy(table, vitalsPages)
+	maps.Copy(table, encounterPages)
+	maps.Copy(table, procedurePages)
+	maps.Copy(table, treatmentPages)
 	maps.Copy(table, streams)
 
 	return table, nil
@@ -810,6 +834,72 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Basis:        api.VitalsBasis,
 	}); vitalsRegisterErr != nil {
 		return vitalsRegisterErr
+	}
+
+	encounterViews, err := page.NewEncounterViews()
+	if err != nil {
+		return err
+	}
+
+	encounterRepo, err := encounterstore.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	if err = encounter.Register(registry, encounter.Wiring{
+		Repository:   encounterRepo,
+		Authorizer:   authorizer,
+		Codec:        api.EncounterCodec{},
+		Schema:       api.EncounterSchema(),
+		Views:        encounterViews,
+		SearchFields: api.EncounterSearchFields,
+		Basis:        api.EncounterBasis,
+	}); err != nil {
+		return err
+	}
+
+	procedureViews, err := page.NewProcedureViews()
+	if err != nil {
+		return err
+	}
+
+	procedureRepo, err := procedurestore.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	if err = procedure.Register(registry, procedure.Wiring{
+		Repository:   procedureRepo,
+		Authorizer:   authorizer,
+		Codec:        api.ProcedureCodec{},
+		Schema:       api.ProcedureSchema(),
+		Views:        procedureViews,
+		SearchFields: api.ProcedureSearchFields,
+		Basis:        api.ProcedureBasis,
+	}); err != nil {
+		return err
+	}
+
+	treatmentViews, err := page.NewTreatmentViews()
+	if err != nil {
+		return err
+	}
+
+	treatmentRepo, err := treatmentstore.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	if err = treatment.Register(registry, treatment.Wiring{
+		Repository:   treatmentRepo,
+		Authorizer:   authorizer,
+		Codec:        api.TreatmentCodec{},
+		Schema:       api.TreatmentSchema(),
+		Views:        treatmentViews,
+		SearchFields: api.TreatmentSearchFields,
+		Basis:        api.TreatmentBasis,
+	}); err != nil {
+		return err
 	}
 
 	// FR-036's three rows, written by the post-commit hooks and by no handler

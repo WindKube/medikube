@@ -45,10 +45,14 @@ func TestTheAppliedMigrationSetEqualsTheRegisteredSet(t *testing.T) {
 		"1756400200_" + kind.Injury.Collection() + ".go",
 		"1756400300_" + kind.Symptom.Collection() + ".go",
 		"1756400400_" + kind.Vitals.Collection() + ".go",
+		"1756400500_" + kind.Encounter.Collection() + ".go",
+		"1756400510_" + kind.Procedure.Collection() + ".go",
+		"1756400520_" + kind.Treatment.Collection() + ".go",
+		"1756400530_care_" + kind.Condition.Collection() + ".go",
 	}
 
 	require.Equal(t, expected, Files(),
-		"the registered set is not the migrations phase 001, phase 002 and US1 declare")
+		"the registered set is not the migrations phase 001, phase 002 and 003 declare")
 
 	applied, err := Applied(app)
 	require.NoError(t, err)

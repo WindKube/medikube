@@ -332,6 +332,255 @@ func MedicationToRecord(record *core.Record, medication clinical.Medication) err
 	return nil
 }
 
+// data-model §4.3's encounter columns, less `lab_results` (phase 004's own
+// migration).
+const (
+	encounterFieldPatient      = "patient"
+	encounterFieldReason       = "reason"
+	encounterFieldOccurredOn   = "occurred_on"
+	encounterFieldVisitType    = "visit_type"
+	encounterFieldPriority     = "priority"
+	encounterFieldAssessment   = "assessment"
+	encounterFieldPlan         = "plan"
+	encounterFieldFollowUp     = "follow_up"
+	encounterFieldDurationMin  = "duration_minutes"
+	encounterFieldPractitioner = "practitioner"
+	encounterFieldFacility     = "facility"
+	encounterFieldCondition    = "condition"
+	encounterFieldNotes        = "notes"
+)
+
+// EncounterFromRecord reads a stored row into the entity. It does not validate
+// (research D-26).
+func EncounterFromRecord(record *core.Record) (clinical.Encounter, error) {
+	if err := expectCollection(record, kind.Encounter.Collection()); err != nil {
+		return clinical.Encounter{}, err
+	}
+
+	occurredOn, err := recordDate(record, encounterFieldOccurredOn)
+	if err != nil {
+		return clinical.Encounter{}, err
+	}
+
+	return clinical.Encounter{
+		ID:             record.Id,
+		PatientID:      record.GetString(encounterFieldPatient),
+		Reason:         record.GetString(encounterFieldReason),
+		OccurredOn:     occurredOn,
+		VisitType:      clinical.VisitType(record.GetString(encounterFieldVisitType)),
+		Priority:       clinical.VisitPriority(record.GetString(encounterFieldPriority)),
+		Assessment:     record.GetString(encounterFieldAssessment),
+		Plan:           record.GetString(encounterFieldPlan),
+		FollowUp:       record.GetString(encounterFieldFollowUp),
+		DurationMin:    record.GetInt(encounterFieldDurationMin),
+		PractitionerID: record.GetString(encounterFieldPractitioner),
+		FacilityID:     record.GetString(encounterFieldFacility),
+		ConditionID:    record.GetString(encounterFieldCondition),
+		Notes:          record.GetString(encounterFieldNotes),
+		CreatedAt:      recordInstant(record, fieldCreated),
+		UpdatedAt:      recordInstant(record, fieldUpdated),
+		Version:        Version(record),
+	}, nil
+}
+
+// EncounterToRecord writes the entity's columns onto the record.
+func EncounterToRecord(record *core.Record, e clinical.Encounter) error {
+	if err := expectCollection(record, kind.Encounter.Collection()); err != nil {
+		return err
+	}
+
+	record.Set(encounterFieldPatient, e.PatientID)
+	record.Set(encounterFieldReason, e.Reason)
+	setDate(record, encounterFieldOccurredOn, e.OccurredOn)
+	record.Set(encounterFieldVisitType, string(e.VisitType))
+	record.Set(encounterFieldPriority, string(e.Priority))
+	record.Set(encounterFieldAssessment, e.Assessment)
+	record.Set(encounterFieldPlan, e.Plan)
+	record.Set(encounterFieldFollowUp, e.FollowUp)
+	record.Set(encounterFieldDurationMin, e.DurationMin)
+	record.Set(encounterFieldPractitioner, e.PractitionerID)
+	record.Set(encounterFieldFacility, e.FacilityID)
+	record.Set(encounterFieldCondition, e.ConditionID)
+	record.Set(encounterFieldNotes, e.Notes)
+
+	return nil
+}
+
+// data-model §4.4's procedure columns.
+const (
+	procedureFieldPatient         = "patient"
+	procedureFieldName            = "name"
+	procedureFieldType            = "type"
+	procedureFieldCode            = "code"
+	procedureFieldDescription     = "description"
+	procedureFieldOccurredOn      = "occurred_on"
+	procedureFieldStatus          = "status"
+	procedureFieldOutcome         = "outcome"
+	procedureFieldSetting         = "setting"
+	procedureFieldComplications   = "complications"
+	procedureFieldDurationMin     = "duration_minutes"
+	procedureFieldAnesthesia      = "anesthesia"
+	procedureFieldAnesthesiaNotes = "anesthesia_notes"
+	procedureFieldPractitioner    = "practitioner"
+	procedureFieldFacility        = "facility"
+	procedureFieldCondition       = "condition"
+	procedureFieldNotes           = "notes"
+)
+
+func ProcedureFromRecord(record *core.Record) (clinical.Procedure, error) {
+	if err := expectCollection(record, kind.Procedure.Collection()); err != nil {
+		return clinical.Procedure{}, err
+	}
+
+	occurredOn, err := recordDate(record, procedureFieldOccurredOn)
+	if err != nil {
+		return clinical.Procedure{}, err
+	}
+
+	return clinical.Procedure{
+		ID:              record.Id,
+		PatientID:       record.GetString(procedureFieldPatient),
+		Name:            record.GetString(procedureFieldName),
+		Type:            clinical.ProcedureType(record.GetString(procedureFieldType)),
+		Code:            record.GetString(procedureFieldCode),
+		Description:     record.GetString(procedureFieldDescription),
+		OccurredOn:      occurredOn,
+		Status:          clinical.OrderStatus(record.GetString(procedureFieldStatus)),
+		Outcome:         clinical.ProcedureOutcome(record.GetString(procedureFieldOutcome)),
+		Setting:         clinical.ProcedureSetting(record.GetString(procedureFieldSetting)),
+		Complications:   record.GetString(procedureFieldComplications),
+		DurationMin:     record.GetInt(procedureFieldDurationMin),
+		Anesthesia:      clinical.Anesthesia(record.GetString(procedureFieldAnesthesia)),
+		AnesthesiaNotes: record.GetString(procedureFieldAnesthesiaNotes),
+		PractitionerID:  record.GetString(procedureFieldPractitioner),
+		FacilityID:      record.GetString(procedureFieldFacility),
+		ConditionID:     record.GetString(procedureFieldCondition),
+		Notes:           record.GetString(procedureFieldNotes),
+		CreatedAt:       recordInstant(record, fieldCreated),
+		UpdatedAt:       recordInstant(record, fieldUpdated),
+		Version:         Version(record),
+	}, nil
+}
+
+func ProcedureToRecord(record *core.Record, p clinical.Procedure) error {
+	if err := expectCollection(record, kind.Procedure.Collection()); err != nil {
+		return err
+	}
+
+	record.Set(procedureFieldPatient, p.PatientID)
+	record.Set(procedureFieldName, p.Name)
+	record.Set(procedureFieldType, string(p.Type))
+	record.Set(procedureFieldCode, p.Code)
+	record.Set(procedureFieldDescription, p.Description)
+	setDate(record, procedureFieldOccurredOn, p.OccurredOn)
+	record.Set(procedureFieldStatus, string(p.Status))
+	record.Set(procedureFieldOutcome, string(p.Outcome))
+	record.Set(procedureFieldSetting, string(p.Setting))
+	record.Set(procedureFieldComplications, p.Complications)
+	record.Set(procedureFieldDurationMin, p.DurationMin)
+	record.Set(procedureFieldAnesthesia, string(p.Anesthesia))
+	record.Set(procedureFieldAnesthesiaNotes, p.AnesthesiaNotes)
+	record.Set(procedureFieldPractitioner, p.PractitionerID)
+	record.Set(procedureFieldFacility, p.FacilityID)
+	record.Set(procedureFieldCondition, p.ConditionID)
+	record.Set(procedureFieldNotes, p.Notes)
+
+	return nil
+}
+
+// data-model §4.5's treatment columns, less `lab_results` (phase 004's own
+// migration).
+const (
+	treatmentFieldPatient         = "patient"
+	treatmentFieldName            = "name"
+	treatmentFieldType            = "type"
+	treatmentFieldSetting         = "setting"
+	treatmentFieldDescription     = "description"
+	treatmentFieldStartedOn       = "started_on"
+	treatmentFieldEndedOn         = "ended_on"
+	treatmentFieldFrequency       = "frequency"
+	treatmentFieldDosage          = "dosage"
+	treatmentFieldExpectedOutcome = "expected_outcome"
+	treatmentFieldStatus          = "status"
+	treatmentFieldPractitioner    = "practitioner"
+	treatmentFieldFacility        = "facility"
+	treatmentFieldCondition       = "condition"
+	treatmentFieldNotes           = "notes"
+)
+
+// Named after the collections they relate to, per data-model §4.5 (FR-028),
+// so declared from the kind table rather than spelled a second time here.
+var (
+	treatmentFieldEncounters = kind.Encounter.Collection()
+	treatmentFieldEquipment  = kind.Equipment.Collection()
+)
+
+func TreatmentFromRecord(record *core.Record) (clinical.Treatment, error) {
+	if err := expectCollection(record, kind.Treatment.Collection()); err != nil {
+		return clinical.Treatment{}, err
+	}
+
+	startedOn, err := recordDate(record, treatmentFieldStartedOn)
+	if err != nil {
+		return clinical.Treatment{}, err
+	}
+
+	endedOn, err := recordDate(record, treatmentFieldEndedOn)
+	if err != nil {
+		return clinical.Treatment{}, err
+	}
+
+	return clinical.Treatment{
+		ID:              record.Id,
+		PatientID:       record.GetString(treatmentFieldPatient),
+		Name:            record.GetString(treatmentFieldName),
+		Type:            record.GetString(treatmentFieldType),
+		Setting:         clinical.TreatmentSetting(record.GetString(treatmentFieldSetting)),
+		Description:     record.GetString(treatmentFieldDescription),
+		StartedOn:       startedOn,
+		EndedOn:         endedOn,
+		Frequency:       record.GetString(treatmentFieldFrequency),
+		Dosage:          record.GetString(treatmentFieldDosage),
+		ExpectedOutcome: record.GetString(treatmentFieldExpectedOutcome),
+		Status:          clinical.TherapyStatus(record.GetString(treatmentFieldStatus)),
+		PractitionerID:  record.GetString(treatmentFieldPractitioner),
+		FacilityID:      record.GetString(treatmentFieldFacility),
+		ConditionID:     record.GetString(treatmentFieldCondition),
+		Encounters:      record.GetStringSlice(treatmentFieldEncounters),
+		Equipment:       record.GetStringSlice(treatmentFieldEquipment),
+		Notes:           record.GetString(treatmentFieldNotes),
+		CreatedAt:       recordInstant(record, fieldCreated),
+		UpdatedAt:       recordInstant(record, fieldUpdated),
+		Version:         Version(record),
+	}, nil
+}
+
+func TreatmentToRecord(record *core.Record, t clinical.Treatment) error {
+	if err := expectCollection(record, kind.Treatment.Collection()); err != nil {
+		return err
+	}
+
+	record.Set(treatmentFieldPatient, t.PatientID)
+	record.Set(treatmentFieldName, t.Name)
+	record.Set(treatmentFieldType, t.Type)
+	record.Set(treatmentFieldSetting, string(t.Setting))
+	record.Set(treatmentFieldDescription, t.Description)
+	setDate(record, treatmentFieldStartedOn, t.StartedOn)
+	setDate(record, treatmentFieldEndedOn, t.EndedOn)
+	record.Set(treatmentFieldFrequency, t.Frequency)
+	record.Set(treatmentFieldDosage, t.Dosage)
+	record.Set(treatmentFieldExpectedOutcome, t.ExpectedOutcome)
+	record.Set(treatmentFieldStatus, string(t.Status))
+	record.Set(treatmentFieldPractitioner, t.PractitionerID)
+	record.Set(treatmentFieldFacility, t.FacilityID)
+	record.Set(treatmentFieldCondition, t.ConditionID)
+	record.Set(treatmentFieldEncounters, t.Encounters)
+	record.Set(treatmentFieldEquipment, t.Equipment)
+	record.Set(treatmentFieldNotes, t.Notes)
+
+	return nil
+}
+
 func UserFromRecord(record *core.Record) (identity.User, error) {
 	if err := expectCollection(record, authCollection); err != nil {
 		return identity.User{}, err
@@ -485,11 +734,39 @@ func AssertMappedFields(app core.App) error {
 			patientFieldRelationshipToOwner, patientFieldPrimaryPractitioner,
 			patientFieldIsSelfRecord, patientFieldPhoto,
 		},
+		kind.Encounter.Collection(): {
+			fieldID, fieldCreated, fieldUpdated,
+			encounterFieldPatient, encounterFieldReason, encounterFieldOccurredOn,
+			encounterFieldVisitType, encounterFieldPriority, encounterFieldAssessment,
+			encounterFieldPlan, encounterFieldFollowUp, encounterFieldDurationMin,
+			encounterFieldPractitioner, encounterFieldFacility, encounterFieldNotes,
+		},
+		kind.Procedure.Collection(): {
+			fieldID, fieldCreated, fieldUpdated,
+			procedureFieldPatient, procedureFieldName, procedureFieldType,
+			procedureFieldCode, procedureFieldDescription, procedureFieldOccurredOn,
+			procedureFieldStatus, procedureFieldOutcome, procedureFieldSetting,
+			procedureFieldComplications, procedureFieldDurationMin, procedureFieldAnesthesia,
+			procedureFieldAnesthesiaNotes, procedureFieldPractitioner, procedureFieldFacility,
+			procedureFieldNotes,
+		},
+		kind.Treatment.Collection(): {
+			fieldID, fieldCreated, fieldUpdated,
+			treatmentFieldPatient, treatmentFieldName, treatmentFieldType,
+			treatmentFieldSetting, treatmentFieldDescription, treatmentFieldStartedOn,
+			treatmentFieldEndedOn, treatmentFieldFrequency, treatmentFieldDosage,
+			treatmentFieldExpectedOutcome, treatmentFieldStatus, treatmentFieldPractitioner,
+			treatmentFieldFacility, treatmentFieldEncounters, treatmentFieldEquipment,
+			treatmentFieldNotes,
+		},
 	}
 
 	var problems []error
 
-	for _, name := range []string{authCollection, kind.Medication.Collection(), auditCollection, patientsCollection} {
+	for _, name := range []string{
+		authCollection, kind.Medication.Collection(), auditCollection, patientsCollection,
+		kind.Encounter.Collection(), kind.Procedure.Collection(), kind.Treatment.Collection(),
+	} {
 		collection, err := app.FindCollectionByNameOrId(name)
 		if err != nil {
 			problems = append(problems, fmt.Errorf("%w: %s is missing entirely: %w", ErrSchemaDrift, name, err))

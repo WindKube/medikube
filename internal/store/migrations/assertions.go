@@ -86,6 +86,18 @@ func Relations() []relationRule {
 		{collection: kind.Symptom.Collection(), field: symptomFieldPatient, required: true, cascadeDelete: true},
 		{collection: kind.Vitals.Collection(), field: vitalsFieldPatient, required: true, cascadeDelete: true},
 		{collection: kind.Vitals.Collection(), field: vitalsFieldPractitioner, required: false, cascadeDelete: false},
+		{collection: kind.Encounter.Collection(), field: encounterFieldPatient, required: true, cascadeDelete: true},
+		{collection: kind.Encounter.Collection(), field: encounterFieldPractitioner, required: false, cascadeDelete: false},
+		{collection: kind.Encounter.Collection(), field: encounterFieldFacility, required: false, cascadeDelete: false},
+		{collection: kind.Encounter.Collection(), field: careFieldCondition, required: false, cascadeDelete: false},
+		{collection: kind.Procedure.Collection(), field: procedureFieldPatient, required: true, cascadeDelete: true},
+		{collection: kind.Procedure.Collection(), field: procedureFieldPractitioner, required: false, cascadeDelete: false},
+		{collection: kind.Procedure.Collection(), field: procedureFieldFacility, required: false, cascadeDelete: false},
+		{collection: kind.Procedure.Collection(), field: careFieldCondition, required: false, cascadeDelete: false},
+		{collection: kind.Treatment.Collection(), field: treatmentFieldPatient, required: true, cascadeDelete: true},
+		{collection: kind.Treatment.Collection(), field: treatmentFieldPractitioner, required: false, cascadeDelete: false},
+		{collection: kind.Treatment.Collection(), field: treatmentFieldFacility, required: false, cascadeDelete: false},
+		{collection: kind.Treatment.Collection(), field: careFieldCondition, required: false, cascadeDelete: false},
 	}
 }
 

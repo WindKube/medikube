@@ -7,7 +7,6 @@ import (
 
 	"medikube/internal/cli"
 	"medikube/internal/config"
-	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
 	"medikube/internal/logging"
 	"medikube/internal/openapi"
@@ -44,74 +43,9 @@ const openAPIDocumentVersion = "0.1.0"
 
 func openAPIInput() (openapi.Input, error) {
 	return openapi.Input{
-		Version: openAPIDocumentVersion,
-		Routes:  httproute.Inventory().Routes(),
-		Kinds: []openapi.Kind{
-			{
-				Enum:    kind.Medication.Enum(),
-				Segment: kind.Medication.Segment(),
-				Summary: api.MedicationSchema().NewSummary(),
-				Detail:  api.MedicationSchema().NewDetail(),
-				Create:  api.MedicationSchema().NewCreate(),
-				Patch:   api.MedicationSchema().NewPatch(),
-			},
-			{
-				Enum:    kind.Allergy.Enum(),
-				Segment: kind.Allergy.Segment(),
-				Summary: api.AllergySchema().NewSummary(),
-				Detail:  api.AllergySchema().NewDetail(),
-				Create:  api.AllergySchema().NewCreate(),
-				Patch:   api.AllergySchema().NewPatch(),
-			},
-			{
-				Enum:    kind.Condition.Enum(),
-				Segment: kind.Condition.Segment(),
-				Summary: api.ConditionSchema().NewSummary(),
-				Detail:  api.ConditionSchema().NewDetail(),
-				Create:  api.ConditionSchema().NewCreate(),
-				Patch:   api.ConditionSchema().NewPatch(),
-			},
-			{
-				Enum:    kind.EmergencyContact.Enum(),
-				Segment: kind.EmergencyContact.Segment(),
-				Summary: api.EmergencyContactSchema().NewSummary(),
-				Detail:  api.EmergencyContactSchema().NewDetail(),
-				Create:  api.EmergencyContactSchema().NewCreate(),
-				Patch:   api.EmergencyContactSchema().NewPatch(),
-			},
-			{
-				Enum:    kind.Immunization.Enum(),
-				Segment: kind.Immunization.Segment(),
-				Summary: api.ImmunizationSchema().NewSummary(),
-				Detail:  api.ImmunizationSchema().NewDetail(),
-				Create:  api.ImmunizationSchema().NewCreate(),
-				Patch:   api.ImmunizationSchema().NewPatch(),
-			},
-			{
-				Enum:    kind.Injury.Enum(),
-				Segment: kind.Injury.Segment(),
-				Summary: api.InjurySchema().NewSummary(),
-				Detail:  api.InjurySchema().NewDetail(),
-				Create:  api.InjurySchema().NewCreate(),
-				Patch:   api.InjurySchema().NewPatch(),
-			},
-			{
-				Enum:    kind.Insurance.Enum(),
-				Segment: kind.Insurance.Segment(),
-				Summary: api.InsuranceSchema().NewSummary(),
-				Detail:  api.InsuranceSchema().NewDetail(),
-				Create:  api.InsuranceSchema().NewCreate(),
-				Patch:   api.InsuranceSchema().NewPatch(),
-			},
-			{
-				Enum:    kind.Equipment.Enum(),
-				Segment: kind.Equipment.Segment(),
-				Summary: api.EquipmentSchema().NewSummary(),
-				Detail:  api.EquipmentSchema().NewDetail(),
-				Create:  api.EquipmentSchema().NewCreate(),
-				Patch:   api.EquipmentSchema().NewPatch(),
-			},
-		},
+		Version:  openAPIDocumentVersion,
+		Routes:   httproute.Inventory().Routes(),
+		Kinds:    api.OpenAPIKinds(),
 		Envelope: web.Envelope{},
 	}, nil
 }
