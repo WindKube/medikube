@@ -10,7 +10,7 @@ import (
 // the page and hidden rather than created on demand, so it exists in the DOM
 // whether or not it is on screen — which is what makes FR-028 assertable by the
 // render gate at all.
-const confirmSignal = "confirming_delete"
+const confirmSignal = "_confirming_delete"
 
 const (
 	detailArticle     = "Medication"
@@ -29,7 +29,7 @@ templ MedicationDetail(props MedicationDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Medication, props.Medication.ID) }
 		aria-label={ detailArticle }
-		data-signals={ "{" + confirmSignal + ": false, etag: " + jsLiteral(props.Medication.Version) + "}" }
+		data-signals={ "{" + confirmSignal + ": false, _etag: " + jsLiteral(props.Medication.Version) + "}" }
 		data-status={ props.Medication.StatusValue }
 		class="flex flex-col"
 	>

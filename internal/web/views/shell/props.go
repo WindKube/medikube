@@ -104,8 +104,8 @@ const (
 	// owns both spellings; heartbeat_test.go is the mechanical tie, because a
 	// signal named one thing on the wire and another in the attribute is a
 	// comparison against a value nothing ever sets.
-	SignalStreamBeat  = "stream_beat"
-	SignalStreamStale = "stream_stale"
+	SignalStreamBeat  = "_stream_beat"
+	SignalStreamStale = "_stream_stale"
 
 	// StreamStaleAfter is the gap without a heartbeat that means the live view
 	// has stopped. It is two missed beats plus slack against a 25-second
@@ -136,7 +136,7 @@ func StreamPollAttribute() string {
 
 // StreamSignals is the initial signal state, written on <body>.
 //
-// stream_beat is seeded with the moment the page was rendered rather than left
+// _stream_beat is seeded with the moment the page was rendered rather than left
 // empty, and that is the load-bearing half: a page whose stream never connects
 // at all has no beat to compare against, so an empty seed would leave
 // Date.parse returning NaN, every comparison false, and the one failure mode

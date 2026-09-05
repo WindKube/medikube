@@ -9,7 +9,7 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 )
 
-// HeartbeatInterval is how often the stream patches $stream_beat.
+// HeartbeatInterval is how often the stream patches $_stream_beat.
 //
 // contracts/streams.md fixes it at 25 seconds against a 60-second staleness
 // threshold, which is two missed beats plus slack: a single dropped frame or a
@@ -18,7 +18,7 @@ import (
 // minute and a quarter.
 const HeartbeatInterval = 25 * time.Second
 
-// StalenessThreshold is the gap the page compares $stream_beat against before
+// StalenessThreshold is the gap the page compares $_stream_beat against before
 // it says the live view has stopped (FR-031). It is the server's number
 // because the server is what decides how often a beat arrives; the page reads
 // it out of this constant through the layout rather than spelling its own.
@@ -29,8 +29,8 @@ const StalenessThreshold = 60 * time.Second
 // name is a contract between a Go string and an HTML attribute, and a typo in
 // either is a banner that never appears.
 const (
-	SignalStreamBeat  = "stream_beat"
-	SignalStreamStale = "stream_stale"
+	SignalStreamBeat  = "_stream_beat"
+	SignalStreamStale = "_stream_stale"
 )
 
 // The response headers newStream sets that datastar.NewSSE does not, or sets

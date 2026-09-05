@@ -31,9 +31,9 @@ templ PatientSwitcher(props PatientSwitcherProps) {
 			role="combobox"
 			aria-label="Active patient"
 			name="patient"
-			data-bind="patient"
+			data-bind="_active_patient"
 			if props.Href != "" {
-				data-on:change={ "@put(" + quotePS(props.Href) + ")" }
+				data-on:change={ "@put(" + quotePS(props.Href) + ", {payload: {patient: $_active_patient}})" }
 			}
 			class="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>

@@ -17,12 +17,12 @@ const confirmRegion = "Confirm delete"
 func confirmProps() components.ConfirmProps {
 	return components.ConfirmProps{
 		ID:           "confirm-under-test",
-		Signal:       "confirming_delete",
+		Signal:       "_confirming_delete",
 		Title:        "Delete this medication?",
 		Subject:      `مسكن <b>alpha</b> & "strong"`,
 		Consequence:  "This is permanent. There is no undo and no recycle bin.",
 		ConfirmLabel: "Delete permanently",
-		ConfirmOn:    "@delete('/api/v1/records/x/y', {headers: {'If-Match': $etag}})",
+		ConfirmOn:    "@delete('/api/v1/records/x/y', {headers: {'If-Match': $_etag}})",
 		CancelLabel:  "Keep it",
 	}
 }

@@ -495,8 +495,8 @@ func (p MedicationFormProps) SubmitLabel() string {
 func jsLiteral(value string) string { return strconv.Quote(value) }
 
 // deleteExpression is the confirmation's action. The If-Match comes from the
-// $etag signal the detail declares rather than from a second read, because a
+// $_etag signal the detail declares rather than from a second read, because a
 // version fetched again is a version that can already be stale (FR-026).
 func deleteExpression(medication MedicationView) string {
-	return "@delete(" + jsLiteral(medication.Links.Record) + ", {headers: {'If-Match': $etag}})"
+	return "@delete(" + jsLiteral(medication.Links.Record) + ", {headers: {'If-Match': $_etag}})"
 }

@@ -465,7 +465,7 @@ func (l medicationLinks) submitExpression(medication views.MedicationView) strin
 		return "@post(" + quote(l.collection) + ")"
 	}
 
-	return "@patch(" + quote(medication.Links.Record) + ", {headers: {'If-Match': $etag}})"
+	return "@patch(" + quote(medication.Links.Record) + ", {headers: {'If-Match': $_etag}})"
 }
 
 func (l medicationLinks) cancelHref(medication views.MedicationView) string {

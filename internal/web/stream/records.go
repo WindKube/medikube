@@ -187,7 +187,7 @@ func (s *streams) pump(
 	events <-chan realtime.Event,
 ) error {
 	// The first beat goes out immediately. Without it a page opened at the
-	// wrong moment sits for 25 seconds with no $stream_beat at all, and the
+	// wrong moment sits for 25 seconds with no $_stream_beat at all, and the
 	// staleness detector compares against a signal that has never been set.
 	if err := s.beat(sse); err != nil {
 		return s.ended(ctx, err)
@@ -368,7 +368,7 @@ func (s *streams) removeRow(sse *datastar.ServerSentEventGenerator, entry record
 // together by heartbeat_test.go: a tag that drifted would leave the page
 // comparing a signal the server never sets.
 type heartbeat struct {
-	StreamBeat string `json:"stream_beat"`
+	StreamBeat string `json:"_stream_beat"`
 }
 
 func (s *streams) beat(sse *datastar.ServerSentEventGenerator) error {

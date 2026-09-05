@@ -113,7 +113,7 @@ func WithRegistrationOpen(open bool) Option {
 	return func(s *settings) { s.registrationOpen = open }
 }
 
-// WithStreamHeartbeat shortens the interval between $stream_beat frames.
+// WithStreamHeartbeat shortens the interval between $_stream_beat frames.
 func WithStreamHeartbeat(interval time.Duration) Option {
 	return func(s *settings) { s.heartbeat = interval }
 }

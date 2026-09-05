@@ -264,7 +264,7 @@ var requestIDs = regexp.MustCompile(
 // that second and by nothing else. Comparing without removing it is a test that
 // passes locally and fails roughly once per minute of CI wall-clock, which
 // Constitution VIII forbids.
-var streamBeats = regexp.MustCompile(`stream_beat: &#39;[^&]*&#39;`)
+var streamBeats = regexp.MustCompile(`_stream_beat: &#39;[^&]*&#39;`)
 
 // volatile removes everything a refusal and a genuine miss are ALLOWED to
 // differ by, and nothing else. Anything this does not strip has to match

@@ -196,7 +196,7 @@ func TestAChangeIsPatchedByTheRowsOwnID(t *testing.T) {
 	rig.publish(realtime.Event{Kind: kind.Medication, RecordID: created.ID, PatientID: recordstest.OwnerID})
 
 	// The first frame is the immediate heartbeat: a page opened at the wrong
-	// moment must not sit for a whole interval with no $stream_beat at all.
+	// moment must not sit for a whole interval with no $_stream_beat at all.
 	require.Equal(t, "datastar-patch-signals", rig.next().Event)
 
 	patch := rig.next()
