@@ -475,7 +475,6 @@ func handlerTable(
 	groups := []httproute.Handlers{
 		recordOps, pageOps, streamOps, accountOps, accountPages, overviewPage, assets,
 		patientOps, photoOps, activePatientOps, patientPages, directoryOps, injuryPageOps, immunizationPageOps,
-		patientOps, photoOps, activePatientOps, patientPages, directoryOps,
 		insurancePageOps, equipmentPageOps,
 	}
 
@@ -590,13 +589,11 @@ func registerKinds(
 	}
 
 	immunizationRepo, err := storeimmunization.New(app, codec)
-	insuranceViews, err := page.NewInsuranceViews()
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 
 	immunizationViews, err := page.NewImmunizationViews()
-	insuranceRepository, err := storeinsurance.New(app, codec)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -609,26 +606,16 @@ func registerKinds(
 		Views:        immunizationViews,
 		SearchFields: api.ImmunizationSearchFields,
 		Basis:        api.ImmunizationBasis,
-	if registerErr := insurance.Register(registry, insurance.Wiring{
-		Repository:   insuranceRepository,
-		Authorizer:   authorizer,
-		Codec:        api.InsuranceCodec{},
-		Schema:       api.InsuranceSchema(),
-		Views:        insuranceViews,
-		SearchFields: api.InsuranceSearchFields,
-		Basis:        api.InsuranceBasis,
 	}); registerErr != nil {
 		return nil, nil, nil, nil, registerErr
 	}
 
 	injuryRepo, err := storeinjury.New(app, codec)
-	equipmentViews, err := page.NewEquipmentViews()
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 
 	injuryViews, err := page.NewInjuryViews()
-	equipmentRepository, err := storeequipment.New(app, codec)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -641,6 +628,42 @@ func registerKinds(
 		Views:        injuryViews,
 		SearchFields: api.InjurySearchFields,
 		Basis:        api.InjuryBasis,
+	}); registerErr != nil {
+		return nil, nil, nil, nil, registerErr
+	}
+
+	insuranceViews, err := page.NewInsuranceViews()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	insuranceRepository, err := storeinsurance.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if registerErr := insurance.Register(registry, insurance.Wiring{
+		Repository:   insuranceRepository,
+		Authorizer:   authorizer,
+		Codec:        api.InsuranceCodec{},
+		Schema:       api.InsuranceSchema(),
+		Views:        insuranceViews,
+		SearchFields: api.InsuranceSearchFields,
+		Basis:        api.InsuranceBasis,
+	}); registerErr != nil {
+		return nil, nil, nil, nil, registerErr
+	}
+
+	equipmentViews, err := page.NewEquipmentViews()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	equipmentRepository, err := storeequipment.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
 	if registerErr := equipment.Register(registry, equipment.Wiring{
 		Repository:   equipmentRepository,
 		Authorizer:   authorizer,

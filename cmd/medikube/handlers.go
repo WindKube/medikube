@@ -293,12 +293,20 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 	}
 
 	immunizationPages, err := page.ImmunizationHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
 	insurancePages, err := page.InsuranceHandlers(resolve, patients)
 	if err != nil {
 		return nil, err
 	}
 
 	injuryPages, err := page.InjuryHandlers(resolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
 	equipmentPages, err := page.EquipmentHandlers(resolve, patients)
 	if err != nil {
 		return nil, err
@@ -532,7 +540,6 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	registry.SetIndexer(indexer)
 	registry.SetSearchReader(searchRepo)
 
-	if err = medication.Register(registry, medication.Wiring{
 	err = medication.Register(registry, medication.Wiring{
 		Repository:   repository,
 		Authorizer:   authorizer,
@@ -546,27 +553,16 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		return err
 	}
 
-	immunizationRepo, err := storeimmunization.New(app, cursors)
 	insuranceViews, err := page.NewInsuranceViews()
 	if err != nil {
 		return err
 	}
 
-	immunizationViews, err := page.NewImmunizationViews()
 	insuranceRepository, err := insurancestore.New(app, cursors)
 	if err != nil {
 		return err
 	}
 
-	if err = kinds.Register(registry, kinds.Wiring{
-		Repository:   immunizationRepo,
-		Authorizer:   authorizer,
-		Codec:        api.ImmunizationCodec{},
-		Schema:       api.ImmunizationSchema(),
-		Views:        immunizationViews,
-		SearchFields: api.ImmunizationSearchFields,
-		Basis:        api.ImmunizationBasis,
-	if err := insurance.Register(registry, insurance.Wiring{
 	err = insurance.Register(registry, insurance.Wiring{
 		Repository:   insuranceRepository,
 		Authorizer:   authorizer,
@@ -580,27 +576,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		return err
 	}
 
-	injuryRepo, err := storeinjury.New(app, cursors)
 	equipmentViews, err := page.NewEquipmentViews()
 	if err != nil {
 		return err
 	}
 
-	injuryViews, err := page.NewInjuryViews()
 	equipmentRepository, err := equipmentstore.New(app, cursors)
 	if err != nil {
 		return err
 	}
 
-	if err := kinds.RegisterInjury(registry, kinds.InjuryWiring{
-		Repository:   injuryRepo,
-		Authorizer:   authorizer,
-		Codec:        api.InjuryCodec{},
-		Schema:       api.InjurySchema(),
-		Views:        injuryViews,
-		SearchFields: api.InjurySearchFields,
-		Basis:        api.InjuryBasis,
-	if err := equipment.Register(registry, equipment.Wiring{
+	if err = equipment.Register(registry, equipment.Wiring{
 		Repository:   equipmentRepository,
 		Authorizer:   authorizer,
 		Codec:        api.EquipmentCodec{},
@@ -608,6 +594,50 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Views:        equipmentViews,
 		SearchFields: api.EquipmentSearchFields,
 		Basis:        api.EquipmentBasis,
+	}); err != nil {
+		return err
+	}
+
+	immunizationRepo, err := storeimmunization.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	immunizationViews, err := page.NewImmunizationViews()
+	if err != nil {
+		return err
+	}
+
+	if err = kinds.Register(registry, kinds.Wiring{
+		Repository:   immunizationRepo,
+		Authorizer:   authorizer,
+		Codec:        api.ImmunizationCodec{},
+		Schema:       api.ImmunizationSchema(),
+		Views:        immunizationViews,
+		SearchFields: api.ImmunizationSearchFields,
+		Basis:        api.ImmunizationBasis,
+	}); err != nil {
+		return err
+	}
+
+	injuryRepo, err := storeinjury.New(app, cursors)
+	if err != nil {
+		return err
+	}
+
+	injuryViews, err := page.NewInjuryViews()
+	if err != nil {
+		return err
+	}
+
+	if err = kinds.RegisterInjury(registry, kinds.InjuryWiring{
+		Repository:   injuryRepo,
+		Authorizer:   authorizer,
+		Codec:        api.InjuryCodec{},
+		Schema:       api.InjurySchema(),
+		Views:        injuryViews,
+		SearchFields: api.InjurySearchFields,
+		Basis:        api.InjuryBasis,
 	}); err != nil {
 		return err
 	}

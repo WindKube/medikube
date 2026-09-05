@@ -70,6 +70,8 @@ func openAPIInput() (openapi.Input, error) {
 				Detail:  api.InjurySchema().NewDetail(),
 				Create:  api.InjurySchema().NewCreate(),
 				Patch:   api.InjurySchema().NewPatch(),
+			},
+			{
 				Enum:    kind.Insurance.Enum(),
 				Segment: kind.Insurance.Segment(),
 				Summary: api.InsuranceSchema().NewSummary(),

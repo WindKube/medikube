@@ -52,24 +52,14 @@ func productionInput() openapi.Input {
 			Detail:  api.InjurySchema().NewDetail(),
 			Create:  api.InjurySchema().NewCreate(),
 			Patch:   api.InjurySchema().NewPatch(),
-		}},
-		Kinds: []openapi.Kind{
-			{
-				Enum:    kind.Medication.Enum(),
-				Segment: kind.Medication.Segment(),
-				Summary: api.MedicationSchema().NewSummary(),
-				Detail:  api.MedicationSchema().NewDetail(),
-				Create:  api.MedicationSchema().NewCreate(),
-				Patch:   api.MedicationSchema().NewPatch(),
-			},
-			{
-				Enum:    kind.Insurance.Enum(),
-				Segment: kind.Insurance.Segment(),
-				Summary: api.InsuranceSchema().NewSummary(),
-				Detail:  api.InsuranceSchema().NewDetail(),
-				Create:  api.InsuranceSchema().NewCreate(),
-				Patch:   api.InsuranceSchema().NewPatch(),
-			},
+		}, {
+			Enum:    kind.Insurance.Enum(),
+			Segment: kind.Insurance.Segment(),
+			Summary: api.InsuranceSchema().NewSummary(),
+			Detail:  api.InsuranceSchema().NewDetail(),
+			Create:  api.InsuranceSchema().NewCreate(),
+			Patch:   api.InsuranceSchema().NewPatch(),
+		},
 			{
 				Enum:    kind.Equipment.Enum(),
 				Segment: kind.Equipment.Segment(),

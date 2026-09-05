@@ -518,6 +518,8 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "One record, every value it holds and the time it last changed.",
 			Landmark: `article[name="Injury"]`, SmokeURL: "/" + kind.Injury.Segment() + "/mkinjamara00001",
+		},
+		{
 			OpID: "insuranceListPage", Method: http.MethodGet, Path: insuranceList,
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "US5's insurance list, with its empty state inside the landmark rather than instead of it.",

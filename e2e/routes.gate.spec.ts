@@ -16,31 +16,42 @@
 // smoke.spec.ts is unchanged and keeps the page-specific assertions — what
 // the record list contains, what the settings danger zone states, and so on.
 // This file only ever runs the seven generic ones.
-import { fixtures } from './fixtures';
-import { open } from './gate';
-import { credentialFor, pageRoutes, type PageRoute } from './routes';
-import { expect, test } from './auth';
+import { fixtures } from "./fixtures";
+import { open } from "./gate";
+import { credentialFor, pageRoutes, type PageRoute } from "./routes";
+import { expect, test } from "./auth";
 
-import type { Page } from '@playwright/test';
+import type { Page } from "@playwright/test";
 
 async function apiNameOf(page: Page, id: string): Promise<string> {
   const response = await page.request.get(`/api/v1/records/medications/${id}`);
-  expect(response.ok(), `routes.gate: the API did not answer for record ${id}`).toBe(true);
+  expect(
+    response.ok(),
+    `routes.gate: the API did not answer for record ${id}`,
+  ).toBe(true);
 
   return ((await response.json()) as { name: string }).name;
 }
 
 async function patientNameOf(page: Page, id: string): Promise<string> {
   const response = await page.request.get(`/api/v1/patients/${id}`);
-  expect(response.ok(), `routes.gate: the API did not answer for patient ${id}`).toBe(true);
+  expect(
+    response.ok(),
+    `routes.gate: the API did not answer for patient ${id}`,
+  ).toBe(true);
 
-  const patient = (await response.json()) as { first_name: string; last_name: string };
+  const patient = (await response.json()) as {
+    first_name: string;
+    last_name: string;
+  };
   return `${patient.first_name} ${patient.last_name}`.trim();
 }
 
 async function nameOf(page: Page, url: string): Promise<string> {
   const response = await page.request.get(url);
-  expect(response.ok(), `routes.gate: the API did not answer for ${url}`).toBe(true);
+  expect(response.ok(), `routes.gate: the API did not answer for ${url}`).toBe(
+    true,
+  );
 
   return ((await response.json()) as { name: string }).name;
 }
@@ -48,16 +59,27 @@ async function nameOf(page: Page, url: string): Promise<string> {
 // fieldOf is nameOf generalised to a member other than `name`: immunization's
 // detail page titles itself after vaccine_name, the same way medication's
 // titles itself after name (medicationDetailPage's own apiNameOf above).
-async function fieldOf(page: Page, url: string, field: string): Promise<string> {
+async function fieldOf(
+  page: Page,
+  url: string,
+  field: string,
+): Promise<string> {
   const response = await page.request.get(url);
-  expect(response.ok(), `routes.gate: the API did not answer for ${url}`).toBe(true);
+  expect(response.ok(), `routes.gate: the API did not answer for ${url}`).toBe(
+    true,
+  );
 
   return ((await response.json()) as Record<string, string>)[field];
+}
+
 // insuranceCompanyOf: insurance titles its detail page after the insurer
 // (the "company" member), not "name" — the one field nameOf's shape assumes.
 async function insuranceCompanyOf(page: Page, id: string): Promise<string> {
   const response = await page.request.get(`/api/v1/records/insurance/${id}`);
-  expect(response.ok(), `routes.gate: the API did not answer for insurance ${id}`).toBe(true);
+  expect(
+    response.ok(),
+    `routes.gate: the API did not answer for insurance ${id}`,
+  ).toBe(true);
 
   return ((await response.json()) as { company: string }).company;
 }
@@ -65,7 +87,7 @@ async function insuranceCompanyOf(page: Page, id: string): Promise<string> {
 // idOf reads the record id P5's SmokeURL is bound to, off the end of the URL
 // itself, so nothing here needs a second copy of the kind's URL segment.
 function idOf(smokeURL: string): string {
-  return smokeURL.slice(smokeURL.lastIndexOf('/') + 1);
+  return smokeURL.slice(smokeURL.lastIndexOf("/") + 1);
 }
 
 // titleFor is contracts/pages.md's title column, worked out generically:
@@ -86,30 +108,48 @@ function idOf(smokeURL: string): string {
 // doing exactly the job contracts/pages.md's gate exists for.
 async function titleFor(route: PageRoute, page: Page): Promise<string> {
   switch (route.opID) {
-    case 'verifyEmailPage':
+    case "verifyEmailPage":
       return fixtures.title(fixtures.titles.verifyEmail);
-    case 'medicationDetailPage':
+    case "medicationDetailPage":
       return fixtures.title(await apiNameOf(page, idOf(route.smokeURL)));
-    case 'immunizationDetailPage':
+    case "immunizationDetailPage":
       return fixtures.title(
-        await fieldOf(page, `/api/v1/records/immunizations/${idOf(route.smokeURL)}`, 'vaccine_name'),
+        await fieldOf(
+          page,
+          `/api/v1/records/immunizations/${idOf(route.smokeURL)}`,
+          "vaccine_name",
+        ),
       );
-    case 'injuryDetailPage':
-      return fixtures.title(await fieldOf(page, `/api/v1/records/injuries/${idOf(route.smokeURL)}`, 'name'));
-    case 'insuranceDetailPage':
-      return fixtures.title(await insuranceCompanyOf(page, idOf(route.smokeURL)));
-    case 'equipmentDetailPage':
-      return fixtures.title(await nameOf(page, `/api/v1/records/equipment/${idOf(route.smokeURL)}`));
-    case 'patientListPage':
-      return fixtures.title('People');
-    case 'patientDetailPage':
+    case "injuryDetailPage":
+      return fixtures.title(
+        await fieldOf(
+          page,
+          `/api/v1/records/injuries/${idOf(route.smokeURL)}`,
+          "name",
+        ),
+      );
+    case "insuranceDetailPage":
+      return fixtures.title(
+        await insuranceCompanyOf(page, idOf(route.smokeURL)),
+      );
+    case "equipmentDetailPage":
+      return fixtures.title(
+        await nameOf(page, `/api/v1/records/equipment/${idOf(route.smokeURL)}`),
+      );
+    case "patientListPage":
+      return fixtures.title("People");
+    case "patientDetailPage":
       return fixtures.title(await patientNameOf(page, idOf(route.smokeURL)));
-    case 'facilityListPage':
-      return fixtures.title('Places of care');
-    case 'practitionerDetailPage':
-      return fixtures.title(await nameOf(page, `/api/v1/practitioners/${idOf(route.smokeURL)}`));
-    case 'facilityDetailPage':
-      return fixtures.title(await nameOf(page, `/api/v1/facilities/${idOf(route.smokeURL)}`));
+    case "facilityListPage":
+      return fixtures.title("Places of care");
+    case "practitionerDetailPage":
+      return fixtures.title(
+        await nameOf(page, `/api/v1/practitioners/${idOf(route.smokeURL)}`),
+      );
+    case "facilityDetailPage":
+      return fixtures.title(
+        await nameOf(page, `/api/v1/facilities/${idOf(route.smokeURL)}`),
+      );
     default:
       return fixtures.title(route.landmark.name);
   }
@@ -119,7 +159,9 @@ for (const route of pageRoutes) {
   test.describe(`${route.opID} — the render gate`, () => {
     test.use({ signedInAs: credentialFor(route) });
 
-    test('passes every one of contracts/pages.md\'s seven assertions', async ({ page }) => {
+    test("passes every one of contracts/pages.md's seven assertions", async ({
+      page,
+    }) => {
       await open(page, {
         path: route.smokeURL,
         title: await titleFor(route, page),
@@ -132,10 +174,14 @@ for (const route of pageRoutes) {
     // patient switcher, forever — this reads the inventory's own auth column
     // rather than naming pages, so a phase-003+ page that registers with
     // auth: user inherits the assertion the day it ships, with no edit here.
-    if (route.auth === 'user') {
-      test('carries the "Active patient" switcher (FR-014)', async ({ page }) => {
+    if (route.auth === "user") {
+      test('carries the "Active patient" switcher (FR-014)', async ({
+        page,
+      }) => {
         await page.goto(route.smokeURL);
-        await expect(page.getByRole('combobox', { name: 'Active patient' })).toBeVisible();
+        await expect(
+          page.getByRole("combobox", { name: "Active patient" }),
+        ).toBeVisible();
       });
     }
   });
@@ -151,41 +197,50 @@ for (const route of pageRoutes) {
 // (T230). Its title, "Something went wrong — MediKube", follows the same
 // generic rule as the two below and is asserted there.
 
-test.describe('E1 — not found', () => {
-  test.use({ signedInAs: 'anonymous' });
+test.describe("E1 — not found", () => {
+  test.use({ signedInAs: "anonymous" });
 
-  test('a path nothing serves answers 404 inside the full shell (FR-033)', async ({ page }) => {
+  test("a path nothing serves answers 404 inside the full shell (FR-033)", async ({
+    page,
+  }) => {
     // A sentinel distinct from every path the inventory actually serves,
     // checked here rather than assumed, so a future page cannot collide with
     // it in silence.
-    const path = '/routes-gate-404-sentinel-for-smoke';
+    const path = "/routes-gate-404-sentinel-for-smoke";
     expect(
-      pageRoutes.some((route) => route.path === path || route.smokeURL === path),
-      'the 404 probe path collides with a real page; pick another sentinel',
+      pageRoutes.some(
+        (route) => route.path === path || route.smokeURL === path,
+      ),
+      "the 404 probe path collides with a real page; pick another sentinel",
     ).toBe(false);
 
     await open(page, {
       path,
-      title: fixtures.title('Not found'),
-      landmark: { role: 'region', name: 'Not found' },
+      title: fixtures.title("Not found"),
+      landmark: { role: "region", name: "Not found" },
       status: 404,
     });
   });
 });
 
-test.describe('E2 — sign in required', () => {
-  test.use({ signedInAs: 'anonymous' });
+test.describe("E2 — sign in required", () => {
+  test.use({ signedInAs: "anonymous" });
 
-  test('a session page opened with no session renders the sign-in prompt, not a 404 (E2)', async ({ page }) => {
+  test("a session page opened with no session renders the sign-in prompt, not a 404 (E2)", async ({
+    page,
+  }) => {
     // Any session-required page probes the same refusal: it is enforced once,
     // at the router (internal/httproute/registry.go's Bind), not per page.
-    const sessionPage = pageRoutes.find((route) => route.auth === 'user');
-    expect(sessionPage, 'routes.ts stopped listing any session-required page to probe E2 with').toBeTruthy();
+    const sessionPage = pageRoutes.find((route) => route.auth === "user");
+    expect(
+      sessionPage,
+      "routes.ts stopped listing any session-required page to probe E2 with",
+    ).toBeTruthy();
 
     await open(page, {
       path: sessionPage!.smokeURL,
-      title: fixtures.title('Sign in required'),
-      landmark: { role: 'region', name: 'Sign in required' },
+      title: fixtures.title("Sign in required"),
+      landmark: { role: "region", name: "Sign in required" },
       status: 403,
     });
   });
