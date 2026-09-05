@@ -21,7 +21,7 @@ const (
 	fieldSeverity      = "severity"
 	fieldStatus        = "status"
 	fieldRecoveryNotes = "recovery_notes"
-	fieldMedications   = "medications"
+	fieldMedications   = "medication_ids"
 	fieldCreated       = "created"
 	fieldUpdated       = "updated"
 )

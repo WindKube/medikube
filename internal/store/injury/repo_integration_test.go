@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"medikube/internal/domain/clinical"
+	"medikube/internal/domain/kind"
 	"medikube/internal/service/injury"
 	"medikube/internal/service/injury/injurytest"
 	"medikube/internal/store"
@@ -132,7 +133,7 @@ func TestMedicationLinksSurviveTheMedicationsDeletion(t *testing.T) {
 	h := newHarness(t)
 	ctx := t.Context()
 
-	medications, err := h.app.FindCollectionByNameOrId("medications")
+	medications, err := h.app.FindCollectionByNameOrId(kind.Medication.Collection())
 	require.NoError(t, err)
 
 	medication := core.NewRecord(medications)

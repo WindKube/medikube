@@ -36,7 +36,7 @@ const (
 	// adds those collections, the same way medications' own tags field was
 	// added retroactively rather than at its birth (1756300020_medication_
 	// tags.go).
-	injuryFieldMedications = "medications"
+	injuryFieldMedications = "medication_ids"
 	injuryFieldTags        = "tags"
 )
 
