@@ -17,7 +17,7 @@ templ PatientDetail(props PatientDetailProps) {
 		id={ ids.PatientDetail(props.Patient.ID) }
 		aria-label={ patientChartRegion }
 		if !props.Patient.IsSelfRecord {
-			data-signals={ "{" + DeleteConfirmSignal + ": false, etag: " + strconv.Quote(props.Patient.Version) + "}" }
+			data-signals={ "{" + DeleteConfirmSignal + ": false, _etag: " + strconv.Quote(props.Patient.Version) + "}" }
 		}
 		class="flex flex-col gap-4"
 	>
@@ -48,6 +48,15 @@ templ PatientDetail(props PatientDetailProps) {
 				>Delete</button>
 			}
 		</div>
+		if !props.Patient.IsSelfRecord {
+			@DeleteConfirm(DeleteConfirmProps{
+				PatientID:    props.Patient.ID,
+				Name:         props.Patient.FullName(),
+				TotalRecords: props.TotalRecords,
+				Version:      props.Patient.Version,
+				DeleteHref:   props.Patient.Links.Record,
+			})
+		}
 		if len(props.Patient.Entries()) > 0 {
 			<dl class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
 				for _, entry := range props.Patient.Entries() {
@@ -101,15 +110,6 @@ templ PatientDetail(props PatientDetailProps) {
 					</ul>
 				</div>
 			}
-		}
-		if !props.Patient.IsSelfRecord {
-			@DeleteConfirm(DeleteConfirmProps{
-				PatientID:    props.Patient.ID,
-				Name:         props.Patient.FullName(),
-				TotalRecords: props.TotalRecords,
-				Version:      props.Patient.Version,
-				DeleteHref:   props.Patient.Links.Record,
-			})
 		}
 	</section>
 }
