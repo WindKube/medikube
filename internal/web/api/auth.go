@@ -80,6 +80,9 @@ type Deps struct {
 	// Patients resolves the patient stack getMe/updateMe and
 	// setActivePatient need (contracts/active-patient.md).
 	Patients PatientResolve
+
+	// Forms is updateMe's Datastar half: nil serves JSON only.
+	Forms SettingsForms
 }
 
 type authHandlers struct {

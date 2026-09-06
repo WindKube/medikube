@@ -9,6 +9,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"medikube/internal/domain/access"
+	domainidentity "medikube/internal/domain/identity"
 	"medikube/internal/httproute"
 	"medikube/internal/records"
 	"medikube/internal/service/patient"
@@ -27,6 +28,15 @@ const (
 // is an internal failure: the deletion confirmation states how many records
 // will be destroyed, and a confirmation that guessed would be worse than none.
 var ErrNoCount = errors.New("api: the record count was asked for and not answered")
+
+// SettingsForms is the settings page's Datastar half: a submit against
+// updateMe answers with the profile form re-rendered through the same
+// components the /settings page itself builds, so a locale change is shown
+// in the language it just chose on the same response (US1-1) — the same
+// reasoning TagForms and FacilityForms document.
+type SettingsForms interface {
+	Updated(ctx context.Context, actor access.Actor, user domainidentity.User) (web.Component, error)
+}
 
 type accountHandlers struct {
 	deps Deps
@@ -158,6 +168,25 @@ func (h *accountHandlers) update(e *core.RequestEvent, actor access.Actor) error
 	user, err := h.deps.Accounts.UpdateProfile(e.Request.Context(), actor, patch.Profile())
 	if err != nil {
 		return refused(err)
+	}
+
+	if wantsFormPatch(e) && h.deps.Forms != nil {
+		// The locale a submit just changed is not yet reflected in e.Auth,
+		// which was resolved at the start of the request: web.Localize keys
+		// on it, so the form would re-render in the language the account was
+		// signed in with rather than the one it just chose. Setting it here,
+		// on the same in-memory record Localize reads, is what makes this
+		// response answer in the new language rather than the next one.
+		if e.Auth != nil {
+			e.Auth.Set("locale", user.Locale)
+		}
+
+		component, formErr := h.deps.Forms.Updated(e.Request.Context(), actor, user)
+		if formErr != nil {
+			return formErr
+		}
+
+		return web.Patch(e, component, web.ByElementID())
 	}
 
 	counts, err := h.deps.Counts(e.Request.Context(), actor)

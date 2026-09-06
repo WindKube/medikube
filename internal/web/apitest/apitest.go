@@ -497,6 +497,13 @@ func handlerTable(
 		return nil, err
 	}
 
+	settingsForms, err := page.NewSettingsForms()
+	if err != nil {
+		return nil, err
+	}
+
+	accounts.Deps.Forms = settingsForms
+
 	accountOps, err := accounts.Handlers()
 	if err != nil {
 		return nil, err
