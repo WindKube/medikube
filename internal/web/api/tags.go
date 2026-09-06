@@ -41,6 +41,7 @@ type TagForms interface {
 	Invalid(ctx context.Context, actor access.Actor, submitted dtag.Tag, isNew bool, invalid *domain.ValidationError) (web.Component, error)
 	Created(ctx context.Context, actor access.Actor, created dtag.Tag, usage int) (web.Component, error)
 	Updated(ctx context.Context, actor access.Actor, updated dtag.Tag, usage int) (web.Component, error)
+	Deleted(ctx context.Context, actor access.Actor) (web.Component, error)
 }
 
 // TagDeps is what the four tag handlers need.
@@ -253,6 +254,15 @@ func (h *tagHandlers) remove(e *core.RequestEvent, actor access.Actor) error {
 
 	if err := service.Delete(e.Request.Context(), actor, id); err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if wantsFormPatch(e) && h.deps.Forms != nil {
+		component, formErr := h.deps.Forms.Deleted(e.Request.Context(), actor)
+		if formErr != nil {
+			return formErr
+		}
+
+		return web.Patch(e, component, web.ByElementID())
 	}
 
 	e.Response.Header().Set("Cache-Control", directoryCacheControl)

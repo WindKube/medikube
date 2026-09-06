@@ -207,6 +207,19 @@ func TestDeleteTag(t *testing.T) {
 		}
 	})
 
+	t.Run("a Datastar delete answers 200 with the manager re-rendered without the row", func(t *testing.T) {
+		t.Parallel()
+
+		caller := newCaller(t)
+
+		created := caller.post(tagsURL(), `{"name":"deletable-inline"}`).tag(t)
+
+		answer := caller.do(http.MethodDelete, tagURL(created.ID), "", map[string]string{"Datastar-Request": "true"})
+		require.Equal(t, http.StatusOK, answer.Status, answer.Body)
+		assert.Contains(t, answer.Body, "<form")
+		assert.NotContains(t, answer.Body, "deletable-inline")
+	})
+
 	t.Run("404 for another account's tag, identical to a non-existent id", func(t *testing.T) {
 		t.Parallel()
 

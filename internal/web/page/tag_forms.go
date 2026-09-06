@@ -75,6 +75,11 @@ func (f tagForms) Updated(ctx context.Context, actor access.Actor, updated domai
 	return f.manager(ctx, actor)
 }
 
+// Deleted re-renders the manager without the row, for the same reason.
+func (f tagForms) Deleted(ctx context.Context, actor access.Actor) (web.Component, error) {
+	return f.manager(ctx, actor)
+}
+
 func (f tagForms) manager(ctx context.Context, actor access.Actor) (web.Component, error) {
 	service, err := f.resolve()
 	if err != nil {
