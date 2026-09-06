@@ -62,8 +62,8 @@ func TestDeletingAPatientDestroysEveryKindOfItsRecordsAndItsSearchIndexRows(t *t
 	require.NoError(t, app.Delete(patientRecord))
 
 	for _, k := range kind.Kinds() {
-		n, err := app.CountRecords(k.Collection(), dbx.HashExp{"patient": patientID})
-		require.NoError(t, err)
+		n, countErr := app.CountRecords(k.Collection(), dbx.HashExp{"patient": patientID})
+		require.NoError(t, countErr)
 		require.EqualValuesf(t, 0, n, "%s: a record still names the deleted patient", k)
 	}
 
