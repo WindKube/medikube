@@ -746,7 +746,7 @@ func courseMedicationFamily(app core.App) api.CourseMedicationResolve {
 			return nil, err
 		}
 
-		return coursemedicationsvc.New(repository, treatments, medications, authorizer)
+		return coursemedicationsvc.New(repository, treatments, medications, authorizer, auditor)
 	})
 }
 

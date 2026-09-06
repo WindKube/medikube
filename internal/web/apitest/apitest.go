@@ -1308,7 +1308,7 @@ func newCourseMedicationService(app core.App) (*coursemedicationsvc.Service, err
 		return nil, err
 	}
 
-	return coursemedicationsvc.New(repository, treatments, medications, authorizer)
+	return coursemedicationsvc.New(repository, treatments, medications, authorizer, auditor)
 }
 
 func courseMedicationHandlers(app core.App, resolve api.Resolve) (httproute.Handlers, error) {

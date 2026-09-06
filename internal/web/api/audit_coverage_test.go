@@ -19,9 +19,9 @@ import (
 // access attempt produces access_denied, and nothing written into any of
 // those bodies' free-text fields ever shows up in the audit trail.
 //
-// The link and treatment_medications leg (relationship changes) is out of
-// scope: US6 is still in flight and lands its own audit case with the link
-// work.
+// TestCourseMedicationRelationshipChangesProduceAuditEntriesAndNoPHI below
+// covers the relationship leg: attaching, re-attaching and detaching a course
+// medication.
 
 // auditKindCase is one kind's create body and the field a correction PATCH
 // changes. sentinel is embedded in that field at create time and never
@@ -251,4 +251,63 @@ func auditEventsBlob(t *testing.T, c *caller) string {
 	}
 
 	return b.String()
+}
+
+// TestCourseMedicationRelationshipChangesProduceAuditEntriesAndNoPHI is
+// T209's relationship leg, FR-084 ("every relationship created or removed")
+// and FR-085 applied to the one payload-carrying join US6 adds:
+// treatment_medications is not a kind.Kind, so attaching, re-attaching and
+// detaching a course medication is not seen by the generic per-kind audit
+// hooks and must write its own row — carrying no dosage, frequency, timing,
+// prescriber or pharmacy.
+func TestCourseMedicationRelationshipChangesProduceAuditEntriesAndNoPHI(t *testing.T) {
+	t.Parallel()
+
+	owner := newCaller(t)
+
+	treatment := owner.post("/api/v1/records/"+kind.Treatment.Segment(),
+		fmt.Sprintf(`{"patient":%q,"name":"Course medication audit","started_on":"2026-01-10"}`,
+			testsupport.AccountAPatientChildID))
+	require.Equal(t, http.StatusCreated, treatment.Status, treatment.Body)
+	treatmentID := treatment.items1(t).ID
+
+	medication := owner.post("/api/v1/records/"+kind.Medication.Segment(),
+		fmt.Sprintf(`{"patient":%q,"name":"Course medication audit"}`, testsupport.AccountAPatientChildID))
+	require.Equal(t, http.StatusCreated, medication.Status, medication.Body)
+	medicationID := medication.items1(t).ID
+
+	current := owner.get(treatmentRecordURL(treatmentID))
+	require.Equal(t, http.StatusOK, current.Status, current.Body)
+
+	dosageSentinel := "audit-phi-sentinel-course-medication-dosage"
+
+	createsBefore := countAuditRows(t, owner, kind.Treatment, "create", treatmentID)
+
+	attached := owner.do(http.MethodPut, courseMedicationItemURL(treatmentID, medicationID),
+		fmt.Sprintf(`{"dosage":%q}`, dosageSentinel), map[string]string{"If-Match": current.etag(t)})
+	require.Equal(t, http.StatusCreated, attached.Status, attached.Body)
+
+	assert.Greaterf(t, countAuditRows(t, owner, kind.Treatment, "create", treatmentID), createsBefore,
+		"attaching a course medication for the first time must audit as its own creation")
+
+	updatesBefore := countAuditRows(t, owner, kind.Treatment, "update", treatmentID)
+
+	reattached := owner.do(http.MethodPut, courseMedicationItemURL(treatmentID, medicationID),
+		fmt.Sprintf(`{"dosage":%q}`, dosageSentinel), map[string]string{"If-Match": current.etag(t)})
+	require.Equal(t, http.StatusOK, reattached.Status, reattached.Body)
+
+	assert.Greaterf(t, countAuditRows(t, owner, kind.Treatment, "update", treatmentID), updatesBefore,
+		"re-attaching the same pair must audit as an update, not a second creation")
+
+	deletesBefore := countAuditRows(t, owner, kind.Treatment, "delete", treatmentID)
+
+	detached := owner.delete(courseMedicationItemURL(treatmentID, medicationID), current.etag(t))
+	require.Equal(t, http.StatusNoContent, detached.Status, detached.Body)
+
+	assert.Greaterf(t, countAuditRows(t, owner, kind.Treatment, "delete", treatmentID), deletesBefore,
+		"detaching a course medication must audit as a deletion")
+
+	blob := auditEventsBlob(t, owner)
+	assert.NotContainsf(t, blob, dosageSentinel,
+		"a course medication's own dosage must never reach the audit trail: %s", dosageSentinel)
 }

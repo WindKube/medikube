@@ -3,9 +3,11 @@ package coursemedication
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
+	"medikube/internal/domain/audit"
 	"medikube/internal/domain/clinical"
 )
 
@@ -14,14 +16,20 @@ type Service struct {
 	treatments  Treatments
 	medications Medications
 	authorizer  Authorizer
+	auditor     Auditor
 }
 
-func New(repository Repository, treatments Treatments, medications Medications, authorizer Authorizer) (*Service, error) {
-	if repository == nil || treatments == nil || medications == nil || authorizer == nil {
+func New(
+	repository Repository, treatments Treatments, medications Medications, authorizer Authorizer, auditor Auditor,
+) (*Service, error) {
+	if repository == nil || treatments == nil || medications == nil || authorizer == nil || auditor == nil {
 		return nil, fmt.Errorf("coursemedication: the service is wired with a nil dependency")
 	}
 
-	return &Service{repository: repository, treatments: treatments, medications: medications, authorizer: authorizer}, nil
+	return &Service{
+		repository: repository, treatments: treatments, medications: medications,
+		authorizer: authorizer, auditor: auditor,
+	}, nil
 }
 
 // List is `GET /treatments/{id}/medications`: every medication attached to
@@ -60,7 +68,7 @@ func (s *Service) List(ctx context.Context, actor access.Actor, treatmentID stri
 func (s *Service) Upsert(
 	ctx context.Context, actor access.Actor, treatmentID, medicationID string, patch Patch, expectedTreatmentVersion string,
 ) (Item, bool, error) {
-	_, medication, err := s.authorizeBothEnds(ctx, actor, treatmentID, medicationID)
+	treatment, medication, err := s.authorizeBothEnds(ctx, actor, treatmentID, medicationID)
 	if err != nil {
 		return Item{}, false, err
 	}
@@ -82,17 +90,50 @@ func (s *Service) Upsert(
 		return Item{}, false, err
 	}
 
+	action := audit.ActionUpdate
+	if created {
+		action = audit.ActionCreate
+	}
+
+	s.audit(ctx, actor, action, treatmentID, treatment.PatientID)
+
 	return Item{CourseMedication: stored, Medication: medication, Effective: stored.Resolve(medication)}, created, nil
 }
 
 // Delete is `DELETE /treatments/{id}/medications/{medicationId}` (FR-058):
 // removes the link row only.
 func (s *Service) Delete(ctx context.Context, actor access.Actor, treatmentID, medicationID, expectedTreatmentVersion string) error {
-	if _, _, err := s.authorizeBothEnds(ctx, actor, treatmentID, medicationID); err != nil {
+	treatment, _, err := s.authorizeBothEnds(ctx, actor, treatmentID, medicationID)
+	if err != nil {
 		return err
 	}
 
-	return s.repository.Delete(ctx, treatmentID, medicationID, expectedTreatmentVersion)
+	if err := s.repository.Delete(ctx, treatmentID, medicationID, expectedTreatmentVersion); err != nil {
+		return err
+	}
+
+	s.audit(ctx, actor, audit.ActionDelete, treatmentID, treatment.PatientID)
+
+	return nil
+}
+
+// audit is FR-084's row for an attach, a re-attach or a detach: the
+// treatment the course medication belongs to, never the dose or any other
+// course-specific field this event carries no column for (FR-085). Its own
+// failure is not reported to the caller, the same trade-off
+// access.Authorizer.denyPatient makes for a denial: the write already
+// committed, and there is nothing left to undo.
+func (s *Service) audit(ctx context.Context, actor access.Actor, action audit.Action, treatmentID, patientID string) {
+	_ = s.auditor.Record(ctx, audit.Event{
+		OccurredAt: time.Now().UTC(),
+		ActorID:    actor.UserID,
+		ActorKind:  audit.ActorKindUser,
+		Action:     action,
+		TargetKind: audit.TargetKindTreatment,
+		TargetID:   treatmentID,
+		RequestID:  actor.RequestID,
+		PatientID:  patientID,
+	})
 }
 
 // authorizeBothEnds is data-model §7.4's invariant applied to this one
