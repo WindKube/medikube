@@ -8,13 +8,20 @@ import { fixtures } from "./fixtures";
 import { open } from "./gate";
 import { expect, test } from "./auth";
 
-const createdName = "e2e-scratch-tag";
-const renamedName = "e2e-scratch-tag-renamed";
+// Both viewport projects run against one instance, so the scratch names carry
+// the project they belong to; a tag name is unique per account (FR-063).
+const scratch = (suffix: string) =>
+  `e2e-${test.info().project.name.replace(/[^a-z0-9]/gi, "")}-${suffix}`.slice(
+    0,
+    40,
+  );
 
 test.describe("the tag manager", () => {
   test("creating, renaming and deleting a tag needs no navigation", async ({
     page,
   }) => {
+    const createdName = scratch("tag");
+    const renamedName = scratch("renamed");
     const manager = await open(page, {
       path: "/tags",
       title: fixtures.title("Tags"),
