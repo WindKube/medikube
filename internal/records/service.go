@@ -44,6 +44,14 @@ type Record struct {
 	Version string
 
 	Body any
+
+	// Tags is the actor's whole tag catalog, attached by AttachTagOptions
+	// before a caller renders Views.Form (FR-064, US7): Views.Form has no ctx
+	// or actor of its own to fetch it with, so whichever caller does have
+	// them — every kind's page handler and the API's generic re-render alike
+	// — attaches it once, here, rather than each kind's Form reaching the tag
+	// service itself.
+	Tags []TagOption
 }
 
 // Criteria is a list's resolved narrowing: what the caller asked for, after

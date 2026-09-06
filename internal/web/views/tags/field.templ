@@ -1,0 +1,109 @@
+package tags
+
+import (
+	"strconv"
+	"strings"
+
+	"medikube/internal/web/views/ids"
+)
+
+// FieldSignal is the array signal every kind's form submits (FR-064): the
+// ids of the tags applied to whatever the form is for, replace-set on
+// submit, the same wire shape contracts/tags.md §5 names on the Patch DTO.
+// It is one global name rather than one scoped per form because exactly one
+// of a page's forms is ever open at a time, the same convention the record
+// forms' own `patient` and `_etag` signals already follow.
+const FieldSignal = "tags"
+
+// fieldQuerySignal is the picker's own search text — `_`-prefixed so a
+// submit never sends it (research: only the free Datastar bundle's default
+// filterSignals is used, which excludes any leading underscore).
+const fieldQuerySignal = "_tags_query"
+
+// FieldProps is tags.Field's whole input: the account's tag catalog
+// (contracts/tags.md §1's own page, attached to the record by
+// records.AttachTagOptions before the kind's Form renders) and which of
+// those ids are already applied.
+type FieldProps struct {
+	FormID   string
+	Options  []TagView
+	Selected []string
+}
+
+// Field is the one tag picker every kind's create/edit form mounts (US7,
+// FR-064): a removable chip per applied tag, and a text field that narrows
+// the same options list to suggestions as the person types — both driven off
+// $tags, client-side, with no round trip, the same reasoning Picker's own doc
+// comment gives.
+templ Field(props FieldProps) {
+	<div
+		id={ ids.Field(props.FormID, "tags") }
+		data-signals={ "{" + FieldSignal + ": " + idsLiteral(props.Selected) + "}" }
+		class="flex flex-col gap-2"
+	>
+		<span
+			id={ ids.Field(props.FormID, "tags") + "-label" }
+			class="block text-sm font-medium text-slate-700 dark:text-slate-300"
+		>Tags</span>
+		<ul aria-label="Selected tags" class="flex flex-wrap gap-2">
+			for _, option := range props.Options {
+				<li data-show={ "$" + FieldSignal + ".includes(" + jsQuote(option.ID) + ")" }>
+					<span class="inline-flex items-center gap-1 rounded-full bg-slate-100 py-1 pl-2 pr-1 text-xs font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+						{ option.Name }
+						<button
+							type="button"
+							data-on:click={ "$" + FieldSignal + " = $" + FieldSignal + ".filter((id) => id !== " + jsQuote(option.ID) + ")" }
+							aria-label={ "Remove " + option.Name }
+							class="rounded-full px-1 text-slate-500 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-400 dark:hover:text-slate-100"
+						>×</button>
+					</span>
+				</li>
+			}
+		</ul>
+		<input
+			id={ ids.Field(props.FormID, "tags") + "-input" }
+			type="text"
+			autocomplete="off"
+			role="combobox"
+			aria-expanded="true"
+			aria-controls={ ids.Field(props.FormID, "tags") + "-options" }
+			aria-labelledby={ ids.Field(props.FormID, "tags") + "-label" }
+			placeholder="Add a tag…"
+			data-bind={ fieldQuerySignal }
+			class="mt-1 block w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+		/>
+		<ul id={ ids.Field(props.FormID, "tags") + "-options" } role="listbox" class="flex flex-col gap-1">
+			for _, option := range props.Options {
+				<li role="presentation">
+					<button
+						type="button"
+						role="option"
+						data-show={ fieldSuggestionShow(option) }
+						data-on:click={ "$" + FieldSignal + " = $" + FieldSignal + ".concat([" + jsQuote(option.ID) + "]); $" + fieldQuerySignal + " = ''" }
+						class="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1 text-left text-sm hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:hover:bg-slate-800"
+					>
+						<span class="flex items-center gap-2">
+							<svg aria-hidden="true" viewBox="0 0 10 10" class="h-2.5 w-2.5"><circle cx="5" cy="5" r="5" fill={ option.Color }></circle></svg>
+							{ option.Name }
+						</span>
+						<span class="text-slate-500 dark:text-slate-400">{ strconv.Itoa(option.UsageCount) }</span>
+					</button>
+				</li>
+			}
+		</ul>
+	</div>
+}
+
+func fieldSuggestionShow(option TagView) string {
+	return "!$" + FieldSignal + ".includes(" + jsQuote(option.ID) + ") && ($" + fieldQuerySignal + " === '' || " +
+		jsQuote(lowered(option.Name)) + ".includes($" + fieldQuerySignal + ".toLowerCase()))"
+}
+
+func idsLiteral(values []string) string {
+	quoted := make([]string, 0, len(values))
+	for _, value := range values {
+		quoted = append(quoted, jsQuote(value))
+	}
+
+	return "[" + strings.Join(quoted, ", ") + "]"
+}
