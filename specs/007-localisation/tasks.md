@@ -22,9 +22,9 @@ the extraction can run in parallel on disjoint files.
 ## Phase 1: Setup
 
 - [ ] T001 Amend `.specify/memory/constitution.md` to 1.4.0: SYNC IMPACT REPORT entry, `go-i18n/v2` admitted under Cross-cutting confined to `internal/i18n`, version line (plan Constitution Check; FR-014)
-- [ ] T002 `go get github.com/nicksnyder/go-i18n/v2@v2.6.1` and `golang.org/x/text@v0.41.0` as direct requires; `go mod tidy`; confirm `internal/architecture/forbidden_deps_test.go` still passes and no cgo entered (FR-014)
-- [ ] T003 [EDIT] `.golangci.yml`: depguard rule — `github.com/nicksnyder/go-i18n/**` allowed only under `internal/i18n`; `golang.org/x/text/**` allowed under `internal/i18n` only; add a failing-import test case in `internal/architecture/` proving the rule fires (plan Structure Decision)
-- [ ] T004 [P] [EDIT] `Taskfile.yaml`: `test:i18n` runs `go test -count=1 ./internal/i18n/...`; `check` depends on it (plan IX)
+- [x] T002 `go get github.com/nicksnyder/go-i18n/v2@v2.6.1` and `golang.org/x/text@v0.41.0` as direct requires; `go mod tidy`; confirm `internal/architecture/forbidden_deps_test.go` still passes and no cgo entered (FR-014)
+- [x] T003 [EDIT] `.golangci.yml`: depguard rule — `github.com/nicksnyder/go-i18n/**` allowed only under `internal/i18n`; `golang.org/x/text/**` allowed under `internal/i18n` only; add a failing-import test case in `internal/architecture/` proving the rule fires (plan Structure Decision)
+- [x] T004 [P] [EDIT] `Taskfile.yaml`: `test:i18n` runs `go test -count=1 ./internal/i18n/...`; `check` depends on it (plan IX)
 
 ---
 
@@ -34,20 +34,20 @@ the extraction can run in parallel on disjoint files.
 
 ### Tests first
 
-- [ ] T005 [P] Failing unit tests `internal/i18n/i18n_test.go`: `Resolve` order (account locale wins over `Accept-Language`; `Accept-Language: pl-PL,en;q=0.8` → `pl`; unknown → `en`; region stripped; unsupported stored locale → `en`), `T` on a missing id in `pl` falls back to the English phrase, `T` with no `Localizer` on ctx is English, `N` returns each Polish form for counts 1, 2, 5, 22, 0 (FR-003, FR-008, FR-009, US1-8, US2-2; Edge Cases)
-- [ ] T006 [P] Failing build-time test `internal/i18n/catalogue_test.go`: for every `locales/active.*.toml`, the id set equals `active.en.toml`'s — a missing id fails naming `(language, id)`, a surplus id fails naming `(language, id)`; every plural message in `pl` defines `one`, `few`, `many`, `other` (FR-011a, FR-011b, US3-2, US3-3, SC-004)
-- [ ] T007 [P] Failing build-time test `internal/i18n/reference_test.go`: scans `internal/web/**/*.templ` and `internal/web/**/*.go` (not `*_templ.go`) for `i18n.T(ctx, "` / `i18n.N(ctx, "` literals plus every id producer registered in `i18n.KnownDynamicIDs()`, and asserts each exists in `active.en.toml`, failing with `file:line: id` (FR-011c, US3-4, SC-004)
-- [ ] T008 [P] Failing test `internal/i18n/supported_test.go`: `Supported()` is derived from the embedded directory — a temporary `active.xx.toml` fixture (via an `fs.FS` injection point) makes `xx` appear with no other change (FR-010, US3-1, SC-003)
+- [x] T005 [P] Failing unit tests `internal/i18n/i18n_test.go`: `Resolve` order (account locale wins over `Accept-Language`; `Accept-Language: pl-PL,en;q=0.8` → `pl`; unknown → `en`; region stripped; unsupported stored locale → `en`), `T` on a missing id in `pl` falls back to the English phrase, `T` with no `Localizer` on ctx is English, `N` returns each Polish form for counts 1, 2, 5, 22, 0 (FR-003, FR-008, FR-009, US1-8, US2-2; Edge Cases)
+- [x] T006 [P] Failing build-time test `internal/i18n/catalogue_test.go`: for every `locales/active.*.toml`, the id set equals `active.en.toml`'s — a missing id fails naming `(language, id)`, a surplus id fails naming `(language, id)`; every plural message in `pl` defines `one`, `few`, `many`, `other` (FR-011a, FR-011b, US3-2, US3-3, SC-004)
+- [x] T007 [P] Failing build-time test `internal/i18n/reference_test.go`: scans `internal/web/**/*.templ` and `internal/web/**/*.go` (not `*_templ.go`) for `i18n.T(ctx, "` / `i18n.N(ctx, "` literals plus every id producer registered in `i18n.KnownDynamicIDs()`, and asserts each exists in `active.en.toml`, failing with `file:line: id` (FR-011c, US3-4, SC-004)
+- [x] T008 [P] Failing test `internal/i18n/supported_test.go`: `Supported()` is derived from the embedded directory — a temporary `active.xx.toml` fixture (via an `fs.FS` injection point) makes `xx` appear with no other change (FR-010, US3-1, SC-003)
 
 ### Implementation
 
-- [ ] T009 `internal/i18n/i18n.go`: `//go:embed locales/*.toml`; `Bundle` built once at package init with `language.English` default and TOML unmarshal registered; `Supported() []Language{Tag, Name}` from filenames, `Name` read from each file's `language.name` id; `IsSupported(string) bool`; `Resolve(accountLocale, acceptLanguage string) *Localizer`; `With(ctx, *Localizer) context.Context`; `From(ctx) *Localizer` (nil → English); `T(ctx, id string, data ...map[string]any) string`; `N(ctx, id string, count int, data ...map[string]any) string`; `KnownDynamicIDs() []string` (D-04, D-05, D-07)
-- [ ] T010 `internal/i18n/locales/active.en.toml` skeleton: `language.name = "English"` and the ids Phase 2 itself needs (`nav.*`, `error.*`, `empty.*`, `action.*`, `confirm.*`); `active.pl.toml` with the same ids in Polish (`language.name = "Polski"`) (D-03; contracts/catalogue.md)
-- [ ] T011 [EDIT] `internal/web/page/shell.go`: `resolveLocale(e)` beside `resolveTheme(e)` (`e.Auth.GetString("locale")`, then `e.Request.Header.Get("Accept-Language")`); `RenderPage` sets `e.Request = e.Request.WithContext(i18n.With(ctx, l))` before rendering and passes `Lang: l.Tag.String()` into `DocumentProps` (FR-003, FR-007)
-- [ ] T012 [P] [EDIT] `internal/web/views/shell/props.go` + `layout.templ`: `Lang string`; `<html lang={ props.Lang }>` (FR-007, US1-6)
-- [ ] T013 [P] [EDIT] `internal/web/render.go` (or wherever `web.Render`/`web.Patch` build the ctx for non-page responses): the same `Localizer` is on ctx for Datastar patches and JSON, resolved by the same rule (Edge Cases: realtime patches; FR-012)
-- [ ] T014 [EDIT] `internal/web/errors.go`: `Message(ctx, code)` reads `i18n.T(ctx, "error."+code)`; `Failure.Code`, `Fields[].Field`, `Fields[].Code` untouched; HTTP test `internal/web/api/errors_locale_test.go` diffs an `en` and a `pl` 403 with `message` removed → byte-identical, and asserts the two `message`s differ (FR-012, D-09, SC-005)
-- [ ] T015 [EDIT] `internal/web/page/shell_test.go`: a Polish account's page carries `lang="pl"`, an anonymous `Accept-Language: pl` page carries `lang="pl"`, an English one `lang="en"` (US1-6, US2-1, US2-2)
+- [x] T009 `internal/i18n/i18n.go`: `//go:embed locales/*.toml`; `Bundle` built once at package init with `language.English` default and TOML unmarshal registered; `Supported() []Language{Tag, Name}` from filenames, `Name` read from each file's `language.name` id; `IsSupported(string) bool`; `Resolve(accountLocale, acceptLanguage string) *Localizer`; `With(ctx, *Localizer) context.Context`; `From(ctx) *Localizer` (nil → English); `T(ctx, id string, data ...map[string]any) string`; `N(ctx, id string, count int, data ...map[string]any) string`; `KnownDynamicIDs() []string` (D-04, D-05, D-07)
+- [x] T010 `internal/i18n/locales/active.en.toml` skeleton: `language.name = "English"` and the ids Phase 2 itself needs (`nav.*`, `error.*`, `empty.*`, `action.*`, `confirm.*`); `active.pl.toml` with the same ids in Polish (`language.name = "Polski"`) (D-03; contracts/catalogue.md)
+- [x] T011 [EDIT] `internal/web/page/shell.go`: `resolveLocale(e)` beside `resolveTheme(e)` (`e.Auth.GetString("locale")`, then `e.Request.Header.Get("Accept-Language")`); `RenderPage` sets `e.Request = e.Request.WithContext(i18n.With(ctx, l))` before rendering and passes `Lang: l.Tag.String()` into `DocumentProps` (FR-003, FR-007)
+- [x] T012 [P] [EDIT] `internal/web/views/shell/props.go` + `layout.templ`: `Lang string`; `<html lang={ props.Lang }>` (FR-007, US1-6)
+- [x] T013 [P] [EDIT] `internal/web/render.go` (or wherever `web.Render`/`web.Patch` build the ctx for non-page responses): the same `Localizer` is on ctx for Datastar patches and JSON, resolved by the same rule (Edge Cases: realtime patches; FR-012)
+- [x] T014 [EDIT] `internal/web/errors.go`: `Message(ctx, code)` reads `i18n.T(ctx, "error."+code)`; `Failure.Code`, `Fields[].Field`, `Fields[].Code` untouched; HTTP test `internal/web/api/errors_locale_test.go` diffs an `en` and a `pl` 403 with `message` removed → byte-identical, and asserts the two `message`s differ (FR-012, D-09, SC-005)
+- [x] T015 [EDIT] `internal/web/page/shell_test.go`: a Polish account's page carries `lang="pl"`, an anonymous `Accept-Language: pl` page carries `lang="pl"`, an English one `lang="en"` (US1-6, US2-1, US2-2)
 
 **Checkpoint**: one phrase (`nav.timeline`) renders in Polish for a Polish account; the three gates pass on a two-file catalogue.
 
