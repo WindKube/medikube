@@ -1,6 +1,25 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.3.0 -> 1.4.0
+Rationale: MINOR. Phase 007 (localisation) cannot meet its own requirements —
+CLDR plural rules for Polish and "adding a language is one file" — without a
+message-catalogue library, and writing one is the wheel FR-014 of that phase
+forbids. Technology Constraints admits github.com/nicksnyder/go-i18n/v2 under
+Cross-cutting, confined to internal/i18n by depguard, with the phase plan as
+its rationale. Nothing is removed and no gate is weakened.
+
+ 12. Technology Constraints: one module ADMITTED — nicksnyder/go-i18n/v2
+     (message catalogues and plural rules; pure Go; depends only on
+     golang.org/x/text, already admitted in 1.3.0, and BurntSushi/toml).
+     Only internal/i18n may import it. The domain still imports nothing but
+     the standard library and zerolog: the set of shipped languages reaches
+     the identity service as an injected predicate.
+-->
+
+<!--
+SYNC IMPACT REPORT
+==================
 Version change: 1.2.0 -> 1.3.0
 Rationale: MINOR. The phase plans, correctly, could not be written without four
 modules the 1.2.0 stack did not list, and they surfaced a second configuration
@@ -523,6 +542,11 @@ plan-level decision.
   invent its own UI for them. Where an unconfigured PocketBase setting would
   silently break a MediKube feature — SMTP for invitations being the live example
   — MediKube MUST surface that state and warn at boot rather than fail quietly.
+- `github.com/nicksnyder/go-i18n/v2` — the phrase catalogue and plural rules
+  behind every application-owned string on every page (phase 007). Imported
+  only by `internal/i18n`; screens call that package's `T`/`N` with the
+  request's `Localizer` on `ctx`. Languages are the catalogue files present,
+  never a list in Go. User data is never translated.
 - `github.com/getkin/kin-openapi` — constructs the OpenAPI document. It is a
   document model, not an HTTP framework, so it does not offend the ban on a
   second router. It is required because PocketBase's route table is NOT
@@ -612,4 +636,4 @@ that is not justified in writing is removed. `/speckit-analyze` is run before
 the project root and MUST stay consistent with this constitution; where they
 disagree, this constitution governs and `CLAUDE.md` is corrected.
 
-**Version**: 1.3.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-27
+**Version**: 1.4.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-09-06
