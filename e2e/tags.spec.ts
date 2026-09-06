@@ -21,8 +21,9 @@ test.describe("the tag manager", () => {
       landmark: { role: "region", name: "Tags" },
     });
 
-    await manager.getByLabel("Name", { exact: true }).fill(createdName);
-    await manager.getByRole("button", { name: "Add tag" }).click();
+    const createForm = manager.getByRole("form", { name: "Add a tag" });
+    await createForm.getByLabel("Name", { exact: true }).fill(createdName);
+    await createForm.getByRole("button", { name: "Add tag" }).click();
 
     const row = manager.getByRole("listitem").filter({ hasText: createdName });
     await expect(row).toBeVisible();
