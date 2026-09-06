@@ -1,6 +1,7 @@
 package records
 
 import (
+	viewtags "medikube/internal/web/views/tags"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 )
@@ -24,6 +25,7 @@ templ FamilyMemberForm(props FamilyMemberFormProps) {
 		@familyMemberTextControl(props, FieldBirthYear, "number", false)
 		@familyMemberTextControl(props, FieldDeathYear, "number", false)
 		@familyMemberCheckboxControl(props)
+		@viewtags.Field(props.Tags)
 		<div class="flex flex-wrap items-center gap-3">
 			<button
 				type="submit"

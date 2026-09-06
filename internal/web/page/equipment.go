@@ -29,7 +29,7 @@ const (
 const equipmentListTitle = "Equipment"
 
 // EquipmentHandlers is the record pages' contribution to the route table.
-func EquipmentHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
+func EquipmentHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
 	links, err := newEquipmentLinks()
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func EquipmentHandlers(resolve api.Resolve, patients api.PatientResolve) (httpro
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &equipmentPages{resolve: resolve, patients: patients, links: links, views: EquipmentViews{links: links}}
+	pages := &equipmentPages{resolve: resolve, patients: patients, tags: tags, links: links, views: EquipmentViews{links: links}}
 
 	return httproute.Handlers{
 		OpEquipmentListPage:   web.WithActor(pages.list),
@@ -93,14 +93,17 @@ func (v EquipmentViews) Form(record recordfamily.Record, invalid *domain.Validat
 	item := v.view(record)
 	fresh := item.ID == ""
 
+	formID := ids.RecordForm(kind.Equipment, item.ID)
+
 	return views.EquipmentForm(views.EquipmentFormProps{
-		FormID:     ids.RecordForm(kind.Equipment, item.ID),
+		FormID:     formID,
 		New:        fresh,
 		OnSubmit:   v.links.submitExpression(item),
 		CancelHref: v.cancelHref(item),
 		Equipment:  item,
 		Errors:     views.NewFieldErrors(invalid),
 		Notice:     notice,
+		Tags:       tagField(formID, record),
 	})
 }
 
@@ -164,6 +167,7 @@ func equipmentDetailEntity(record recordfamily.Record, detail api.Equipment) cli
 type equipmentPages struct {
 	resolve  api.Resolve
 	patients api.PatientResolve
+	tags     api.TagResolve
 	links    equipmentLinks
 	views    EquipmentViews
 }
@@ -195,6 +199,10 @@ func (p *equipmentPages) list(e *core.RequestEvent, actor access.Actor) error {
 
 	blank := recordfamily.Record{Kind: kind.Equipment}
 	blank.Body = &api.EquipmentCreate{Patient: query.PatientID}
+
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); tagErr != nil {
+		return tagErr
+	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
 	if err != nil {
@@ -267,6 +275,10 @@ func (p *equipmentPages) detail(e *core.RequestEvent, actor access.Actor) error 
 		kind.Equipment.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &found); tagErr != nil {
+		return tagErr
 	}
 
 	patientID := ""

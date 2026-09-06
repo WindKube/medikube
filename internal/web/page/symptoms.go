@@ -29,7 +29,7 @@ const (
 const symptomListTitle = "Symptoms"
 
 // SymptomHandlers is the symptom pages' contribution to the route table.
-func SymptomHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
+func SymptomHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
 	links, err := newSymptomLinks()
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func SymptomHandlers(resolve api.Resolve, patients api.PatientResolve) (httprout
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &symptomPages{resolve: resolve, patients: patients, links: links, views: SymptomViews{links: links}}
+	pages := &symptomPages{resolve: resolve, patients: patients, tags: tags, links: links, views: SymptomViews{links: links}}
 
 	return httproute.Handlers{
 		OpSymptomListPage:   web.WithActor(pages.list),
@@ -97,14 +97,17 @@ func (v SymptomViews) Form(record recordfamily.Record, invalid *domain.Validatio
 	symptom := v.view(record)
 	fresh := symptom.ID == ""
 
+	formID := ids.RecordForm(kind.Symptom, symptom.ID)
+
 	return views.SymptomForm(views.SymptomFormProps{
-		FormID:     ids.RecordForm(kind.Symptom, symptom.ID),
+		FormID:     formID,
 		New:        fresh,
 		OnSubmit:   v.links.submitExpression(symptom),
 		CancelHref: v.links.cancelHref(symptom),
 		Symptom:    symptom,
 		Errors:     views.NewFieldErrors(invalid),
 		Notice:     notice,
+		Tags:       tagField(formID, record),
 	})
 }
 
@@ -192,6 +195,7 @@ func readClinicalInstantPtr(raw *string) (clinical.Instant, error) {
 type symptomPages struct {
 	resolve  api.Resolve
 	patients api.PatientResolve
+	tags     api.TagResolve
 	links    symptomLinks
 	views    SymptomViews
 }
@@ -223,6 +227,10 @@ func (p *symptomPages) list(e *core.RequestEvent, actor access.Actor) error {
 
 	blank := recordfamily.Record{Kind: kind.Symptom}
 	blank.Body = &api.SymptomCreate{Patient: query.PatientID}
+
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); tagErr != nil {
+		return tagErr
+	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
 	if err != nil {
@@ -295,6 +303,10 @@ func (p *symptomPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		kind.Symptom.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &found); tagErr != nil {
+		return tagErr
 	}
 
 	patientID := ""

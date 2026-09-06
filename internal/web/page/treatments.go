@@ -32,6 +32,7 @@ const treatmentListTitle = "Treatments"
 // mirroring medications.go's Handlers end to end (T078).
 func TreatmentHandlers(
 	resolve api.Resolve, patients api.PatientResolve, courseMedications api.CourseMedicationResolve,
+	tags api.TagResolve,
 ) (httproute.Handlers, error) {
 	links, err := newTreatmentLinks()
 	if err != nil {
@@ -47,7 +48,7 @@ func TreatmentHandlers(
 	}
 
 	pages := &treatmentPages{
-		resolve: resolve, patients: patients, courseMedications: courseMedications,
+		resolve: resolve, patients: patients, courseMedications: courseMedications, tags: tags,
 		links: links, views: TreatmentViews{links: links},
 	}
 
@@ -103,14 +104,17 @@ func (v TreatmentViews) Form(record recordfamily.Record, invalid *domain.Validat
 	treatment := v.view(record)
 	fresh := treatment.ID == ""
 
+	formID := ids.RecordForm(kind.Treatment, treatment.ID)
+
 	return views.TreatmentForm(views.TreatmentFormProps{
-		FormID:     ids.RecordForm(kind.Treatment, treatment.ID),
+		FormID:     formID,
 		New:        fresh,
 		OnSubmit:   v.links.submitExpression(treatment),
 		CancelHref: v.links.cancelHref(treatment),
 		Treatment:  treatment,
 		Errors:     views.NewFieldErrors(invalid),
 		Notice:     notice,
+		Tags:       tagField(formID, record),
 	})
 }
 
@@ -173,6 +177,7 @@ func treatmentDetailEntity(record recordfamily.Record, detail api.Treatment) cli
 type treatmentPages struct {
 	resolve           api.Resolve
 	patients          api.PatientResolve
+	tags              api.TagResolve
 	courseMedications api.CourseMedicationResolve
 	links             treatmentLinks
 	views             TreatmentViews
@@ -205,6 +210,10 @@ func (p *treatmentPages) list(e *core.RequestEvent, actor access.Actor) error {
 
 	blank := recordfamily.Record{Kind: kind.Treatment}
 	blank.Body = &api.TreatmentCreate{Patient: query.PatientID}
+
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); tagErr != nil {
+		return tagErr
+	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
 	if err != nil {
@@ -278,6 +287,10 @@ func (p *treatmentPages) detail(e *core.RequestEvent, actor access.Actor) error 
 	found, err := handler.Get(e.Request.Context(), actor, kind.Treatment.Segment(), treatmentID)
 	if err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &found); tagErr != nil {
+		return tagErr
 	}
 
 	patientID, conditionID := "", ""

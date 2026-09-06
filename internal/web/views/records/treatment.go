@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"medikube/internal/domain/clinical"
+	viewtags "medikube/internal/web/views/tags"
 )
 
 const (
@@ -167,6 +168,8 @@ type TreatmentFormProps struct {
 	Treatment TreatmentView
 	Errors    FieldErrors
 	Notice    string
+
+	Tags viewtags.FieldProps
 }
 
 func (p TreatmentFormProps) Label() string {

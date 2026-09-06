@@ -2,6 +2,7 @@ package records
 
 import (
 	"medikube/internal/domain/clinical"
+	viewtags "medikube/internal/web/views/tags"
 )
 
 const (
@@ -204,6 +205,7 @@ type AllergyFormProps struct {
 	Allergy AllergyView
 	Errors  FieldErrors
 	Notice  string
+	Tags    viewtags.FieldProps
 }
 
 func (p AllergyFormProps) Label() string {

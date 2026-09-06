@@ -30,7 +30,7 @@ const encounterListTitle = "Encounters"
 
 // EncounterHandlers is the encounter pages' contribution to the route table,
 // mirroring medications.go's Handlers end to end (T078).
-func EncounterHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
+func EncounterHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
 	links, err := newEncounterLinks()
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func EncounterHandlers(resolve api.Resolve, patients api.PatientResolve) (httpro
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &encounterPages{resolve: resolve, patients: patients, links: links, views: EncounterViews{links: links}}
+	pages := &encounterPages{resolve: resolve, patients: patients, tags: tags, links: links, views: EncounterViews{links: links}}
 
 	return httproute.Handlers{
 		OpEncounterListPage:   web.WithActor(pages.list),
@@ -94,14 +94,17 @@ func (v EncounterViews) Form(record recordfamily.Record, invalid *domain.Validat
 	encounter := v.view(record)
 	fresh := encounter.ID == ""
 
+	formID := ids.RecordForm(kind.Encounter, encounter.ID)
+
 	return views.EncounterForm(views.EncounterFormProps{
-		FormID:     ids.RecordForm(kind.Encounter, encounter.ID),
+		FormID:     formID,
 		New:        fresh,
 		OnSubmit:   v.links.submitExpression(encounter),
 		CancelHref: v.links.cancelHref(encounter),
 		Encounter:  encounter,
 		Errors:     views.NewFieldErrors(invalid),
 		Notice:     notice,
+		Tags:       tagField(formID, record),
 	})
 }
 
@@ -160,6 +163,7 @@ func encounterDetailEntity(record recordfamily.Record, detail api.Encounter) cli
 type encounterPages struct {
 	resolve  api.Resolve
 	patients api.PatientResolve
+	tags     api.TagResolve
 	links    encounterLinks
 	views    EncounterViews
 }
@@ -191,6 +195,10 @@ func (p *encounterPages) list(e *core.RequestEvent, actor access.Actor) error {
 
 	blank := recordfamily.Record{Kind: kind.Encounter}
 	blank.Body = &api.EncounterCreate{Patient: query.PatientID}
+
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); tagErr != nil {
+		return tagErr
+	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
 	if err != nil {
@@ -263,6 +271,10 @@ func (p *encounterPages) detail(e *core.RequestEvent, actor access.Actor) error 
 		kind.Encounter.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &found); tagErr != nil {
+		return tagErr
 	}
 
 	patientID := ""

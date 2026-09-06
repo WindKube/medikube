@@ -108,6 +108,34 @@ func TestListOfKindEchoesCriteriaAndPopulatesBasis(t *testing.T) {
 		}
 	})
 
+	// US9-1: with both an active and a resolved condition on record, the
+	// active view lists only the active one and says why it was selected.
+	t.Run("condition active", func(t *testing.T) {
+		collection := "/api/v1/records/" + kind.Condition.Segment()
+
+		created := owner.post(collection,
+			`{"patient":"`+patient+`","diagnosis":"Seasonal rhinitis","status":"active"}`)
+		require.Equal(t, http.StatusCreated, created.Status, created.Body)
+
+		got := owner.get(collection + "?patient=" + patient + "&active=true")
+		require.Equal(t, http.StatusOK, got.Status, got.Body)
+
+		page := got.criteriaList(t)
+		assert.ElementsMatch(t, []any{"true"}, page.Criteria["active"])
+		require.NotEmpty(t, page.Items)
+
+		for _, item := range page.Items {
+			var row struct {
+				ID     string `json:"id"`
+				Status string `json:"status"`
+			}
+			require.NoError(t, json.Unmarshal(item, &row))
+			assert.NotEqual(t, testsupport.ResolvedConditionID, row.ID)
+			assert.Contains(t, []string{"active", "chronic"}, row.Status)
+			assert.Equal(t, []string{"active"}, basisOf(t, item))
+		}
+	})
+
 	t.Run("no narrowing echoes an empty criteria beyond patient", func(t *testing.T) {
 		url := "/api/v1/records/" + kind.Allergy.Segment() + "?patient=" + patient
 

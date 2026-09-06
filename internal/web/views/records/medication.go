@@ -7,6 +7,7 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/clinical"
 	"medikube/internal/web/views/components"
+	viewtags "medikube/internal/web/views/tags"
 )
 
 // The names the domain attaches its refusals to (internal/domain/clinical
@@ -421,6 +422,8 @@ type MedicationFormProps struct {
 	// Notice is set when the form was re-rendered from the server's current
 	// values after a stale If-Match.
 	Notice string
+
+	Tags viewtags.FieldProps
 }
 
 // Label is the form's accessible name, and it is the component's rather than

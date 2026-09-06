@@ -35,7 +35,7 @@ const injuryListTitle = "Injuries"
 // exports, because that name is already taken in this package — this
 // package's later kinds all follow PractitionerHandlers/FacilityHandlers'
 // precedent instead.
-func InjuryHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
+func InjuryHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
 	links, err := newInjuryLinks()
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func InjuryHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &injuryPages{resolve: resolve, patients: patients, links: links, views: InjuryViews{links: links}}
+	pages := &injuryPages{resolve: resolve, patients: patients, tags: tags, links: links, views: InjuryViews{links: links}}
 
 	return httproute.Handlers{
 		OpInjuryListPage:   web.WithActor(pages.list),
@@ -106,14 +106,17 @@ func (v InjuryViews) Form(record recordfamily.Record, invalid *domain.Validation
 	injury := v.view(record)
 	fresh := injury.ID == ""
 
+	formID := ids.RecordForm(kind.Injury, injury.ID)
+
 	return views.InjuryForm(views.InjuryFormProps{
-		FormID:     ids.RecordForm(kind.Injury, injury.ID),
+		FormID:     formID,
 		New:        fresh,
 		OnSubmit:   v.links.submitExpression(injury),
 		CancelHref: v.cancelHref(injury),
 		Injury:     injury,
 		Errors:     views.NewFieldErrors(invalid),
 		Notice:     notice,
+		Tags:       tagField(formID, record),
 	})
 }
 
@@ -172,6 +175,7 @@ func injuryDetailEntity(record recordfamily.Record, detail api.Injury) clinical.
 type injuryPages struct {
 	resolve  api.Resolve
 	patients api.PatientResolve
+	tags     api.TagResolve
 	links    injuryLinks
 	views    InjuryViews
 }
@@ -204,6 +208,10 @@ func (p *injuryPages) list(e *core.RequestEvent, actor access.Actor) error {
 
 	blank := recordfamily.Record{Kind: kind.Injury}
 	blank.Body = &api.InjuryCreate{Patient: query.PatientID}
+
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); tagErr != nil {
+		return tagErr
+	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
 	if err != nil {
@@ -276,6 +284,10 @@ func (p *injuryPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		kind.Injury.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &found); tagErr != nil {
+		return tagErr
 	}
 
 	patientID, medications := "", []string(nil)

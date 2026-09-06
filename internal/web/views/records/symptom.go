@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"medikube/internal/domain/clinical"
+	viewtags "medikube/internal/web/views/tags"
 )
 
 func itoa(v int) string { return strconv.Itoa(v) }
@@ -290,6 +291,8 @@ type SymptomFormProps struct {
 	Errors  FieldErrors
 
 	Notice string
+
+	Tags viewtags.FieldProps
 }
 
 func (p SymptomFormProps) Label() string {

@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"medikube/internal/domain/clinical"
+	viewtags "medikube/internal/web/views/tags"
 )
 
 const (
@@ -196,6 +197,8 @@ type EmergencyContactFormProps struct {
 	Contact EmergencyContactView
 	Errors  FieldErrors
 	Notice  string
+
+	Tags viewtags.FieldProps
 }
 
 func (p EmergencyContactFormProps) Label() string {

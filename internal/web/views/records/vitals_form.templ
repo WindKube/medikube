@@ -1,6 +1,7 @@
 package records
 
 import (
+	viewtags "medikube/internal/web/views/tags"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 )
@@ -32,6 +33,7 @@ templ VitalsForm(props VitalsFormProps) {
 		@vitalsTextControl(props, VitalsFieldHba1cPct, "number", false)
 		@vitalsTextControl(props, VitalsFieldPainScale, "number", false)
 		@vitalsTextControl(props, VitalsFieldDevice, "text", false)
+		@viewtags.Field(props.Tags)
 		<div class="flex flex-wrap items-center gap-3">
 			<button
 				type="submit"

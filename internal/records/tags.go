@@ -5,7 +5,89 @@ import (
 	"fmt"
 
 	"medikube/internal/domain/access"
+	tagsvc "medikube/internal/service/tag"
 )
+
+// tagCatalogLimit is contracts/tags.md §1's own page cap: the account's whole
+// tag catalog, not a search result, so a picker has the same "whole of what
+// this account has" list the tag manager's own GET already returns.
+const tagCatalogLimit = 200
+
+// TagOption is one tag as a kind's Form can offer it in its picker: enough to
+// render a suggestion and its usage count, with none of the tag service
+// itself in reach of Views (Views.Form has no ctx or actor to reach it with).
+type TagOption struct {
+	ID         string
+	Name       string
+	Color      string
+	UsageCount int
+}
+
+// TagCatalogResolve resolves the tag service lazily, the same shape
+// search.Reader and patient.Service already reach this package through.
+type TagCatalogResolve func() (*tagsvc.Service, error)
+
+// AttachTagOptions populates record.Tags with the actor's whole tag catalog,
+// so that whichever kind's Views.Form renders next can offer every tag as a
+// suggestion without reaching the tag service itself. It is the one place
+// this fetch happens: every page handler and the API's generic form
+// re-render call it, once, before calling Views.Form — not once per kind.
+//
+// A nil resolve is a build that never wired tags in (most test harnesses)
+// and is a deliberate no-op rather than an error: a form with no tag picker
+// is a smaller build, not a broken one.
+func AttachTagOptions(ctx context.Context, actor access.Actor, resolve TagCatalogResolve, record *Record) error {
+	if resolve == nil || record == nil {
+		return nil
+	}
+
+	service, err := resolve()
+	if err != nil {
+		return err
+	}
+
+	page, err := service.List(ctx, actor, tagsvc.Query{Limit: tagCatalogLimit})
+	if err != nil {
+		return err
+	}
+
+	ids := make([]string, 0, len(page.Items))
+	for _, t := range page.Items {
+		ids = append(ids, t.ID)
+	}
+
+	usage, err := service.Usage(ctx, actor, ids)
+	if err != nil {
+		return err
+	}
+
+	options := make([]TagOption, 0, len(page.Items))
+	for _, t := range page.Items {
+		options = append(options, TagOption{ID: t.ID, Name: t.Name, Color: t.Color, UsageCount: usage[t.ID]})
+	}
+
+	record.Tags = options
+
+	return nil
+}
+
+// SelectedTagIDs reads whichever tag ids a record's own Body already carries
+// — Tagged for a detail read after a create or an update, Taggable for a
+// submission still being validated or re-rendered — so a kind's Form can seed
+// its picker's chips without any kind-specific mapping of its own.
+func SelectedTagIDs(body any) []string {
+	if tagged, ok := body.(Tagged); ok {
+		return tagged.GetTags()
+	}
+
+	if taggable, ok := body.(Taggable); ok {
+		if ids, supplied := taggable.TagIDs(); supplied {
+			return ids
+		}
+	}
+
+	return nil
+}
 
 // The `?tags=a,b&match=any|all` narrowing every registered kind publishes
 // (FR-067, research D-10). Declared once here so a kind cannot spell either

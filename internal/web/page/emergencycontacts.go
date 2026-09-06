@@ -30,7 +30,7 @@ const emergencyContactListTitle = "Emergency contacts"
 
 // EmergencyContactHandlers is the emergency-contact pages' contribution to
 // the route table.
-func EmergencyContactHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
+func EmergencyContactHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
 	links, err := newEmergencyContactLinks()
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func EmergencyContactHandlers(resolve api.Resolve, patients api.PatientResolve) 
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &emergencyContactPages{resolve: resolve, patients: patients, links: links, views: EmergencyContactViews{links: links}}
+	pages := &emergencyContactPages{resolve: resolve, patients: patients, tags: tags, links: links, views: EmergencyContactViews{links: links}}
 
 	return httproute.Handlers{
 		OpEmergencyContactListPage:   web.WithActor(pages.list),
@@ -95,14 +95,17 @@ func (v EmergencyContactViews) Form(record recordfamily.Record, invalid *domain.
 	contact := v.view(record)
 	fresh := contact.ID == ""
 
+	formID := ids.RecordForm(kind.EmergencyContact, contact.ID)
+
 	return views.EmergencyContactForm(views.EmergencyContactFormProps{
-		FormID:     ids.RecordForm(kind.EmergencyContact, contact.ID),
+		FormID:     formID,
 		New:        fresh,
 		OnSubmit:   v.links.submitExpression(contact),
 		CancelHref: v.cancelHref(contact),
 		Contact:    contact,
 		Errors:     views.NewFieldErrors(invalid),
 		Notice:     notice,
+		Tags:       tagField(formID, record),
 	})
 }
 
@@ -164,6 +167,7 @@ func emergencyContactDetailEntity(record recordfamily.Record, detail api.Emergen
 type emergencyContactPages struct {
 	resolve  api.Resolve
 	patients api.PatientResolve
+	tags     api.TagResolve
 	links    emergencyContactLinks
 	views    EmergencyContactViews
 }
@@ -195,6 +199,10 @@ func (p *emergencyContactPages) list(e *core.RequestEvent, actor access.Actor) e
 
 	blank := recordfamily.Record{Kind: kind.EmergencyContact}
 	blank.Body = &api.EmergencyContactCreate{Patient: query.PatientID}
+
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); tagErr != nil {
+		return tagErr
+	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
 	if err != nil {
@@ -267,6 +275,10 @@ func (p *emergencyContactPages) detail(e *core.RequestEvent, actor access.Actor)
 		kind.EmergencyContact.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &found); tagErr != nil {
+		return tagErr
 	}
 
 	patientID := ""

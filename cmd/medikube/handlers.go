@@ -117,7 +117,7 @@ func operations(
 	patientResolve, photoResolve := patientFamily(app, cfg, registry, measurements, tracing)
 
 	// The real ones win. This is the only line each later group touches.
-	served, err := wired(app, resolve, searchResolve, patientResolve, timelineResolve, hub)
+	served, err := wired(app, resolve, searchResolve, patientResolve, timelineResolve, hub, tagResolve)
 	if err != nil {
 		return nil, err
 	}
@@ -344,66 +344,66 @@ func assetHandlers() httproute.Handlers {
 // application and is assembled by operations above.
 func wired(
 	app core.App, resolve api.Resolve, searchResolve api.SearchResolve, patients api.PatientResolve,
-	timelineResolve page.TimelineResolve, hub *realtime.Hub,
+	timelineResolve page.TimelineResolve, hub *realtime.Hub, tagResolve api.TagResolve,
 ) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
-	records, err := api.Handlers(resolve, api.WithReferences(referencesFamily(app)))
+	records, err := api.Handlers(resolve, api.WithReferences(referencesFamily(app)), api.WithTags(tagResolve))
 	if err != nil {
 		return nil, err
 	}
 
-	pages, err := page.Handlers(resolve, patients, referencesFamily(app))
+	pages, err := page.Handlers(resolve, patients, referencesFamily(app), tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	immunizationPages, err := page.ImmunizationHandlers(resolve, patients)
+	immunizationPages, err := page.ImmunizationHandlers(resolve, patients, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	insurancePages, err := page.InsuranceHandlers(resolve, patients)
+	insurancePages, err := page.InsuranceHandlers(resolve, patients, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	injuryPages, err := page.InjuryHandlers(resolve, patients)
+	injuryPages, err := page.InjuryHandlers(resolve, patients, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	equipmentPages, err := page.EquipmentHandlers(resolve, patients)
+	equipmentPages, err := page.EquipmentHandlers(resolve, patients, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	symptomPages, err := page.SymptomHandlers(resolve, patients)
+	symptomPages, err := page.SymptomHandlers(resolve, patients, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	vitalsPages, err := page.VitalsHandlers(resolve, patients)
+	vitalsPages, err := page.VitalsHandlers(resolve, patients, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	encounterPages, err := page.EncounterHandlers(resolve, patients)
+	encounterPages, err := page.EncounterHandlers(resolve, patients, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	procedurePages, err := page.ProcedureHandlers(resolve, patients)
+	procedurePages, err := page.ProcedureHandlers(resolve, patients, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	treatmentPages, err := page.TreatmentHandlers(resolve, patients, courseMedicationFamily(app))
+	treatmentPages, err := page.TreatmentHandlers(resolve, patients, courseMedicationFamily(app), tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	familyMemberPages, err := page.FamilyMemberHandlers(resolve, patients)
+	familyMemberPages, err := page.FamilyMemberHandlers(resolve, patients, tagResolve)
 	if err != nil {
 		return nil, err
 	}
@@ -1398,6 +1398,7 @@ func unimplemented() []string {
 		func() (*patient.Service, error) { return nil, nil },
 		func() (*timelinesvc.Service, error) { return nil, nil },
 		realtime.New(),
+		func() (*tagsvc.Service, error) { return nil, nil },
 	)
 	if err != nil {
 		panic("medikube: the handler groups cannot be assembled: " + err.Error())
