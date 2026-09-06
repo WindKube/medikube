@@ -88,14 +88,19 @@ func referencesFor(ctx context.Context, backrel *link.Backrelations, k kind.Kind
 // (medication.Adapter's own doc comment), and this is the one seam that
 // reaches past it after the fact rather than threading a database dependency
 // through every kind's codec for the sake of three of them.
-func (h *recordHandlers) attachReferences(ctx context.Context, k kind.Kind, id string, body any) error {
-	if h.references == nil {
+//
+// A free function rather than a *recordHandlers method: courseMedicationHandlers'
+// own stale-If-Match response (coursemedications.go's failure) re-reads a
+// treatment the same way records.go's own update/delete failure paths do,
+// and must attach the same field the same way rather than reimplementing it.
+func attachReferences(ctx context.Context, references ReferencesResolve, k kind.Kind, id string, body any) error {
+	if references == nil {
 		return nil
 	}
 
 	switch v := body.(type) {
 	case *Medication:
-		summary, err := h.resolveReferences(ctx, k, id)
+		summary, err := resolveReferences(ctx, references, k, id)
 		if err != nil {
 			return err
 		}
@@ -103,7 +108,7 @@ func (h *recordHandlers) attachReferences(ctx context.Context, k kind.Kind, id s
 		v.References = summary
 
 	case *Condition:
-		summary, err := h.resolveReferences(ctx, k, id)
+		summary, err := resolveReferences(ctx, references, k, id)
 		if err != nil {
 			return err
 		}
@@ -111,7 +116,7 @@ func (h *recordHandlers) attachReferences(ctx context.Context, k kind.Kind, id s
 		v.References = summary
 
 	case *Treatment:
-		summary, err := h.resolveReferences(ctx, k, id)
+		summary, err := resolveReferences(ctx, references, k, id)
 		if err != nil {
 			return err
 		}
@@ -122,8 +127,8 @@ func (h *recordHandlers) attachReferences(ctx context.Context, k kind.Kind, id s
 	return nil
 }
 
-func (h *recordHandlers) resolveReferences(ctx context.Context, k kind.Kind, id string) (*ReferencesSummary, error) {
-	backrel, err := h.references()
+func resolveReferences(ctx context.Context, references ReferencesResolve, k kind.Kind, id string) (*ReferencesSummary, error) {
+	backrel, err := references()
 	if err != nil {
 		return nil, err
 	}

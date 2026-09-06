@@ -42,10 +42,14 @@ var ErrNoCourseMedications = errors.New("api: the course-medication operations w
 // CourseMedicationDeps is what the three handlers need. Records is the
 // record family's own resolver, reused here only to answer a stale If-Match
 // with the treatment's current representation — the same 412 shape
-// updateRecord/deleteRecord already answer with.
+// updateRecord/deleteRecord already answer with, references.go's
+// `references` field included: a stale If-Match on a course medication still
+// re-reads the treatment, and that representation must carry the same field
+// getRecord would put on it.
 type CourseMedicationDeps struct {
-	Resolve CourseMedicationResolve
-	Records Resolve
+	Resolve    CourseMedicationResolve
+	Records    Resolve
+	References ReferencesResolve
 }
 
 func (d CourseMedicationDeps) validate() error {
@@ -229,6 +233,10 @@ func (h *courseMedicationHandlers) failure(e *core.RequestEvent, actor access.Ac
 	current, readErr := handler.Get(e.Request.Context(), actor, kind.Treatment.Collection(), treatmentID)
 	if readErr != nil {
 		return web.OwnerScoped(readErr)
+	}
+
+	if refErr := attachReferences(e.Request.Context(), h.deps.References, current.Kind, current.ID, current.Body); refErr != nil {
+		return refErr
 	}
 
 	e.Response.Header().Set("Cache-Control", courseMedicationCacheControl)

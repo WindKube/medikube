@@ -269,8 +269,9 @@ func operations(
 	// contracts/treatment-medications.md (US6): the one payload-carrying join,
 	// wired the same lazy way as the directory above.
 	courseMedicationOps, err := api.CourseMedicationHandlers(api.CourseMedicationDeps{
-		Resolve: courseMedicationFamily(app),
-		Records: resolve,
+		Resolve:    courseMedicationFamily(app),
+		Records:    resolve,
+		References: referencesFamily(app),
 	})
 	if err != nil {
 		return nil, err

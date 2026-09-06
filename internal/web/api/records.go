@@ -336,7 +336,7 @@ func (h *recordHandlers) get(e *core.RequestEvent, actor access.Actor) error {
 		return web.OwnerScoped(err)
 	}
 
-	if err := h.attachReferences(e.Request.Context(), found.Kind, found.ID, found.Body); err != nil {
+	if err := attachReferences(e.Request.Context(), h.references, found.Kind, found.ID, found.Body); err != nil {
 		return err
 	}
 
@@ -400,6 +400,10 @@ func (h *recordHandlers) updateFailure(e *core.RequestEvent, actor access.Actor,
 		current, readErr := entry.Service.Get(e.Request.Context(), actor, id)
 		if readErr != nil {
 			return web.OwnerScoped(readErr)
+		}
+
+		if refErr := attachReferences(e.Request.Context(), h.references, current.Kind, current.ID, current.Body); refErr != nil {
+			return refErr
 		}
 
 		e.Response.Header().Set("Cache-Control", recordCacheControl)
@@ -478,6 +482,10 @@ func (h *recordHandlers) stale(e *core.RequestEvent, actor access.Actor, segment
 	current, readErr := handler.Get(e.Request.Context(), actor, segment, id)
 	if readErr != nil {
 		return web.OwnerScoped(readErr)
+	}
+
+	if refErr := attachReferences(e.Request.Context(), h.references, current.Kind, current.ID, current.Body); refErr != nil {
+		return refErr
 	}
 
 	e.Response.Header().Set("Cache-Control", recordCacheControl)
