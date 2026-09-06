@@ -70,9 +70,9 @@ the extraction can run in parallel on disjoint files.
 
 Each task: replace every literal phrase in its files with `i18n.T(ctx, "<id>")` / `i18n.N(...)`, add the ids to `active.en.toml` with a `description`, and add the Polish to `active.pl.toml`. Go-side `Label:` values and enum-label functions return ids (D-06). Existing render tests keep passing because the default locale is English. Kind display names come from `kind.<enum>.one|other`. No `data-*` attribute, class, route, signal name, enum wire value or `basis` string is ever touched.
 
-- [ ] T020 [P] [US1] Shell, navigation, switcher, empty states, confirm dialog: `internal/web/views/shell/*.templ`, `shared/*.templ`, `components/*.templ`, `page/shell.go` nav labels (FR-005)
-- [ ] T021 [P] [US1] Sign-in, sign-up, recovery, verification, sessions, settings: `internal/web/views/auth/**`, `views/settings/**`, `views/errors/**`, `page/accounts.go`, `page/settings.go` titles and option labels (`themeOptions`, unit/date-format options) (FR-005)
-- [ ] T022 [P] [US1] Patients and directories: `views/patients/**`, `views/directory/**`, `page/patients.go`, `page/practitioners.go`, `page/facilities.go` (FR-005)
+- [x] T020 [P] [US1] Shell, navigation, switcher, empty states, confirm dialog: `internal/web/views/shell/*.templ`, `shared/*.templ`, `components/*.templ`, `page/shell.go` nav labels (FR-005)
+- [x] T021 [P] [US1] Sign-in, sign-up, recovery, verification, sessions, settings: `internal/web/views/auth/**`, `views/settings/**`, `views/errors/**`, `page/accounts.go`, `page/settings.go` titles and option labels (`themeOptions`, unit/date-format options) (FR-005)
+- [x] T022 [P] [US1] Patients and directories: `views/patients/**`, `views/directory/**`, `page/patients.go`, `page/practitioners.go`, `page/facilities.go` (FR-005)
 - [x] T023 [P] [US1] Records A–E: `views/records/{allergy,condition,emergencycontact,encounter,equipment}.templ` + `.go` labels and enum-label functions; `page/{allergies,conditions,emergencycontacts,encounters,equipment}.go` titles (FR-005)
 - [x] T024 [P] [US1] Records F–M: `views/records/{familymember,immunization,injury,insurance,medication}.templ` + `.go`; matching `page/*.go` titles (FR-005)
 - [x] T025 [P] [US1] Records P–V and links: `views/records/{procedure,symptom,treatment,vitals,links,coursemedications}.templ` + `.go`; matching `page/*.go` titles (FR-005)
