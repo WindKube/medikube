@@ -1,6 +1,6 @@
 package records
 
-const courseMedicationsEmpty = "No medications attached to this course yet."
+import "medikube/internal/i18n"
 
 // CourseMedications is FR-060/FR-061's rendering: every medication attached
 // to a treatment, with its effective dosage/frequency/etc and, for each,
@@ -10,7 +10,7 @@ templ CourseMedications(id, title string, rows []CourseMedicationRow, form Cours
 	<section id={ id } aria-label={ title } class="flex flex-col gap-3">
 		<h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{ title }</h2>
 		if len(rows) == 0 {
-			<p class="text-sm text-slate-500 dark:text-slate-400">{ courseMedicationsEmpty }</p>
+			<p class="text-sm text-slate-500 dark:text-slate-400">{ i18n.T(ctx, "empty.course_medications") }</p>
 		} else {
 			<ul class="flex flex-col gap-4">
 				for _, row := range rows {
@@ -24,15 +24,15 @@ templ CourseMedications(id, title string, rows []CourseMedicationRow, form Cours
 								type="button"
 								data-on:click={ row.RemoveOn }
 								class="text-xs font-medium text-rose-800 underline underline-offset-2 hover:text-rose-900 dark:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"
-							>Remove</button>
+							>{ i18n.T(ctx, "action.remove") }</button>
 						</div>
 						<dl class="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-[minmax(0,8rem)_minmax(0,1fr)]">
 							for _, field := range row.Fields() {
-								<dt class="text-xs font-medium text-slate-500 dark:text-slate-400">{ field.Label }</dt>
+								<dt class="text-xs font-medium text-slate-500 dark:text-slate-400">{ i18n.T(ctx, field.Label) }</dt>
 								<dd class="text-sm text-slate-900 dark:text-slate-100">
 									{ field.Effective.Value }
 									<span class="ml-1 text-xs text-slate-500 dark:text-slate-400">
-										({ courseMedicationSourceLabel(field.Effective.Source) })
+										({ i18n.T(ctx, courseMedicationSourceLabel(field.Effective.Source)) })
 									</span>
 								</dd>
 							}
@@ -59,7 +59,7 @@ templ CourseMedicationForm(props CourseMedicationFormProps) {
 			data-bind={ props.medicationSignal() }
 			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		>
-			<option value="">Add a medication…</option>
+			<option value="">{ i18n.T(ctx, "action.add_a_medication") }</option>
 			for _, option := range props.Options {
 				<option value={ option.ID }>{ option.Name }</option>
 			}
@@ -67,30 +67,30 @@ templ CourseMedicationForm(props CourseMedicationFormProps) {
 		<input
 			id={ props.ID + "-dosage" }
 			type="text"
-			placeholder="Dosage"
-			aria-label="Dosage"
+			placeholder={ i18n.T(ctx, "field.course_medication.dosage") }
+			aria-label={ i18n.T(ctx, "field.course_medication.dosage") }
 			data-bind={ props.dosageSignal() }
 			class="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		/>
 		<input
 			id={ props.ID + "-frequency" }
 			type="text"
-			placeholder="Frequency"
-			aria-label="Frequency"
+			placeholder={ i18n.T(ctx, "field.course_medication.frequency") }
+			aria-label={ i18n.T(ctx, "field.course_medication.frequency") }
 			data-bind={ props.frequencySignal() }
 			class="w-28 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		/>
 		<input
 			id={ props.ID + "-started-on" }
 			type="date"
-			aria-label="Started on"
+			aria-label={ i18n.T(ctx, "field.course_medication.started") }
 			data-bind={ props.startedOnSignal() }
 			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		/>
 		<input
 			id={ props.ID + "-ended-on" }
 			type="date"
-			aria-label="Ended on"
+			aria-label={ i18n.T(ctx, "field.course_medication.ended") }
 			data-bind={ props.endedOnSignal() }
 			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		/>
@@ -98,6 +98,6 @@ templ CourseMedicationForm(props CourseMedicationFormProps) {
 			type="button"
 			data-on:click={ props.submitExpr() }
 			class="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-		>Add</button>
+		>{ i18n.T(ctx, "action.add") }</button>
 	</div>
 }

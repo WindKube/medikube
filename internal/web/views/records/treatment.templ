@@ -3,42 +3,36 @@ package records
 import (
 	viewtags "medikube/internal/web/views/tags"
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
 	"medikube/internal/web"
 )
 
-const (
-	treatmentsTitle     = "Treatments"
-	treatmentCreate     = "Record a treatment"
-	treatmentEmptyTitle = "Nothing recorded yet"
-	treatmentEmptyBody  = "Record the first one and it will be listed here, with everything you noted about it."
-)
-
 templ TreatmentList(props TreatmentListProps) {
-	<section id={ ids.RecordList(kind.Treatment) } aria-label={ treatmentsTitle } class="flex flex-col">
+	<section id={ ids.RecordList(kind.Treatment) } aria-label={ i18n.T(ctx, "page.treatmentListPage.title") } class="flex flex-col">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<h1
 				id={ ids.RecordListHeading(kind.Treatment) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ treatmentsTitle }</h1>
+			>{ i18n.T(ctx, "page.treatmentListPage.title") }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }
 					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-				>{ treatmentCreate }</a>
+				>{ i18n.T(ctx, "action.record_treatment") }</a>
 			}
 		</div>
 		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
 			<div data-empty class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:          ids.RecordEmpty(kind.Treatment),
-					Title:       treatmentEmptyTitle,
-					Body:        treatmentEmptyBody,
+					Title:       i18n.T(ctx, "empty.nothing_recorded"),
+					Body:        i18n.T(ctx, "empty.treatment_body"),
 					ActionHref:  props.CreateHref,
-					ActionLabel: treatmentCreate,
+					ActionLabel: i18n.T(ctx, "action.record_treatment"),
 				})
 			</div>
 			<div data-rows class="mt-4 overflow-x-auto">
@@ -92,7 +86,7 @@ templ TreatmentRow(t TreatmentView) {
 templ TreatmentDetail(props TreatmentDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Treatment, props.Treatment.ID) }
-		aria-label="Treatment"
+		aria-label={ i18n.T(ctx, "a11y.treatment_article") }
 		data-signals={ "{_confirming_delete: false, _etag: " + jsLiteral(web.ETag(props.Treatment.Version)) + "}" }
 		data-status={ props.Treatment.StatusVal }
 		class="flex flex-col"
@@ -108,14 +102,14 @@ templ TreatmentDetail(props TreatmentDetailProps) {
 					<a
 						href={ props.Treatment.Links.Edit }
 						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-					>Edit</a>
+					>{ i18n.T(ctx, "action.edit") }</a>
 				}
 				<button
 					type="button"
 					id={ ids.RecordDelete(kind.Treatment, props.Treatment.ID) }
 					data-on:click="$_confirming_delete = true"
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-				>Delete</button>
+				>{ i18n.T(ctx, "action.delete") }</button>
 			</div>
 		</header>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
@@ -128,12 +122,12 @@ templ TreatmentDetail(props TreatmentDetailProps) {
 			ID:             ids.RecordConfirm(kind.Treatment, props.Treatment.ID),
 			ReturnTo: ids.RecordDelete(kind.Treatment, props.Treatment.ID),
 			Signal:         "_confirming_delete",
-			Title:          "Delete this treatment?",
+			Title:          i18n.T(ctx, "confirm.delete_treatment"),
 			Subject:        props.Treatment.Name,
 			ReferenceCount: props.ReferenceCount,
-			ConfirmLabel:   "Delete permanently",
+			ConfirmLabel:   i18n.T(ctx, "action.delete_permanently"),
 			ConfirmOn:      treatmentDeleteExpression(props.Treatment),
-			CancelLabel:    "Keep it",
+			CancelLabel:    i18n.T(ctx, "confirm.keep_it"),
 		})
 	</article>
 }
@@ -141,7 +135,7 @@ templ TreatmentDetail(props TreatmentDetailProps) {
 templ TreatmentForm(props TreatmentFormProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ props.Label() }
+		aria-label={ props.Label(ctx) }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
@@ -167,12 +161,12 @@ templ TreatmentForm(props TreatmentFormProps) {
 			<button
 				type="submit"
 				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ props.SubmitLabel() }</button>
+			>{ props.SubmitLabel(ctx) }</button>
 			if props.CancelHref != "" {
 				<a
 					href={ props.CancelHref }
 					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
-				>Cancel</a>
+				>{ i18n.T(ctx, "action.cancel") }</a>
 			}
 		</div>
 	</form>
@@ -211,9 +205,9 @@ templ treatmentSelectControl(props TreatmentFormProps, field string, options []O
 			}
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>
-			<option value="" selected?={ props.Treatment.Value(field) == "" }>Not recorded</option>
+			<option value="" selected?={ props.Treatment.Value(field) == "" }>{ i18n.T(ctx, "enum.unset") }</option>
 			for _, option := range options {
-				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+				<option value={ option.Value } selected?={ option.Selected }>{ i18n.T(ctx, option.Label) }</option>
 			}
 		</select>
 		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))

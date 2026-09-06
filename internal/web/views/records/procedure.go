@@ -1,14 +1,17 @@
 package records
 
 import (
+	"context"
+
 	"medikube/internal/domain/clinical"
+	"medikube/internal/i18n"
 
 	viewtags "medikube/internal/web/views/tags"
 )
 
 const (
-	ProcedureFormLabelCreate = "Record a procedure"
-	ProcedureFormLabelEdit   = "Edit procedure"
+	ProcedureFormLabelCreate = "action.record_procedure"
+	ProcedureFormLabelEdit   = "a11y.edit_procedure_form"
 )
 
 type ProcedureLinks struct {
@@ -149,20 +152,31 @@ func (p ProcedureView) Value(field string) string {
 	}
 }
 
+// vocabOptions is enumOptions' twin for D-06: the Option.Label a form select
+// offers is a message id (enum.<vocab>.<value>), resolved at render by the
+// templ that prints it, never the raw wire value.
+func vocabOptions[T ~string](published []T, selected T, vocab string) []Option {
+	options := make([]Option, 0, len(published))
+	for _, value := range published {
+		options = append(options, Option{Value: string(value), Label: "enum." + vocab + "." + string(value), Selected: value == selected})
+	}
+	return options
+}
+
 func (p ProcedureView) TypeOptions() []Option {
-	return enumOptions(clinical.ProcedureTypes(), clinical.ProcedureType(p.TypeVal))
+	return vocabOptions(clinical.ProcedureTypes(), clinical.ProcedureType(p.TypeVal), "procedure_type")
 }
 func (p ProcedureView) StatusOptions() []Option {
-	return enumOptions(clinical.OrderStatuses(), clinical.OrderStatus(p.StatusVal))
+	return vocabOptions(clinical.OrderStatuses(), clinical.OrderStatus(p.StatusVal), "order_status")
 }
 func (p ProcedureView) OutcomeOptions() []Option {
-	return enumOptions(clinical.ProcedureOutcomes(), clinical.ProcedureOutcome(p.OutcomeVal))
+	return vocabOptions(clinical.ProcedureOutcomes(), clinical.ProcedureOutcome(p.OutcomeVal), "procedure_outcome")
 }
 func (p ProcedureView) SettingOptions() []Option {
-	return enumOptions(clinical.ProcedureSettings(), clinical.ProcedureSetting(p.SettingVal))
+	return vocabOptions(clinical.ProcedureSettings(), clinical.ProcedureSetting(p.SettingVal), "procedure_setting")
 }
 func (p ProcedureView) AnesthesiaOptions() []Option {
-	return enumOptions(clinical.Anesthesias(), clinical.Anesthesia(p.AnesthesiaVal))
+	return vocabOptions(clinical.Anesthesias(), clinical.Anesthesia(p.AnesthesiaVal), "anesthesia")
 }
 
 type ProcedureListProps struct {
@@ -189,18 +203,18 @@ type ProcedureFormProps struct {
 	Tags viewtags.FieldProps
 }
 
-func (p ProcedureFormProps) Label() string {
+func (p ProcedureFormProps) Label(ctx context.Context) string {
 	if p.New {
-		return ProcedureFormLabelCreate
+		return i18n.T(ctx, ProcedureFormLabelCreate)
 	}
-	return ProcedureFormLabelEdit
+	return i18n.T(ctx, ProcedureFormLabelEdit)
 }
 
-func (p ProcedureFormProps) SubmitLabel() string {
+func (p ProcedureFormProps) SubmitLabel(ctx context.Context) string {
 	if p.New {
-		return "Record it"
+		return i18n.T(ctx, "action.record_it")
 	}
-	return "Save changes"
+	return i18n.T(ctx, "action.save_changes")
 }
 
 func procedureDeleteExpression(p ProcedureView) string {

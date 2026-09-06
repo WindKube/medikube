@@ -37,12 +37,8 @@ const (
 // shell.Title adds. P5's is the record's own name.
 const medicationListTitle = "Medications"
 
-// medicationListTitleID is a message id (D-06), resolved at render time; the
-// text is identical to the shared nav.medications id, so it is reused here
-// rather than duplicated. The raw medicationListTitle stays as-is: it feeds
-// shell.NavLink.Label across the whole app (out of scope, shell package),
-// which renders it unresolved.
-const medicationListTitleID = "nav.medications"
+// medicationListTitle stays English for shell.NavLink.Label until T020 resolves nav labels.
+const medicationListTitleID = "page.medicationListPage.title"
 
 // Handlers is the record pages' contribution to the route table.
 //
@@ -371,6 +367,8 @@ func nextPageHref(e *core.RequestEvent, listing domain.Page[recordfamily.Record]
 // same reason it is one through the API: the existence of an identifier is
 // itself a disclosure (FR-033).
 func (p *medicationPages) detail(e *core.RequestEvent, actor access.Actor) error {
+	web.Localize(e)
+
 	handler, err := p.session(actor)
 	if err != nil {
 		return err
@@ -474,7 +472,7 @@ func (p *medicationPages) backrelatedLinks(
 
 	props := views.RemovableLinksProps{
 		ID:    ids.RecordDetail(kind.Medication, medicationID) + "-links",
-		Title: "Linked records",
+		Title: i18n.T(ctx, "linked_records.title"),
 		Items: items,
 	}
 

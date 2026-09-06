@@ -1,6 +1,6 @@
 package records
 
-const linkedRecordsEmpty = "Nothing linked yet."
+import "medikube/internal/i18n"
 
 // LinkedRecords is FR-059's shared rendering for a set of related records:
 // every item names its kind, carries an identifying summary and opens as a
@@ -9,7 +9,7 @@ templ LinkedRecords(id, title string, items []LinkedRecordItem) {
 	<section id={ id } aria-label={ title } class="flex flex-col gap-2">
 		<h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{ title }</h2>
 		if len(items) == 0 {
-			<p class="text-sm text-slate-500 dark:text-slate-400">{ linkedRecordsEmpty }</p>
+			<p class="text-sm text-slate-500 dark:text-slate-400">{ i18n.T(ctx, "empty.linked_records") }</p>
 		} else {
 			<ul class="flex flex-col gap-1">
 				for _, item := range items {
@@ -28,8 +28,6 @@ templ LinkedRecords(id, title string, items []LinkedRecordItem) {
 	</section>
 }
 
-const medicationLinksEmpty = "No medications linked yet."
-
 // MedicationLinksEditor is FR-055's editor, mounted on the owning kind's own
 // detail page (allergy, condition, injury, symptom): every currently linked
 // medication with a Remove button, and a picker to add another, for one role
@@ -43,7 +41,7 @@ templ MedicationLinksEditor(props MedicationLinksEditorProps) {
 					<h3 class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{ role.Label }</h3>
 				}
 				if len(role.Items) == 0 {
-					<p class="text-sm text-slate-500 dark:text-slate-400">{ medicationLinksEmpty }</p>
+					<p class="text-sm text-slate-500 dark:text-slate-400">{ i18n.T(ctx, "empty.medication_links") }</p>
 				} else {
 					<ul class="flex flex-col gap-1">
 						for i, item := range role.Items {
@@ -56,7 +54,7 @@ templ MedicationLinksEditor(props MedicationLinksEditorProps) {
 									type="button"
 									data-on:click={ props.removeExpr(role, role.IDs[i]) }
 									class="text-xs font-medium text-rose-800 underline underline-offset-2 hover:text-rose-900 dark:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"
-								>Remove</button>
+								>{ i18n.T(ctx, "action.remove") }</button>
 							</li>
 						}
 					</ul>
@@ -71,7 +69,7 @@ templ MedicationLinksEditor(props MedicationLinksEditorProps) {
 				<select
 				id={ props.ID + "-role" }
 					data-bind={ props.addRoleSignal() }
-					aria-label="Role"
+					aria-label={ i18n.T(ctx, "field.medication_link.role") }
 					class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 				>
 					for _, role := range props.Roles {
@@ -82,10 +80,10 @@ templ MedicationLinksEditor(props MedicationLinksEditorProps) {
 			<select
 			id={ props.ID + "-medication" }
 				data-bind={ props.addMedicationSignal() }
-				aria-label="Medication"
+				aria-label={ i18n.T(ctx, "field.medication_link.medication") }
 				class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 			>
-				<option value="">Add a medication…</option>
+				<option value="">{ i18n.T(ctx, "action.add_a_medication") }</option>
 				for _, option := range props.Options {
 					<option value={ option.ID }>{ option.Name }</option>
 				}
@@ -94,7 +92,7 @@ templ MedicationLinksEditor(props MedicationLinksEditorProps) {
 				type="button"
 				data-on:click={ props.addExpr() }
 				class="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>Add</button>
+			>{ i18n.T(ctx, "action.add") }</button>
 		</div>
 	</section>
 }
@@ -107,7 +105,7 @@ templ RemovableLinks(props RemovableLinksProps) {
 	<section id={ props.ID } aria-label={ props.Title } class="mt-6 flex flex-col gap-2">
 		<h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{ props.Title }</h2>
 		if len(props.Items) == 0 {
-			<p class="text-sm text-slate-500 dark:text-slate-400">{ linkedRecordsEmpty }</p>
+			<p class="text-sm text-slate-500 dark:text-slate-400">{ i18n.T(ctx, "empty.linked_records") }</p>
 		} else {
 			<ul class="flex flex-col gap-1">
 				for _, item := range props.Items {
@@ -123,7 +121,7 @@ templ RemovableLinks(props RemovableLinksProps) {
 							type="button"
 							data-on:click={ item.RemoveOn }
 							class="text-xs font-medium text-rose-800 underline underline-offset-2 hover:text-rose-900 dark:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"
-						>Remove</button>
+						>{ i18n.T(ctx, "action.remove") }</button>
 					</li>
 				}
 			</ul>

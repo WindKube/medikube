@@ -2,6 +2,7 @@ package records
 
 import (
 	viewtags "medikube/internal/web/views/tags"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 )
@@ -9,7 +10,7 @@ import (
 templ SymptomForm(props SymptomFormProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ props.Label() }
+		aria-label={ props.Label(ctx) }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
@@ -36,12 +37,12 @@ templ SymptomForm(props SymptomFormProps) {
 			<button
 				type="submit"
 				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ props.SubmitLabel() }</button>
+			>{ props.SubmitLabel(ctx) }</button>
 			if props.CancelHref != "" {
 				<a
 					href={ props.CancelHref }
 					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
-				>{ cancelLabel }</a>
+				>{ i18n.T(ctx, "action.cancel") }</a>
 			}
 		</div>
 	</form>
@@ -52,7 +53,7 @@ templ symptomTextControl(props SymptomFormProps, field, inputType string, requir
 		<label
 			for={ ids.Field(props.FormID, field) }
 			class="text-sm font-medium text-slate-900 dark:text-slate-100"
-		>{ SymptomFieldLabel(field) }</label>
+		>{ i18n.T(ctx, SymptomFieldLabel(field)) }</label>
 		<input
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -75,7 +76,7 @@ templ symptomSelectControl(props SymptomFormProps, field string, options []Optio
 		<label
 			for={ ids.Field(props.FormID, field) }
 			class="text-sm font-medium text-slate-900 dark:text-slate-100"
-		>{ SymptomFieldLabel(field) }</label>
+		>{ i18n.T(ctx, SymptomFieldLabel(field)) }</label>
 		<select
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -87,10 +88,10 @@ templ symptomSelectControl(props SymptomFormProps, field string, options []Optio
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>
 			if optional {
-				<option value="" selected?={ props.Symptom.Value(field) == "" }>{ notRecorded }</option>
+				<option value="" selected?={ props.Symptom.Value(field) == "" }>{ i18n.T(ctx, "enum.unset") }</option>
 			}
 			for _, option := range options {
-				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+				<option value={ option.Value } selected?={ option.Selected }>{ i18n.T(ctx, option.Label) }</option>
 			}
 		</select>
 		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))

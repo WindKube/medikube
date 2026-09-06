@@ -1211,3 +1211,619 @@ other = "Odstawiony"
 [enum.therapy_status.cancelled]
 description = "Therapy status vocabulary value: cancelled/never started"
 other = "Nigdy nie rozpoczęty"
+# --- T025: procedure, symptom, treatment, vitals, links, coursemedications ---
+
+[page.procedureListPage.title]
+description = "The procedure list page's own <title> and heading"
+other = "Zabiegi"
+
+[page.symptomListPage.title]
+description = "The symptom list page's own <title> and heading"
+other = "Objawy"
+
+[page.treatmentListPage.title]
+description = "The treatment list page's own <title> and heading"
+other = "Leczenie"
+
+[page.vitalsListPage.title]
+description = "The vitals (measurements) list page's own <title> and heading, also this detail page's title when no date has been recorded yet"
+other = "Pomiary"
+
+[action.record_procedure]
+description = "The create button on the procedure list, and the new-record form's aria-label"
+other = "Zapisz zabieg"
+
+[a11y.edit_procedure_form]
+description = "The procedure edit form's aria-label"
+other = "Edytuj zabieg"
+
+[action.record_symptom]
+description = "The create button on the symptom list, and the new-record form's aria-label"
+other = "Zapisz objaw"
+
+[a11y.edit_symptom_form]
+description = "The symptom edit form's aria-label"
+other = "Edytuj objaw"
+
+[action.record_treatment]
+description = "The create button on the treatment list, and the new-record form's aria-label"
+other = "Zapisz leczenie"
+
+[a11y.edit_treatment_form]
+description = "The treatment edit form's aria-label"
+other = "Edytuj leczenie"
+
+[action.record_vitals]
+description = "The create button on the vitals list, and the new-record form's aria-label"
+other = "Zapisz pomiary"
+
+[a11y.edit_vitals_form]
+description = "The vitals edit form's aria-label"
+other = "Edytuj pomiary"
+
+[action.record_it]
+description = "A record form's submit button when creating a new record"
+other = "Zapisz"
+
+[action.save_changes]
+description = "A record form's submit button when editing an existing record"
+other = "Zapisz zmiany"
+
+[action.edit]
+description = "The button on a record's detail page that opens its edit form"
+other = "Edytuj"
+
+[action.delete_permanently]
+description = "The confirm dialog's own destructive button, after action.delete opened it"
+other = "Usuń na stałe"
+
+[action.remove]
+description = "The button that detaches one linked or attached item (a medication link, a course medication) without deleting the item itself"
+other = "Usuń powiązanie"
+
+[action.add]
+description = "The button that attaches whichever item a picker currently holds"
+other = "Dodaj"
+
+[action.add_a_medication]
+description = "The placeholder option of a medication picker before anything is chosen"
+other = "Dodaj lek…"
+
+[empty.procedure_body]
+description = "The procedure list's empty-state body text"
+other = "Zapisz pierwszy zabieg, a pojawi się tutaj razem ze wszystkimi zanotowanymi informacjami."
+
+[empty.symptom_body]
+description = "The symptom list's empty-state body text"
+other = "Zapisz pierwszy epizod, a pojawi się tutaj razem ze wszystkimi zanotowanymi informacjami."
+
+[empty.treatment_body]
+description = "The treatment list's empty-state body text"
+other = "Zapisz pierwsze leczenie, a pojawi się tutaj razem ze wszystkimi zanotowanymi informacjami."
+
+[empty.vitals_body]
+description = "The vitals list's empty-state body text"
+other = "Zapisz pierwszy zestaw pomiarów, a pojawi się tutaj."
+
+[confirm.delete_procedure]
+description = "The delete confirmation dialog's question on a procedure's detail page"
+other = "Usunąć ten zabieg?"
+
+[confirm.delete_symptom_episode]
+description = "The delete confirmation dialog's question on a symptom's detail page"
+other = "Usunąć ten epizod objawu?"
+
+[confirm.delete_treatment]
+description = "The delete confirmation dialog's question on a treatment's detail page"
+other = "Usunąć to leczenie?"
+
+[confirm.delete_vitals]
+description = "The delete confirmation dialog's question on a vitals (measurement set) detail page"
+other = "Usunąć ten zestaw pomiarów?"
+
+[confirm.irreversible]
+description = "The delete confirmation dialog's consequence line, the short form"
+other = "To jest nieodwracalne. Nie ma kosza ani cofania."
+
+[confirm.irreversible_full]
+description = "The delete confirmation dialog's consequence line, the longer form used when the record holds several measurements at once"
+other = "To jest nieodwracalne. Nie ma kosza ani cofania, więc wszystko zapisane tutaj zniknie razem z tym."
+
+[a11y.procedure_article]
+description = "The procedure detail page's own article landmark aria-label"
+other = "Zabieg"
+
+[a11y.symptom_article]
+description = "The symptom detail page's own article landmark aria-label"
+other = "Epizod objawu"
+
+[a11y.treatment_article]
+description = "The treatment detail page's own article landmark aria-label"
+other = "Leczenie"
+
+[a11y.vitals_article]
+description = "The vitals detail page's own article landmark aria-label"
+other = "Zestaw pomiarów"
+
+[enum.unset]
+description = "A select's own placeholder option for a field nobody has filled in yet"
+other = "Nie zapisano"
+
+[field.symptom.name]
+description = "A symptom episode's own name field"
+other = "Co to było"
+
+[field.symptom.category]
+description = "A symptom episode's category field"
+other = "Kategoria"
+
+[field.symptom.severity]
+description = "A symptom episode's severity field"
+other = "Nasilenie"
+
+[field.symptom.occurred_at]
+description = "A symptom episode's own occurred-at field"
+other = "Kiedy"
+
+[field.symptom.duration_minutes]
+description = "A symptom episode's duration field, in minutes"
+other = "Czas trwania (minuty)"
+
+[field.symptom.pain_scale]
+description = "A symptom episode's pain scale field, 0-10"
+other = "Ból (0-10)"
+
+[field.symptom.body_site]
+description = "A symptom episode's body site field"
+other = "Miejsce na ciele"
+
+[field.symptom.triggers]
+description = "A symptom episode's triggers field"
+other = "Czynniki wywołujące"
+
+[field.symptom.relief_methods]
+description = "A symptom episode's relief methods field"
+other = "Co pomogło"
+
+[field.symptom.impact]
+description = "A symptom episode's impact field"
+other = "Wpływ"
+
+[field.symptom.resolved_at]
+description = "A symptom episode's resolved-at field"
+other = "Ustąpił"
+
+[field.symptom.is_chronic]
+description = "A symptom episode's ongoing/chronic flag"
+other = "Przewlekły"
+
+[field.symptom.status]
+description = "A symptom episode's status field"
+other = "Stan"
+
+[field.symptom.episode_count]
+description = "The symptom list column, and the detail page's sr-only label, for how many episodes are recorded under one name"
+other = "Epizody"
+
+[field.symptom.last_occurred]
+description = "The symptom list column for the most recent occurrence date"
+other = "Ostatnio"
+
+[field.symptom.treated_by_role]
+description = "The symptom medication editor's role label for medications that treat the symptom"
+other = "Leczy"
+
+[field.symptom.caused_by_role]
+description = "The symptom medication editor's role label for medications that cause the symptom"
+other = "Powoduje"
+
+[symptom.episodes_recorded]
+description = "The symptom detail page's own count line, e.g. \"4 episodes recorded under this name.\""
+one = "Zapisano {{.PluralCount}} epizod pod tą nazwą."
+few = "Zapisano {{.PluralCount}} epizody pod tą nazwą."
+many = "Zapisano {{.PluralCount}} epizodów pod tą nazwą."
+other = "Zapisano {{.PluralCount}} epizodu pod tą nazwą."
+
+[field.vitals.recorded_at]
+description = "A vitals record's own recorded-at field"
+other = "Kiedy"
+
+[field.vitals.systolic_mmhg]
+description = "A vitals record's systolic blood pressure field"
+other = "Skurczowe (mmHg)"
+
+[field.vitals.diastolic_mmhg]
+description = "A vitals record's diastolic blood pressure field"
+other = "Rozkurczowe (mmHg)"
+
+[field.vitals.heart_rate_bpm]
+description = "A vitals record's heart rate field"
+other = "Tętno (uderzenia/min)"
+
+[field.vitals.respiratory_rate_bpm]
+description = "A vitals record's respiratory rate field"
+other = "Częstość oddechów (oddechy/min)"
+
+[field.vitals.temperature_c]
+description = "A vitals record's temperature field"
+other = "Temperatura"
+
+[field.vitals.spo2_pct]
+description = "A vitals record's oxygen saturation field"
+other = "Saturacja (%)"
+
+[field.vitals.weight_kg]
+description = "A vitals record's weight field"
+other = "Waga"
+
+[field.vitals.height_cm]
+description = "A vitals record's height field"
+other = "Wzrost"
+
+[field.vitals.glucose_mmol_l]
+description = "A vitals record's glucose field"
+other = "Glukoza"
+
+[field.vitals.glucose_context]
+description = "A vitals record's glucose context field (when it was taken)"
+other = "Pomiar wykonano"
+
+[field.vitals.hba1c_pct]
+description = "A vitals record's HbA1c field"
+other = "HbA1c (%)"
+
+[field.vitals.pain_scale]
+description = "A vitals record's pain scale field, 0-10"
+other = "Ból (0-10)"
+
+[field.vitals.device]
+description = "A vitals record's device field"
+other = "Urządzenie"
+
+[field.vitals.bmi]
+description = "A vitals record's derived BMI field"
+other = "BMI"
+
+[field.vitals.measurements]
+description = "The vitals list's own column heading for the row's one-line measurement summary"
+other = "Pomiary"
+
+[field.vitals.systolic_short]
+description = "The vitals row's own one-line summary abbreviation for systolic pressure"
+other = "Skurczowe"
+
+[field.vitals.diastolic_short]
+description = "The vitals row's own one-line summary abbreviation for diastolic pressure"
+other = "Rozkurczowe"
+
+[field.vitals.heart_rate_short]
+description = "The vitals row's own one-line summary abbreviation for heart rate"
+other = "Tętno"
+
+[field.vitals.temperature_short]
+description = "The vitals row's own one-line summary abbreviation for temperature"
+other = "Temp."
+
+[field.vitals.spo2_short]
+description = "The vitals row's own one-line summary abbreviation for oxygen saturation"
+other = "SpO2"
+
+[field.vitals.weight_short]
+description = "The vitals row's own one-line summary abbreviation for weight"
+other = "Waga"
+
+[field.vitals.height_short]
+description = "The vitals row's own one-line summary abbreviation for height"
+other = "Wzrost"
+
+[field.vitals.glucose_short]
+description = "The vitals row's own one-line summary abbreviation for glucose"
+other = "Glukoza"
+
+[field.vitals.bmi_short]
+description = "The vitals row's own one-line summary abbreviation for BMI"
+other = "BMI"
+
+[field.course_medication.dosage]
+description = "A course medication's own dosage override field"
+other = "Dawka"
+
+[field.course_medication.frequency]
+description = "A course medication's own frequency override field"
+other = "Częstość"
+
+[field.course_medication.duration]
+description = "A course medication's effective duration field"
+other = "Czas trwania"
+
+[field.course_medication.timing]
+description = "A course medication's effective timing field"
+other = "Pora przyjmowania"
+
+[field.course_medication.prescriber]
+description = "A course medication's effective prescriber field"
+other = "Przepisujący"
+
+[field.course_medication.pharmacy]
+description = "A course medication's effective pharmacy field"
+other = "Apteka"
+
+[field.course_medication.started]
+description = "A course medication's own started-on override field"
+other = "Rozpoczęto"
+
+[field.course_medication.ended]
+description = "A course medication's own ended-on override field"
+other = "Zakończono"
+
+[field.course_medication.source_course]
+description = "Shown next to a course medication's effective field when the value came from the course's own override"
+other = "tego leczenia"
+
+[field.course_medication.source_medication]
+description = "Shown next to a course medication's effective field when the value came from the medication's own default"
+other = "leku"
+
+[field.course_medication.source_none]
+description = "Shown next to a course medication's effective field when neither the course nor the medication has set it"
+other = "nie ustawiono"
+
+[field.medication_link.role]
+description = "A medication link editor's role picker aria-label, when a kind offers more than one role"
+other = "Rola"
+
+[field.medication_link.medication]
+description = "A medication link editor's medication picker aria-label"
+other = "Lek"
+
+[empty.course_medications]
+description = "Shown under a treatment's course medications section when none are attached yet"
+other = "Do tego leczenia nie dołączono jeszcze żadnych leków."
+
+[empty.linked_records]
+description = "Shown under a record's linked-records section when nothing is linked yet"
+other = "Nic jeszcze nie połączono."
+
+[empty.medication_links]
+description = "Shown under a medication link editor's role when nothing is linked yet"
+other = "Nie połączono jeszcze żadnych leków."
+
+[linked_records.title]
+description = "The heading over a record's own linked-records section"
+other = "Powiązane rekordy"
+
+[course_medications.title]
+description = "The heading over a treatment's own course medications section"
+other = "Leki w ramach leczenia"
+
+[medication_links.title]
+description = "The heading over a symptom's own medication links editor"
+other = "Leki"
+
+[enum.procedure_type.surgical]
+description = "Procedure type vocabulary value"
+other = "Chirurgiczny"
+
+[enum.procedure_type.diagnostic]
+description = "Procedure type vocabulary value"
+other = "Diagnostyczny"
+
+[enum.procedure_type.therapeutic]
+description = "Procedure type vocabulary value"
+other = "Terapeutyczny"
+
+[enum.procedure_type.preventive]
+description = "Procedure type vocabulary value"
+other = "Profilaktyczny"
+
+[enum.procedure_type.other]
+description = "Procedure type vocabulary value, the catch-all"
+other = "Inny"
+
+[enum.order_status.ordered]
+description = "Order status vocabulary value (procedure and similar ordered events)"
+other = "Zlecony"
+
+[enum.order_status.scheduled]
+description = "Order status vocabulary value"
+other = "Zaplanowany"
+
+[enum.order_status.in_progress]
+description = "Order status vocabulary value"
+other = "W trakcie"
+
+[enum.order_status.completed]
+description = "Order status vocabulary value"
+other = "Zakończony"
+
+[enum.order_status.cancelled]
+description = "Order status vocabulary value"
+other = "Odwołany"
+
+[enum.procedure_outcome.successful]
+description = "Procedure outcome vocabulary value"
+other = "Udany"
+
+[enum.procedure_outcome.partial]
+description = "Procedure outcome vocabulary value"
+other = "Częściowy"
+
+[enum.procedure_outcome.unsuccessful]
+description = "Procedure outcome vocabulary value"
+other = "Nieudany"
+
+[enum.procedure_outcome.complications]
+description = "Procedure outcome vocabulary value"
+other = "Powikłania"
+
+[enum.procedure_setting.outpatient]
+description = "Procedure setting vocabulary value"
+other = "Ambulatoryjnie"
+
+[enum.procedure_setting.inpatient]
+description = "Procedure setting vocabulary value"
+other = "Szpitalnie"
+
+[enum.procedure_setting.office]
+description = "Procedure setting vocabulary value"
+other = "W gabinecie"
+
+[enum.anesthesia.none]
+description = "Anesthesia vocabulary value"
+other = "Brak"
+
+[enum.anesthesia.local]
+description = "Anesthesia vocabulary value"
+other = "Miejscowe"
+
+[enum.anesthesia.regional]
+description = "Anesthesia vocabulary value"
+other = "Regionalne"
+
+[enum.anesthesia.sedation]
+description = "Anesthesia vocabulary value"
+other = "Sedacja"
+
+[enum.anesthesia.general]
+description = "Anesthesia vocabulary value"
+other = "Ogólne"
+
+[enum.treatment_setting.inpatient]
+description = "Treatment setting vocabulary value"
+other = "Szpitalnie"
+
+[enum.treatment_setting.outpatient]
+description = "Treatment setting vocabulary value"
+other = "Ambulatoryjnie"
+
+[enum.treatment_setting.home]
+description = "Treatment setting vocabulary value"
+other = "W domu"
+
+[enum.therapy_status.active]
+description = "Therapy status vocabulary value (treatment, medication, equipment)"
+other = "Aktywne"
+
+[enum.therapy_status.on_hold]
+description = "Therapy status vocabulary value"
+other = "Wstrzymane"
+
+[enum.therapy_status.completed]
+description = "Therapy status vocabulary value"
+other = "Zakończone"
+
+[enum.therapy_status.stopped]
+description = "Therapy status vocabulary value"
+other = "Przerwane"
+
+[enum.therapy_status.cancelled]
+description = "Therapy status vocabulary value"
+other = "Odwołane"
+
+[enum.symptom_category.pain]
+description = "Symptom category vocabulary value"
+other = "Ból"
+
+[enum.symptom_category.respiratory]
+description = "Symptom category vocabulary value"
+other = "Oddechowy"
+
+[enum.symptom_category.gastrointestinal]
+description = "Symptom category vocabulary value"
+other = "Żołądkowo-jelitowy"
+
+[enum.symptom_category.neurological]
+description = "Symptom category vocabulary value"
+other = "Neurologiczny"
+
+[enum.symptom_category.cardiovascular]
+description = "Symptom category vocabulary value"
+other = "Sercowo-naczyniowy"
+
+[enum.symptom_category.musculoskeletal]
+description = "Symptom category vocabulary value"
+other = "Mięśniowo-szkieletowy"
+
+[enum.symptom_category.dermatological]
+description = "Symptom category vocabulary value"
+other = "Skórny"
+
+[enum.symptom_category.psychological]
+description = "Symptom category vocabulary value"
+other = "Psychiczny"
+
+[enum.symptom_category.constitutional]
+description = "Symptom category vocabulary value"
+other = "Ogólnoustrojowy"
+
+[enum.symptom_category.other]
+description = "Symptom category vocabulary value, the catch-all"
+other = "Inny"
+
+[enum.severity.mild]
+description = "Severity vocabulary value"
+other = "Łagodne"
+
+[enum.severity.moderate]
+description = "Severity vocabulary value"
+other = "Umiarkowane"
+
+[enum.severity.severe]
+description = "Severity vocabulary value"
+other = "Ciężkie"
+
+[enum.severity.life_threatening]
+description = "Severity vocabulary value"
+other = "Zagrażające życiu"
+
+[enum.symptom_impact.none]
+description = "Symptom impact vocabulary value"
+other = "Brak"
+
+[enum.symptom_impact.mild]
+description = "Symptom impact vocabulary value"
+other = "Łagodny"
+
+[enum.symptom_impact.moderate]
+description = "Symptom impact vocabulary value"
+other = "Umiarkowany"
+
+[enum.symptom_impact.severe]
+description = "Symptom impact vocabulary value"
+other = "Ciężki"
+
+[enum.condition_status.active]
+description = "Condition status vocabulary value (condition, symptom)"
+other = "Aktywny"
+
+[enum.condition_status.healing]
+description = "Condition status vocabulary value"
+other = "W trakcie gojenia"
+
+[enum.condition_status.inactive]
+description = "Condition status vocabulary value"
+other = "Nieaktywny"
+
+[enum.condition_status.resolved]
+description = "Condition status vocabulary value"
+other = "Ustąpił"
+
+[enum.condition_status.chronic]
+description = "Condition status vocabulary value"
+other = "Przewlekły"
+
+[enum.glucose_context.fasting]
+description = "Glucose measurement context vocabulary value"
+other = "Na czczo"
+
+[enum.glucose_context.before_meal]
+description = "Glucose measurement context vocabulary value"
+other = "Przed posiłkiem"
+
+[enum.glucose_context.after_meal]
+description = "Glucose measurement context vocabulary value"
+other = "Po posiłku"
+
+[enum.glucose_context.random]
+description = "Glucose measurement context vocabulary value"
+other = "Przypadkowy"

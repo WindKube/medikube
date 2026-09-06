@@ -13,6 +13,7 @@ import (
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	recordfamily "medikube/internal/records"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -26,7 +27,7 @@ const (
 	OpSymptomDetailPage = "symptomDetailPage"
 )
 
-const symptomListTitle = "Symptoms"
+const symptomListTitleID = "page.symptomListPage.title"
 
 // SymptomHandlers is the symptom pages' contribution to the route table.
 func SymptomHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
@@ -237,7 +238,9 @@ func (p *symptomPages) list(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	return p.render(e, actor, symptomListTitle, sequence{
+	web.Localize(e)
+
+	return p.render(e, actor, i18n.T(e.Request.Context(), symptomListTitleID), sequence{
 		context,
 		p.views.ListOfPage(listing, nextPageHref(e, listing)),
 		entry.Views.Form(blank, nil, ""),
@@ -289,6 +292,8 @@ func (p *symptomPages) patientContext(ctx context.Context, actor access.Actor, p
 }
 
 func (p *symptomPages) detail(e *core.RequestEvent, actor access.Actor) error {
+	web.Localize(e)
+
 	handler, err := p.session(actor)
 	if err != nil {
 		return err
@@ -344,12 +349,12 @@ func (p *symptomPages) medicationsEditor(
 		return views.MedicationLinksEditorProps{}, err
 	}
 
-	treatedRole := medicationLinkRole(api.MemberSymptomTreatedByMedications, "Treats", treatedBy, options, p.links.medicationHref)
-	causedRole := medicationLinkRole(api.MemberSymptomCausedByMedications, "Causes", causedBy, options, p.links.medicationHref)
+	treatedRole := medicationLinkRole(api.MemberSymptomTreatedByMedications, i18n.T(ctx, "field.symptom.treated_by_role"), treatedBy, options, p.links.medicationHref)
+	causedRole := medicationLinkRole(api.MemberSymptomCausedByMedications, i18n.T(ctx, "field.symptom.caused_by_role"), causedBy, options, p.links.medicationHref)
 
 	return views.MedicationLinksEditorProps{
 		ID:         ids.RecordDetail(kind.Symptom, found.ID) + "-" + kind.Medication.Collection(),
-		Title:      "Medications",
+		Title:      i18n.T(ctx, "medication_links.title"),
 		RecordHref: p.links.of(found.ID).Record,
 		Options:    options,
 		Roles:      []views.MedicationLinkRole{treatedRole, causedRole},
@@ -455,7 +460,10 @@ func (l symptomLinks) cancelHref(symptom views.SymptomView) string {
 func (l symptomLinks) nav(current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: medicationListTitle, Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
-		{Label: symptomListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		// Nav labels are not yet resolved through i18n.T by shell/nav.templ
+		// (T020); left in English here until that seam lands (US1 cross-slice
+		// note in this task's report).
+		{Label: "Symptoms", Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }
