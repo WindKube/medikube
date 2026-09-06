@@ -75,6 +75,7 @@ import (
 	storeimmunization "medikube/internal/store/immunization"
 	storeinjury "medikube/internal/store/injury"
 	storeinsurance "medikube/internal/store/insurance"
+	linkstore "medikube/internal/store/link"
 	storemedication "medikube/internal/store/medication"
 	patientstore "medikube/internal/store/patient"
 	practitionerstore "medikube/internal/store/practitioner"
@@ -345,7 +346,7 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 	}
 
 	table, err := handlerTable(
-		resolve, patientResolve, photoResolve, searchResolve, hub, chosen, accounts, directoryOps, tagOps,
+		app, resolve, patientResolve, photoResolve, searchResolve, hub, chosen, accounts, directoryOps, tagOps,
 		timelineResolve, courseMedicationOps,
 	)
 	if err != nil {
@@ -407,6 +408,7 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 // httproute.New refuses the table, because a route nothing serves is a route
 // that would panic on its first request.
 func handlerTable(
+	app core.App,
 	resolve api.Resolve,
 	patientResolve api.PatientResolve,
 	photoResolve api.PatientPhotoResolve,
@@ -429,7 +431,9 @@ func handlerTable(
 		table[route.OpID] = notImplemented(route.OpID)
 	}
 
-	recordOps, err := api.Handlers(resolve)
+	recordOps, err := api.Handlers(resolve, api.WithReferences(func() (*linkstore.Backrelations, error) {
+		return linkstore.NewBackrelations(app)
+	}))
 	if err != nil {
 		return nil, err
 	}

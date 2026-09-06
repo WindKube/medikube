@@ -117,7 +117,7 @@ func operations(
 	patientResolve, photoResolve := patientFamily(app, cfg, registry, measurements, tracing)
 
 	// The real ones win. This is the only line each later group touches.
-	served, err := wired(resolve, searchResolve, patientResolve, timelineResolve, hub)
+	served, err := wired(app, resolve, searchResolve, patientResolve, timelineResolve, hub)
 	if err != nil {
 		return nil, err
 	}
@@ -342,12 +342,12 @@ func assetHandlers() httproute.Handlers {
 // record pages and the Datastar stream are in; the account surface needs the
 // application and is assembled by operations above.
 func wired(
-	resolve api.Resolve, searchResolve api.SearchResolve, patients api.PatientResolve,
+	app core.App, resolve api.Resolve, searchResolve api.SearchResolve, patients api.PatientResolve,
 	timelineResolve page.TimelineResolve, hub *realtime.Hub,
 ) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
-	records, err := api.Handlers(resolve)
+	records, err := api.Handlers(resolve, api.WithReferences(referencesFamily(app)))
 	if err != nil {
 		return nil, err
 	}
@@ -682,6 +682,18 @@ func recordFamily(
 // registerKinds', the same way patientFamily and directoryFamily each build
 // their own: every family here is a self-contained resolver, not a shared
 // mutable state the composition root would otherwise have to sequence.
+// referencesFamily wires internal/web/api/references.go's back-relation
+// reader (FR-006). Unlike the other families here it needs no cursor codec or
+// authorizer of its own — it only reads, never authorizes, because a
+// pre-delete count is the SAME actor's own record read one layer deeper
+// (the caller already passed getRecord's authorization to reach the body
+// this attaches to).
+func referencesFamily(app core.App) api.ReferencesResolve {
+	return func() (*linkstore.Backrelations, error) {
+		return linkstore.NewBackrelations(app)
+	}
+}
+
 func courseMedicationFamily(app core.App) api.CourseMedicationResolve {
 	return sync.OnceValues(func() (*coursemedicationsvc.Service, error) {
 		secret, err := store.CursorSecret(app, "")
@@ -1379,6 +1391,7 @@ func courseMedicationOperations() []string {
 // handed in here is one that is never called.
 func unimplemented() []string {
 	implemented, err := wired(
+		nil,
 		func() (*records.Handler, error) { return nil, nil },
 		func() (*searchsvc.Service, []kind.Kind, error) { return nil, nil, nil },
 		func() (*patient.Service, error) { return nil, nil },

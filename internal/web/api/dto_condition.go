@@ -60,6 +60,9 @@ type Condition struct {
 
 	Tags      []string `json:"tags"`
 	CreatedAt string   `json:"created_at"`
+
+	// References is FR-006's pre-delete count (internal/web/api/references.go).
+	References *ReferencesSummary `json:"references,omitempty"`
 }
 
 // GetTags implements records.Tagged so the search index stays in step with
