@@ -45,9 +45,12 @@ func TestSearchKindAt50000Rows(t *testing.T) {
 			started := time.Now()
 
 			page, err := h.repo.SearchKind(ctx, h.patient, k, "scale-term", nil, "", 25, "")
+			elapsed := time.Since(started)
 			require.NoError(t, err)
 
-			assert.Less(t, time.Since(started), 3*time.Second,
+			t.Logf("first page of %s at %d indexed rows: %s", k, scaleRowCount, elapsed)
+
+			assert.Less(t, elapsed, 3*time.Second,
 				"the first page of a grouped search must return within 3s at 50,000 indexed rows (SC-003)")
 			assert.NotEmpty(t, page.Items, "every kind holding a match must be represented (SC-003, FR-089)")
 			assert.LessOrEqual(t, len(page.Items), 25)
