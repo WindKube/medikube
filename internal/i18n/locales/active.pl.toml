@@ -1217,6 +1217,10 @@ other = "Nigdy nie rozpoczęty"
 description = "The procedure list page's own <title> and heading"
 other = "Zabiegi"
 
+[page.medications.title]
+description = "The medication list page's title"
+other = "Leki"
+
 [page.symptoms.title]
 description = "The symptom list page's own <title> and heading"
 other = "Objawy"

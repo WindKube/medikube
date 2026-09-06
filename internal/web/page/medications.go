@@ -38,7 +38,7 @@ const (
 const medicationListTitle = "Medications"
 
 // medicationListTitle stays English for shell.NavLink.Label until T020 resolves nav labels.
-const medicationListTitleID = "page.medicationListPage.title"
+const medicationListTitleID = "page.medications.title"
 
 // Handlers is the record pages' contribution to the route table.
 //
