@@ -33,11 +33,6 @@ const (
 	OpMedicationDetailPage = "medicationDetailPage"
 )
 
-// The two page titles of contracts/pages.md, without the product suffix, which
-// shell.Title adds. P5's is the record's own name.
-const medicationListTitle = "Medications"
-
-// medicationListTitle stays English for shell.NavLink.Label until T020 resolves nav labels.
 const medicationListTitleID = "page.medications.title"
 
 // Handlers is the record pages' contribution to the route table.

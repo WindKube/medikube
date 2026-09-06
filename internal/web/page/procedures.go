@@ -389,7 +389,7 @@ func (l procedureLinks) cancelHref(procedure views.ProcedureView) string {
 func (l procedureLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
-		{Label: procedureListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, procedureListTitleID), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

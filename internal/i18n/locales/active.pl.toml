@@ -1924,10 +1924,6 @@ other = "Do {{.Date}}"
 description = "Reloads the page from the stream-stale banner"
 other = "Odśwież"
 
-[action.add]
-description = "Confirms adding a new directory entry from a picker's inline drawer"
-other = "Dodaj"
-
 [action.add_new_one]
 description = "Opens a directory picker's inline drawer to create a new entry"
 other = "Dodaj nowy"
@@ -1978,10 +1974,6 @@ other = "Aktywne zawężenie"
 [a11y.remove_criterion]
 description = "Removes one narrowing criterion, naming it"
 other = "Usuń: {{.Criterion}}"
-
-[a11y.confirm_delete]
-description = "The delete-confirmation section's accessible name"
-other = "Potwierdź usunięcie"
 
 [a11y.pagination]
 description = "The pagination controls' accessible name"
@@ -2263,10 +2255,6 @@ other = "Wraz z nim zostaną usunięte:"
 description = "Resends the email-confirmation message from settings"
 other = "Wyślij potwierdzenie ponownie"
 
-[action.save_changes]
-description = "The settings profile form's submit button"
-other = "Zapisz zmiany"
-
 [action.sign_out]
 description = "Ends every session this account has open, everywhere"
 other = "Wyloguj się"
@@ -2424,26 +2412,6 @@ other = "Nie odnotowano"
 
 # --- enum.sex (T022 additions) -----------------------------------------------
 
-[enum.sex.female]
-description = "The patient form's sex option"
-other = "Kobieta"
-
-[enum.sex.male]
-description = "The patient form's sex option"
-other = "Mężczyzna"
-
-[enum.sex.intersex]
-description = "The patient form's sex option"
-other = "Interpłciowa"
-
-[enum.sex.unspecified]
-description = "The patient form's sex option"
-other = "Nieokreślona"
-
-# --- enum.blood_type (T022 additions) ----------------------------------------
-# Blood-type notation is the same string in every language (data-model's own
-# spelling), so en and pl carry the identical value.
-
 [enum.blood_type.a_pos]
 description = "The patient form's blood-type option"
 other = "A+"
@@ -2514,12 +2482,6 @@ other = "Ten rekord zmienił się od czasu wczytania; pokazano aktualne wartośc
 
 # --- action (T022 additions) -------------------------------------------------
 
-[action.edit]
-description = "Opens a record's edit form, shared by the patient, facility and practitioner detail pages"
-other = "Edytuj"
-
-# --- confirm (T022 additions) -------------------------------------------------
-
 [confirm.delete_this_person]
 description = "The patient delete confirmation's own question"
 other = "Usunąć tę osobę?"
@@ -2589,14 +2551,14 @@ other = "Dodaj specjalistę"
 [directory.usage_practitioners]
 description = "How many practitioners name a facility, half of the facility detail's usage sentence"
 one = "{{.PluralCount}} specjalista"
-few = "{{.PluralCount}} specjalistów"
+few = "{{.PluralCount}} specjaliści"
 many = "{{.PluralCount}} specjalistów"
 other = "{{.PluralCount}} specjalisty"
 
 [directory.usage_patients]
 description = "How many patients name a practitioner, half of the practitioner detail's usage sentence"
 one = "{{.PluralCount}} pacjent"
-few = "{{.PluralCount}} pacjentów"
+few = "{{.PluralCount}} pacjenci"
 many = "{{.PluralCount}} pacjentów"
 other = "{{.PluralCount}} pacjenta"
 
@@ -2951,3 +2913,7 @@ other = "Jest to nieodwracalne i niszczy wszystkie {{.PluralCount}} rekordu zapi
 [directory.facility_region]
 description = "The facility list's landmark and heading, distinct from the nav label (\"Places of care\")"
 other = "Placówki"
+
+[search.no_records]
+description = "Search: heading when the person has no records of any kind yet"
+other = "Nic jeszcze nie zapisano"

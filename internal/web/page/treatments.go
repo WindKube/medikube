@@ -559,7 +559,7 @@ func (l treatmentLinks) cancelHref(treatment views.TreatmentView) string {
 func (l treatmentLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
-		{Label: treatmentListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, treatmentListTitleID), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

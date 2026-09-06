@@ -2,6 +2,7 @@ package page
 
 import (
 	"context"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
 
@@ -51,6 +52,7 @@ func (p *accountPages) settings(e *core.RequestEvent, actor access.Actor) error 
 			ResendOn:       p.links.post(p.links.verify),
 			Name:           user.Name,
 			UnitSystems:    unitSystemOptions(ctx, user.UnitSystem),
+			Locales:        localeOptions(user.Locale),
 			Locale:         user.Locale,
 			DateFormats:    dateFormatOptions(ctx, user.DateFormat),
 			Themes:         themeOptions(ctx, user.Theme),
@@ -121,6 +123,25 @@ func optionsOf[T ~string](values []T, selected T, labels map[T]string) []setting
 			Value:    string(value),
 			Label:    label,
 			Selected: value == selected,
+		})
+	}
+
+	return rendered
+}
+
+func localeOptions(selected string) []settings.Option {
+	base, _, _ := strings.Cut(selected, "-")
+	base = strings.ToLower(base)
+
+	langs := i18n.Supported()
+	rendered := make([]settings.Option, 0, len(langs))
+
+	for _, lang := range langs {
+		tag := lang.Tag.String()
+		rendered = append(rendered, settings.Option{
+			Value:    tag,
+			Label:    lang.Name,
+			Selected: tag == base,
 		})
 	}
 

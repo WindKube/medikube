@@ -460,7 +460,7 @@ func (l symptomLinks) cancelHref(symptom views.SymptomView) string {
 func (l symptomLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
-		{Label: symptomListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, symptomListTitleID), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

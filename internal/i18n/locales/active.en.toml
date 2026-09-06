@@ -1894,10 +1894,6 @@ other = "To {{.Date}}"
 description = "Reloads the page from the stream-stale banner"
 other = "Reload"
 
-[action.add]
-description = "Confirms adding a new directory entry from a picker's inline drawer"
-other = "Add"
-
 [action.add_new_one]
 description = "Opens a directory picker's inline drawer to create a new entry"
 other = "Add a new one"
@@ -1946,10 +1942,6 @@ other = "Narrowing in force"
 [a11y.remove_criterion]
 description = "Removes one narrowing criterion, naming it"
 other = "Remove {{.Criterion}}"
-
-[a11y.confirm_delete]
-description = "The delete-confirmation section's accessible name"
-other = "Confirm delete"
 
 [a11y.pagination]
 description = "The pagination controls' accessible name"
@@ -2231,10 +2223,6 @@ other = "These are destroyed with it:"
 description = "Resends the email-confirmation message from settings"
 other = "Send the confirmation again"
 
-[action.save_changes]
-description = "The settings profile form's submit button"
-other = "Save changes"
-
 [action.sign_out]
 description = "Ends every session this account has open, everywhere"
 other = "Sign out"
@@ -2392,26 +2380,6 @@ other = "Not recorded"
 
 # --- enum.sex (T022 additions) -----------------------------------------------
 
-[enum.sex.female]
-description = "The patient form's sex option"
-other = "Female"
-
-[enum.sex.male]
-description = "The patient form's sex option"
-other = "Male"
-
-[enum.sex.intersex]
-description = "The patient form's sex option"
-other = "Intersex"
-
-[enum.sex.unspecified]
-description = "The patient form's sex option"
-other = "Unspecified"
-
-# --- enum.blood_type (T022 additions) ----------------------------------------
-# Blood-type notation is the same string in every language (data-model's own
-# spelling), so en and pl carry the identical value.
-
 [enum.blood_type.a_pos]
 description = "The patient form's blood-type option"
 other = "A+"
@@ -2481,12 +2449,6 @@ description = "Shown when a form is re-rendered from the server's current values
 other = "This record changed since you loaded it; the current values are shown."
 
 # --- action (T022 additions) -------------------------------------------------
-
-[action.edit]
-description = "Opens a record's edit form, shared by the patient, facility and practitioner detail pages"
-other = "Edit"
-
-# --- confirm (T022 additions) -------------------------------------------------
 
 [confirm.delete_this_person]
 description = "The patient delete confirmation's own question"
@@ -2911,3 +2873,7 @@ other = "This is permanent and destroys all {{.PluralCount}} records kept for th
 [directory.facility_region]
 description = "The facility list's landmark and heading, distinct from the nav label (\"Places of care\")"
 other = "Facilities"
+
+[search.no_records]
+description = "Search: heading when the person has no records of any kind yet"
+other = "Nothing recorded yet"

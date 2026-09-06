@@ -50,7 +50,7 @@ templ Results(props Props) {
 			</div>
 		} else if props.EmptyReason == "no_records" {
 			<div role="status" class="rounded-lg border border-dashed border-slate-300 px-6 py-12 text-center dark:border-slate-700">
-				<p class="text-base font-medium text-slate-900 dark:text-slate-100">{ i18n.T(ctx, "empty.nothing_recorded") }</p>
+				<p class="text-base font-medium text-slate-900 dark:text-slate-100">{ i18n.T(ctx, "search.no_records") }</p>
 				<p class="mt-1 text-sm text-slate-600 dark:text-slate-400">{ i18n.T(ctx, "search.no_records_body") }</p>
 			</div>
 		} else if props.EmptyReason == "no_matches" {

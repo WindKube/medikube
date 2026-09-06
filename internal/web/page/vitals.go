@@ -397,7 +397,7 @@ func (l vitalsLinks) cancelHref(v views.VitalsView) string {
 func (l vitalsLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
-		{Label: vitalsListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, vitalsListTitleID), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

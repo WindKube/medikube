@@ -137,7 +137,7 @@ func (l tagLinks) of(id string) viewtags.Links {
 func (l tagLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
-		{Label: tagsListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, tagsListTitleID), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }
