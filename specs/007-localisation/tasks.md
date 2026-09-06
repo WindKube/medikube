@@ -99,10 +99,10 @@ Each task: replace every literal phrase in its files with `i18n.T(ctx, "<id>")` 
 
 ## Phase 5: User Story 3 — Add the next language by adding one file (P3)
 
-- [ ] T037 [P] [US3] `internal/i18n/add_language_test.go`: with an injected `fs.FS` holding `active.en.toml` + a complete `active.de.toml`, `Supported()` lists `de`, `Resolve("", "de")` yields German, `settings.localeOptions` offers it — and nothing else in the repository changed (`git diff --stat` in the PR description) (FR-010, US3-1, SC-003)
-- [ ] T038 [P] [US3] Negative fixtures for T006/T007 under `internal/i18n/testdata/`: one file missing an id, one with a surplus id, one templ snippet asking for an undefined id; the tests run against fixtures and assert the exact failure text (US3-2, US3-3, US3-4, SC-004)
-- [ ] T039 [P] [US3] `active.en.toml` lint in `catalogue_test.go`: every message has a non-empty `description`; ids match `^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$`; no id contains its English text (US3-5, D-03)
-- [ ] T040 [US3] `specs/007-localisation/quickstart.md` §"Add a language" verified by actually doing it for `de` with three phrases in a scratch branch and deleting it; the commands in the doc are the ones run (US3-1)
+- [x] T037 [P] [US3] `internal/i18n/add_language_test.go`: with an injected `fs.FS` holding `active.en.toml` + a complete `active.de.toml`, `Supported()` lists `de`, `Resolve("", "de")` yields German, `settings.localeOptions` offers it — and nothing else in the repository changed (`git diff --stat` in the PR description) (FR-010, US3-1, SC-003)
+- [x] T038 [P] [US3] Negative fixtures for T006/T007 under `internal/i18n/testdata/`: one file missing an id, one with a surplus id, one templ snippet asking for an undefined id; the tests run against fixtures and assert the exact failure text (US3-2, US3-3, US3-4, SC-004)
+- [x] T039 [P] [US3] `active.en.toml` lint in `catalogue_test.go`: every message has a non-empty `description`; ids match `^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$`; no id contains its English text (US3-5, D-03)
+- [x] T040 [US3] `specs/007-localisation/quickstart.md` §"Add a language" verified by actually doing it for `de` with three phrases in a scratch branch and deleting it; the commands in the doc are the ones run (US3-1)
 
 ---
 

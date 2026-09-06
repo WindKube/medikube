@@ -32,7 +32,7 @@ func safeSignal(id string) string {
 templ Manager(props ManagerProps) {
 	<section
 		id={ ids.DirectoryList(Segment) }
-		aria-label={ i18n.T(ctx, "page.tagsPage.title") }
+		aria-label={ i18n.T(ctx, "page.tags.title") }
 		class="flex flex-col"
 	>
 		<div class="flex flex-wrap items-center justify-between gap-3">
@@ -40,7 +40,7 @@ templ Manager(props ManagerProps) {
 				id={ ids.DirectoryListHeading(Segment) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ i18n.T(ctx, "page.tagsPage.title") }</h1>
+			>{ i18n.T(ctx, "page.tags.title") }</h1>
 		</div>
 		if len(props.Tags) == 0 {
 			<div class="mt-6">

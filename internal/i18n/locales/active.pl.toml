@@ -1385,7 +1385,7 @@ description = "Therapy status vocabulary value: cancelled/never started"
 other = "Nigdy nie rozpoczęty"
 # --- T025: procedure, symptom, treatment, vitals, links, coursemedications ---
 
-[page.procedureListPage.title]
+[page.procedures.title]
 description = "The procedure list page's own <title> and heading"
 other = "Zabiegi"
 
@@ -1397,7 +1397,7 @@ other = "Leki"
 description = "The symptom list page's own <title> and heading"
 other = "Objawy"
 
-[page.treatmentListPage.title]
+[page.treatments.title]
 description = "The treatment list page's own <title> and heading"
 other = "Leczenie"
 
@@ -1937,11 +1937,11 @@ other = "Przypadkowy"
 description = "The tag manager's empty state body"
 other = "Utwórz etykietę, aby zacząć porządkować dane."
 
-[page.tagsPage.title]
+[page.tags.title]
 description = "The tag manager page's own <title> and landmark name"
 other = "Etykiety"
 
-[page.searchPage.title]
+[page.search.title]
 description = "The search page's own <title>, heading, and submit button"
 other = "Wyszukiwanie"
 
@@ -2011,7 +2011,7 @@ other = "Wybrane etykiety"
 description = "A tag field's own remove-chip button aria-label, naming the tag being removed"
 other = "Usuń {{.Name}}"
 
-[search.term]
+[field.search.term]
 description = "The search page's own search-box sr-only label"
 other = "Fraza wyszukiwania"
 

@@ -27,7 +27,7 @@ const (
 	OpProcedureDetailPage = "procedureDetailPage"
 )
 
-const procedureListTitleID = "page.procedureListPage.title"
+const procedureListTitleID = "page.procedures.title"
 
 // ProcedureHandlers is the procedure pages' contribution to the route table,
 // mirroring medications.go's Handlers end to end (T078).

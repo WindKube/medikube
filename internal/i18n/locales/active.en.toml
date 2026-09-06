@@ -1361,7 +1361,7 @@ description = "Therapy status vocabulary value: cancelled/never started"
 other = "Never started"
 # --- T025: procedure, symptom, treatment, vitals, links, coursemedications ---
 
-[page.procedureListPage.title]
+[page.procedures.title]
 description = "The procedure list page's own <title> and heading"
 other = "Procedures"
 
@@ -1373,7 +1373,7 @@ other = "Medications"
 description = "The symptom list page's own <title> and heading"
 other = "Symptoms"
 
-[page.treatmentListPage.title]
+[page.treatments.title]
 description = "The treatment list page's own <title> and heading"
 other = "Treatments"
 
@@ -1911,11 +1911,11 @@ other = "Random"
 description = "The tag manager's empty state body"
 other = "Create a tag to start organising records."
 
-[page.tagsPage.title]
+[page.tags.title]
 description = "The tag manager page's own <title> and landmark name"
 other = "Tags"
 
-[page.searchPage.title]
+[page.search.title]
 description = "The search page's own <title>, heading, and submit button"
 other = "Search"
 
@@ -1981,7 +1981,7 @@ other = "Selected tags"
 description = "A tag field's own remove-chip button aria-label, naming the tag being removed"
 other = "Remove {{.Name}}"
 
-[search.term]
+[field.search.term]
 description = "The search page's own search-box sr-only label"
 other = "Search term"
 

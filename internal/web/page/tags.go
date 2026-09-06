@@ -22,7 +22,7 @@ import (
 // OpTagsPage is contracts/pages.md's /tags.
 const OpTagsPage = "tagsPage"
 
-const tagsListTitleID = "page.tagsPage.title"
+const tagsListTitleID = "page.tags.title"
 
 // TagHandlers is /tags' contribution to the route table.
 func TagHandlers(resolve api.TagResolve) (httproute.Handlers, error) {

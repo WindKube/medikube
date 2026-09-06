@@ -106,6 +106,15 @@ func Supported() []Language {
 // IsSupported reports whether code's base language matches a shipped
 // language, region stripped (pl-PL -> pl).
 func IsSupported(code string) bool {
+	ensureBundle()
+
+	return isSupported(supported, code)
+}
+
+// isSupported is IsSupported's logic against an explicit langs list, so a
+// test can check it against a fixture without touching the package-level
+// bundle (add_language_test.go).
+func isSupported(langs []Language, code string) bool {
 	tag, err := language.Parse(code)
 	if err != nil {
 		return false
@@ -113,7 +122,7 @@ func IsSupported(code string) bool {
 
 	base, _ := tag.Base()
 
-	for _, l := range Supported() {
+	for _, l := range langs {
 		lBase, _ := l.Tag.Base()
 		if lBase == base {
 			return true
@@ -136,14 +145,21 @@ type Localizer struct {
 func Resolve(accountLocale, acceptLanguage string) *Localizer {
 	ensureBundle()
 
-	if accountLocale != "" && IsSupported(accountLocale) {
-		return newLocalizer(accountLocale)
+	return resolve(bundle, supported, english, accountLocale, acceptLanguage)
+}
+
+// resolve is Resolve's logic against an explicit bundle, langs and fallback,
+// so a test can exercise it against a fixture bundle without touching the
+// package-level bundle (add_language_test.go).
+func resolve(b *goi18n.Bundle, langs []Language, fallback *Localizer, accountLocale, acceptLanguage string) *Localizer {
+	if accountLocale != "" && isSupported(langs, accountLocale) {
+		return newLocalizerFrom(b, accountLocale)
 	}
 
 	// English first, so it is the matcher's default when nothing else fits.
-	tags := make([]language.Tag, 0, len(supported)+1)
+	tags := make([]language.Tag, 0, len(langs)+1)
 	tags = append(tags, language.English)
-	for _, l := range supported {
+	for _, l := range langs {
 		if l.Tag != language.English {
 			tags = append(tags, l.Tag)
 		}
@@ -154,14 +170,14 @@ func Resolve(accountLocale, acceptLanguage string) *Localizer {
 			matcher := language.NewMatcher(tags)
 			_, index, _ := matcher.Match(parsed...)
 
-			return newLocalizer(tags[index].String())
+			return newLocalizerFrom(b, tags[index].String())
 		}
 	}
 
-	return english
+	return fallback
 }
 
-func newLocalizer(tag string) *Localizer {
+func newLocalizerFrom(b *goi18n.Bundle, tag string) *Localizer {
 	parsed, err := language.Parse(tag)
 	if err != nil {
 		parsed = language.English
@@ -169,7 +185,7 @@ func newLocalizer(tag string) *Localizer {
 
 	base, _ := parsed.Base()
 
-	return &Localizer{inner: goi18n.NewLocalizer(bundle, base.String(), language.English.String()), Tag: parsed}
+	return &Localizer{inner: goi18n.NewLocalizer(b, base.String(), language.English.String()), Tag: parsed}
 }
 
 type contextKey struct{}

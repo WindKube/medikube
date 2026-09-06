@@ -52,7 +52,7 @@ func (p *accountPages) settings(e *core.RequestEvent, actor access.Actor) error 
 			ResendOn:       p.links.post(p.links.verify),
 			Name:           user.Name,
 			UnitSystems:    unitSystemOptions(ctx, user.UnitSystem),
-			Locales:        localeOptions(user.Locale),
+			Locales:        localeOptions(i18n.Supported(), user.Locale),
 			Locale:         user.Locale,
 			DateFormats:    dateFormatOptions(ctx, user.DateFormat),
 			Themes:         themeOptions(ctx, user.Theme),
@@ -129,11 +129,13 @@ func optionsOf[T ~string](values []T, selected T, labels map[T]string) []setting
 	return rendered
 }
 
-func localeOptions(selected string) []settings.Option {
+// localeOptions takes langs rather than calling i18n.Supported() itself, so
+// a test can assert a fixture language is offered without any package-level
+// bundle to swap out.
+func localeOptions(langs []i18n.Language, selected string) []settings.Option {
 	base, _, _ := strings.Cut(selected, "-")
 	base = strings.ToLower(base)
 
-	langs := i18n.Supported()
 	rendered := make([]settings.Option, 0, len(langs))
 
 	for _, lang := range langs {

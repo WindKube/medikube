@@ -11,13 +11,13 @@ import (
 )
 
 templ TreatmentList(props TreatmentListProps) {
-	<section id={ ids.RecordList(kind.Treatment) } aria-label={ i18n.T(ctx, "page.treatmentListPage.title") } class="flex flex-col">
+	<section id={ ids.RecordList(kind.Treatment) } aria-label={ i18n.T(ctx, "page.treatments.title") } class="flex flex-col">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<h1
 				id={ ids.RecordListHeading(kind.Treatment) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ i18n.T(ctx, "page.treatmentListPage.title") }</h1>
+			>{ i18n.T(ctx, "page.treatments.title") }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }

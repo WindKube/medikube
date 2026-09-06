@@ -26,7 +26,7 @@ import (
 // OpSearchPage is contracts/pages.md P: /search, landmark `search`.
 const OpSearchPage = "searchPage"
 
-const searchPageTitleID = "page.searchPage.title"
+const searchPageTitleID = "page.search.title"
 
 // SearchHandlers is the search page's contribution to the route table.
 func SearchHandlers(resolve api.SearchResolve, patients api.PatientResolve) (httproute.Handlers, error) {
