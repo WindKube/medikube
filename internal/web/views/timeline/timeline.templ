@@ -1,0 +1,95 @@
+// Package timeline is US9's one chronological view across every registered
+// kind (FR-076, FR-077, contracts/pages.md §3, research D-06).
+package timeline
+
+import (
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/shared"
+)
+
+const (
+	landmark          = "Timeline"
+	choosePersonTitle = "Choose a person"
+	choosePersonBody  = "Pick who this timeline is for."
+	undatedGroupLabel = "Date not recorded"
+)
+
+// EntryView is one timeline row: its kind, its identifying summary and its
+// date, or its explicit absence (FR-076, FR-077).
+type EntryView struct {
+	ID    string
+	Kind  string
+	Title string
+	Date  string
+	Href  string
+}
+
+// Group is one date the timeline groups entries under. Label is the calendar
+// date rendered for people, or undatedGroupLabel for the one group that has
+// none (research D-06).
+type Group struct {
+	Label   string
+	Entries []EntryView
+}
+
+// Props is the whole of the timeline page's own landmark, in the three states
+// contracts/pages.md and FR-080 both require: choose a person, nothing to
+// show, and the interleaved groups themselves.
+type Props struct {
+	ChoosePerson bool
+
+	Groups   []Group
+	Criteria shared.CriteriaProps
+	Empty    *shared.EmptyStateProps
+	NextHref string
+}
+
+templ Timeline(props Props) {
+	<section id="timeline" aria-label={ landmark } class="flex flex-col gap-4">
+		<h1
+			tabindex="-1"
+			class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+		>{ landmark }</h1>
+		if props.ChoosePerson {
+			<div class="mt-6">
+				@components.EmptyState(components.EmptyStateProps{
+					ID:    "timeline-choose-person",
+					Title: choosePersonTitle,
+					Body:  choosePersonBody,
+				})
+			</div>
+		} else {
+			if len(props.Criteria.Chips) > 0 {
+				@shared.Criteria(props.Criteria)
+			}
+			if props.Empty != nil {
+				<div class="mt-6">
+					@shared.EmptyState(*props.Empty)
+				</div>
+			} else {
+				<div id="timeline-groups" class="flex flex-col gap-6">
+					for _, group := range props.Groups {
+						<div>
+							<h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{ group.Label }</h2>
+							<ul class="flex flex-col gap-2">
+								for _, entry := range group.Entries {
+									<li
+										id={ entry.ID }
+										class="flex items-baseline gap-3 rounded-md border border-slate-200 px-3 py-2 dark:border-slate-800"
+									>
+										<span class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{ entry.Kind }</span>
+										<a
+											href={ entry.Href }
+											class="text-teal-800 underline underline-offset-2 hover:text-teal-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-teal-300 dark:hover:text-teal-200"
+										>{ entry.Title }</a>
+									</li>
+								}
+							</ul>
+						</div>
+					}
+				</div>
+				@components.Pagination(components.PaginationProps{ID: "timeline-pager", NextHref: props.NextHref})
+			}
+		}
+	</section>
+}

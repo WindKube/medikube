@@ -34,13 +34,16 @@ type AllergySummary struct {
 	ID   string `json:"id"`
 	Kind string `json:"kind"`
 
-	Allergen  string  `json:"allergen"`
-	Severity  string  `json:"severity"`
-	Status    string  `json:"status"`
-	OnsetOn   *string `json:"onset_on"`
-	Critical  bool    `json:"critical"`
-	UpdatedAt string  `json:"updated_at"`
+	Allergen  string   `json:"allergen"`
+	Severity  string   `json:"severity"`
+	Status    string   `json:"status"`
+	OnsetOn   *string  `json:"onset_on"`
+	Critical  bool     `json:"critical"`
+	UpdatedAt string   `json:"updated_at"`
+	Basis     []string `json:"basis"`
 }
+
+func (s *AllergySummary) SetBasis(basis []string) { s.Basis = basis }
 
 type Allergy struct {
 	AllergySummary
@@ -117,9 +120,12 @@ func AllergySearchFields(body any) (title, text string) {
 }
 
 // AllergyBasis is FR-018's critical narrowing (contracts/pages.md §3.5,
-// `?critical=true`): a row's own basis, not a query-level fact.
+// `?critical=true`): a row's own basis, not a query-level fact. It reads the
+// Summary shape, because that is what a list row carries
+// (contracts/records-clinical.md §1) — Allergy embeds it, so a detail body
+// satisfies this too.
 func AllergyBasis(body any, _ records.Criteria) []string {
-	found, ok := body.(*Allergy)
+	found, ok := body.(*AllergySummary)
 	if !ok || !found.Critical {
 		return nil
 	}

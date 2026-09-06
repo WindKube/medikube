@@ -35,12 +35,15 @@ type ConditionSummary struct {
 	ID   string `json:"id"`
 	Kind string `json:"kind"`
 
-	Diagnosis string  `json:"diagnosis"`
-	Status    string  `json:"status"`
-	Severity  string  `json:"severity,omitempty"`
-	OnsetOn   *string `json:"onset_on"`
-	UpdatedAt string  `json:"updated_at"`
+	Diagnosis string   `json:"diagnosis"`
+	Status    string   `json:"status"`
+	Severity  string   `json:"severity,omitempty"`
+	OnsetOn   *string  `json:"onset_on"`
+	UpdatedAt string   `json:"updated_at"`
+	Basis     []string `json:"basis"`
 }
+
+func (s *ConditionSummary) SetBasis(basis []string) { s.Basis = basis }
 
 type Condition struct {
 	ConditionSummary
@@ -126,9 +129,11 @@ func ConditionSearchFields(body any) (title, text string) {
 }
 
 // ConditionBasis is FR-078's `?active=true` narrowing: active and chronic
-// conditions share the "active" basis.
+// conditions share the "active" basis. It reads the Summary shape, because
+// that is what a list row carries (contracts/records-clinical.md §1) —
+// Condition embeds it, so a detail body satisfies this too.
 func ConditionBasis(body any, criteria records.Criteria) []string {
-	found, ok := body.(*Condition)
+	found, ok := body.(*ConditionSummary)
 	if !ok {
 		return nil
 	}

@@ -45,7 +45,7 @@ func Insurances() []clinical.Insurance {
 			Status: clinical.InsuranceStatusActive, IsPrimary: true,
 		},
 		{
-			ID: InsuranceExpiringID, PatientID: accountAPatientSelfID,
+			ID: InsuranceExpiringID, PatientID: accountAPatientParentID,
 			Type: clinical.InsuranceTypeDental, Company: "Riverbend Dental Trust",
 			MemberName: "Amara Okonkwo", MemberID: "RDT-224917",
 			EffectiveOn: date(2025, 1, 1), ExpiresOn: daysFromNow(45),

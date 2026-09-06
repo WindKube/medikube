@@ -93,6 +93,15 @@ type Route struct {
 	// time CI ran, and the expired-link state is what FR-074 requires anyway.
 	SmokeURL string
 
+	// SmokeVariants is US9's addition (contracts/pages.md §3.5): additional
+	// concrete URLs on THIS route the browser gate must also visit, each
+	// already bound — no unbound "{param}" — exactly like SmokeURL. It is how
+	// the seven status views enter the gate without becoming seven more page
+	// routes (research L2): they are query strings on an already-registered
+	// route, and this is where that route says so. Pages only, and never
+	// counted toward the page total `medikube routes` reports.
+	SmokeVariants []string
+
 	// Middlewares are bound to this route alone, at the moment it is
 	// registered.
 	//
@@ -430,6 +439,10 @@ func (r *Registry) describe(route Route) {
 		if route.SmokeURL != "" {
 			panic(fmt.Sprintf("httproute: %s is not a page but declares a SmokeURL; only pages are browser-gate targets", identify(route)))
 		}
+
+		if len(route.SmokeVariants) > 0 {
+			panic(fmt.Sprintf("httproute: %s is not a page but declares SmokeVariants; only pages are browser-gate targets", identify(route)))
+		}
 	}
 
 	r.opIDs[route.OpID] = struct{}{}
@@ -473,6 +486,10 @@ func (r *Registry) describePage(route Route) {
 	}
 
 	assertOpenable("page "+route.OpID, route.SmokeURL)
+
+	for _, variant := range route.SmokeVariants {
+		assertOpenable("page "+route.OpID+"'s smoke variant", variant)
+	}
 }
 
 func assertOpenable(who, smokeURL string) {

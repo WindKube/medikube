@@ -43,12 +43,15 @@ type ProcedureSummary struct {
 	ID   string `json:"id"`
 	Kind string `json:"kind"`
 
-	Name       string  `json:"name"`
-	Status     string  `json:"status"`
-	OccurredOn *string `json:"occurred_on"`
-	Outcome    string  `json:"outcome,omitempty"`
-	UpdatedAt  string  `json:"updated_at"`
+	Name       string   `json:"name"`
+	Status     string   `json:"status"`
+	OccurredOn *string  `json:"occurred_on"`
+	Outcome    string   `json:"outcome,omitempty"`
+	UpdatedAt  string   `json:"updated_at"`
+	Basis      []string `json:"basis"`
 }
+
+func (s *ProcedureSummary) SetBasis(basis []string) { s.Basis = basis }
 
 type Procedure struct {
 	ProcedureSummary
@@ -160,9 +163,11 @@ func ProcedureSearchFields(body any) (title, text string) {
 }
 
 // ProcedureBasis is FR-026's row-level distinction, read off the DTO's own
-// Status member.
+// Status member. It reads the Summary shape, because that is what a list row
+// carries (contracts/records-clinical.md §1) — Procedure embeds it, so a
+// detail body satisfies this too.
 func ProcedureBasis(body any, _ records.Criteria) []string {
-	p, ok := body.(*Procedure)
+	p, ok := body.(*ProcedureSummary)
 	if !ok {
 		return nil
 	}

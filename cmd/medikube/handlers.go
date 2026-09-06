@@ -37,6 +37,7 @@ import (
 	searchsvc "medikube/internal/service/search"
 	"medikube/internal/service/symptom"
 	tagsvc "medikube/internal/service/tag"
+	timelinesvc "medikube/internal/service/timeline"
 	"medikube/internal/service/treatment"
 	"medikube/internal/service/vitals"
 	"medikube/internal/store"
@@ -59,6 +60,7 @@ import (
 	searchstore "medikube/internal/store/search"
 	symptomstore "medikube/internal/store/symptom"
 	tagstore "medikube/internal/store/tag"
+	timelinestore "medikube/internal/store/timeline"
 	treatmentstore "medikube/internal/store/treatment"
 	vitalsstore "medikube/internal/store/vitals"
 	"medikube/internal/web"
@@ -84,6 +86,7 @@ func operations(
 	registry *records.Registry,
 	resolveDirectory func() (directoryServices, error),
 	tagResolve api.TagResolve,
+	timelineResolve page.TimelineResolve,
 	hub *realtime.Hub,
 	measurements *obs.Metrics,
 	tracing *obs.Tracing,
@@ -111,7 +114,7 @@ func operations(
 	patientResolve, photoResolve := patientFamily(app, cfg, registry, measurements, tracing)
 
 	// The real ones win. This is the only line each later group touches.
-	served, err := wired(resolve, searchResolve, patientResolve, hub)
+	served, err := wired(resolve, searchResolve, patientResolve, timelineResolve, hub)
 	if err != nil {
 		return nil, err
 	}
@@ -323,7 +326,10 @@ func assetHandlers() httproute.Handlers {
 // can be assembled from the kind registry alone. The record family, the two
 // record pages and the Datastar stream are in; the account surface needs the
 // application and is assembled by operations above.
-func wired(resolve api.Resolve, searchResolve api.SearchResolve, patients api.PatientResolve, hub *realtime.Hub) (httproute.Handlers, error) {
+func wired(
+	resolve api.Resolve, searchResolve api.SearchResolve, patients api.PatientResolve,
+	timelineResolve page.TimelineResolve, hub *realtime.Hub,
+) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
 	records, err := api.Handlers(resolve)
@@ -401,6 +407,11 @@ func wired(resolve api.Resolve, searchResolve api.SearchResolve, patients api.Pa
 		return nil, err
 	}
 
+	timelinePages, err := page.TimelineHandlers(timelineResolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
 	maps.Copy(table, records)
 	maps.Copy(table, pages)
 	maps.Copy(table, immunizationPages)
@@ -413,6 +424,7 @@ func wired(resolve api.Resolve, searchResolve api.SearchResolve, patients api.Pa
 	maps.Copy(table, procedurePages)
 	maps.Copy(table, treatmentPages)
 	maps.Copy(table, familyMemberPages)
+	maps.Copy(table, timelinePages)
 	maps.Copy(table, streams)
 	maps.Copy(table, searchOps)
 	maps.Copy(table, searchPages)
@@ -576,22 +588,26 @@ func patientFamily(
 // registration that cannot be built is a boot failure and not a 500 on
 // somebody's first request.
 //
-// recordFamilyResult is the once-built tuple api.Resolve, api.TagResolve and
-// api.SearchResolve each read a part of: sync.OnceValues would need three
-// separate calls to build the handler, the tag service and the search
-// service otherwise, and registerKinds wires the tag checker into the
-// registry before any kind registers (FR-064) — calling it more than once
-// would build a second tag service the checker never sees.
+// recordFamilyResult is the once-built tuple api.Resolve, api.TagResolve,
+// api.SearchResolve and page.TimelineResolve each read a part of:
+// sync.OnceValues would need four separate calls to build the handler, the
+// tag service, the search service and the timeline service otherwise, and
+// registerKinds wires the tag checker into the registry before any kind
+// registers (FR-064) — calling it more than once would build a second tag
+// service the checker never sees.
 type recordFamilyResult struct {
-	handler *records.Handler
-	tags    *tagsvc.Service
-	search  *searchsvc.Service
-	kinds   []kind.Kind
+	handler  *records.Handler
+	tags     *tagsvc.Service
+	search   *searchsvc.Service
+	kinds    []kind.Kind
+	timeline *timelinesvc.Service
 }
 
-func recordFamily(app core.App, registry *records.Registry, hub *realtime.Hub) (api.Resolve, api.TagResolve, api.SearchResolve) {
+func recordFamily(
+	app core.App, registry *records.Registry, hub *realtime.Hub,
+) (api.Resolve, api.TagResolve, api.SearchResolve, page.TimelineResolve) {
 	once := sync.OnceValues(func() (recordFamilyResult, error) {
-		tags, err := registerKinds(app, registry, hub)
+		tags, timelineReader, err := registerKinds(app, registry, hub)
 		if err != nil {
 			return recordFamilyResult{}, err
 		}
@@ -601,7 +617,18 @@ func recordFamily(app core.App, registry *records.Registry, hub *realtime.Hub) (
 			return recordFamilyResult{}, err
 		}
 
-		return recordFamilyResult{handler: records.NewHandler(registry), tags: tags, search: search, kinds: kinds}, nil
+		timeline, err := timelinesvc.New(registry, timelineReader)
+		if err != nil {
+			return recordFamilyResult{}, err
+		}
+
+		return recordFamilyResult{
+			handler:  records.NewHandler(registry),
+			tags:     tags,
+			search:   search,
+			kinds:    kinds,
+			timeline: timeline,
+		}, nil
 	})
 
 	resolve := func() (*records.Handler, error) {
@@ -622,7 +649,13 @@ func recordFamily(app core.App, registry *records.Registry, hub *realtime.Hub) (
 		return result.search, result.kinds, err
 	}
 
-	return resolve, tagResolve, searchResolve
+	timelineResolve := func() (*timelinesvc.Service, error) {
+		result, err := once()
+
+		return result.timeline, err
+	}
+
+	return resolve, tagResolve, searchResolve, timelineResolve
 }
 
 // buildSearchService wires US8's read side, once registerKinds has finished:
@@ -682,60 +715,60 @@ func buildSearchService(app core.App, registry *records.Registry, tags *tagsvc.S
 
 // registerKinds is the extension point phases 002 through 006 add a kind to.
 // One call per kind, seven consumers wired by it, and no route.
-func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) (*tagsvc.Service, error) {
+func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) (*tagsvc.Service, timelinesvc.Reader, error) {
 	secret, err := store.CursorSecret(app, "")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	cursors, err := store.NewCursorCodec(secret)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	owners, err := store.NewOwners(app)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	trail, err := auditstore.New(app)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	patientOwners, err := store.NewPatientOwners(app)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	authorizer, err := accessservice.New(owners, accessservice.WithPatients(patientOwners, auditor))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	views, err := page.NewMedicationViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	repository, err := medicationstore.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	searchRepo, err := searchstore.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	indexer, err := searchsvc.NewIndexer(searchRepo)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	registry.SetIndexer(indexer)
@@ -757,12 +790,12 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		return collections
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	tagService, err := tagsvc.New(tagRepository, tagRepository, tagRepository, tagsvc.DefaultAuthorizer, auditor)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	registry.SetTagChecker(tagService)
@@ -776,17 +809,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.MedicationSearchFields,
 		Basis:        api.MedicationBasis,
 	}); medicationRegisterErr != nil {
-		return nil, medicationRegisterErr
+		return nil, nil, medicationRegisterErr
 	}
 
 	insuranceViews, err := page.NewInsuranceViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	insuranceRepository, err := insurancestore.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	err = insurance.Register(registry, insurance.Wiring{
@@ -799,17 +832,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Basis:        api.InsuranceBasis,
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	equipmentViews, err := page.NewEquipmentViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	equipmentRepository, err := equipmentstore.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err = equipment.Register(registry, equipment.Wiring{
@@ -821,17 +854,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.EquipmentSearchFields,
 		Basis:        api.EquipmentBasis,
 	}); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	allergyViews, err := page.NewAllergyViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	allergyRepo, err := allergystore.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err = kinds.RegisterAllergy(registry, kinds.AllergyWiring{
@@ -843,17 +876,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.AllergySearchFields,
 		Basis:        api.AllergyBasis,
 	}); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	conditionViews, err := page.NewConditionViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	conditionRepo, err := conditionstore.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err = kinds.RegisterCondition(registry, kinds.ConditionWiring{
@@ -865,17 +898,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.ConditionSearchFields,
 		Basis:        api.ConditionBasis,
 	}); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	emergencyContactViews, err := page.NewEmergencyContactViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	emergencyContactRepo, err := emergencycontactstore.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err = kinds.RegisterEmergencyContact(registry, kinds.EmergencyContactWiring{
@@ -887,17 +920,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.EmergencyContactSearchFields,
 		Basis:        api.EmergencyContactBasis,
 	}); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	immunizationRepo, err := storeimmunization.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	immunizationViews, err := page.NewImmunizationViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err = kinds.Register(registry, kinds.Wiring{
@@ -909,17 +942,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.ImmunizationSearchFields,
 		Basis:        api.ImmunizationBasis,
 	}); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	injuryRepo, err := storeinjury.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	injuryViews, err := page.NewInjuryViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err = kinds.RegisterInjury(registry, kinds.InjuryWiring{
@@ -931,22 +964,22 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.InjurySearchFields,
 		Basis:        api.InjuryBasis,
 	}); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	identityRepo, err := storeidentity.NewRepository(app)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	identityAuth, err := storeidentity.NewAuthenticator(app)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	mailer, err := pb.NewMailer(app)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	identityService, err := serviceidentity.New(serviceidentity.Config{
@@ -957,17 +990,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		Clock:         serviceidentity.SystemClock{},
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	symptomViews, err := page.NewSymptomViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	symptomRepo, err := symptomstore.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if symptomRegisterErr := symptom.Register(registry, symptom.Wiring{
@@ -979,17 +1012,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.SymptomSearchFields,
 		Basis:        api.SymptomBasis,
 	}); symptomRegisterErr != nil {
-		return nil, symptomRegisterErr
+		return nil, nil, symptomRegisterErr
 	}
 
 	vitalsViews, err := page.NewVitalsViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	vitalsRepo, err := vitalsstore.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if vitalsRegisterErr := vitals.Register(registry, vitals.Wiring{
@@ -1002,17 +1035,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.VitalsSearchFields,
 		Basis:        api.VitalsBasis,
 	}); vitalsRegisterErr != nil {
-		return nil, vitalsRegisterErr
+		return nil, nil, vitalsRegisterErr
 	}
 
 	encounterViews, err := page.NewEncounterViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	encounterRepo, err := encounterstore.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err = encounter.Register(registry, encounter.Wiring{
@@ -1024,17 +1057,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.EncounterSearchFields,
 		Basis:        api.EncounterBasis,
 	}); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	procedureViews, err := page.NewProcedureViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	procedureRepo, err := procedurestore.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err = procedure.Register(registry, procedure.Wiring{
@@ -1046,17 +1079,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.ProcedureSearchFields,
 		Basis:        api.ProcedureBasis,
 	}); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	treatmentViews, err := page.NewTreatmentViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	treatmentRepo, err := treatmentstore.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err = treatment.Register(registry, treatment.Wiring{
@@ -1068,17 +1101,17 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.TreatmentSearchFields,
 		Basis:        api.TreatmentBasis,
 	}); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	familyMemberViews, err := page.NewFamilyMemberViews()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	familyMemberRepo, err := familymemberstore.New(app, cursors)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if familyMemberRegisterErr := familymember.Register(registry, familymember.Wiring{
@@ -1090,50 +1123,57 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		SearchFields: api.FamilyMemberSearchFields,
 		Basis:        api.FamilyMemberBasis,
 	}); familyMemberRegisterErr != nil {
-		return nil, familyMemberRegisterErr
+		return nil, nil, familyMemberRegisterErr
 	}
 
 	// FR-036's three rows, written by the post-commit hooks and by no handler
 	// (research D-21). Bound after the kinds are registered, so it audits
 	// exactly what this build serves and nothing else.
-	if err := pb.BindRecordAudit(app, pb.RecordAudit{
+	if recordAuditErr := pb.BindRecordAudit(app, pb.RecordAudit{
 		Trail:   auditor,
 		Kinds:   registry.Kinds(),
 		Actor:   web.ActorFrom,
 		Request: obs.CorrelationID,
-	}); err != nil {
-		return nil, err
+	}); recordAuditErr != nil {
+		return nil, nil, recordAuditErr
 	}
 
 	// Patients are not a kind.Kind (research D-05), so their rows are bound
 	// separately rather than through registry.Kinds().
-	if err := pb.BindPatientAudit(app, pb.PatientAudit{
+	if patientAuditErr := pb.BindPatientAudit(app, pb.PatientAudit{
 		Trail:   auditor,
 		Actor:   web.ActorFrom,
 		Request: obs.CorrelationID,
-	}); err != nil {
-		return nil, err
+	}); patientAuditErr != nil {
+		return nil, nil, patientAuditErr
 	}
 
 	// FR-036's sign-in rows, from OnRecordAuthRequest and never from a handler
 	// (research D-14): PocketBase's native auth route stays reachable, so a
 	// handler-side audit would leave one of the two paths to a session
 	// unrecorded.
-	if err := pb.BindAuthAudit(app, pb.AuthAudit{
+	if authAuditErr := pb.BindAuthAudit(app, pb.AuthAudit{
 		Trail:   auditor,
 		Request: obs.CorrelationID,
-	}); err != nil {
-		return nil, err
+	}); authAuditErr != nil {
+		return nil, nil, authAuditErr
 	}
 
 	// contracts/streams.md's publisher, bound to the same three post-commit
 	// hooks and to the same kinds: a live view of a kind this build does not
 	// serve is a live view of nothing.
-	if err := pb.BindRecordStream(app, pb.RecordStream{Hub: hub, Kinds: registry.Kinds()}); err != nil {
-		return nil, err
+	if streamErr := pb.BindRecordStream(app, pb.RecordStream{Hub: hub, Kinds: registry.Kinds()}); streamErr != nil {
+		return nil, nil, streamErr
 	}
 
-	return tagService, nil
+	// US9's timeline reads the same cursor codec every other repository
+	// registered above does.
+	timelineReader, err := timelinestore.New(app, cursors)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return tagService, timelineReader, nil
 }
 
 // directoryServices is the two services practitioners.md and facilities.md's
@@ -1243,6 +1283,7 @@ func unimplemented() []string {
 		func() (*records.Handler, error) { return nil, nil },
 		func() (*searchsvc.Service, []kind.Kind, error) { return nil, nil, nil },
 		func() (*patient.Service, error) { return nil, nil },
+		func() (*timelinesvc.Service, error) { return nil, nil },
 		realtime.New(),
 	)
 	if err != nil {

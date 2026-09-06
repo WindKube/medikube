@@ -64,8 +64,11 @@ type VitalsSummary struct {
 	// present (FR-037); it is never a member of Create or Patch.
 	Bmi *float64 `json:"bmi,omitempty"`
 
-	UpdatedAt string `json:"updated_at"`
+	UpdatedAt string   `json:"updated_at"`
+	Basis     []string `json:"basis"`
 }
+
+func (s *VitalsSummary) SetBasis(basis []string) { s.Basis = basis }
 
 type Vitals struct {
 	VitalsSummary

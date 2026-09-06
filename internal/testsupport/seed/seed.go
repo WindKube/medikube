@@ -589,7 +589,7 @@ func Injuries() []clinical.Injury {
 			Name: "Sprained ankle", Type: clinical.InjuryTypeSprain,
 			BodyPart: "ankle", Laterality: clinical.LateralityRight,
 			OccurredOn: date(2025, 8, 20), Mechanism: "fell while running",
-			Severity: clinical.SeverityModerate, Status: clinical.ConditionStatusHealing,
+			Severity: clinical.SeverityModerate, Status: clinical.ConditionStatusResolved,
 		},
 		{
 			ID: "mkinjamara00002", PatientID: accountAPatientSelfID,

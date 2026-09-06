@@ -48,11 +48,14 @@ type TreatmentSummary struct {
 	ID   string `json:"id"`
 	Kind string `json:"kind"`
 
-	Name      string  `json:"name"`
-	Status    string  `json:"status,omitempty"`
-	StartedOn *string `json:"started_on"`
-	UpdatedAt string  `json:"updated_at"`
+	Name      string   `json:"name"`
+	Status    string   `json:"status,omitempty"`
+	StartedOn *string  `json:"started_on"`
+	UpdatedAt string   `json:"updated_at"`
+	Basis     []string `json:"basis"`
 }
+
+func (s *TreatmentSummary) SetBasis(basis []string) { s.Basis = basis }
 
 type Treatment struct {
 	TreatmentSummary

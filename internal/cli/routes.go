@@ -20,19 +20,25 @@ type RouteRow struct {
 	Auth     string `json:"auth"`
 	Landmark string `json:"landmark,omitempty"`
 	SmokeURL string `json:"smoke_url,omitempty"`
-	Summary  string `json:"summary"`
+	// SmokeVariants is US9's addition (contracts/pages.md §3.5): the status
+	// views a page's own SmokeURL narrows into, each a concrete URL the
+	// browser gate also visits, emitted inside this route's own row rather
+	// than as separate rows — they are not pages (research L2).
+	SmokeVariants []string `json:"smoke_variants,omitempty"`
+	Summary       string   `json:"summary"`
 }
 
 func rowOf(route httproute.Route) RouteRow {
 	return RouteRow{
-		OpID:     route.OpID,
-		Method:   route.Method,
-		Path:     route.Path,
-		Kind:     string(route.Kind),
-		Auth:     string(route.Auth),
-		Landmark: route.Landmark,
-		SmokeURL: route.SmokeURL,
-		Summary:  route.Summary,
+		OpID:          route.OpID,
+		Method:        route.Method,
+		Path:          route.Path,
+		Kind:          string(route.Kind),
+		Auth:          string(route.Auth),
+		Landmark:      route.Landmark,
+		SmokeURL:      route.SmokeURL,
+		SmokeVariants: route.SmokeVariants,
+		Summary:       route.Summary,
 	}
 }
 

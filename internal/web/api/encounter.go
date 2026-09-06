@@ -39,12 +39,15 @@ type EncounterSummary struct {
 	ID   string `json:"id"`
 	Kind string `json:"kind"`
 
-	Reason     string  `json:"reason"`
-	OccurredOn *string `json:"occurred_on"`
-	VisitType  string  `json:"visit_type,omitempty"`
-	Priority   string  `json:"priority,omitempty"`
-	UpdatedAt  string  `json:"updated_at"`
+	Reason     string   `json:"reason"`
+	OccurredOn *string  `json:"occurred_on"`
+	VisitType  string   `json:"visit_type,omitempty"`
+	Priority   string   `json:"priority,omitempty"`
+	UpdatedAt  string   `json:"updated_at"`
+	Basis      []string `json:"basis"`
 }
+
+func (s *EncounterSummary) SetBasis(basis []string) { s.Basis = basis }
 
 // Encounter is what the detail operations return.
 type Encounter struct {

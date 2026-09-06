@@ -238,18 +238,20 @@ func build(cfg config.Config, log zerolog.Logger) (*pocketbase.PocketBase, *di.C
 	// everything else the container holds: a hub nobody closes leaves every
 	// open stream's watcher goroutine parked until the process exits.
 	kindRegistry := records.NewRegistry()
-	resolve, tagResolve, searchResolve := recordFamily(app, kindRegistry, container.Hub())
+	resolve, tagResolve, searchResolve, timelineResolve := recordFamily(app, kindRegistry, container.Hub())
 	resolveDirectory := directoryFamily(app, destinations.measurements)
 
 	readiness := obs.NewReadiness()
 	startedAt := time.Now()
 
-	table, err := operations(app, cfg, resolve, searchResolve, kindRegistry, resolveDirectory, tagResolve, container.Hub(), destinations.measurements, destinations.tracing, api.HealthDeps{
-		Version:   version,
-		StartedAt: startedAt,
-		Readiness: readiness,
-		Pending:   migrations.Pending,
-	})
+	table, err := operations(
+		app, cfg, resolve, searchResolve, kindRegistry, resolveDirectory, tagResolve, timelineResolve,
+		container.Hub(), destinations.measurements, destinations.tracing, api.HealthDeps{
+			Version:   version,
+			StartedAt: startedAt,
+			Readiness: readiness,
+			Pending:   migrations.Pending,
+		})
 	if err != nil {
 		return nil, nil, nil, shutdownAfter(container, fmt.Errorf("wire the MediKube handlers: %w", err))
 	}

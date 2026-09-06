@@ -202,12 +202,19 @@ func (h *recordHandlers) listOfKind(e *core.RequestEvent, actor access.Actor) er
 		return err
 	}
 
+	criteria, err := handler.ResolveCriteria(segment, query)
+	if err != nil {
+		return err
+	}
+
 	page, err := handler.ListOfKind(e.Request.Context(), actor, segment, query)
 	if err != nil {
 		return web.OwnerScoped(err)
 	}
 
-	return h.writePage(e, page)
+	applyBasis(entry, criteria, page.Items)
+
+	return h.writeKindPage(e, page, buildCriteria(query.PatientID, criteria))
 }
 
 // KindQuery turns one request into one kind's list query: the shared parameters
@@ -528,6 +535,33 @@ func (h *recordHandlers) writePage(e *core.RequestEvent, page domain.Page[record
 	envelope := domain.NewPage(bodies, page.NextCursor)
 	if page.Total != nil {
 		envelope = envelope.WithTotal(*page.Total)
+	}
+
+	e.Response.Header().Set("Cache-Control", recordCacheControl)
+
+	return web.WriteJSON(e, http.StatusOK, envelope)
+}
+
+// pageEnvelope is writeKindPage's wire shape: a plain list page plus the
+// `criteria` the request resolved to (contracts/records-clinical.md §1). The
+// cross-kind list has no named filters of its own and keeps writePage's plain
+// envelope instead.
+type pageEnvelope struct {
+	domain.Page[any]
+	Criteria criteriaEnvelope `json:"criteria"`
+}
+
+// writeKindPage is writePage plus the resolved `criteria` echo that only a
+// single kind's list makes sense of.
+func (h *recordHandlers) writeKindPage(e *core.RequestEvent, page domain.Page[records.Record], criteria criteriaEnvelope) error {
+	bodies := make([]any, 0, len(page.Items))
+	for _, item := range page.Items {
+		bodies = append(bodies, item.Body)
+	}
+
+	envelope := pageEnvelope{Page: domain.NewPage(bodies, page.NextCursor), Criteria: criteria}
+	if page.Total != nil {
+		envelope.Page = envelope.WithTotal(*page.Total)
 	}
 
 	e.Response.Header().Set("Cache-Control", recordCacheControl)
