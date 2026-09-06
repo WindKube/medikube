@@ -14,6 +14,7 @@ import (
 	"medikube/internal/domain/kind"
 	domainsearch "medikube/internal/domain/search"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	searchsvc "medikube/internal/service/search"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -24,7 +25,7 @@ import (
 // OpSearchPage is contracts/pages.md P: /search, landmark `search`.
 const OpSearchPage = "searchPage"
 
-const searchPageTitle = "Search"
+const searchPageTitleID = "page.searchPage.title"
 
 // SearchHandlers is the search page's contribution to the route table.
 func SearchHandlers(resolve api.SearchResolve, patients api.PatientResolve) (httproute.Handlers, error) {
@@ -61,6 +62,8 @@ func (p *searchPages) show(e *core.RequestEvent, actor access.Actor) error {
 	if !actor.Authenticated() {
 		return fmt.Errorf("page: the page needs a session: %w", domain.ErrForbidden)
 	}
+
+	web.Localize(e)
 
 	values := e.Request.URL.Query()
 	patientID := values.Get(api.ParamPatient)
@@ -129,6 +132,8 @@ func (p *searchPages) kindChips(e *core.RequestEvent, values url.Values) []views
 		return nil
 	}
 
+	ctx := e.Request.Context()
+
 	chips := make([]views.Chip, 0, len(segments))
 
 	for i, segment := range segments {
@@ -141,7 +146,7 @@ func (p *searchPages) kindChips(e *core.RequestEvent, values url.Values) []views
 		remaining = append(remaining, segments[:i]...)
 		remaining = append(remaining, segments[i+1:]...)
 
-		chips = append(chips, views.Chip{Label: kindLabel(k), Href: withQuery(e, func(q url.Values) {
+		chips = append(chips, views.Chip{Label: kindNoun(ctx, k), Href: withQuery(e, func(q url.Values) {
 			if len(remaining) == 0 {
 				q.Del(api.ParamKinds)
 			} else {
@@ -202,6 +207,8 @@ func (p *searchPages) clearHref(e *core.RequestEvent) string {
 // continues that one kind from the boundary the search just minted while
 // leaving every other group's incoming cursor untouched.
 func (p *searchPages) groups(e *core.RequestEvent, incoming searchsvc.Cursors, result searchsvc.Result) []views.Group {
+	ctx := e.Request.Context()
+
 	groups := make([]views.Group, 0, len(result.Groups))
 
 	for _, group := range result.Groups {
@@ -225,7 +232,7 @@ func (p *searchPages) groups(e *core.RequestEvent, incoming searchsvc.Cursors, r
 		}
 
 		groups = append(groups, views.Group{
-			Kind: group.Kind.Enum(), Label: kindLabel(group.Kind), Items: items, LoadMoreHref: loadMore,
+			Kind: group.Kind.Enum(), Label: kindNoun(ctx, group.Kind), Items: items, LoadMoreHref: loadMore,
 		})
 	}
 
@@ -272,22 +279,6 @@ func withQuery(e *core.RequestEvent, mutate func(url.Values)) string {
 	return next.RequestURI()
 }
 
-// kindLabel reads the human name straight out of the kind's own declared
-// list landmark (`region[name="Medications"]`) rather than keeping a second
-// table of the same fourteen names.
-func kindLabel(k kind.Kind) string {
-	landmark := k.ListLandmark()
-
-	start := strings.Index(landmark, `"`)
-	end := strings.LastIndex(landmark, `"`)
-
-	if start < 0 || end <= start {
-		return string(k)
-	}
-
-	return landmark[start+1 : end]
-}
-
 func splitCSV(raw string) []string {
 	if raw == "" {
 		return nil
@@ -302,7 +293,9 @@ func (p *searchPages) render(e *core.RequestEvent, actor access.Actor, props vie
 		return err
 	}
 
-	return RenderPage(e, http.StatusOK, searchPageTitle,
+	web.Localize(e)
+
+	return RenderPage(e, http.StatusOK, i18n.T(e.Request.Context(), searchPageTitleID),
 		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path), Switcher: switcher}, views.Results(props))
 }
 

@@ -1827,3 +1827,150 @@ other = "Po posiłku"
 [enum.glucose_context.random]
 description = "Glucose measurement context vocabulary value"
 other = "Przypadkowy"
+
+# --- T026: tags, search, timeline ---
+[empty.tag_body]
+description = "The tag manager's empty state body"
+other = "Utwórz etykietę, aby zacząć porządkować dane."
+
+[page.tagsPage.title]
+description = "The tag manager page's own <title> and landmark name"
+other = "Etykiety"
+
+[page.searchPage.title]
+description = "The search page's own <title>, heading, and submit button"
+other = "Wyszukiwanie"
+
+[action.add_a_tag]
+description = "The tag manager's create-form aria-label"
+other = "Dodaj etykietę"
+
+[action.add_tag]
+description = "The tag manager's create-form submit button"
+other = "Dodaj etykietę"
+
+[action.add_a_tag_placeholder]
+description = "The tag field's own text input placeholder, on every kind's form"
+other = "Dodaj etykietę…"
+
+[tag.rename_form]
+description = "The tag manager's rename-form aria-label, naming the tag being renamed"
+other = "Zmień nazwę: {{.Name}}"
+
+[action.rename]
+description = "A tag row's rename button"
+other = "Zmień nazwę"
+
+[a11y.confirm_delete]
+description = "A delete-confirmation panel's own aria-label"
+other = "Potwierdź usunięcie"
+
+[confirm.delete_tag]
+description = "The tag delete-confirmation panel's heading"
+other = "Usunąć tę etykietę?"
+
+[tag.usage_count]
+description = "A tag row's own usage count, e.g. \"4 records\""
+one = "{{.PluralCount}} wpis"
+few = "{{.PluralCount}} wpisy"
+many = "{{.PluralCount}} wpisów"
+other = "{{.PluralCount}} wpisu"
+
+[tag.delete_consequence]
+description = "The tag delete-confirmation panel's own body text stating how many records carry the tag"
+one = "Ta etykieta jest przypisana do {{.PluralCount}} wpisu. Usunięcie etykiety usunie ją z tego wpisu."
+few = "Ta etykieta jest przypisana do {{.PluralCount}} wpisów. Usunięcie etykiety usunie ją ze wszystkich."
+many = "Ta etykieta jest przypisana do {{.PluralCount}} wpisów. Usunięcie etykiety usunie ją ze wszystkich."
+other = "Ta etykieta jest przypisana do {{.PluralCount}} wpisu. Usunięcie etykiety usunie ją ze wszystkich."
+
+[field.tag.name]
+description = "The tag form's own name field label"
+other = "Nazwa"
+
+[field.tag.color]
+description = "The tag form's own color field label"
+other = "Kolor"
+
+[tag.field_label]
+description = "The tag picker field's own label, on every kind's form"
+other = "Etykiety"
+
+[tag.selected]
+description = "The tag field's applied-tags list aria-label"
+other = "Wybrane etykiety"
+
+[tag.remove]
+description = "A tag field's own remove-chip button aria-label, naming the tag being removed"
+other = "Usuń {{.Name}}"
+
+[search.term]
+description = "The search page's own search-box sr-only label"
+other = "Fraza wyszukiwania"
+
+[search.placeholder]
+description = "The search page's own search-box placeholder"
+other = "Szukaj w danych tej osoby"
+
+[search.narrowing]
+description = "The search page's own active-narrowing chip list aria-label"
+other = "Zawężenie"
+
+[search.choose_person]
+description = "The search page's no-patient-chosen empty state heading"
+other = "Wybierz osobę"
+
+[search.choose_person_body]
+description = "The search page's no-patient-chosen empty state body"
+other = "Wybierz osobę za pomocą przełącznika powyżej."
+
+[search.no_term]
+description = "The search page's no-term-typed-yet empty state heading"
+other = "Przeszukaj kartę tej osoby"
+
+[search.no_term_body]
+description = "The search page's no-term-typed-yet empty state body"
+other = "Wpisz frazę powyżej, aby znaleźć coś w jej danych."
+
+[search.no_records_body]
+description = "The search page's own empty state body when the person has no records of any kind yet"
+other = "Ta osoba nie ma jeszcze żadnych zapisanych danych."
+
+[search.no_matches_body]
+description = "The search page's own empty state body when a search matched nothing"
+other = "Żadne wpisy nie pasują do tego wyszukiwania."
+
+[search.no_matches]
+description = "The search page's own no-matches empty state heading"
+other = "Nic nie pasuje"
+
+[search.clear_narrowing]
+description = "The search page's own link that clears every active narrowing"
+other = "Wyczyść zawężenie"
+
+[search.load_more]
+description = "A search results group's own load-more link, naming the kind it continues"
+other = "Wczytaj więcej: {{.Group}}"
+
+[timeline.date_not_recorded]
+description = "The timeline's own group label for entries with no recorded date"
+other = "Data nie została zapisana"
+
+[timeline.choose_person]
+description = "The timeline's no-patient-chosen empty state heading"
+other = "Wybierz osobę"
+
+[timeline.choose_person_body]
+description = "The timeline's no-patient-chosen empty state body"
+other = "Wybierz osobę, dla której ma być wyświetlona oś czasu."
+
+[timeline.criteria_tag]
+description = "The timeline's own removable narrowing chip naming an active tag"
+other = "Etykieta: {{.Tag}}"
+
+[timeline.criteria_from]
+description = "The timeline's own removable narrowing chip naming the active from-date"
+other = "Od {{.Date}}"
+
+[timeline.criteria_to]
+description = "The timeline's own removable narrowing chip naming the active to-date"
+other = "Do {{.Date}}"

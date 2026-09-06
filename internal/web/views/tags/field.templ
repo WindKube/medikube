@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/ids"
 )
 
@@ -44,8 +45,8 @@ templ Field(props FieldProps) {
 		<span
 			id={ ids.Field(props.FormID, "tags") + "-label" }
 			class="block text-sm font-medium text-slate-700 dark:text-slate-300"
-		>Tags</span>
-		<ul aria-label="Selected tags" class="flex flex-wrap gap-2">
+		>{ i18n.T(ctx, "tag.field_label") }</span>
+		<ul aria-label={ i18n.T(ctx, "tag.selected") } class="flex flex-wrap gap-2">
 			for _, option := range props.Options {
 				<li data-show={ "$" + FieldSignal + ".includes(" + jsQuote(option.ID) + ")" }>
 					<span class="inline-flex items-center gap-1 rounded-full bg-slate-100 py-1 pl-2 pr-1 text-xs font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200">
@@ -53,7 +54,7 @@ templ Field(props FieldProps) {
 						<button
 							type="button"
 							data-on:click={ "$" + FieldSignal + " = $" + FieldSignal + ".filter((id) => id !== " + jsQuote(option.ID) + ")" }
-							aria-label={ "Remove " + option.Name }
+							aria-label={ i18n.T(ctx, "tag.remove", map[string]any{"Name": option.Name}) }
 							class="rounded-full px-1 text-slate-500 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-400 dark:hover:text-slate-100"
 						>×</button>
 					</span>
@@ -68,7 +69,7 @@ templ Field(props FieldProps) {
 			aria-expanded="true"
 			aria-controls={ ids.Field(props.FormID, "tags") + "-options" }
 			aria-labelledby={ ids.Field(props.FormID, "tags") + "-label" }
-			placeholder="Add a tag…"
+			placeholder={ i18n.T(ctx, "action.add_a_tag_placeholder") }
 			data-bind={ fieldQuerySignal }
 			class="mt-1 block w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
 		/>

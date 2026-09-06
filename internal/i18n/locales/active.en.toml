@@ -1801,3 +1801,146 @@ other = "After a meal"
 [enum.glucose_context.random]
 description = "Glucose measurement context vocabulary value"
 other = "Random"
+
+# --- T026: tags, search, timeline ---
+[empty.tag_body]
+description = "The tag manager's empty state body"
+other = "Create a tag to start organising records."
+
+[page.tagsPage.title]
+description = "The tag manager page's own <title> and landmark name"
+other = "Tags"
+
+[page.searchPage.title]
+description = "The search page's own <title>, heading, and submit button"
+other = "Search"
+
+[action.add_a_tag]
+description = "The tag manager's create-form aria-label"
+other = "Add a tag"
+
+[action.add_tag]
+description = "The tag manager's create-form submit button"
+other = "Add tag"
+
+[action.add_a_tag_placeholder]
+description = "The tag field's own text input placeholder, on every kind's form"
+other = "Add a tag…"
+
+[tag.rename_form]
+description = "The tag manager's rename-form aria-label, naming the tag being renamed"
+other = "Rename {{.Name}}"
+
+[action.rename]
+description = "A tag row's rename button"
+other = "Rename"
+
+[a11y.confirm_delete]
+description = "A delete-confirmation panel's own aria-label"
+other = "Confirm delete"
+
+[confirm.delete_tag]
+description = "The tag delete-confirmation panel's heading"
+other = "Delete this tag?"
+
+[tag.usage_count]
+description = "A tag row's own usage count, e.g. \"4 records\""
+one = "{{.PluralCount}} record"
+other = "{{.PluralCount}} records"
+
+[tag.delete_consequence]
+description = "The tag delete-confirmation panel's own body text stating how many records carry the tag"
+one = "{{.PluralCount}} record carries this tag. Deleting it removes the tag from that record."
+other = "{{.PluralCount}} records carry this tag. Deleting it removes the tag from all of them."
+
+[field.tag.name]
+description = "The tag form's own name field label"
+other = "Name"
+
+[field.tag.color]
+description = "The tag form's own color field label"
+other = "Color"
+
+[tag.field_label]
+description = "The tag picker field's own label, on every kind's form"
+other = "Tags"
+
+[tag.selected]
+description = "The tag field's applied-tags list aria-label"
+other = "Selected tags"
+
+[tag.remove]
+description = "A tag field's own remove-chip button aria-label, naming the tag being removed"
+other = "Remove {{.Name}}"
+
+[search.term]
+description = "The search page's own search-box sr-only label"
+other = "Search term"
+
+[search.placeholder]
+description = "The search page's own search-box placeholder"
+other = "Search this person's records"
+
+[search.narrowing]
+description = "The search page's own active-narrowing chip list aria-label"
+other = "Narrowing"
+
+[search.choose_person]
+description = "The search page's no-patient-chosen empty state heading"
+other = "Choose a person"
+
+[search.choose_person_body]
+description = "The search page's no-patient-chosen empty state body"
+other = "Pick who to search using the switcher above."
+
+[search.no_term]
+description = "The search page's no-term-typed-yet empty state heading"
+other = "Search this person's chart"
+
+[search.no_term_body]
+description = "The search page's no-term-typed-yet empty state body"
+other = "Type a term above to find something in their records."
+
+[search.no_records_body]
+description = "The search page's own empty state body when the person has no records of any kind yet"
+other = "This person has no records of any kind yet."
+
+[search.no_matches_body]
+description = "The search page's own empty state body when a search matched nothing"
+other = "No records matched this search."
+
+[search.no_matches]
+description = "The search page's own no-matches empty state heading"
+other = "Nothing matched that"
+
+[search.clear_narrowing]
+description = "The search page's own link that clears every active narrowing"
+other = "Clear narrowing"
+
+[search.load_more]
+description = "A search results group's own load-more link, naming the kind it continues"
+other = "Load more {{.Group}}"
+
+[timeline.date_not_recorded]
+description = "The timeline's own group label for entries with no recorded date"
+other = "Date not recorded"
+
+[timeline.choose_person]
+description = "The timeline's no-patient-chosen empty state heading"
+other = "Choose a person"
+
+[timeline.choose_person_body]
+description = "The timeline's no-patient-chosen empty state body"
+other = "Pick who this timeline is for."
+
+[timeline.criteria_tag]
+description = "The timeline's own removable narrowing chip naming an active tag"
+other = "Tag: {{.Tag}}"
+
+[timeline.criteria_from]
+description = "The timeline's own removable narrowing chip naming the active from-date"
+other = "From {{.Date}}"
+
+[timeline.criteria_to]
+description = "The timeline's own removable narrowing chip naming the active to-date"
+other = "To {{.Date}}"

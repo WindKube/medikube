@@ -5,7 +5,10 @@
 package tags
 
 import (
+	"context"
+
 	"medikube/internal/domain/tag"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 )
 
@@ -73,20 +76,20 @@ type FormProps struct {
 	Errors   components.FieldErrors
 }
 
-func (p FormProps) Label() string {
+func (p FormProps) Label(ctx context.Context) string {
 	if p.New {
-		return "Add a tag"
+		return i18n.T(ctx, "action.add_a_tag")
 	}
 
-	return "Rename " + p.Tag.Name
+	return i18n.T(ctx, "tag.rename_form", map[string]any{"Name": p.Tag.Name})
 }
 
-func (p FormProps) SubmitLabel() string {
+func (p FormProps) SubmitLabel(ctx context.Context) string {
 	if p.New {
-		return "Add tag"
+		return i18n.T(ctx, "action.add_tag")
 	}
 
-	return "Save changes"
+	return i18n.T(ctx, "action.save_changes")
 }
 
 // PickerProps is picker.templ's input: the candidate tags a text field

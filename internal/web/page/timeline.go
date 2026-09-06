@@ -24,8 +24,6 @@ import (
 // OpTimelinePage is contracts/pages.md §3's /timeline.
 const OpTimelinePage = "timelinePage"
 
-const timelineTitle = "Timeline"
-
 // TimelineResolve resolves the timeline service, the same lazy pattern
 // api.Resolve uses: the store it reads through needs a cursor codec keyed
 // from a secret migrations have only just created.
@@ -76,6 +74,8 @@ func (p *timelinePages) list(e *core.RequestEvent, actor access.Actor) error {
 	if !actor.Authenticated() {
 		return fmt.Errorf("page: the page needs a session: %w", domain.ErrForbidden)
 	}
+
+	web.Localize(e)
 
 	query := e.Request.URL.Query()
 	patientID := query.Get(api.ParamPatient)
@@ -128,7 +128,7 @@ func (p *timelinePages) list(e *core.RequestEvent, actor access.Actor) error {
 
 		props.Empty = &empty
 	} else {
-		props.Groups = groupEntries(listing.Items)
+		props.Groups = groupEntries(e.Request.Context(), listing.Items)
 	}
 
 	return p.render(e, actor, props)
@@ -140,16 +140,26 @@ func (p *timelinePages) render(e *core.RequestEvent, actor access.Actor, props v
 		return err
 	}
 
-	return RenderPage(e, http.StatusOK, timelineTitle,
+	web.Localize(e)
+
+	return RenderPage(e, http.StatusOK, i18n.T(e.Request.Context(), "nav.timeline"),
 		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path), Switcher: switcher},
 		viewtimeline.Timeline(props))
 }
 
-func groupEntries(items []svctimeline.Entry) []viewtimeline.Group {
+// kindNoun is a bare, singular display name for a kind (a timeline entry's
+// own kind tag, a removable narrowing chip): i18n.N's own "one" form of
+// kind.<enum> (D-06), with the leading "{{.PluralCount}} " every one of
+// those messages carries trimmed back off, since this is never a count.
+func kindNoun(ctx context.Context, k kind.Kind) string {
+	return strings.TrimPrefix(i18n.N(ctx, "kind."+k.Enum(), 1), "1 ")
+}
+
+func groupEntries(ctx context.Context, items []svctimeline.Entry) []viewtimeline.Group {
 	groups := make([]viewtimeline.Group, 0)
 	byLabel := make(map[string]int, len(items))
 
-	undatedLabel := "Date not recorded"
+	undatedLabel := i18n.T(ctx, "timeline.date_not_recorded")
 
 	for _, item := range items {
 		label := undatedLabel
@@ -159,7 +169,7 @@ func groupEntries(items []svctimeline.Entry) []viewtimeline.Group {
 
 		entry := viewtimeline.EntryView{
 			ID:    "timeline-entry-" + item.ID,
-			Kind:  strings.ReplaceAll(item.Kind.Segment(), "-", " "),
+			Kind:  kindNoun(ctx, item.Kind),
 			Title: item.Title,
 			Date:  label,
 			Href:  "/" + item.Kind.Segment() + "/" + item.ID,
@@ -216,10 +226,12 @@ func criteriaOf(e *core.RequestEvent, kinds []kind.Kind, tags []string, from, to
 		segments = append(segments, k.Segment())
 	}
 
+	ctx := e.Request.Context()
+
 	for i, k := range kinds {
 		chips = append(chips, shared.CriteriaChip{
 			ID:      "timeline-criteria-kind-" + k.Enum(),
-			Label:   strings.ReplaceAll(k.Segment(), "-", " "),
+			Label:   kindNoun(ctx, k),
 			ClearOn: clearParamExpression(e, paramKind, segments, i),
 		})
 	}
@@ -227,20 +239,24 @@ func criteriaOf(e *core.RequestEvent, kinds []kind.Kind, tags []string, from, to
 	for i, tag := range tags {
 		chips = append(chips, shared.CriteriaChip{
 			ID:      "timeline-criteria-tag-" + tag,
-			Label:   "Tag: " + tag,
+			Label:   i18n.T(ctx, "timeline.criteria_tag", map[string]any{"Tag": tag}),
 			ClearOn: clearParamExpression(e, paramTags, tags, i),
 		})
 	}
 
 	if from != "" {
 		chips = append(chips, shared.CriteriaChip{
-			ID: "timeline-criteria-from", Label: "From " + from, ClearOn: clearOneParam(e, paramFrom),
+			ID:      "timeline-criteria-from",
+			Label:   i18n.T(ctx, "timeline.criteria_from", map[string]any{"Date": from}),
+			ClearOn: clearOneParam(e, paramFrom),
 		})
 	}
 
 	if to != "" {
 		chips = append(chips, shared.CriteriaChip{
-			ID: "timeline-criteria-to", Label: "To " + to, ClearOn: clearOneParam(e, paramTo),
+			ID:      "timeline-criteria-to",
+			Label:   i18n.T(ctx, "timeline.criteria_to", map[string]any{"Date": to}),
+			ClearOn: clearOneParam(e, paramTo),
 		})
 	}
 
