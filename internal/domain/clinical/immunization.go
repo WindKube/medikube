@@ -38,6 +38,10 @@ type Immunization struct {
 	Route        ImmunizationRoute
 	ExpiresOn    domain.Date
 
+	// Tags is data-model §0.8's universal field: any number of the owning
+	// account's tags, applied with replace-set semantics (FR-064).
+	Tags []string
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	Version   string

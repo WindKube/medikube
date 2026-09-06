@@ -51,6 +51,15 @@ func (r *Repo) List(ctx context.Context, patientID string, query service.Query) 
 	}
 
 	conditions := []store.Condition{store.Equal(ColumnPatient, patientID)}
+
+	if len(query.Tags) > 0 {
+		if query.Match == service.MatchAll {
+			conditions = append(conditions, store.AllOf(fieldTags, query.Tags...))
+		} else {
+			conditions = append(conditions, store.AnyOf(fieldTags, query.Tags...))
+		}
+	}
+
 	listing := store.Query{Conditions: conditions, Sort: sortKeys, Limit: query.Limit}
 
 	if query.Cursor != "" {

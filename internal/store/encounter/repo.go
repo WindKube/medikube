@@ -128,6 +128,14 @@ func (r *Repo) narrowing(patientID string, query service.Query) []store.Conditio
 		conditions = append(conditions, store.OneOf(store.EncounterPriority, values...))
 	}
 
+	if len(query.Tags) > 0 {
+		if query.Match == service.MatchAll {
+			conditions = append(conditions, store.AllOf(store.EncounterTags, query.Tags...))
+		} else {
+			conditions = append(conditions, store.AnyOf(store.EncounterTags, query.Tags...))
+		}
+	}
+
 	return conditions
 }
 

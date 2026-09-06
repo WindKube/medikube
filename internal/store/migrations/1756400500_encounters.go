@@ -88,7 +88,7 @@ func encountersUp(app core.App) error {
 		Name: encounterFieldFacility, MaxSelect: 1, CollectionId: facilities.Id,
 	})
 	collection.Fields.Add(&core.TextField{Name: encounterFieldNotes, Max: encounterNotesMax})
-	collection.Fields.Add(&core.RelationField{Name: encounterFieldTags, MaxSelect: 0, CollectionId: tags.Id})
+	collection.Fields.Add(&core.RelationField{Name: encounterFieldTags, MaxSelect: unlimitedTags, CollectionId: tags.Id})
 	collection.Fields.Add(&core.AutodateField{Name: fieldCreated, OnCreate: true})
 	collection.Fields.Add(&core.AutodateField{Name: fieldUpdated, OnCreate: true, OnUpdate: true})
 

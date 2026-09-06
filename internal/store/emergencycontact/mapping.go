@@ -27,6 +27,7 @@ func recordFromContact(record *core.Record) (clinical.EmergencyContact, error) {
 		IsPrimary:    record.GetBool(fieldIsPrimary),
 		IsActive:     record.GetBool(fieldIsActive),
 		Notes:        record.GetString(fieldNotes),
+		Tags:         record.GetStringSlice(fieldTags),
 		CreatedAt:    recordInstant(record, fieldCreated),
 		UpdatedAt:    recordInstant(record, fieldUpdated),
 		Version:      store.Version(record),
@@ -48,6 +49,7 @@ func contactToRecord(record *core.Record, entity clinical.EmergencyContact) erro
 	record.Set(fieldIsPrimary, entity.IsPrimary)
 	record.Set(fieldIsActive, entity.IsActive)
 	record.Set(fieldNotes, entity.Notes)
+	record.Set(fieldTags, entity.Tags)
 
 	return nil
 }

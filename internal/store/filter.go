@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -334,6 +335,22 @@ func (s Schema) Column(name string) (Column, bool) {
 // defines `?q=` as a substring over the name *and* the alternative name: a
 // person who recorded the brand name and searched for the generic one is the
 // case that column exists for.
+// relationSetValue is a multi-select RelationField's Go twin: PocketBase
+// stores such a column as a JSON array of ids (encoding/json produces the
+// same bytes as its own types.JSONArray.MarshalJSON for a plain string
+// slice), so this is what a keyset-boundary or filter_test.go comparison
+// against the raw column must reproduce.
+func relationSetValue(name string) func(record *core.Record) string {
+	return func(record *core.Record) string {
+		encoded, err := json.Marshal(record.GetStringSlice(name))
+		if err != nil {
+			return "[]"
+		}
+
+		return string(encoded)
+	}
+}
+
 func MedicationSchema() Schema {
 	return NewSchema(kind.Medication.Collection(),
 		Column{Name: medicationFieldPatient},
@@ -362,6 +379,10 @@ func MedicationSchema() Schema {
 		Column{Name: medicationFieldStatus},
 		Column{Name: medicationFieldStartedOn, AbsentLast: true},
 		Column{Name: medicationFieldEndedOn},
+		// FilterOnly: `?tags=` narrows, but a multi-select relation's JSON
+		// column is never an ordering (research D-05's cursor-disclosure
+		// rule).
+		Column{Name: medicationFieldTags, FilterOnly: true, Value: relationSetValue(medicationFieldTags)},
 		Column{Name: fieldCreated},
 		Column{Name: fieldUpdated},
 	)
@@ -374,6 +395,10 @@ func EncounterSchema() Schema {
 		Column{Name: encounterFieldVisitType},
 		Column{Name: encounterFieldPriority},
 		Column{Name: encounterFieldOccurredOn, AbsentLast: true},
+		// FilterOnly: `?tags=` narrows, but a MaxSelect:0 relation's JSON
+		// column is never an ordering (research D-05's cursor-disclosure
+		// rule).
+		Column{Name: encounterFieldTags, FilterOnly: true},
 		Column{Name: fieldCreated},
 		Column{Name: fieldUpdated},
 	)
@@ -393,6 +418,10 @@ func ProcedureSchema() Schema {
 		},
 		Column{Name: procedureFieldStatus},
 		Column{Name: procedureFieldOccurredOn, AbsentLast: true},
+		// FilterOnly: `?tags=` narrows, but a MaxSelect:0 relation's JSON
+		// column is never an ordering (research D-05's cursor-disclosure
+		// rule).
+		Column{Name: procedureFieldTags, FilterOnly: true},
 		Column{Name: fieldCreated},
 		Column{Name: fieldUpdated},
 	)
@@ -412,6 +441,10 @@ func TreatmentSchema() Schema {
 		},
 		Column{Name: treatmentFieldStatus},
 		Column{Name: treatmentFieldStartedOn, AbsentLast: true},
+		// FilterOnly: `?tags=` narrows, but a MaxSelect:0 relation's JSON
+		// column is never an ordering (research D-05's cursor-disclosure
+		// rule).
+		Column{Name: treatmentFieldTags, FilterOnly: true},
 		Column{Name: fieldCreated},
 		Column{Name: fieldUpdated},
 	)
@@ -424,16 +457,19 @@ const (
 	EncounterVisitType  = encounterFieldVisitType
 	EncounterPriority   = encounterFieldPriority
 	EncounterOccurredOn = encounterFieldOccurredOn
+	EncounterTags       = encounterFieldTags
 
 	ProcedurePatient    = procedureFieldPatient
 	ProcedureName       = procedureFieldName
 	ProcedureStatus     = procedureFieldStatus
 	ProcedureOccurredOn = procedureFieldOccurredOn
+	ProcedureTags       = procedureFieldTags
 
 	TreatmentPatient   = treatmentFieldPatient
 	TreatmentName      = treatmentFieldName
 	TreatmentStatus    = treatmentFieldStatus
 	TreatmentStartedOn = treatmentFieldStartedOn
+	TreatmentTags      = treatmentFieldTags
 )
 
 // PatientsSchema is the patient list's query surface (research D-29): last
@@ -527,6 +563,7 @@ const (
 	MedicationName            = medicationFieldName
 	MedicationAlternativeName = medicationFieldAlternativeName
 	MedicationStatus          = medicationFieldStatus
+	MedicationTags            = medicationFieldTags
 )
 
 // Build turns the query into SQL.

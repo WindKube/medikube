@@ -23,6 +23,7 @@ const (
 	fieldDeathYear    = "death_year"
 	fieldIsDeceased   = "is_deceased"
 	fieldConditions   = "conditions"
+	fieldTags         = "tags"
 	fieldCreated      = "created"
 	fieldUpdated      = "updated"
 )
@@ -49,6 +50,10 @@ func Schema() store.Schema {
 			Value:      func(record *core.Record) string { return asciiLower(record.GetString(fieldName)) },
 		},
 		store.Column{Name: fieldRelationship},
+		// FilterOnly: `?tags=` narrows, but a MaxSelect:0 relation's JSON
+		// column is never an ordering (research D-05's cursor-disclosure
+		// rule).
+		store.Column{Name: fieldTags, FilterOnly: true},
 		store.Column{Name: fieldCreated},
 		store.Column{Name: fieldUpdated},
 	)
@@ -109,6 +114,7 @@ func FromRecord(record *core.Record) (clinical.FamilyMember, error) {
 		DeathYear:    recordIntPtr(record, fieldDeathYear),
 		IsDeceased:   record.GetBool(fieldIsDeceased),
 		Conditions:   conditions,
+		Tags:         record.GetStringSlice(fieldTags),
 		CreatedAt:    recordInstant(record, fieldCreated),
 		UpdatedAt:    recordInstant(record, fieldUpdated),
 		Version:      store.Version(record),
@@ -133,6 +139,8 @@ func ToRecord(record *core.Record, entity clinical.FamilyMember) error {
 	if err := writeConditions(record, entity.Conditions); err != nil {
 		return err
 	}
+
+	record.Set(fieldTags, entity.Tags)
 
 	return nil
 }

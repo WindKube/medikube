@@ -368,7 +368,12 @@ func Apply(app core.App) error {
 			return err
 		}
 
-		return applyActivePatients(tx)
+		if err := applyActivePatients(tx); err != nil {
+			return err
+		}
+
+		// Last: every row it tags already has to exist (US7).
+		return applyTags(tx)
 	})
 }
 

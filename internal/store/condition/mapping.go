@@ -38,6 +38,7 @@ func recordFromCondition(record *core.Record) (clinical.Condition, error) {
 		SNOMEDCode:     record.GetString(fieldSNOMEDCode),
 		PractitionerID: record.GetString(fieldPractitioner),
 		Notes:          record.GetString(fieldNotes),
+		Tags:           record.GetStringSlice(fieldTags),
 		CreatedAt:      recordInstant(record, fieldCreated),
 		UpdatedAt:      recordInstant(record, fieldUpdated),
 		Version:        store.Version(record),
@@ -59,6 +60,7 @@ func conditionToRecord(record *core.Record, entity clinical.Condition) error {
 	record.Set(fieldSNOMEDCode, entity.SNOMEDCode)
 	record.Set(fieldPractitioner, entity.PractitionerID)
 	record.Set(fieldNotes, entity.Notes)
+	record.Set(fieldTags, entity.Tags)
 
 	return nil
 }

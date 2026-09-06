@@ -57,6 +57,11 @@ const (
 	// Message(code) is constant per code and the account-closure explanation
 	// is not the generic "already recorded" conflict text.
 	CodeSelfRecordProtected = "self_record_protected"
+
+	// CodeDuplicateName is createTag and updateTag's refusal of a
+	// case-insensitive duplicate within the owner's own tags
+	// (FR-063, US7-2, contracts/tags.md §2).
+	CodeDuplicateName = "duplicate_name"
 )
 
 // StatusClientClosed is nginx's 499, which contracts/README.md's table names
@@ -113,6 +118,11 @@ var (
 	// translates patient.ErrSelfRecordProtected into this one, the same way
 	// it translates a stale If-Match into WriteVersionMismatch.
 	ErrSelfRecordProtected = &Coded{Status: http.StatusConflict, Code: CodeSelfRecordProtected}
+
+	// ErrDuplicateName translates tag.ErrDuplicateName into MediKube's
+	// envelope, the same way ErrSelfRecordProtected translates its own
+	// domain sentinel.
+	ErrDuplicateName = &Coded{Status: http.StatusConflict, Code: CodeDuplicateName}
 )
 
 // Coded is an error that names its own status and machine code, for the
@@ -289,6 +299,8 @@ func Message(code string) string {
 		return "name the patient this request is for"
 	case CodeSelfRecordProtected:
 		return "closing the account is what removes a self-record; there is no separate delete for it"
+	case CodeDuplicateName:
+		return "a tag under that name already exists"
 	}
 
 	return InternalMessage

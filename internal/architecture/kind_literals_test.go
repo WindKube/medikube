@@ -124,6 +124,9 @@ var kindLiteralExempt = map[string]string{
 	"internal/web/api/familymember_test.go":                  "false positive, asserting the same field name",
 	"internal/web/views/records/familymember.go":             "false positive: the view model's field label names family_member's own \"conditions\" field",
 	"internal/web/views/records/familymember_templ_test.go":  "false positive, asserting the same field label",
+	"internal/store/migrations/applied_set_test.go": "a false positive: the registered-set literal " +
+		"\"1756400410_symptom_vitals_tags.go\" is the migration's own filename, and vitals is a mass " +
+		"noun whose collection spelling it necessarily contains",
 }
 
 func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {

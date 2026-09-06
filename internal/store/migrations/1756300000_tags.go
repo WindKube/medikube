@@ -26,6 +26,14 @@ const tagColorPattern = `^#[0-9a-fA-F]{6}$`
 
 const tagsOwnerNameIndex = "uniq_tags_owner_name"
 
+// unlimitedTags is every carrier's own `tags` RelationField's MaxSelect
+// (FR-064: "any number of tags"). PocketBase's RelationField.IsMultiple
+// treats MaxSelect <= 1 as a single-value relation — 0 does NOT mean
+// unlimited, it means "at most one" — so "any number" has to name an actual
+// ceiling. There is no requirement capping how many tags one record may
+// carry, so this is generous rather than exact.
+const unlimitedTags = 999
+
 func init() {
 	register(tagsUp, tagsDown)
 }

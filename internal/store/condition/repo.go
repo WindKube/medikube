@@ -138,6 +138,14 @@ func (r *Repo) narrowing(patientID string, query service.Query) []store.Conditio
 			string(clinical.ConditionStatusActive), string(clinical.ConditionStatusChronic)))
 	}
 
+	if len(query.Tags) > 0 {
+		if query.Match == service.MatchAll {
+			built = append(built, store.AllOf(fieldTags, query.Tags...))
+		} else {
+			built = append(built, store.AnyOf(fieldTags, query.Tags...))
+		}
+	}
+
 	return built
 }
 

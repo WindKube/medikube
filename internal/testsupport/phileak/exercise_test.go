@@ -130,6 +130,7 @@ const (
 	ContactPhone    = "+1-555-0199-a-sentinel-number"
 
 	RelativeName = "Adaeze-Okonkwo-Van-Der-Berg"
+	TagName      = "clandoxerith-remission-marker"
 )
 
 // Sentinel is one planted value and what it stands for. The meaning is printed
@@ -186,6 +187,7 @@ func Sentinels() []Sentinel {
 		{ContactName, "who to call in an emergency, which names a relationship"},
 		{ContactPhone, "their emergency contact's phone number"},
 		{RelativeName, "the name of a relative recorded in family history, which identifies a third person"},
+		{TagName, "the name of a tag (FR-085, FR-086, SC-011)"},
 	}
 }
 
@@ -1037,6 +1039,7 @@ func drive(t testing.TB, c *client) {
 	driveFamilyMembers(c)
 	drivePatients(c)
 	driveDirectory(c)
+	driveTags(c)
 	drivePages(c)
 	driveNativePaths(c)
 	driveAccountLifecycle(c)
@@ -1135,6 +1138,36 @@ func driveDirectory(c *client) {
 		"/practitioners", "/practitioners/" + practitionerID, "/practitioners/" + missingRecordID,
 		"/facilities", "/facilities/" + facilityID, "/facilities/" + missingRecordID,
 	} {
+		c.do(http.MethodGet, path, "")
+	}
+}
+
+// driveTags: contracts/tags.md's four operations and the /tags page.
+func driveTags(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	created := c.do(http.MethodPost, "/api/v1/tags", jsonBody(c.t, api.TagCreate{Name: TagName, Color: "#aa3311"}))
+	require.Equal(c.t, http.StatusCreated, created.Status, "the sentinel tag was not created: %s", created.Body)
+
+	tagID := idOf(c.t, created.Body)
+
+	for _, path := range []string{
+		"/api/v1/tags", "/api/v1/tags?q=" + SearchTerm,
+	} {
+		c.do(http.MethodGet, path, "")
+	}
+
+	c.do(http.MethodPatch, "/api/v1/tags/"+tagID, jsonBody(c.t, api.TagPatch{Name: ptr(TagName)}))
+
+	// A rejected Datastar submit answers the form re-rendered from what was
+	// submitted, so the sentinel must appear here too — in the body, never
+	// in the logs.
+	c.doWith(http.MethodPatch, "/api/v1/tags/"+tagID, jsonBody(c.t, api.TagPatch{Color: ptr("not-a-color")}),
+		map[string]string{"Datastar-Request": "true"})
+
+	c.do(http.MethodDelete, "/api/v1/tags/"+tagID, "")
+
+	for _, path := range []string{"/tags"} {
 		c.do(http.MethodGet, path, "")
 	}
 }

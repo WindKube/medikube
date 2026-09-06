@@ -27,6 +27,7 @@ const (
 	fieldResolvedAt    = "resolved_at"
 	fieldIsChronic     = "is_chronic"
 	fieldStatus        = "status"
+	fieldTags          = "tags"
 	fieldCreated       = "created"
 	fieldUpdated       = "updated"
 )
@@ -66,6 +67,7 @@ func FromRecord(record *core.Record) (clinical.Symptom, error) {
 		Impact:          clinical.SymptomImpact(record.GetString(fieldImpact)),
 		ResolvedAt:      resolvedAt,
 		IsChronic:       record.GetBool(fieldIsChronic),
+		Tags:            record.GetStringSlice(fieldTags),
 		Status:          clinical.ConditionStatus(record.GetString(fieldStatus)),
 		CreatedAt:       record.GetDateTime(fieldCreated).Time().UTC().Truncate(time.Millisecond),
 		UpdatedAt:       record.GetDateTime(fieldUpdated).Time().UTC().Truncate(time.Millisecond),
@@ -99,6 +101,7 @@ func ToRecord(record *core.Record, s clinical.Symptom) error {
 	}
 
 	record.Set(fieldIsChronic, s.IsChronic)
+	record.Set(fieldTags, s.Tags)
 	record.Set(fieldStatus, string(s.Status))
 
 	return nil

@@ -65,6 +65,8 @@ var unknownFieldFixtures = map[string]any{
 	"FacilityCreate":     api.FacilityCreate{Kind: "practice", Name: "Fixture Facility"},
 	"FacilityPatch":      api.FacilityPatch{},
 	"ActivePatientBody":  api.ActivePatientBody{Patient: &activePatientFixture},
+	"TagCreate":          api.TagCreate{Name: "cardiology", Color: "#aa3311"},
+	"TagPatch":           api.TagPatch{},
 }
 
 var activePatientFixture = "pat0000000000001"

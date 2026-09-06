@@ -92,7 +92,7 @@ func immunizationsUp(app core.App) error {
 		Name: immunizationFieldRoute, MaxSelect: 1, Values: enumValues(clinical.ImmunizationRoutes()),
 	})
 	collection.Fields.Add(&core.DateField{Name: immunizationFieldExpiresOn})
-	collection.Fields.Add(&core.RelationField{Name: immunizationFieldTags, MaxSelect: 0, CollectionId: tags.Id})
+	collection.Fields.Add(&core.RelationField{Name: immunizationFieldTags, MaxSelect: unlimitedTags, CollectionId: tags.Id})
 	collection.Fields.Add(&core.AutodateField{Name: fieldCreated, OnCreate: true})
 	collection.Fields.Add(&core.AutodateField{Name: fieldUpdated, OnCreate: true, OnUpdate: true})
 

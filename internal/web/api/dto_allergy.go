@@ -54,14 +54,19 @@ type Allergy struct {
 }
 
 type AllergyCreate struct {
-	Patient  string  `json:"patient"`
-	Allergen string  `json:"allergen"`
-	Reaction string  `json:"reaction,omitempty"`
-	Severity string  `json:"severity"`
-	Status   string  `json:"status,omitempty"`
-	OnsetOn  *string `json:"onset_on,omitempty"`
-	Notes    string  `json:"notes,omitempty"`
+	Patient  string   `json:"patient"`
+	Allergen string   `json:"allergen"`
+	Reaction string   `json:"reaction,omitempty"`
+	Severity string   `json:"severity"`
+	Status   string   `json:"status,omitempty"`
+	OnsetOn  *string  `json:"onset_on,omitempty"`
+	Notes    string   `json:"notes,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
 }
+
+// TagIDs implements records.Taggable: a create always supplies its tags,
+// even when that is none.
+func (c *AllergyCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
 type AllergyPatch struct {
 	Allergen *string              `json:"allergen,omitempty"`
@@ -70,6 +75,20 @@ type AllergyPatch struct {
 	Status   *string              `json:"status,omitempty"`
 	OnsetOn  web.Optional[string] `json:"onset_on,omitzero"`
 	Notes    *string              `json:"notes,omitempty"`
+
+	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
+	// applied tags alone, a non-nil one — including an empty array —
+	// replaces the whole set.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// TagIDs implements records.Taggable.
+func (p *AllergyPatch) TagIDs() (ids []string, supplied bool) {
+	if p.Tags == nil {
+		return nil, false
+	}
+
+	return *p.Tags, true
 }
 
 // AllergyCodec is the DTO boundary for allergies.
@@ -125,7 +144,7 @@ func (c AllergyCodec) Detail(a clinical.Allergy) any {
 		Patient:        a.PatientID,
 		Reaction:       a.Reaction,
 		Notes:          a.Notes,
-		Tags:           []string{},
+		Tags:           nonNil(a.Tags),
 		CreatedAt:      wireInstant(a.CreatedAt),
 	}
 }
@@ -152,6 +171,7 @@ func (AllergyCodec) Draft(body any) (clinical.Allergy, error) {
 		Status:    clinical.ConditionStatus(create.Status),
 		OnsetOn:   onsetOn,
 		Notes:     create.Notes,
+		Tags:      create.Tags,
 	}, nil
 }
 
@@ -170,6 +190,7 @@ func (AllergyCodec) Patch(body any) (allergy.Patch, error) {
 		Status:   convert[clinical.ConditionStatus](incoming.Status),
 		OnsetOn:  readOptionalDate(&invalid, MemberOnsetOn, incoming.OnsetOn),
 		Notes:    incoming.Notes,
+		Tags:     incoming.Tags,
 	}
 
 	if err := sortFieldOrder(&invalid, allergyMembers); err != nil {

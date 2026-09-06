@@ -19,6 +19,11 @@ type Patch struct {
 	ResolvedAt      *clinical.Instant
 	IsChronic       *bool
 	Status          *clinical.ConditionStatus
+
+	// Tags is data-model §0.8's universal field, replace-set (FR-064,
+	// FR-065): nil leaves the applied tags alone, non-nil (including empty)
+	// replaces the whole set.
+	Tags *[]string
 }
 
 func (p Patch) applyTo(s clinical.Symptom) clinical.Symptom {
@@ -35,6 +40,10 @@ func (p Patch) applyTo(s clinical.Symptom) clinical.Symptom {
 	assign(&s.ResolvedAt, p.ResolvedAt)
 	assign(&s.IsChronic, p.IsChronic)
 	assign(&s.Status, p.Status)
+
+	if p.Tags != nil {
+		s.Tags = *p.Tags
+	}
 
 	return s
 }

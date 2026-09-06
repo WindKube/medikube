@@ -54,17 +54,22 @@ type EmergencyContact struct {
 }
 
 type EmergencyContactCreate struct {
-	Patient      string `json:"patient"`
-	Name         string `json:"name"`
-	Relationship string `json:"relationship"`
-	Phone        string `json:"phone"`
-	PhoneAlt     string `json:"phone_alt,omitempty"`
-	Email        string `json:"email,omitempty"`
-	Address      string `json:"address,omitempty"`
-	IsPrimary    bool   `json:"is_primary,omitempty"`
-	IsActive     *bool  `json:"is_active,omitempty"`
-	Notes        string `json:"notes,omitempty"`
+	Patient      string   `json:"patient"`
+	Name         string   `json:"name"`
+	Relationship string   `json:"relationship"`
+	Phone        string   `json:"phone"`
+	PhoneAlt     string   `json:"phone_alt,omitempty"`
+	Email        string   `json:"email,omitempty"`
+	Address      string   `json:"address,omitempty"`
+	IsPrimary    bool     `json:"is_primary,omitempty"`
+	IsActive     *bool    `json:"is_active,omitempty"`
+	Notes        string   `json:"notes,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
 }
+
+// TagIDs implements records.Taggable: a create always supplies its tags,
+// even when that is none.
+func (c *EmergencyContactCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
 type EmergencyContactPatch struct {
 	Name         *string `json:"name,omitempty"`
@@ -76,6 +81,20 @@ type EmergencyContactPatch struct {
 	IsPrimary    *bool   `json:"is_primary,omitempty"`
 	IsActive     *bool   `json:"is_active,omitempty"`
 	Notes        *string `json:"notes,omitempty"`
+
+	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
+	// applied tags alone, a non-nil one — including an empty array —
+	// replaces the whole set.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// TagIDs implements records.Taggable.
+func (p *EmergencyContactPatch) TagIDs() (ids []string, supplied bool) {
+	if p.Tags == nil {
+		return nil, false
+	}
+
+	return *p.Tags, true
 }
 
 type EmergencyContactCodec struct{}
@@ -125,7 +144,7 @@ func (codec EmergencyContactCodec) Detail(c clinical.EmergencyContact) any {
 		Email:                   c.Email,
 		Address:                 c.Address,
 		Notes:                   c.Notes,
-		Tags:                    []string{},
+		Tags:                    nonNil(c.Tags),
 		CreatedAt:               wireInstant(c.CreatedAt),
 	}
 
@@ -158,6 +177,7 @@ func (EmergencyContactCodec) Draft(body any) (clinical.EmergencyContact, error) 
 		IsPrimary:    create.IsPrimary,
 		IsActive:     isActive,
 		Notes:        create.Notes,
+		Tags:         create.Tags,
 	}, nil
 }
 
@@ -177,5 +197,6 @@ func (EmergencyContactCodec) Patch(body any) (emergencycontact.Patch, error) {
 		IsPrimary:    incoming.IsPrimary,
 		IsActive:     incoming.IsActive,
 		Notes:        incoming.Notes,
+		Tags:         incoming.Tags,
 	}, nil
 }

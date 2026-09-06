@@ -70,11 +70,12 @@ type VitalsSummary struct {
 type Vitals struct {
 	VitalsSummary
 
-	Patient        string `json:"patient"`
-	GlucoseContext string `json:"glucose_context,omitempty"`
-	Device         string `json:"device,omitempty"`
-	Practitioner   string `json:"practitioner,omitempty"`
-	CreatedAt      string `json:"created_at"`
+	Patient        string   `json:"patient"`
+	GlucoseContext string   `json:"glucose_context,omitempty"`
+	Device         string   `json:"device,omitempty"`
+	Practitioner   string   `json:"practitioner,omitempty"`
+	Tags           []string `json:"tags,omitempty"`
+	CreatedAt      string   `json:"created_at"`
 
 	// Display names the unit system every measurement above is already
 	// expressed in (research D-15) — the same idea patients.md's Display
@@ -99,7 +100,12 @@ type VitalsCreate struct {
 	PainScale          *float64 `json:"pain_scale,omitempty"`
 	Device             string   `json:"device,omitempty"`
 	Practitioner       *string  `json:"practitioner,omitempty"`
+	Tags               []string `json:"tags,omitempty"`
 }
+
+// TagIDs implements records.Taggable: a create always supplies its tags,
+// even when that is none.
+func (c *VitalsCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
 type VitalsPatch struct {
 	RecordedAt *string `json:"recorded_at,omitempty"`
@@ -119,6 +125,20 @@ type VitalsPatch struct {
 
 	Device       *string `json:"device,omitempty"`
 	Practitioner *string `json:"practitioner,omitempty"`
+
+	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
+	// applied tags alone, a non-nil one — including an empty array —
+	// replaces the whole set.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// TagIDs implements records.Taggable.
+func (p *VitalsPatch) TagIDs() (ids []string, supplied bool) {
+	if p.Tags == nil {
+		return nil, false
+	}
+
+	return *p.Tags, true
 }
 
 // VitalsCodec is the DTO boundary for measurement sets, and the one place
@@ -189,6 +209,7 @@ func (c VitalsCodec) Detail(v clinical.Vitals, system identity.UnitSystem) any {
 		GlucoseContext: string(v.GlucoseContext),
 		Device:         v.Device,
 		Practitioner:   v.PractitionerID,
+		Tags:           v.Tags,
 		CreatedAt:      wireInstant(v.CreatedAt),
 		Display:        Display{UnitSystem: string(system)},
 	}
@@ -225,6 +246,7 @@ func (VitalsCodec) Draft(body any, system identity.UnitSystem) (clinical.Vitals,
 		PainScale:          create.PainScale,
 		Device:             create.Device,
 		PractitionerID:     deref(create.Practitioner),
+		Tags:               create.Tags,
 	}, nil
 }
 
@@ -252,6 +274,7 @@ func (VitalsCodec) Patch(body any, system identity.UnitSystem) (vitals.Patch, er
 		PainScale:          readOptionalFloatPtr(incoming.PainScale, identity.UnitSystemMetric, nil),
 		Device:             incoming.Device,
 		PractitionerID:     incoming.Practitioner,
+		Tags:               incoming.Tags,
 	}
 
 	if err := orderedVitalsRefusal(&invalid); err != nil {

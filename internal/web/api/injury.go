@@ -78,6 +78,7 @@ type Injury struct {
 	Mechanism     string   `json:"mechanism,omitempty"`
 	RecoveryNotes string   `json:"recovery_notes,omitempty"`
 	Medications   []string `json:"medication_ids,omitempty"`
+	Tags          []string `json:"tags,omitempty"`
 	CreatedAt     string   `json:"created_at"`
 }
 
@@ -98,7 +99,12 @@ type InjuryCreate struct {
 	RecoveryNotes string   `json:"recovery_notes,omitempty"`
 	Practitioner  *string  `json:"practitioner,omitempty"`
 	Medications   []string `json:"medication_ids,omitempty"`
+	Tags          []string `json:"tags,omitempty"`
 }
+
+// TagIDs implements records.Taggable: a create always supplies its tags,
+// even when that is none.
+func (c *InjuryCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
 // InjuryPatch is the partial update. Only supplied members change.
 //
@@ -123,6 +129,20 @@ type InjuryPatch struct {
 	Practitioner *string `json:"practitioner,omitempty"`
 
 	Medications []string `json:"medication_ids,omitempty"`
+
+	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
+	// applied tags alone, a non-nil one — including an empty array —
+	// replaces the whole set.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// TagIDs implements records.Taggable.
+func (p *InjuryPatch) TagIDs() (ids []string, supplied bool) {
+	if p.Tags == nil {
+		return nil, false
+	}
+
+	return *p.Tags, true
 }
 
 // InjuryCodec is the DTO boundary for injuries: the only place a
@@ -202,6 +222,7 @@ func (c InjuryCodec) Detail(i clinical.Injury) any {
 		Mechanism:     i.Mechanism,
 		RecoveryNotes: i.RecoveryNotes,
 		Medications:   i.MedicationIDs,
+		Tags:          i.Tags,
 		CreatedAt:     wireInstant(i.CreatedAt),
 	}
 }
@@ -234,6 +255,7 @@ func (InjuryCodec) Draft(body any) (clinical.Injury, error) {
 		RecoveryNotes:  create.RecoveryNotes,
 		MedicationIDs:  create.Medications,
 		PractitionerID: deref(create.Practitioner),
+		Tags:           create.Tags,
 	}, nil
 }
 
@@ -262,6 +284,8 @@ func (InjuryCodec) Patch(body any) (injury.Patch, error) {
 	if incoming.Medications != nil {
 		patch.MedicationIDs = &incoming.Medications
 	}
+
+	patch.Tags = incoming.Tags
 
 	if err := orderedInjuryRefusal(&invalid); err != nil {
 		return injury.Patch{}, err

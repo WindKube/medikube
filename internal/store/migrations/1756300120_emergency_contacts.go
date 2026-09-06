@@ -85,7 +85,7 @@ func emergencyContactsUp(app core.App) error {
 	collection.Fields.Add(&core.TextField{Name: contactFieldNotes, Max: contactNotesMax})
 	collection.Fields.Add(&core.RelationField{
 		Name:         contactFieldTags,
-		MaxSelect:    0,
+		MaxSelect:    unlimitedTags,
 		CollectionId: tags.Id,
 	})
 	collection.Fields.Add(&core.AutodateField{Name: fieldCreated, OnCreate: true})

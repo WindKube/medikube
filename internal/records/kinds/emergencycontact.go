@@ -56,6 +56,8 @@ func (a *emergencyContactAdapter) List(ctx context.Context, actor access.Actor, 
 		PatientID: query.PatientID,
 		Search:    query.Search,
 		IsActive:  boolFilter(query.Filters[emergencycontact.FilterIsActive]),
+		Tags:      query.Filters[records.FilterTags],
+		Match:     matchOf(query.Filters[records.FilterMatch]),
 		Sort:      query.Sort,
 		Limit:     query.Limit,
 		Cursor:    query.Cursor,
@@ -179,6 +181,10 @@ func RegisterEmergencyContact(registry *records.Registry, wiring EmergencyContac
 			Kind:    records.FilterEnum,
 			Allowed: boolStrings(),
 		},
+	}
+
+	for name, spec := range records.TagFilters() {
+		schema.Filters[name] = spec
 	}
 
 	return registry.Register(records.Registration{

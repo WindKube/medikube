@@ -102,7 +102,7 @@ func injuriesUp(app core.App) error {
 	collection.Fields.Add(&core.RelationField{
 		Name: injuryFieldMedications, MaxSelect: 0, CollectionId: medications.Id,
 	})
-	collection.Fields.Add(&core.RelationField{Name: injuryFieldTags, MaxSelect: 0, CollectionId: tags.Id})
+	collection.Fields.Add(&core.RelationField{Name: injuryFieldTags, MaxSelect: unlimitedTags, CollectionId: tags.Id})
 	collection.Fields.Add(&core.AutodateField{Name: fieldCreated, OnCreate: true})
 	collection.Fields.Add(&core.AutodateField{Name: fieldUpdated, OnCreate: true, OnUpdate: true})
 

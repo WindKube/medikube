@@ -73,8 +73,9 @@ type Treatment struct {
 	Encounters   []string `json:"encounters"`
 	Equipment    []string `json:"equipment"`
 
-	Notes     string `json:"notes,omitempty"`
-	CreatedAt string `json:"created_at"`
+	Notes     string   `json:"notes,omitempty"`
+	Tags      []string `json:"tags,omitempty"`
+	CreatedAt string   `json:"created_at"`
 }
 
 type TreatmentCreate struct {
@@ -96,7 +97,12 @@ type TreatmentCreate struct {
 	Condition    *string  `json:"condition,omitempty"`
 	Encounters   []string `json:"encounters,omitempty"`
 	Equipment    []string `json:"equipment,omitempty"`
+	Tags         []string `json:"tags,omitempty"`
 }
+
+// TagIDs implements records.Taggable: a create always supplies its tags,
+// even when that is none.
+func (c *TreatmentCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
 type TreatmentPatch struct {
 	Name            *string              `json:"name,omitempty"`
@@ -116,6 +122,20 @@ type TreatmentPatch struct {
 	Condition    *string   `json:"condition,omitempty"`
 	Encounters   *[]string `json:"encounters,omitempty"`
 	Equipment    *[]string `json:"equipment,omitempty"`
+
+	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
+	// applied tags alone, a non-nil one — including an empty array —
+	// replaces the whole set.
+	Tags *[]string `json:"tags,omitempty"`
+}
+
+// TagIDs implements records.Taggable.
+func (p *TreatmentPatch) TagIDs() (ids []string, supplied bool) {
+	if p.Tags == nil {
+		return nil, false
+	}
+
+	return *p.Tags, true
 }
 
 type TreatmentCodec struct{}
@@ -175,6 +195,7 @@ func (c TreatmentCodec) Detail(t clinical.Treatment) any {
 		Encounters:       nonNil(t.Encounters),
 		Equipment:        nonNil(t.Equipment),
 		Notes:            t.Notes,
+		Tags:             t.Tags,
 		CreatedAt:        wireInstant(t.CreatedAt),
 	}
 }
@@ -212,6 +233,7 @@ func (TreatmentCodec) Draft(body any) (clinical.Treatment, error) {
 		ConditionID:     deref(create.Condition),
 		Encounters:      create.Encounters,
 		Equipment:       create.Equipment,
+		Tags:            create.Tags,
 	}, nil
 }
 
@@ -240,6 +262,7 @@ func (TreatmentCodec) Patch(body any) (treatment.Patch, error) {
 		Condition:       incoming.Condition,
 		Encounters:      incoming.Encounters,
 		Equipment:       incoming.Equipment,
+		Tags:            incoming.Tags,
 	}
 
 	if err := orderedTreatmentRefusal(&invalid); err != nil {

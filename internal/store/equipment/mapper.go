@@ -30,6 +30,7 @@ const (
 	fieldSupplier     = "supplier"
 	fieldPractitioner = "practitioner"
 	fieldNotes        = "notes"
+	fieldTags         = "tags"
 	fieldCreated      = "created"
 	fieldUpdated      = "updated"
 )
@@ -64,6 +65,10 @@ func Schema() store.Schema {
 		store.Column{Name: fieldStatus},
 		store.Column{Name: fieldPrescribedOn, AbsentLast: true},
 		store.Column{Name: fieldServiceDueOn},
+		// FilterOnly: `?tags=` narrows, but a multi-select relation's JSON
+		// column is never an ordering (research D-05's cursor-disclosure
+		// rule).
+		store.Column{Name: fieldTags, FilterOnly: true},
 		store.Column{Name: fieldCreated},
 		store.Column{Name: fieldUpdated},
 	)
@@ -128,6 +133,7 @@ func FromRecord(record *core.Record) (clinical.Equipment, error) {
 		SupplierID:     record.GetString(fieldSupplier),
 		PractitionerID: record.GetString(fieldPractitioner),
 		Notes:          record.GetString(fieldNotes),
+		Tags:           record.GetStringSlice(fieldTags),
 		CreatedAt:      recordInstant(record, fieldCreated),
 		UpdatedAt:      recordInstant(record, fieldUpdated),
 		Version:        store.Version(record),
@@ -155,6 +161,7 @@ func ToRecord(record *core.Record, entity clinical.Equipment) error {
 	record.Set(fieldSupplier, entity.SupplierID)
 	record.Set(fieldPractitioner, entity.PractitionerID)
 	record.Set(fieldNotes, entity.Notes)
+	record.Set(fieldTags, entity.Tags)
 
 	return nil
 }

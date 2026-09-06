@@ -30,6 +30,7 @@ func recordFromAllergy(record *core.Record) (clinical.Allergy, error) {
 		Status:    clinical.ConditionStatus(record.GetString(fieldStatus)),
 		OnsetOn:   onsetOn,
 		Notes:     record.GetString(fieldNotes),
+		Tags:      record.GetStringSlice(fieldTags),
 		CreatedAt: recordInstant(record, fieldCreated),
 		UpdatedAt: recordInstant(record, fieldUpdated),
 		Version:   store.Version(record),
@@ -48,6 +49,7 @@ func allergyToRecord(record *core.Record, entity clinical.Allergy) error {
 	record.Set(fieldStatus, string(entity.Status))
 	setDate(record, fieldOnsetOn, entity.OnsetOn)
 	record.Set(fieldNotes, entity.Notes)
+	record.Set(fieldTags, entity.Tags)
 
 	return nil
 }

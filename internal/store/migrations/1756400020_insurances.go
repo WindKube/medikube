@@ -113,7 +113,7 @@ func insurancesUp(app core.App) error {
 	collection.Fields.Add(&core.TextField{Name: insuranceFieldNotes, Max: insuranceNotesMax})
 	collection.Fields.Add(&core.RelationField{
 		Name:         insuranceFieldTags,
-		MaxSelect:    0,
+		MaxSelect:    unlimitedTags,
 		CollectionId: tags.Id,
 	})
 	collection.Fields.Add(&core.AutodateField{Name: fieldCreated, OnCreate: true})

@@ -74,6 +74,10 @@ func fillWithSentinels(t *testing.T, m *Medication) []sentinelField {
 				sentinelInstant.Format(time.DateOnly),
 				fmt.Sprint(sentinelInstant.Unix()),
 			}
+		case field.Type == reflect.TypeOf([]string{}):
+			sentinel := fmt.Sprintf("SENTINEL%dZ", i)
+			target.Set(reflect.ValueOf([]string{sentinel}))
+			found.tokens = []string{sentinel}
 		default:
 			t.Fatalf("Medication.%s is a %s, which this test does not know how to fill — "+
 				"teach it, then decide deliberately whether MarshalZerologObject may emit it (FR-038)",

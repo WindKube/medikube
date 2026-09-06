@@ -52,6 +52,8 @@ func (a *Adapter) List(ctx context.Context, actor access.Actor, query records.Qu
 		Search:     query.Search,
 		VisitTypes: visitTypes(query.Filters[FilterVisitType]),
 		Priorities: priorities(query.Filters[FilterPriority]),
+		Tags:       query.Filters[records.FilterTags],
+		Match:      matchOf(query.Filters[records.FilterMatch]),
 		Sort:       query.Sort,
 		Limit:      query.Limit,
 		Cursor:     query.Cursor,
@@ -151,6 +153,16 @@ func priorities(values []string) []clinical.VisitPriority {
 	return converted
 }
 
+// matchOf reads the resolved `?match=` filter value, defaulting to "any" the
+// same way records.TagFilters' FilterSpec.Default does.
+func matchOf(values []string) string {
+	if len(values) == 0 {
+		return records.MatchAny
+	}
+
+	return values[0]
+}
+
 // StreamFilter admits every event that names a record and a patient — an
 // encounter has no draft state (mirrors medication.StreamFilter).
 type StreamFilter struct{}
@@ -191,6 +203,10 @@ func Register(registry *records.Registry, wiring Wiring) error {
 	schema.Filters = map[string]records.FilterSpec{
 		FilterVisitType: {Name: FilterVisitType, Kind: records.FilterEnum, Allowed: visitTypeStrings()},
 		FilterPriority:  {Name: FilterPriority, Kind: records.FilterEnum, Allowed: priorityStrings()},
+	}
+
+	for name, spec := range records.TagFilters() {
+		schema.Filters[name] = spec
 	}
 
 	return registry.Register(records.Registration{

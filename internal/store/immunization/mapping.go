@@ -37,6 +37,7 @@ func recordFromImmunization(record *core.Record) (clinical.Immunization, error) 
 		Site:           clinical.ImmunizationSite(record.GetString(fieldSite)),
 		Route:          clinical.ImmunizationRoute(record.GetString(fieldRoute)),
 		ExpiresOn:      expiresOn,
+		Tags:           record.GetStringSlice(fieldTags),
 		CreatedAt:      recordInstant(record, fieldCreated),
 		UpdatedAt:      recordInstant(record, fieldUpdated),
 		Version:        store.Version(record),
@@ -62,6 +63,7 @@ func immunizationToRecord(record *core.Record, entity clinical.Immunization) err
 	record.Set(fieldSite, string(entity.Site))
 	record.Set(fieldRoute, string(entity.Route))
 	setDate(record, fieldExpiresOn, entity.ExpiresOn)
+	record.Set(fieldTags, entity.Tags)
 
 	return nil
 }

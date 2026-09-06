@@ -23,6 +23,11 @@ type Patch struct {
 
 	Device         *string
 	PractitionerID *string
+
+	// Tags is data-model §0.8's universal field, replace-set (FR-064,
+	// FR-065): nil leaves the applied tags alone, non-nil (including empty)
+	// replaces the whole set.
+	Tags *[]string
 }
 
 func (p Patch) applyTo(v clinical.Vitals) clinical.Vitals {
@@ -41,6 +46,10 @@ func (p Patch) applyTo(v clinical.Vitals) clinical.Vitals {
 	assign(&v.PainScale, p.PainScale)
 	assign(&v.Device, p.Device)
 	assign(&v.PractitionerID, p.PractitionerID)
+
+	if p.Tags != nil {
+		v.Tags = *p.Tags
+	}
 
 	return v
 }

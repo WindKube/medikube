@@ -71,6 +71,8 @@ func (a *Adapter) List(ctx context.Context, actor access.Actor, query records.Qu
 		PatientID: query.PatientID,
 		Search:    query.Search,
 		Statuses:  statuses(query.Filters[FilterStatus]),
+		Tags:      query.Filters[records.FilterTags],
+		Match:     matchOf(query.Filters[records.FilterMatch]),
 		Sort:      query.Sort,
 		Limit:     query.Limit,
 		Cursor:    query.Cursor,
@@ -167,6 +169,16 @@ func statuses(values []string) []clinical.TherapyStatus {
 	return converted
 }
 
+// matchOf reads the resolved `?match=` filter value, defaulting to "any" the
+// same way records.TagFilters' FilterSpec.Default does.
+func matchOf(values []string) string {
+	if len(values) == 0 {
+		return records.MatchAny
+	}
+
+	return values[0]
+}
+
 // StreamFilter is which of this kind's changes may reach a live view before the
 // per-subscriber authorization runs.
 //
@@ -244,6 +256,10 @@ func Register(registry *records.Registry, wiring Wiring) error {
 			Kind:    records.FilterEnum,
 			Allowed: therapyStatusStrings(),
 		},
+	}
+
+	for name, spec := range records.TagFilters() {
+		schema.Filters[name] = spec
 	}
 
 	return registry.Register(records.Registration{

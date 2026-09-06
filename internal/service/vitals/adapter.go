@@ -65,6 +65,8 @@ func (a *Adapter) List(ctx context.Context, actor access.Actor, query records.Qu
 	page, err := a.service.List(ctx, actor, Query{
 		PatientID: query.PatientID,
 		Search:    query.Search,
+		Tags:      query.Filters[records.FilterTags],
+		Match:     matchOf(query.Filters[records.FilterMatch]),
 		Sort:      query.Sort,
 		Limit:     query.Limit,
 		Cursor:    query.Cursor,
@@ -159,6 +161,16 @@ func (a *Adapter) record(v clinical.Vitals, body any) records.Record {
 // SeedFixtureID is the fixture `medikube seed` builds for this kind.
 const SeedFixtureID = "measurements-01"
 
+// matchOf reads the resolved `?match=` filter value, defaulting to "any" the
+// same way records.TagFilters' FilterSpec.Default does.
+func matchOf(values []string) string {
+	if len(values) == 0 {
+		return records.MatchAny
+	}
+
+	return values[0]
+}
+
 // StreamFilter admits every change that names a record and a patient.
 type StreamFilter struct{}
 
@@ -199,7 +211,7 @@ func Register(registry *records.Registry, wiring Wiring) error {
 
 	schema := wiring.Schema
 	schema.Sorts = Sorts()
-	schema.Filters = map[string]records.FilterSpec{}
+	schema.Filters = records.TagFilters()
 
 	return registry.Register(records.Registration{
 		Kind:       kind.Vitals,

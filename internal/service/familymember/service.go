@@ -20,6 +20,11 @@ type Patch struct {
 	DeathYear    **int
 	IsDeceased   *bool
 	Conditions   *[]clinical.FamilyCondition
+
+	// Tags is data-model §0.8's universal field, replace-set (FR-064,
+	// FR-065): nil leaves the applied tags alone, non-nil (including empty)
+	// replaces the whole set.
+	Tags *[]string
 }
 
 // FieldPatient is the field a create's missing patient is reported against.
@@ -193,6 +198,10 @@ func (p Patch) applyTo(entity clinical.FamilyMember) clinical.FamilyMember {
 	assign(&entity.DeathYear, p.DeathYear)
 	assign(&entity.IsDeceased, p.IsDeceased)
 	assign(&entity.Conditions, p.Conditions)
+
+	if p.Tags != nil {
+		entity.Tags = *p.Tags
+	}
 
 	return entity
 }
