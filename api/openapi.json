@@ -170,6 +170,12 @@
           "allergen": {
             "type": "string"
           },
+          "medications": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "notes": {
             "type": "string"
           },
@@ -210,6 +216,12 @@
           },
           "icd10_code": {
             "type": "string"
+          },
+          "medications": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "notes": {
             "type": "string"
@@ -836,6 +848,12 @@
           "category": {
             "type": "string"
           },
+          "caused_by_medications": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "duration_minutes": {
             "type": "integer"
           },
@@ -873,6 +891,12 @@
             "type": "string"
           },
           "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "treated_by_medications": {
             "items": {
               "type": "string"
             },
@@ -1082,6 +1106,12 @@
           "allergen": {
             "type": "string"
           },
+          "medications": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "notes": {
             "type": "string"
           },
@@ -1117,6 +1147,12 @@
           },
           "icd10_code": {
             "type": "string"
+          },
+          "medications": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "notes": {
             "type": "string"
@@ -1712,6 +1748,12 @@
           "category": {
             "type": "string"
           },
+          "caused_by_medications": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "duration_minutes": {
             "type": [
               "integer",
@@ -1755,6 +1797,12 @@
             "type": "string"
           },
           "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "treated_by_medications": {
             "items": {
               "type": "string"
             },
@@ -2743,6 +2791,12 @@
             ],
             "type": "string"
           },
+          "medications": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "notes": {
             "type": "string"
           },
@@ -2817,6 +2871,12 @@
             ],
             "type": "string"
           },
+          "medications": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "notes": {
             "type": "string"
           },
@@ -2831,6 +2891,24 @@
           },
           "practitioner": {
             "type": "string"
+          },
+          "references": {
+            "additionalProperties": false,
+            "properties": {
+              "by_kind": {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              "total": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "type": "object"
           },
           "resolved_on": {
             "type": [
@@ -3624,6 +3702,24 @@
           "practitioner": {
             "type": "string"
           },
+          "references": {
+            "additionalProperties": false,
+            "properties": {
+              "by_kind": {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              "total": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "type": "object"
+          },
           "route": {
             "type": "string"
           },
@@ -3779,6 +3875,12 @@
           "category": {
             "type": "string"
           },
+          "caused_by_medications": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "duration_minutes": {
             "type": "integer"
           },
@@ -3834,6 +3936,12 @@
             "type": "string"
           },
           "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "treated_by_medications": {
             "items": {
               "type": "string"
             },
@@ -3935,6 +4043,24 @@
           },
           "practitioner": {
             "type": "string"
+          },
+          "references": {
+            "additionalProperties": false,
+            "properties": {
+              "by_kind": {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              "total": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "total"
+            ],
+            "type": "object"
           },
           "setting": {
             "type": "string"
@@ -6722,6 +6848,254 @@
           }
         ],
         "summary": "Every record the signed-in account owns, across kinds, cursor-paginated."
+      }
+    },
+    "/api/v1/records/treatments/{id}/medications": {
+      "get": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nOrdering is medication.name, id. A treatment belonging to another account is 404, byte-identical to one that never existed.",
+        "operationId": "listCourseMedications",
+        "parameters": [
+          {
+            "description": "The record's id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every medication attached to this course of treatment, each with its effective values and their provenance."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`not_found`. On owner-scoped data this is also the answer for a record belonging to somebody else, byte-identical apart from `request_id` to an id that never existed (FR-033)."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Every medication attached to this course of treatment, each with its effective values and their provenance."
+      }
+    },
+    "/api/v1/records/treatments/{id}/medications/{medicationId}": {
+      "delete": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nIf-Match is the treatment's own ETag. Deleting either end of the relationship cascades this join row away on its own.",
+        "operationId": "deleteCourseMedication",
+        "parameters": [
+          {
+            "description": "The record's id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The medicationId.",
+            "in": "path",
+            "name": "medicationId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The version the caller last saw, from the record's `ETag`. Required: an optional precondition is a precondition nobody sends. A mismatch is 412.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The link is gone. Both the treatment and the medication survive untouched (FR-058)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`not_found`. On owner-scoped data this is also the answer for a record belonging to somebody else, byte-identical apart from `request_id` to an id that never existed (FR-033)."
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`version_mismatch`: the `If-Match` precondition did not match the stored version."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`validation_failed`, with every offending member reported at once in `fields[]`. An unknown or unexpected member is reported with the field code `unknown_field`."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Detach the medication from the course. Both the treatment and the medication survive untouched."
+      },
+      "put": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nIf-Match is the treatment's own ETag, checked and required for the same reason as updateRecord's. Authorizer.Record runs on both the treatment and the medication, every time; a medication that does not exist, is unreachable, or belongs to a different patient than the treatment is 404, identical in all three cases (FR-057). The same pair upserted twice yields one row: the second call is 200, not 201 (FR-061).",
+        "operationId": "upsertCourseMedication",
+        "parameters": [
+          {
+            "description": "The record's id.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The medicationId.",
+            "in": "path",
+            "name": "medicationId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The version the caller last saw, from the record's `ETag`. Required: an optional precondition is a precondition nobody sends. A mismatch is 412.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The link's updated values. 201 with Location the first time this medication is attached to this course."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`not_found`. On owner-scoped data this is also the answer for a record belonging to somebody else, byte-identical apart from `request_id` to an id that never existed (FR-033)."
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`version_mismatch`: the `If-Match` precondition did not match the stored version."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`validation_failed`, with every offending member reported at once in `fields[]`. An unknown or unexpected member is reported with the field code `unknown_field`."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Attach a medication to the course, or update its dosage/frequency/etc. Idempotent: a second call updates rather than duplicates."
       }
     },
     "/api/v1/records/{kind}": {
