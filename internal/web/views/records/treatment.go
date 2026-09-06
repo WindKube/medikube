@@ -1,15 +1,17 @@
 package records
 
 import (
+	"context"
 	"strings"
 
 	"medikube/internal/domain/clinical"
+	"medikube/internal/i18n"
 	viewtags "medikube/internal/web/views/tags"
 )
 
 const (
-	TreatmentFormLabelCreate = "Record a treatment"
-	TreatmentFormLabelEdit   = "Edit treatment"
+	TreatmentFormLabelCreate = "action.record_treatment"
+	TreatmentFormLabelEdit   = "a11y.edit_treatment_form"
 )
 
 type TreatmentLinks struct {
@@ -141,10 +143,10 @@ func (t TreatmentView) Value(field string) string {
 }
 
 func (t TreatmentView) SettingOptions() []Option {
-	return enumOptions(clinical.TreatmentSettings(), clinical.TreatmentSetting(t.SettingVal))
+	return vocabOptions(clinical.TreatmentSettings(), clinical.TreatmentSetting(t.SettingVal), "treatment_setting")
 }
 func (t TreatmentView) StatusOptions() []Option {
-	return enumOptions(clinical.TherapyStatuses(), clinical.TherapyStatus(t.StatusVal))
+	return vocabOptions(clinical.TherapyStatuses(), clinical.TherapyStatus(t.StatusVal), "therapy_status")
 }
 
 type TreatmentListProps struct {
@@ -172,18 +174,18 @@ type TreatmentFormProps struct {
 	Tags viewtags.FieldProps
 }
 
-func (p TreatmentFormProps) Label() string {
+func (p TreatmentFormProps) Label(ctx context.Context) string {
 	if p.New {
-		return TreatmentFormLabelCreate
+		return i18n.T(ctx, TreatmentFormLabelCreate)
 	}
-	return TreatmentFormLabelEdit
+	return i18n.T(ctx, TreatmentFormLabelEdit)
 }
 
-func (p TreatmentFormProps) SubmitLabel() string {
+func (p TreatmentFormProps) SubmitLabel(ctx context.Context) string {
 	if p.New {
-		return "Record it"
+		return i18n.T(ctx, "action.record_it")
 	}
-	return "Save changes"
+	return i18n.T(ctx, "action.save_changes")
 }
 
 func treatmentDeleteExpression(t TreatmentView) string {

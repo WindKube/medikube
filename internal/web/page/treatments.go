@@ -13,6 +13,7 @@ import (
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	recordfamily "medikube/internal/records"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -26,7 +27,7 @@ const (
 	OpTreatmentDetailPage = "treatmentDetailPage"
 )
 
-const treatmentListTitle = "Treatments"
+const treatmentListTitleID = "page.treatmentListPage.title"
 
 // TreatmentHandlers is the treatment pages' contribution to the route table,
 // mirroring medications.go's Handlers end to end (T078).
@@ -220,7 +221,9 @@ func (p *treatmentPages) list(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	return p.render(e, actor, treatmentListTitle, sequence{
+	web.Localize(e)
+
+	return p.render(e, actor, i18n.T(e.Request.Context(), treatmentListTitleID), sequence{
 		context,
 		p.views.ListOfPage(listing, nextPageHref(e, listing)),
 		entry.Views.Form(blank, nil, ""),
@@ -272,6 +275,8 @@ func (p *treatmentPages) patientContext(ctx context.Context, actor access.Actor,
 }
 
 func (p *treatmentPages) detail(e *core.RequestEvent, actor access.Actor) error {
+	web.Localize(e)
+
 	handler, err := p.session(actor)
 	if err != nil {
 		return err
@@ -319,8 +324,8 @@ func (p *treatmentPages) detail(e *core.RequestEvent, actor access.Actor) error 
 	return p.render(e, actor, p.views.view(found).Name, sequence{
 		context,
 		p.views.detailWithReferenceCount(found, len(courseMedications)),
-		views.LinkedRecords(ids.RecordDetail(kind.Treatment, treatmentID)+"-links", "Linked records", linked),
-		views.CourseMedications(sectionID, "Course medications", courseMedications, views.CourseMedicationFormProps{
+		views.LinkedRecords(ids.RecordDetail(kind.Treatment, treatmentID)+"-links", i18n.T(e.Request.Context(), "linked_records.title"), linked),
+		views.CourseMedications(sectionID, i18n.T(e.Request.Context(), "course_medications.title"), courseMedications, views.CourseMedicationFormProps{
 			ID:         sectionID + "-form",
 			UpsertBase: p.links.courseMedicationsBase(treatmentID),
 			Etag:       found.Version,
@@ -554,7 +559,10 @@ func (l treatmentLinks) cancelHref(treatment views.TreatmentView) string {
 func (l treatmentLinks) nav(current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: medicationListTitle, Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
-		{Label: treatmentListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		// Nav labels are not yet resolved through i18n.T by shell/nav.templ
+		// (T020); left in English here until that seam lands (US1 cross-slice
+		// note in this task's report).
+		{Label: "Treatments", Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

@@ -58,7 +58,7 @@ func TestDeleteConfirmationStatesTheUsageCountBeforeConfirming(t *testing.T) {
 		want  string
 	}{
 		{name: "none", usage: 0, want: "No record carries this tag"},
-		{name: "one", usage: 1, want: "One record carries this tag"},
+		{name: "one", usage: 1, want: "1 record carries this tag"},
 		{name: "many", usage: 37, want: "37 records carry this tag"},
 	}
 

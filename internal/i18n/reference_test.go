@@ -29,6 +29,11 @@ func (r referenceCall) String() string { return fmt.Sprintf("%s:%d: %s", r.file,
 // producer, not a literal this scan can check.
 var callPattern = regexp.MustCompile(`i18n\.(?:T|N)\(ctx, "([^"]+)"\s*[,)]`)
 
+// constPattern matches a Go constant holding an id (`fooTitle = "page.foo.title"`)
+// that a template later hands to i18n.T through the name: the same reference,
+// one indirection away from callPattern's reach.
+var constPattern = regexp.MustCompile(`^\s*\w+\s*=\s*"([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)"`)
+
 // scanReferences walks every .templ and .go file under root (excluding
 // *_templ.go, which templ generates) for i18n.T/i18n.N literal id calls.
 func scanReferences(root string) ([]referenceCall, error) {
@@ -62,6 +67,9 @@ func scanReferences(root string) ([]referenceCall, error) {
 
 		for i, line := range strings.Split(string(content), "\n") {
 			for _, match := range callPattern.FindAllStringSubmatch(line, -1) {
+				calls = append(calls, referenceCall{file: rel, line: i + 1, id: match[1]})
+			}
+			if match := constPattern.FindStringSubmatch(line); match != nil && !strings.HasSuffix(name, "_test.go") {
 				calls = append(calls, referenceCall{file: rel, line: i + 1, id: match[1]})
 			}
 		}

@@ -2,21 +2,15 @@ package records
 
 import (
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
-)
-
-const (
-	vitalsEmptyTitle  = "Nothing recorded yet"
-	vitalsEmptyBody   = "Record the first set of measurements and it will be listed here."
-	vitalsCreateLabel = "Record measurements"
-	vitalsTitle       = "Measurements"
 )
 
 templ VitalsList(props VitalsListProps) {
 	<section
 		id={ ids.RecordList(kind.Vitals) }
-		aria-label={ vitalsTitle }
+		aria-label={ i18n.T(ctx, "page.vitals.title") }
 		class="flex flex-col"
 	>
 		<div class="flex flex-wrap items-center justify-between gap-3">
@@ -24,30 +18,30 @@ templ VitalsList(props VitalsListProps) {
 				id={ ids.RecordListHeading(kind.Vitals) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ vitalsTitle }</h1>
+			>{ i18n.T(ctx, "page.vitals.title") }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }
 					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-				>{ vitalsCreateLabel }</a>
+				>{ i18n.T(ctx, "action.record_vitals") }</a>
 			}
 		</div>
 		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
 			<div data-empty class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:          ids.RecordEmpty(kind.Vitals),
-					Title:       vitalsEmptyTitle,
-					Body:        vitalsEmptyBody,
+					Title:       i18n.T(ctx, "empty.nothing_recorded"),
+					Body:        i18n.T(ctx, "empty.vitals_body"),
 					ActionHref:  props.CreateHref,
-					ActionLabel: vitalsCreateLabel,
+					ActionLabel: i18n.T(ctx, "action.record_vitals"),
 				})
 			</div>
 			<div data-rows class="mt-4 overflow-x-auto">
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
-							<th scope="col" class="pb-2 pr-4 font-medium">{ VitalsFieldLabel(VitalsFieldRecordedAt) }</th>
-							<th scope="col" class="pb-2 font-medium">Measurements</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, VitalsFieldLabel(VitalsFieldRecordedAt)) }</th>
+							<th scope="col" class="pb-2 font-medium">{ i18n.T(ctx, "field.vitals.measurements") }</th>
 						</tr>
 					</thead>
 					<tbody id={ ids.RecordRows(kind.Vitals) }>

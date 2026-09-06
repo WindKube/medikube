@@ -12,16 +12,17 @@ type CourseMedicationEffectiveView struct {
 	Source string
 }
 
-// courseMedicationSourceLabel turns the wire vocabulary into the word a
-// reader sees next to the value.
+// courseMedicationSourceLabel turns the wire vocabulary into the message id
+// for the word a reader sees next to the value; the templ that prints it
+// resolves it with i18n.T at render.
 func courseMedicationSourceLabel(source string) string {
 	switch source {
 	case "course":
-		return "this course"
+		return "field.course_medication.source_course"
 	case "medication":
-		return "the medication"
+		return "field.course_medication.source_medication"
 	default:
-		return "not set"
+		return "field.course_medication.source_none"
 	}
 }
 
@@ -87,14 +88,14 @@ func (p CourseMedicationFormProps) submitExpr() string {
 // the same one DetailEntry follows for a plain field).
 func (r CourseMedicationRow) Fields() []courseMedicationField {
 	candidates := []courseMedicationField{
-		{Label: "Dosage", Effective: r.Dosage},
-		{Label: "Frequency", Effective: r.Frequency},
-		{Label: "Duration", Effective: r.Duration},
-		{Label: "Timing", Effective: r.Timing},
-		{Label: "Prescriber", Effective: r.Prescriber},
-		{Label: "Pharmacy", Effective: r.Pharmacy},
-		{Label: "Started", Effective: r.StartedOn},
-		{Label: "Ended", Effective: r.EndedOn},
+		{Label: "field.course_medication.dosage", Effective: r.Dosage},
+		{Label: "field.course_medication.frequency", Effective: r.Frequency},
+		{Label: "field.course_medication.duration", Effective: r.Duration},
+		{Label: "field.course_medication.timing", Effective: r.Timing},
+		{Label: "field.course_medication.prescriber", Effective: r.Prescriber},
+		{Label: "field.course_medication.pharmacy", Effective: r.Pharmacy},
+		{Label: "field.course_medication.started", Effective: r.StartedOn},
+		{Label: "field.course_medication.ended", Effective: r.EndedOn},
 	}
 
 	fields := make([]courseMedicationField, 0, len(candidates))

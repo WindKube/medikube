@@ -34,7 +34,7 @@ test.describe("the tag manager", () => {
 
     const row = manager.getByRole("listitem").filter({ hasText: createdName });
     await expect(row).toBeVisible();
-    await expect(row).toContainText("0 record(s)");
+    await expect(row).toContainText("0 records");
 
     await row.getByRole("button", { name: "Rename" }).click();
     const renameForm = row.getByRole("form", { name: `Rename ${createdName}` });

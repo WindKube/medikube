@@ -2,6 +2,7 @@ package records
 
 import (
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
 	"medikube/internal/web"
@@ -9,19 +10,10 @@ import (
 
 const symptomConfirmSignal = "_confirming_delete"
 
-const (
-	symptomDetailArticle = "Symptom episode"
-	symptomConfirmTitle  = "Delete this symptom episode?"
-	symptomConfirmLabel  = "Delete permanently"
-	symptomConfirmCancel = "Keep it"
-	symptomEditLabel     = "Edit"
-	symptomDeleteLabel   = "Delete"
-)
-
 templ SymptomDetail(props SymptomDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Symptom, props.Symptom.ID) }
-		aria-label={ symptomDetailArticle }
+		aria-label={ i18n.T(ctx, "a11y.symptom_article") }
 		data-signals={ "{" + symptomConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Symptom.Version)) + "}" }
 		data-status={ props.Symptom.StatusValue }
 		class="flex flex-col"
@@ -37,22 +29,22 @@ templ SymptomDetail(props SymptomDetailProps) {
 					<a
 						href={ props.Symptom.Links.Edit }
 						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-					>{ symptomEditLabel }</a>
+					>{ i18n.T(ctx, "action.edit") }</a>
 				}
 				<button
 					type="button"
 					id={ ids.RecordDelete(kind.Symptom, props.Symptom.ID) }
 					data-on:click={ "$" + symptomConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-				>{ symptomDeleteLabel }</button>
+				>{ i18n.T(ctx, "action.delete") }</button>
 			</div>
 		</header>
 		<p class="mt-2 text-sm text-slate-600 dark:text-slate-400">
-			{ itoa(props.Symptom.EpisodeCount) } episodes recorded under this name.
+			{ i18n.N(ctx, "symptom.episodes_recorded", props.Symptom.EpisodeCount) }
 		</p>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
 			for _, entry := range props.Symptom.Entries() {
-				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ i18n.T(ctx, entry.Label) }</dt>
 				@detailValue(entry)
 			}
 		</dl>
@@ -63,12 +55,12 @@ templ SymptomDetail(props SymptomDetailProps) {
 			ID:             ids.RecordConfirm(kind.Symptom, props.Symptom.ID),
 			ReturnTo: ids.RecordDelete(kind.Symptom, props.Symptom.ID),
 			Signal:         symptomConfirmSignal,
-			Title:          symptomConfirmTitle,
+			Title:          i18n.T(ctx, "confirm.delete_symptom_episode"),
 			Subject:        props.Symptom.Name,
 			ReferenceCount: 0,
-			ConfirmLabel:   symptomConfirmLabel,
+			ConfirmLabel:   i18n.T(ctx, "action.delete_permanently"),
 			ConfirmOn:      deleteSymptomExpression(props.Symptom),
-			CancelLabel:    symptomConfirmCancel,
+			CancelLabel:    i18n.T(ctx, "confirm.keep_it"),
 		})
 	</article>
 }

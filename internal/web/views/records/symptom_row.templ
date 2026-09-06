@@ -2,6 +2,7 @@ package records
 
 import (
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/ids"
 )
 
@@ -18,16 +19,16 @@ templ SymptomRow(symptom SymptomView) {
 			>{ symptom.Name }</a>
 		</th>
 		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
-			<span class="sr-only">{ SymptomFieldLabel(SymptomFieldSeverity) }</span>
+			<span class="sr-only">{ i18n.T(ctx, SymptomFieldLabel(SymptomFieldSeverity)) }</span>
 			{ symptom.Severity }
 		</td>
 		<td class="py-3 pr-4 align-top tabular-nums text-slate-700 dark:text-slate-300">
-			<span class="sr-only">Episodes</span>
+			<span class="sr-only">{ i18n.T(ctx, "field.symptom.episode_count") }</span>
 			{ itoa(symptom.EpisodeCount) }
 		</td>
 		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
 			if symptom.LastOccurredAt != "" {
-				<span class="sr-only">Most recent</span>
+				<span class="sr-only">{ i18n.T(ctx, "field.symptom.last_occurred") }</span>
 				<time datetime={ symptom.LastOccurredAt }>{ symptom.LastOccurredAt }</time>
 			}
 		</td>

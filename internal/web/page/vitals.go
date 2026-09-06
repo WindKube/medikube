@@ -13,6 +13,7 @@ import (
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	recordfamily "medikube/internal/records"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -26,7 +27,7 @@ const (
 	OpVitalsDetailPage = "measurementsDetailPage"
 )
 
-const vitalsListTitle = "Measurements"
+const vitalsListTitleID = "page.vitals.title"
 
 // VitalsHandlers is the vitals pages' contribution to the route table.
 func VitalsHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
@@ -87,13 +88,7 @@ func (v VitalsViews) Detail(record recordfamily.Record) recordfamily.Renderer {
 	return views.VitalsDetail(views.VitalsDetailProps{Vitals: v.view(record)})
 }
 
-func (v VitalsViews) Title(record recordfamily.Record) string {
-	if title := v.view(record).RecordedAt; title != "" {
-		return title
-	}
-
-	return vitalsListTitle
-}
+func (v VitalsViews) Title(record recordfamily.Record) string { return v.view(record).RecordedAt }
 
 func (v VitalsViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {
 	vitals := v.view(record)
@@ -216,7 +211,9 @@ func (p *vitalsPages) list(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	return p.render(e, actor, vitalsListTitle, sequence{
+	web.Localize(e)
+
+	return p.render(e, actor, i18n.T(e.Request.Context(), vitalsListTitleID), sequence{
 		context,
 		p.views.ListOfPage(listing, nextPageHref(e, listing)),
 		entry.Views.Form(blank, nil, ""),
@@ -268,6 +265,8 @@ func (p *vitalsPages) patientContext(ctx context.Context, actor access.Actor, pa
 }
 
 func (p *vitalsPages) detail(e *core.RequestEvent, actor access.Actor) error {
+	web.Localize(e)
+
 	handler, err := p.session(actor)
 	if err != nil {
 		return err
@@ -298,7 +297,12 @@ func (p *vitalsPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	return p.render(e, actor, p.views.Title(found), sequence{
+	title := p.views.view(found).RecordedAt
+	if title == "" {
+		title = i18n.T(e.Request.Context(), vitalsListTitleID)
+	}
+
+	return p.render(e, actor, title, sequence{
 		context,
 		entry.Views.Detail(found),
 		entry.Views.Form(found, nil, ""),
@@ -393,7 +397,10 @@ func (l vitalsLinks) cancelHref(v views.VitalsView) string {
 func (l vitalsLinks) nav(current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: medicationListTitle, Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
-		{Label: vitalsListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		// Nav labels are not yet resolved through i18n.T by shell/nav.templ
+		// (T020); left in English here until that seam lands (US1 cross-slice
+		// note in this task's report).
+		{Label: "Measurements", Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

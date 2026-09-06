@@ -32,14 +32,6 @@ function title(page: string): string {
   );
 }
 
-const symptomListTitle = goString(
-  "internal/web/page/symptoms.go",
-  "symptomListTitle",
-);
-const vitalsListTitle = goString(
-  "internal/web/page/vitals.go",
-  "vitalsListTitle",
-);
 const englishCatalogue = readFileSync(
   resolve(repositoryRoot, "internal/i18n/locales/active.en.toml"),
   "utf8",
@@ -56,6 +48,8 @@ function catalogueEnglish(id: string): string {
   return found[1];
 }
 
+const symptomListTitle = catalogueEnglish("page.symptoms.title");
+const vitalsListTitle = catalogueEnglish("page.vitals.title");
 const familyMemberListTitle = catalogueEnglish("page.family_history.title");
 
 // Read from internal/testsupport/seed/seed_clinical.go rather than restated:

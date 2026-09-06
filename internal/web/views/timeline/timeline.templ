@@ -3,15 +3,9 @@
 package timeline
 
 import (
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/shared"
-)
-
-const (
-	landmark          = "Timeline"
-	choosePersonTitle = "Choose a person"
-	choosePersonBody  = "Pick who this timeline is for."
-	undatedGroupLabel = "Date not recorded"
 )
 
 // EntryView is one timeline row: its kind, its identifying summary and its
@@ -25,8 +19,8 @@ type EntryView struct {
 }
 
 // Group is one date the timeline groups entries under. Label is the calendar
-// date rendered for people, or undatedGroupLabel for the one group that has
-// none (research D-06).
+// date rendered for people, or "timeline.date_not_recorded" for the one
+// group that has none (research D-06).
 type Group struct {
 	Label   string
 	Entries []EntryView
@@ -45,17 +39,17 @@ type Props struct {
 }
 
 templ Timeline(props Props) {
-	<section id="timeline" aria-label={ landmark } class="flex flex-col gap-4">
+	<section id="timeline" aria-label={ i18n.T(ctx, "nav.timeline") } class="flex flex-col gap-4">
 		<h1
 			tabindex="-1"
 			class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-		>{ landmark }</h1>
+		>{ i18n.T(ctx, "nav.timeline") }</h1>
 		if props.ChoosePerson {
 			<div class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:    "timeline-choose-person",
-					Title: choosePersonTitle,
-					Body:  choosePersonBody,
+					Title: i18n.T(ctx, "timeline.choose_person"),
+					Body:  i18n.T(ctx, "timeline.choose_person_body"),
 				})
 			</div>
 		} else {

@@ -1187,3 +1187,696 @@ other = "Stopped taking"
 [enum.therapy_status.cancelled]
 description = "Therapy status vocabulary value: cancelled/never started"
 other = "Never started"
+# --- T025: procedure, symptom, treatment, vitals, links, coursemedications ---
+
+[page.procedureListPage.title]
+description = "The procedure list page's own <title> and heading"
+other = "Procedures"
+
+[page.medications.title]
+description = "The medication list page's title"
+other = "Medications"
+
+[page.symptoms.title]
+description = "The symptom list page's own <title> and heading"
+other = "Symptoms"
+
+[page.treatmentListPage.title]
+description = "The treatment list page's own <title> and heading"
+other = "Treatments"
+
+[page.vitals.title]
+description = "The vitals (measurements) list page's own <title> and heading, also this detail page's title when no date has been recorded yet"
+other = "Measurements"
+
+[action.record_procedure]
+description = "The create button on the procedure list, and the new-record form's aria-label"
+other = "Record a procedure"
+
+[a11y.edit_procedure_form]
+description = "The procedure edit form's aria-label"
+other = "Edit procedure"
+
+[action.record_symptom]
+description = "The create button on the symptom list, and the new-record form's aria-label"
+other = "Record a symptom"
+
+[a11y.edit_symptom_form]
+description = "The symptom edit form's aria-label"
+other = "Edit symptom"
+
+[action.record_treatment]
+description = "The create button on the treatment list, and the new-record form's aria-label"
+other = "Record a treatment"
+
+[a11y.edit_treatment_form]
+description = "The treatment edit form's aria-label"
+other = "Edit treatment"
+
+[action.record_vitals]
+description = "The create button on the vitals list, and the new-record form's aria-label"
+other = "Record measurements"
+
+[a11y.edit_vitals_form]
+description = "The vitals edit form's aria-label"
+other = "Edit measurements"
+
+[action.remove]
+description = "The button that detaches one linked or attached item (a medication link, a course medication) without deleting the item itself"
+other = "Remove"
+
+[action.add]
+description = "The button that attaches whichever item a picker currently holds"
+other = "Add"
+
+[action.add_a_medication]
+description = "The placeholder option of a medication picker before anything is chosen"
+other = "Add a medication…"
+
+[empty.procedure_body]
+description = "The procedure list's empty-state body text"
+other = "Record the first one and it will be listed here, with everything you noted about it."
+
+[empty.symptom_body]
+description = "The symptom list's empty-state body text"
+other = "Record the first episode and it will be listed here, with everything you noted about it."
+
+[empty.treatment_body]
+description = "The treatment list's empty-state body text"
+other = "Record the first one and it will be listed here, with everything you noted about it."
+
+[empty.vitals_body]
+description = "The vitals list's empty-state body text"
+other = "Record the first set of measurements and it will be listed here."
+
+[confirm.delete_procedure]
+description = "The delete confirmation dialog's question on a procedure's detail page"
+other = "Delete this procedure?"
+
+[confirm.delete_symptom_episode]
+description = "The delete confirmation dialog's question on a symptom's detail page"
+other = "Delete this symptom episode?"
+
+[confirm.delete_treatment]
+description = "The delete confirmation dialog's question on a treatment's detail page"
+other = "Delete this treatment?"
+
+[confirm.delete_vitals]
+description = "The delete confirmation dialog's question on a vitals (measurement set) detail page"
+other = "Delete this measurement set?"
+
+[confirm.irreversible]
+description = "The delete confirmation dialog's consequence line, the short form"
+other = "This is permanent. There is no recycle bin and no undo."
+
+[confirm.irreversible_full]
+description = "The delete confirmation dialog's consequence line, the longer form used when the record holds several measurements at once"
+other = "This is permanent. There is no recycle bin and no undo, so everything recorded here goes with it."
+
+[a11y.procedure_article]
+description = "The procedure detail page's own article landmark aria-label"
+other = "Procedure"
+
+[a11y.symptom_article]
+description = "The symptom detail page's own article landmark aria-label"
+other = "Symptom episode"
+
+[a11y.treatment_article]
+description = "The treatment detail page's own article landmark aria-label"
+other = "Treatment"
+
+[a11y.vitals_article]
+description = "The vitals detail page's own article landmark aria-label"
+other = "Measurement set"
+
+[enum.unset]
+description = "A select's own placeholder option for a field nobody has filled in yet"
+other = "Not recorded"
+
+[field.symptom.name]
+description = "A symptom episode's own name field"
+other = "What it was"
+
+[field.symptom.category]
+description = "A symptom episode's category field"
+other = "Category"
+
+[field.symptom.severity]
+description = "A symptom episode's severity field"
+other = "Severity"
+
+[field.symptom.occurred_at]
+description = "A symptom episode's own occurred-at field"
+other = "When"
+
+[field.symptom.duration_minutes]
+description = "A symptom episode's duration field, in minutes"
+other = "How long (minutes)"
+
+[field.symptom.pain_scale]
+description = "A symptom episode's pain scale field, 0-10"
+other = "Pain (0-10)"
+
+[field.symptom.body_site]
+description = "A symptom episode's body site field"
+other = "Where on the body"
+
+[field.symptom.triggers]
+description = "A symptom episode's triggers field"
+other = "Triggers"
+
+[field.symptom.relief_methods]
+description = "A symptom episode's relief methods field"
+other = "What helped"
+
+[field.symptom.impact]
+description = "A symptom episode's impact field"
+other = "Impact"
+
+[field.symptom.resolved_at]
+description = "A symptom episode's resolved-at field"
+other = "Resolved"
+
+[field.symptom.is_chronic]
+description = "A symptom episode's ongoing/chronic flag"
+other = "Ongoing"
+
+[field.symptom.status]
+description = "A symptom episode's status field"
+other = "State"
+
+[field.symptom.episode_count]
+description = "The symptom list column, and the detail page's sr-only label, for how many episodes are recorded under one name"
+other = "Episodes"
+
+[field.symptom.last_occurred]
+description = "The symptom list column for the most recent occurrence date"
+other = "Most recent"
+
+[field.symptom.treated_by_role]
+description = "The symptom medication editor's role label for medications that treat the symptom"
+other = "Treats"
+
+[field.symptom.caused_by_role]
+description = "The symptom medication editor's role label for medications that cause the symptom"
+other = "Causes"
+
+[symptom.episodes_recorded]
+description = "The symptom detail page's own count line, e.g. \"4 episodes recorded under this name.\""
+one = "{{.PluralCount}} episode recorded under this name."
+other = "{{.PluralCount}} episodes recorded under this name."
+
+[field.vitals.recorded_at]
+description = "A vitals record's own recorded-at field"
+other = "When"
+
+[field.vitals.systolic_mmhg]
+description = "A vitals record's systolic blood pressure field"
+other = "Systolic (mmHg)"
+
+[field.vitals.diastolic_mmhg]
+description = "A vitals record's diastolic blood pressure field"
+other = "Diastolic (mmHg)"
+
+[field.vitals.heart_rate_bpm]
+description = "A vitals record's heart rate field"
+other = "Heart rate (bpm)"
+
+[field.vitals.respiratory_rate_bpm]
+description = "A vitals record's respiratory rate field"
+other = "Respiratory rate (breaths/min)"
+
+[field.vitals.temperature_c]
+description = "A vitals record's temperature field"
+other = "Temperature"
+
+[field.vitals.spo2_pct]
+description = "A vitals record's oxygen saturation field"
+other = "Oxygen saturation (%)"
+
+[field.vitals.weight_kg]
+description = "A vitals record's weight field"
+other = "Weight"
+
+[field.vitals.height_cm]
+description = "A vitals record's height field"
+other = "Height"
+
+[field.vitals.glucose_mmol_l]
+description = "A vitals record's glucose field"
+other = "Glucose"
+
+[field.vitals.glucose_context]
+description = "A vitals record's glucose context field (when it was taken)"
+other = "Taken"
+
+[field.vitals.hba1c_pct]
+description = "A vitals record's HbA1c field"
+other = "HbA1c (%)"
+
+[field.vitals.pain_scale]
+description = "A vitals record's pain scale field, 0-10"
+other = "Pain (0-10)"
+
+[field.vitals.device]
+description = "A vitals record's device field"
+other = "Device"
+
+[field.vitals.bmi]
+description = "A vitals record's derived BMI field"
+other = "BMI"
+
+[field.vitals.measurements]
+description = "The vitals list's own column heading for the row's one-line measurement summary"
+other = "Measurements"
+
+[field.vitals.systolic_short]
+description = "The vitals row's own one-line summary abbreviation for systolic pressure"
+other = "Systolic"
+
+[field.vitals.diastolic_short]
+description = "The vitals row's own one-line summary abbreviation for diastolic pressure"
+other = "Diastolic"
+
+[field.vitals.heart_rate_short]
+description = "The vitals row's own one-line summary abbreviation for heart rate"
+other = "HR"
+
+[field.vitals.temperature_short]
+description = "The vitals row's own one-line summary abbreviation for temperature"
+other = "Temp"
+
+[field.vitals.spo2_short]
+description = "The vitals row's own one-line summary abbreviation for oxygen saturation"
+other = "SpO2"
+
+[field.vitals.weight_short]
+description = "The vitals row's own one-line summary abbreviation for weight"
+other = "Weight"
+
+[field.vitals.height_short]
+description = "The vitals row's own one-line summary abbreviation for height"
+other = "Height"
+
+[field.vitals.glucose_short]
+description = "The vitals row's own one-line summary abbreviation for glucose"
+other = "Glucose"
+
+[field.vitals.bmi_short]
+description = "The vitals row's own one-line summary abbreviation for BMI"
+other = "BMI"
+
+[field.course_medication.dosage]
+description = "A course medication's own dosage override field"
+other = "Dosage"
+
+[field.course_medication.frequency]
+description = "A course medication's own frequency override field"
+other = "Frequency"
+
+[field.course_medication.duration]
+description = "A course medication's effective duration field"
+other = "Duration"
+
+[field.course_medication.timing]
+description = "A course medication's effective timing field"
+other = "Timing"
+
+[field.course_medication.prescriber]
+description = "A course medication's effective prescriber field"
+other = "Prescriber"
+
+[field.course_medication.pharmacy]
+description = "A course medication's effective pharmacy field"
+other = "Pharmacy"
+
+[field.course_medication.started]
+description = "A course medication's own started-on override field"
+other = "Started"
+
+[field.course_medication.ended]
+description = "A course medication's own ended-on override field"
+other = "Ended"
+
+[field.course_medication.source_course]
+description = "Shown next to a course medication's effective field when the value came from the course's own override"
+other = "this course"
+
+[field.course_medication.source_medication]
+description = "Shown next to a course medication's effective field when the value came from the medication's own default"
+other = "the medication"
+
+[field.course_medication.source_none]
+description = "Shown next to a course medication's effective field when neither the course nor the medication has set it"
+other = "not set"
+
+[field.medication_link.role]
+description = "A medication link editor's role picker aria-label, when a kind offers more than one role"
+other = "Role"
+
+[field.medication_link.medication]
+description = "A medication link editor's medication picker aria-label"
+other = "Medication"
+
+[empty.course_medications]
+description = "Shown under a treatment's course medications section when none are attached yet"
+other = "No medications attached to this course yet."
+
+[empty.linked_records]
+description = "Shown under a record's linked-records section when nothing is linked yet"
+other = "Nothing linked yet."
+
+[empty.medication_links]
+description = "Shown under a medication link editor's role when nothing is linked yet"
+other = "No medications linked yet."
+
+[linked_records.title]
+description = "The heading over a record's own linked-records section"
+other = "Linked records"
+
+[course_medications.title]
+description = "The heading over a treatment's own course medications section"
+other = "Course medications"
+
+[medication_links.title]
+description = "The heading over a symptom's own medication links editor"
+other = "Medications"
+
+[enum.procedure_type.surgical]
+description = "Procedure type vocabulary value"
+other = "Surgical"
+
+[enum.procedure_type.diagnostic]
+description = "Procedure type vocabulary value"
+other = "Diagnostic"
+
+[enum.procedure_type.therapeutic]
+description = "Procedure type vocabulary value"
+other = "Therapeutic"
+
+[enum.procedure_type.preventive]
+description = "Procedure type vocabulary value"
+other = "Preventive"
+
+[enum.procedure_type.other]
+description = "Procedure type vocabulary value, the catch-all"
+other = "Other"
+
+[enum.order_status.ordered]
+description = "Order status vocabulary value (procedure and similar ordered events)"
+other = "Ordered"
+
+[enum.order_status.scheduled]
+description = "Order status vocabulary value"
+other = "Scheduled"
+
+[enum.order_status.in_progress]
+description = "Order status vocabulary value"
+other = "In progress"
+
+[enum.order_status.completed]
+description = "Order status vocabulary value"
+other = "Completed"
+
+[enum.order_status.cancelled]
+description = "Order status vocabulary value"
+other = "Cancelled"
+
+[enum.procedure_outcome.successful]
+description = "Procedure outcome vocabulary value"
+other = "Successful"
+
+[enum.procedure_outcome.partial]
+description = "Procedure outcome vocabulary value"
+other = "Partial"
+
+[enum.procedure_outcome.unsuccessful]
+description = "Procedure outcome vocabulary value"
+other = "Unsuccessful"
+
+[enum.procedure_outcome.complications]
+description = "Procedure outcome vocabulary value"
+other = "Complications"
+
+[enum.procedure_setting.outpatient]
+description = "Procedure setting vocabulary value"
+other = "Outpatient"
+
+[enum.procedure_setting.inpatient]
+description = "Procedure setting vocabulary value"
+other = "Inpatient"
+
+[enum.procedure_setting.office]
+description = "Procedure setting vocabulary value"
+other = "Office"
+
+[enum.anesthesia.none]
+description = "Anesthesia vocabulary value"
+other = "None"
+
+[enum.anesthesia.local]
+description = "Anesthesia vocabulary value"
+other = "Local"
+
+[enum.anesthesia.regional]
+description = "Anesthesia vocabulary value"
+other = "Regional"
+
+[enum.anesthesia.sedation]
+description = "Anesthesia vocabulary value"
+other = "Sedation"
+
+[enum.anesthesia.general]
+description = "Anesthesia vocabulary value"
+other = "General"
+
+[enum.treatment_setting.inpatient]
+description = "Treatment setting vocabulary value"
+other = "Inpatient"
+
+[enum.treatment_setting.outpatient]
+description = "Treatment setting vocabulary value"
+other = "Outpatient"
+
+[enum.treatment_setting.home]
+description = "Treatment setting vocabulary value"
+other = "Home"
+
+[enum.symptom_category.pain]
+description = "Symptom category vocabulary value"
+other = "Pain"
+
+[enum.symptom_category.respiratory]
+description = "Symptom category vocabulary value"
+other = "Respiratory"
+
+[enum.symptom_category.gastrointestinal]
+description = "Symptom category vocabulary value"
+other = "Gastrointestinal"
+
+[enum.symptom_category.neurological]
+description = "Symptom category vocabulary value"
+other = "Neurological"
+
+[enum.symptom_category.cardiovascular]
+description = "Symptom category vocabulary value"
+other = "Cardiovascular"
+
+[enum.symptom_category.musculoskeletal]
+description = "Symptom category vocabulary value"
+other = "Musculoskeletal"
+
+[enum.symptom_category.dermatological]
+description = "Symptom category vocabulary value"
+other = "Dermatological"
+
+[enum.symptom_category.psychological]
+description = "Symptom category vocabulary value"
+other = "Psychological"
+
+[enum.symptom_category.constitutional]
+description = "Symptom category vocabulary value"
+other = "Constitutional"
+
+[enum.symptom_category.other]
+description = "Symptom category vocabulary value, the catch-all"
+other = "Other"
+
+[enum.symptom_impact.none]
+description = "Symptom impact vocabulary value"
+other = "None"
+
+[enum.symptom_impact.mild]
+description = "Symptom impact vocabulary value"
+other = "Mild"
+
+[enum.symptom_impact.moderate]
+description = "Symptom impact vocabulary value"
+other = "Moderate"
+
+[enum.symptom_impact.severe]
+description = "Symptom impact vocabulary value"
+other = "Severe"
+
+[enum.glucose_context.fasting]
+description = "Glucose measurement context vocabulary value"
+other = "Fasting"
+
+[enum.glucose_context.before_meal]
+description = "Glucose measurement context vocabulary value"
+other = "Before a meal"
+
+[enum.glucose_context.after_meal]
+description = "Glucose measurement context vocabulary value"
+other = "After a meal"
+
+[enum.glucose_context.random]
+description = "Glucose measurement context vocabulary value"
+other = "Random"
+
+# --- T026: tags, search, timeline ---
+[empty.tag_body]
+description = "The tag manager's empty state body"
+other = "Create a tag to start organising records."
+
+[page.tagsPage.title]
+description = "The tag manager page's own <title> and landmark name"
+other = "Tags"
+
+[page.searchPage.title]
+description = "The search page's own <title>, heading, and submit button"
+other = "Search"
+
+[action.add_a_tag]
+description = "The tag manager's create-form aria-label"
+other = "Add a tag"
+
+[action.add_tag]
+description = "The tag manager's create-form submit button"
+other = "Add tag"
+
+[action.add_a_tag_placeholder]
+description = "The tag field's own text input placeholder, on every kind's form"
+other = "Add a tag…"
+
+[tag.rename_form]
+description = "The tag manager's rename-form aria-label, naming the tag being renamed"
+other = "Rename {{.Name}}"
+
+[action.rename]
+description = "A tag row's rename button"
+other = "Rename"
+
+[a11y.confirm_delete]
+description = "A delete-confirmation panel's own aria-label"
+other = "Confirm delete"
+
+[confirm.delete_tag]
+description = "The tag delete-confirmation panel's heading"
+other = "Delete this tag?"
+
+[tag.usage_count]
+description = "A tag row's own usage count, e.g. \"4 records\""
+one = "{{.PluralCount}} record"
+other = "{{.PluralCount}} records"
+
+[tag.delete_consequence]
+description = "The tag delete-confirmation panel's own body text stating how many records carry the tag"
+one = "{{.PluralCount}} record carries this tag. Deleting it removes the tag from that record."
+other = "{{.PluralCount}} records carry this tag. Deleting it removes the tag from all of them."
+
+[tag.delete_consequence_none]
+description = "The tag delete-confirmation panel's body when no record carries the tag"
+other = "No record carries this tag. Deleting it removes nothing from anything."
+
+[field.tag.name]
+description = "The tag form's own name field label"
+other = "Name"
+
+[field.tag.color]
+description = "The tag form's own color field label"
+other = "Color"
+
+[tag.field_label]
+description = "The tag picker field's own label, on every kind's form"
+other = "Tags"
+
+[tag.selected]
+description = "The tag field's applied-tags list aria-label"
+other = "Selected tags"
+
+[tag.remove]
+description = "A tag field's own remove-chip button aria-label, naming the tag being removed"
+other = "Remove {{.Name}}"
+
+[search.term]
+description = "The search page's own search-box sr-only label"
+other = "Search term"
+
+[search.placeholder]
+description = "The search page's own search-box placeholder"
+other = "Search this person's records"
+
+[search.narrowing]
+description = "The search page's own active-narrowing chip list aria-label"
+other = "Narrowing"
+
+[search.choose_person]
+description = "The search page's no-patient-chosen empty state heading"
+other = "Choose a person"
+
+[search.choose_person_body]
+description = "The search page's no-patient-chosen empty state body"
+other = "Pick who to search using the switcher above."
+
+[search.no_term]
+description = "The search page's no-term-typed-yet empty state heading"
+other = "Search this person's chart"
+
+[search.no_term_body]
+description = "The search page's no-term-typed-yet empty state body"
+other = "Type a term above to find something in their records."
+
+[search.no_records_body]
+description = "The search page's own empty state body when the person has no records of any kind yet"
+other = "This person has no records of any kind yet."
+
+[search.no_matches_body]
+description = "The search page's own empty state body when a search matched nothing"
+other = "No records matched this search."
+
+[search.no_matches]
+description = "The search page's own no-matches empty state heading"
+other = "Nothing matched that"
+
+[search.clear_narrowing]
+description = "The search page's own link that clears every active narrowing"
+other = "Clear narrowing"
+
+[search.load_more]
+description = "A search results group's own load-more link, naming the kind it continues"
+other = "Load more {{.Group}}"
+
+[timeline.date_not_recorded]
+description = "The timeline's own group label for entries with no recorded date"
+other = "Date not recorded"
+
+[timeline.choose_person]
+description = "The timeline's no-patient-chosen empty state heading"
+other = "Choose a person"
+
+[timeline.choose_person_body]
+description = "The timeline's no-patient-chosen empty state body"
+other = "Pick who this timeline is for."
+
+[timeline.criteria_tag]
+description = "The timeline's own removable narrowing chip naming an active tag"
+other = "Tag: {{.Tag}}"
+
+[timeline.criteria_from]
+description = "The timeline's own removable narrowing chip naming the active from-date"
+other = "From {{.Date}}"
+
+[timeline.criteria_to]
+description = "The timeline's own removable narrowing chip naming the active to-date"
+other = "To {{.Date}}"

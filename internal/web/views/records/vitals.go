@@ -1,9 +1,11 @@
 package records
 
 import (
+	"context"
 	"strconv"
 
 	"medikube/internal/domain/clinical"
+	"medikube/internal/i18n"
 	viewtags "medikube/internal/web/views/tags"
 )
 
@@ -26,8 +28,8 @@ const (
 )
 
 const (
-	VitalsFormLabelCreate = "Record measurements"
-	VitalsFormLabelEdit   = "Edit measurements"
+	VitalsFormLabelCreate = "action.record_vitals"
+	VitalsFormLabelEdit   = "a11y.edit_vitals_form"
 )
 
 var vitalsFields = []string{
@@ -39,32 +41,41 @@ var vitalsFields = []string{
 
 func VitalsFields() []string { return append([]string(nil), vitalsFields...) }
 
+// vitalsFieldLabels maps each of vitals' own fields to its message id
+// (D-06); the templ that prints a label resolves it with i18n.T at render.
 var vitalsFieldLabels = map[string]string{
-	VitalsFieldRecordedAt:         "When",
-	VitalsFieldSystolicMmHg:       "Systolic (mmHg)",
-	VitalsFieldDiastolicMmHg:      "Diastolic (mmHg)",
-	VitalsFieldHeartRateBpm:       "Heart rate (bpm)",
-	VitalsFieldRespiratoryRateBpm: "Respiratory rate (breaths/min)",
-	VitalsFieldTemperatureC:       "Temperature",
-	VitalsFieldSpo2Pct:            "Oxygen saturation (%)",
-	VitalsFieldWeightKg:           "Weight",
-	VitalsFieldHeightCm:           "Height",
-	VitalsFieldGlucoseMmolL:       "Glucose",
-	VitalsFieldGlucoseContext:     "Taken",
-	VitalsFieldHba1cPct:           "HbA1c (%)",
-	VitalsFieldPainScale:          "Pain (0-10)",
-	VitalsFieldDevice:             "Device",
-	VitalsFieldBmi:                "BMI",
+	VitalsFieldRecordedAt:         "field.vitals.recorded_at",
+	VitalsFieldSystolicMmHg:       "field.vitals.systolic_mmhg",
+	VitalsFieldDiastolicMmHg:      "field.vitals.diastolic_mmhg",
+	VitalsFieldHeartRateBpm:       "field.vitals.heart_rate_bpm",
+	VitalsFieldRespiratoryRateBpm: "field.vitals.respiratory_rate_bpm",
+	VitalsFieldTemperatureC:       "field.vitals.temperature_c",
+	VitalsFieldSpo2Pct:            "field.vitals.spo2_pct",
+	VitalsFieldWeightKg:           "field.vitals.weight_kg",
+	VitalsFieldHeightCm:           "field.vitals.height_cm",
+	VitalsFieldGlucoseMmolL:       "field.vitals.glucose_mmol_l",
+	VitalsFieldGlucoseContext:     "field.vitals.glucose_context",
+	VitalsFieldHba1cPct:           "field.vitals.hba1c_pct",
+	VitalsFieldPainScale:          "field.vitals.pain_scale",
+	VitalsFieldDevice:             "field.vitals.device",
+	VitalsFieldBmi:                "field.vitals.bmi",
 }
 
+// VitalsFieldLabel returns the field's message id; the caller resolves it
+// with i18n.T at the point it is printed.
 func VitalsFieldLabel(field string) string {
-	if label, known := vitalsFieldLabels[field]; known {
-		return label
+	if id, known := vitalsFieldLabels[field]; known {
+		return id
 	}
 
 	return field
 }
 
+// glucoseContextLabels stays plain English: it feeds View.GlucoseContext, a
+// DetailEntry.Value printed by the shared, cross-slice detailValue templ
+// that does not (yet) call i18n.T (see GlucoseContextOptions below for the
+// id-producing twin used by the form select, which this codebase does
+// control).
 var glucoseContextLabels = map[clinical.GlucoseContext]string{
 	clinical.GlucoseContextFasting:    "Fasting",
 	clinical.GlucoseContextBeforeMeal: "Before a meal",
@@ -81,7 +92,7 @@ func GlucoseContextOptions(selected clinical.GlucoseContext) []Option {
 	options := make([]Option, 0, len(published))
 
 	for _, value := range published {
-		options = append(options, Option{Value: string(value), Label: GlucoseContextLabel(value), Selected: value == selected})
+		options = append(options, Option{Value: string(value), Label: "enum.glucose_context." + string(value), Selected: value == selected})
 	}
 
 	return options
@@ -233,34 +244,34 @@ type VitalsFormProps struct {
 	Tags viewtags.FieldProps
 }
 
-func (p VitalsFormProps) Label() string {
+func (p VitalsFormProps) Label(ctx context.Context) string {
 	if p.New {
-		return VitalsFormLabelCreate
+		return i18n.T(ctx, VitalsFormLabelCreate)
 	}
 
-	return VitalsFormLabelEdit
+	return i18n.T(ctx, VitalsFormLabelEdit)
 }
 
 // Summary is the row's one-line rendering of "only the measurements present"
 // (T089): each measurement actually taken, and nothing for the rest.
-func (m VitalsView) Summary() string {
+func (m VitalsView) Summary(ctx context.Context) string {
 	parts := make([]string, 0, 8)
 
-	add := func(label, value string) {
+	add := func(id, value string) {
 		if value != "" {
-			parts = append(parts, label+" "+value)
+			parts = append(parts, i18n.T(ctx, id)+" "+value)
 		}
 	}
 
-	add("Systolic", m.SystolicMmHg)
-	add("Diastolic", m.DiastolicMmHg)
-	add("HR", m.HeartRateBpm)
-	add("Temp", m.TemperatureC)
-	add("SpO2", m.Spo2Pct)
-	add("Weight", m.WeightKg)
-	add("Height", m.HeightCm)
-	add("Glucose", m.GlucoseMmolL)
-	add("BMI", m.Bmi)
+	add("field.vitals.systolic_short", m.SystolicMmHg)
+	add("field.vitals.diastolic_short", m.DiastolicMmHg)
+	add("field.vitals.heart_rate_short", m.HeartRateBpm)
+	add("field.vitals.temperature_short", m.TemperatureC)
+	add("field.vitals.spo2_short", m.Spo2Pct)
+	add("field.vitals.weight_short", m.WeightKg)
+	add("field.vitals.height_short", m.HeightCm)
+	add("field.vitals.glucose_short", m.GlucoseMmolL)
+	add("field.vitals.bmi_short", m.Bmi)
 
 	return join(parts)
 }
@@ -304,12 +315,12 @@ func (m VitalsView) Value(field string) string {
 	}
 }
 
-func (p VitalsFormProps) SubmitLabel() string {
+func (p VitalsFormProps) SubmitLabel(ctx context.Context) string {
 	if p.New {
-		return "Record it"
+		return i18n.T(ctx, "action.record_it")
 	}
 
-	return "Save changes"
+	return i18n.T(ctx, "action.save_changes")
 }
 
 func deleteVitalsExpression(v VitalsView) string {

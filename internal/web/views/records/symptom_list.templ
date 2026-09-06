@@ -2,21 +2,15 @@ package records
 
 import (
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
-)
-
-const (
-	symptomEmptyTitle  = "Nothing recorded yet"
-	symptomEmptyBody   = "Record the first episode and it will be listed here, with everything you noted about it."
-	symptomCreateLabel = "Record a symptom"
-	symptomsTitle      = "Symptoms"
 )
 
 templ SymptomList(props SymptomListProps) {
 	<section
 		id={ ids.RecordList(kind.Symptom) }
-		aria-label={ symptomsTitle }
+		aria-label={ i18n.T(ctx, "page.symptoms.title") }
 		class="flex flex-col"
 	>
 		<div class="flex flex-wrap items-center justify-between gap-3">
@@ -24,32 +18,32 @@ templ SymptomList(props SymptomListProps) {
 				id={ ids.RecordListHeading(kind.Symptom) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ symptomsTitle }</h1>
+			>{ i18n.T(ctx, "page.symptoms.title") }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }
 					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-				>{ symptomCreateLabel }</a>
+				>{ i18n.T(ctx, "action.record_symptom") }</a>
 			}
 		</div>
 		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
 			<div data-empty class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:          ids.RecordEmpty(kind.Symptom),
-					Title:       symptomEmptyTitle,
-					Body:        symptomEmptyBody,
+					Title:       i18n.T(ctx, "empty.nothing_recorded"),
+					Body:        i18n.T(ctx, "empty.symptom_body"),
 					ActionHref:  props.CreateHref,
-					ActionLabel: symptomCreateLabel,
+					ActionLabel: i18n.T(ctx, "action.record_symptom"),
 				})
 			</div>
 			<div data-rows class="mt-4 overflow-x-auto">
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
-							<th scope="col" class="pb-2 pr-4 font-medium">{ SymptomFieldLabel(SymptomFieldName) }</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">{ SymptomFieldLabel(SymptomFieldSeverity) }</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">Episodes</th>
-							<th scope="col" class="pb-2 font-medium">Most recent</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, SymptomFieldLabel(SymptomFieldName)) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, SymptomFieldLabel(SymptomFieldSeverity)) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, "field.symptom.episode_count") }</th>
+							<th scope="col" class="pb-2 font-medium">{ i18n.T(ctx, "field.symptom.last_occurred") }</th>
 						</tr>
 					</thead>
 					<tbody id={ ids.RecordRows(kind.Symptom) }>

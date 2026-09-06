@@ -10,6 +10,7 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	tagsvc "medikube/internal/service/tag"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -20,7 +21,7 @@ import (
 // OpTagsPage is contracts/pages.md's /tags.
 const OpTagsPage = "tagsPage"
 
-const tagsListTitle = "Tags"
+const tagsListTitleID = "page.tagsPage.title"
 
 // TagHandlers is /tags' contribution to the route table.
 func TagHandlers(resolve api.TagResolve) (httproute.Handlers, error) {
@@ -65,7 +66,9 @@ func (p *tagPages) list(e *core.RequestEvent, actor access.Actor) error {
 		CreateHref: p.links.collection,
 	})
 
-	return RenderPage(e, http.StatusOK, tagsListTitle,
+	web.Localize(e)
+
+	return RenderPage(e, http.StatusOK, i18n.T(e.Request.Context(), tagsListTitleID),
 		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
 }
 
@@ -133,7 +136,10 @@ func (l tagLinks) of(id string) viewtags.Links {
 func (l tagLinks) nav(current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: medicationListTitle, Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
-		{Label: tagsListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		// Nav labels are not yet resolved through i18n.T by shell/nav.templ
+		// (T020); left in English here until that seam lands (US1 cross-slice
+		// note in this task's report).
+		{Label: "Tags", Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

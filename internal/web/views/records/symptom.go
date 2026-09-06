@@ -1,10 +1,12 @@
 package records
 
 import (
+	"context"
 	"strconv"
 	"strings"
 
 	"medikube/internal/domain/clinical"
+	"medikube/internal/i18n"
 	viewtags "medikube/internal/web/views/tags"
 )
 
@@ -30,8 +32,8 @@ const (
 )
 
 const (
-	SymptomFormLabelCreate = "Record a symptom"
-	SymptomFormLabelEdit   = "Edit symptom"
+	SymptomFormLabelCreate = "action.record_symptom"
+	SymptomFormLabelEdit   = "a11y.edit_symptom_form"
 )
 
 var symptomFields = []string{
@@ -43,25 +45,29 @@ var symptomFields = []string{
 
 func SymptomFields() []string { return append([]string(nil), symptomFields...) }
 
+// symptomFieldLabels maps each of symptom's own fields to its message id
+// (D-06); the templ that prints a label resolves it with i18n.T at render.
 var symptomFieldLabels = map[string]string{
-	SymptomFieldName:            "What it was",
-	SymptomFieldCategory:        "Category",
-	SymptomFieldSeverity:        "Severity",
-	SymptomFieldOccurredAt:      "When",
-	SymptomFieldDurationMinutes: "How long (minutes)",
-	SymptomFieldPainScale:       "Pain (0-10)",
-	SymptomFieldBodySite:        "Where on the body",
-	SymptomFieldTriggers:        "Triggers",
-	SymptomFieldReliefMethods:   "What helped",
-	SymptomFieldImpact:          "Impact",
-	SymptomFieldResolvedAt:      "Resolved",
-	SymptomFieldIsChronic:       "Ongoing",
-	SymptomFieldStatus:          "State",
+	SymptomFieldName:            "field.symptom.name",
+	SymptomFieldCategory:        "field.symptom.category",
+	SymptomFieldSeverity:        "field.symptom.severity",
+	SymptomFieldOccurredAt:      "field.symptom.occurred_at",
+	SymptomFieldDurationMinutes: "field.symptom.duration_minutes",
+	SymptomFieldPainScale:       "field.symptom.pain_scale",
+	SymptomFieldBodySite:        "field.symptom.body_site",
+	SymptomFieldTriggers:        "field.symptom.triggers",
+	SymptomFieldReliefMethods:   "field.symptom.relief_methods",
+	SymptomFieldImpact:          "field.symptom.impact",
+	SymptomFieldResolvedAt:      "field.symptom.resolved_at",
+	SymptomFieldIsChronic:       "field.symptom.is_chronic",
+	SymptomFieldStatus:          "field.symptom.status",
 }
 
+// SymptomFieldLabel returns the field's message id; the caller resolves it
+// with i18n.T at the point it is printed.
 func SymptomFieldLabel(field string) string {
-	if label, known := symptomFieldLabels[field]; known {
-		return label
+	if id, known := symptomFieldLabels[field]; known {
+		return id
 	}
 
 	return field
@@ -102,12 +108,20 @@ func SymptomStatusLabel(value clinical.ConditionStatus) string {
 	return label(string(value), symptomStatusLabels[value])
 }
 
+// The Options functions below produce a select's Option.Label as a message
+// id (enum.<vocab>.<value>, D-06): the form control that prints it (mine)
+// resolves it with i18n.T at render. This is deliberately not the same
+// string as SymptomCategoryLabel etc. return, which stays plain text because
+// it also feeds View.Category/.Severity/.Impact/.Status — a DetailEntry.Value
+// printed by the shared, cross-slice detailValue templ that does not (yet)
+// call i18n.T.
+
 func SymptomCategoryOptions(selected clinical.SymptomCategory) []Option {
 	published := clinical.SymptomCategories()
 	options := make([]Option, 0, len(published))
 
 	for _, value := range published {
-		options = append(options, Option{Value: string(value), Label: SymptomCategoryLabel(value), Selected: value == selected})
+		options = append(options, Option{Value: string(value), Label: "enum.symptom_category." + string(value), Selected: value == selected})
 	}
 
 	return options
@@ -118,7 +132,7 @@ func SymptomSeverityOptions(selected clinical.Severity) []Option {
 	options := make([]Option, 0, len(published))
 
 	for _, value := range published {
-		options = append(options, Option{Value: string(value), Label: SymptomSeverityLabel(value), Selected: value == selected})
+		options = append(options, Option{Value: string(value), Label: "enum.severity." + string(value), Selected: value == selected})
 	}
 
 	return options
@@ -129,7 +143,7 @@ func SymptomImpactOptions(selected clinical.SymptomImpact) []Option {
 	options := make([]Option, 0, len(published))
 
 	for _, value := range published {
-		options = append(options, Option{Value: string(value), Label: SymptomImpactLabel(value), Selected: value == selected})
+		options = append(options, Option{Value: string(value), Label: "enum.symptom_impact." + string(value), Selected: value == selected})
 	}
 
 	return options
@@ -140,7 +154,7 @@ func SymptomStatusOptions(selected clinical.ConditionStatus) []Option {
 	options := make([]Option, 0, len(published))
 
 	for _, value := range published {
-		options = append(options, Option{Value: string(value), Label: SymptomStatusLabel(value), Selected: value == selected})
+		options = append(options, Option{Value: string(value), Label: "enum.condition_status." + string(value), Selected: value == selected})
 	}
 
 	return options
@@ -295,12 +309,12 @@ type SymptomFormProps struct {
 	Tags viewtags.FieldProps
 }
 
-func (p SymptomFormProps) Label() string {
+func (p SymptomFormProps) Label(ctx context.Context) string {
 	if p.New {
-		return SymptomFormLabelCreate
+		return i18n.T(ctx, SymptomFormLabelCreate)
 	}
 
-	return SymptomFormLabelEdit
+	return i18n.T(ctx, SymptomFormLabelEdit)
 }
 
 func (m SymptomView) CategoryOptions() []Option {
@@ -347,12 +361,12 @@ func (m SymptomView) Value(field string) string {
 	}
 }
 
-func (p SymptomFormProps) SubmitLabel() string {
+func (p SymptomFormProps) SubmitLabel(ctx context.Context) string {
 	if p.New {
-		return "Record it"
+		return i18n.T(ctx, "action.record_it")
 	}
 
-	return "Save changes"
+	return i18n.T(ctx, "action.save_changes")
 }
 
 func deleteSymptomExpression(symptom SymptomView) string {

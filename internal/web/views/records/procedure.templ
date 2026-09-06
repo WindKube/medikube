@@ -5,39 +5,33 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
+	"medikube/internal/i18n"
 	"medikube/internal/web"
 )
 
-const (
-	proceduresTitle     = "Procedures"
-	procedureCreate     = "Record a procedure"
-	procedureEmptyTitle = "Nothing recorded yet"
-	procedureEmptyBody  = "Record the first one and it will be listed here, with everything you noted about it."
-)
-
 templ ProcedureList(props ProcedureListProps) {
-	<section id={ ids.RecordList(kind.Procedure) } aria-label={ proceduresTitle } class="flex flex-col">
+	<section id={ ids.RecordList(kind.Procedure) } aria-label={ i18n.T(ctx, "page.procedureListPage.title") } class="flex flex-col">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<h1
 				id={ ids.RecordListHeading(kind.Procedure) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ proceduresTitle }</h1>
+			>{ i18n.T(ctx, "page.procedureListPage.title") }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }
 					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-				>{ procedureCreate }</a>
+				>{ i18n.T(ctx, "action.record_procedure") }</a>
 			}
 		</div>
 		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
 			<div data-empty class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:          ids.RecordEmpty(kind.Procedure),
-					Title:       procedureEmptyTitle,
-					Body:        procedureEmptyBody,
+					Title:       i18n.T(ctx, "empty.nothing_recorded"),
+					Body:        i18n.T(ctx, "empty.procedure_body"),
 					ActionHref:  props.CreateHref,
-					ActionLabel: procedureCreate,
+					ActionLabel: i18n.T(ctx, "action.record_procedure"),
 				})
 			</div>
 			<div data-rows class="mt-4 overflow-x-auto">
@@ -89,7 +83,7 @@ templ ProcedureRow(p ProcedureView) {
 templ ProcedureDetail(props ProcedureDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Procedure, props.Procedure.ID) }
-		aria-label="Procedure"
+		aria-label={ i18n.T(ctx, "a11y.procedure_article") }
 		data-signals={ "{_confirming_delete: false, _etag: " + jsLiteral(web.ETag(props.Procedure.Version)) + "}" }
 		data-status={ props.Procedure.StatusVal }
 		class="flex flex-col"
@@ -105,14 +99,14 @@ templ ProcedureDetail(props ProcedureDetailProps) {
 					<a
 						href={ props.Procedure.Links.Edit }
 						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-					>Edit</a>
+					>{ i18n.T(ctx, "action.edit") }</a>
 				}
 				<button
 					type="button"
 					id={ ids.RecordDelete(kind.Procedure, props.Procedure.ID) }
 					data-on:click="$_confirming_delete = true"
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-				>Delete</button>
+				>{ i18n.T(ctx, "action.delete") }</button>
 			</div>
 		</header>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
@@ -125,12 +119,12 @@ templ ProcedureDetail(props ProcedureDetailProps) {
 			ID:           ids.RecordConfirm(kind.Procedure, props.Procedure.ID),
 			ReturnTo: ids.RecordDelete(kind.Procedure, props.Procedure.ID),
 			Signal:       "_confirming_delete",
-			Title:        "Delete this procedure?",
+			Title:        i18n.T(ctx, "confirm.delete_procedure"),
 			Subject:      props.Procedure.Name,
-			Consequence:  "This is permanent. There is no recycle bin and no undo.",
-			ConfirmLabel: "Delete permanently",
+			Consequence:  i18n.T(ctx, "confirm.irreversible"),
+			ConfirmLabel: i18n.T(ctx, "action.delete_permanently"),
 			ConfirmOn:    procedureDeleteExpression(props.Procedure),
-			CancelLabel:  "Keep it",
+			CancelLabel:  i18n.T(ctx, "confirm.keep_it"),
 		})
 	</article>
 }
@@ -138,7 +132,7 @@ templ ProcedureDetail(props ProcedureDetailProps) {
 templ ProcedureForm(props ProcedureFormProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ props.Label() }
+		aria-label={ props.Label(ctx) }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
@@ -166,12 +160,12 @@ templ ProcedureForm(props ProcedureFormProps) {
 			<button
 				type="submit"
 				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ props.SubmitLabel() }</button>
+			>{ props.SubmitLabel(ctx) }</button>
 			if props.CancelHref != "" {
 				<a
 					href={ props.CancelHref }
 					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
-				>Cancel</a>
+				>{ i18n.T(ctx, "action.cancel") }</a>
 			}
 		</div>
 	</form>
@@ -210,9 +204,9 @@ templ procedureSelectControl(props ProcedureFormProps, field string, options []O
 			}
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>
-			<option value="" selected?={ props.Procedure.Value(field) == "" }>Not recorded</option>
+			<option value="" selected?={ props.Procedure.Value(field) == "" }>{ i18n.T(ctx, "enum.unset") }</option>
 			for _, option := range options {
-				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
+				<option value={ option.Value } selected?={ option.Selected }>{ i18n.T(ctx, option.Label) }</option>
 			}
 		</select>
 		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
