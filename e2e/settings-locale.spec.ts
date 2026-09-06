@@ -8,12 +8,29 @@
 // gate. randomUUID keeps it unique across the two viewport projects, which
 // run against the same instance at once.
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { fixtures } from './fixtures';
 import { open } from './gate';
 import { expect, test } from './auth';
 
 import type { Page } from '@playwright/test';
+
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+function polish(id: string): string {
+  const data = readFileSync(resolve(repositoryRoot, 'internal/i18n/locales/active.pl.toml'), 'utf8');
+  const escaped = id.replace(/\./g, '\\.');
+  const found = new RegExp(`\\[${escaped}\\][^[]*?\\nother = "([^"]*)"`).exec(data);
+  if (!found) {
+    throw new Error(`e2e: active.pl.toml declares no ${id}`);
+  }
+  return found[1];
+}
+
+const saveChangesPl = polish('action.save_changes');
 
 async function newAccount(page: Page): Promise<{ email: string; password: string }> {
   const email = `settings-locale-${randomUUID().slice(0, 8)}@example.test`;
@@ -79,11 +96,8 @@ test.describe('the settings page language control', () => {
     // Switch back: English is a language choice like any other, and this is
     // what proves the control keeps working once it is not showing the
     // default any more.
-    // "Save changes" is not translated by this task (T021's is the rest of
-    // this page's own literals), so the submit button reads the same in
-    // either language.
     await languageAfterSignIn.selectOption({ label: 'English' });
-    await afterSignIn.getByRole('button', { name: 'Save changes' }).click();
+    await afterSignIn.getByRole('button', { name: saveChangesPl }).click();
 
     const languageEn = afterSignIn.getByRole('combobox', { name: 'Language' });
     await expect(languageEn, 'the re-rendered form did not switch back to English').toBeVisible();
