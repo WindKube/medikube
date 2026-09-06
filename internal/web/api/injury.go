@@ -57,13 +57,16 @@ type InjurySummary struct {
 	ID   string `json:"id"`
 	Kind string `json:"kind"`
 
-	Name       string  `json:"name"`
-	Type       string  `json:"type,omitempty"`
-	Severity   string  `json:"severity,omitempty"`
-	Status     string  `json:"status"`
-	OccurredOn *string `json:"occurred_on"`
-	UpdatedAt  string  `json:"updated_at"`
+	Name       string   `json:"name"`
+	Type       string   `json:"type,omitempty"`
+	Severity   string   `json:"severity,omitempty"`
+	Status     string   `json:"status"`
+	OccurredOn *string  `json:"occurred_on"`
+	UpdatedAt  string   `json:"updated_at"`
+	Basis      []string `json:"basis"`
 }
+
+func (s *InjurySummary) SetBasis(basis []string) { s.Basis = basis }
 
 // Injury is what the detail operations return: every recorded field of
 // data-model §4.9 plus the created and last-changed instants.

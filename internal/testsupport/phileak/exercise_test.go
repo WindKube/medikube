@@ -2038,6 +2038,20 @@ func drivePages(c *client) {
 	} {
 		c.do(http.MethodGet, path, "")
 	}
+
+	// US9's timeline: no ?patient= at all (the explicit choose-a-person
+	// state), the populated view, and one status-view narrowing off
+	// records.StatusViews' own catalogue — all three render entirely from
+	// each kind's own SearchFields/Basis, which is exactly the surface this
+	// exercise exists to walk for a kind this account does not own leaking
+	// through.
+	for _, path := range []string{
+		"/timeline",
+		"/timeline?patient=" + testsupport.AccountAPatientSelfID,
+		"/timeline?patient=" + testsupport.AccountAPatientSelfID + "&kind=" + kind.Medication.Segment(),
+	} {
+		c.do(http.MethodGet, path, "")
+	}
 }
 
 // driveNativePaths walks contracts/README.md's documented PocketBase-native

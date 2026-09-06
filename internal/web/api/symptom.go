@@ -42,14 +42,17 @@ type SymptomSummary struct {
 	ID   string `json:"id"`
 	Kind string `json:"kind"`
 
-	Name           string `json:"name"`
-	Severity       string `json:"severity"`
-	OccurredAt     string `json:"occurred_at"`
-	EpisodeCount   int    `json:"episode_count"`
-	LastOccurredAt string `json:"last_occurred_at"`
-	UpdatedAt      string `json:"updated_at"`
-	Status         string `json:"status,omitempty"`
+	Name           string   `json:"name"`
+	Severity       string   `json:"severity"`
+	OccurredAt     string   `json:"occurred_at"`
+	EpisodeCount   int      `json:"episode_count"`
+	LastOccurredAt string   `json:"last_occurred_at"`
+	UpdatedAt      string   `json:"updated_at"`
+	Status         string   `json:"status,omitempty"`
+	Basis          []string `json:"basis"`
 }
+
+func (s *SymptomSummary) SetBasis(basis []string) { s.Basis = basis }
 
 type Symptom struct {
 	SymptomSummary

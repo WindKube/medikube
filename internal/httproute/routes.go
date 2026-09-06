@@ -11,6 +11,7 @@ import (
 	"github.com/pocketbase/pocketbase/tools/hook"
 
 	"medikube/internal/domain/kind"
+	"medikube/internal/records"
 	"medikube/internal/testsupport/seed"
 	"medikube/internal/web/views/shell"
 )
@@ -52,6 +53,20 @@ const expiredTokenForSmoke = "expired-token-for-smoke"
 const notFoundSmokeURL = "/not-found-for-smoke"
 
 const settingsPath = "/settings"
+
+// statusViewVariant answers the one SmokeVariants entry a status view's own
+// kind catalogues (contracts/pages.md §3.5): a page whose kind carries no
+// catalogue entry panics, so a kind added to the catalogue with no page to
+// carry it — or a status view page assembled without reading the catalogue —
+// fails at boot rather than shipping unsmoked (T183a).
+func statusViewVariant(k kind.Kind) []string {
+	view, found := records.StatusViewFor(k)
+	if !found {
+		panic(fmt.Sprintf("httproute: %s carries no entry in records.StatusViews", k))
+	}
+
+	return []string{view.SmokeURL(seed.AccountAPatientSelfID)}
+}
 
 // streamMiddlewares is built once rather than per call to table(), because two
 // calls returning two equal-but-distinct handler pointers would make the
@@ -495,6 +510,7 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "The record list, with its empty state inside the landmark rather than instead of it.",
 			Landmark: `region[name="Medications"]`, SmokeURL: list + "?patient=" + seed.AccountAPatientSelfID,
+			SmokeVariants: statusViewVariant(kind.Medication),
 		},
 		{
 			// The smoke URL is the seeded partial-data row: a name, a state
@@ -511,6 +527,7 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "US1's allergy list, with its empty state inside the landmark rather than instead of it.",
 			Landmark: kind.Allergy.ListLandmark(), SmokeURL: allergyList + "?patient=" + seed.AccountAPatientSelfID,
+			SmokeVariants: statusViewVariant(kind.Allergy),
 		},
 		{
 			OpID: "allergyDetailPage", Method: http.MethodGet, Path: allergyList + "/{id}",
@@ -523,6 +540,7 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "US1's condition list, with its empty state inside the landmark rather than instead of it.",
 			Landmark: kind.Condition.ListLandmark(), SmokeURL: conditionList + "?patient=" + seed.AccountAPatientSelfID,
+			SmokeVariants: statusViewVariant(kind.Condition),
 		},
 		{
 			OpID: "conditionDetailPage", Method: http.MethodGet, Path: conditionList + "/{id}",
@@ -562,6 +580,7 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "The record list, with its empty state inside the landmark rather than instead of it.",
 			Landmark: `region[name="Injuries"]`, SmokeURL: "/" + kind.Injury.Segment() + "?patient=" + seed.AccountAPatientSelfID,
+			SmokeVariants: statusViewVariant(kind.Injury),
 		},
 		{
 			OpID: "injuryDetailPage", Method: http.MethodGet, Path: "/" + kind.Injury.Segment() + "/{id}",
@@ -574,6 +593,7 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "US5's insurance list, with its empty state inside the landmark rather than instead of it.",
 			Landmark: `region[name="Insurance"]`, SmokeURL: insuranceList + "?patient=" + seed.AccountAPatientSelfID,
+			SmokeVariants: statusViewVariant(kind.Insurance),
 		},
 		{
 			OpID: "insuranceDetailPage", Method: http.MethodGet, Path: insuranceDetail,
@@ -586,6 +606,7 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "US5's equipment list, with its empty state inside the landmark rather than instead of it.",
 			Landmark: `region[name="Equipment"]`, SmokeURL: equipmentList + "?patient=" + seed.AccountAPatientSelfID,
+			SmokeVariants: statusViewVariant(kind.Equipment),
 		},
 		{
 			OpID: "equipmentDetailPage", Method: http.MethodGet, Path: equipmentDetail,
@@ -634,6 +655,7 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "The procedure list, with its empty state inside the landmark rather than instead of it.",
 			Landmark: `region[name="Procedures"]`, SmokeURL: procedureList + "?patient=" + seed.AccountAPatientSelfID,
+			SmokeVariants: statusViewVariant(kind.Procedure),
 		},
 		{
 			OpID: "procedureDetailPage", Method: http.MethodGet, Path: procedureDetail,
@@ -694,6 +716,15 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "contracts/pages.md: the tag manager — create, rename, recolour, delete, with usage counts and a delete confirmation naming how many records carry the tag.",
 			Landmark: `region[name="Tags"]`, SmokeURL: "/tags",
+		},
+		{
+			// /timeline requires ?patient=, same as /search: without one it
+			// renders the explicit "choose a person" state rather than
+			// guessing (FR-070, US8-3, US9).
+			OpID: "timelinePage", Method: http.MethodGet, Path: "/timeline",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "contracts/pages.md §3: one chronological view across every kind, narrowable by kind, date range and tag.",
+			Landmark: `region[name="Timeline"]`, SmokeURL: "/timeline?patient=" + seed.AccountAPatientSelfID,
 		},
 		{
 			OpID: "settingsPage", Method: http.MethodGet, Path: settingsPath,

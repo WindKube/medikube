@@ -2027,6 +2027,12 @@
           "allergen": {
             "type": "string"
           },
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "critical": {
             "type": "boolean"
           },
@@ -2057,6 +2063,7 @@
         },
         "required": [
           "allergen",
+          "basis",
           "critical",
           "id",
           "kind",
@@ -2070,6 +2077,12 @@
       "RecordSummary_conditions": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "diagnosis": {
             "type": "string"
           },
@@ -2099,6 +2112,7 @@
           }
         },
         "required": [
+          "basis",
           "diagnosis",
           "id",
           "kind",
@@ -2111,6 +2125,12 @@
       "RecordSummary_emergency-contacts": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "id": {
             "type": "string"
           },
@@ -2140,6 +2160,7 @@
           }
         },
         "required": [
+          "basis",
           "id",
           "is_active",
           "is_primary",
@@ -2154,6 +2175,12 @@
       "RecordSummary_encounters": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "id": {
             "type": "string"
           },
@@ -2183,6 +2210,7 @@
           }
         },
         "required": [
+          "basis",
           "id",
           "kind",
           "occurred_on",
@@ -2241,6 +2269,12 @@
       "RecordSummary_family-history": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "id": {
             "type": "string"
           },
@@ -2261,6 +2295,7 @@
           }
         },
         "required": [
+          "basis",
           "id",
           "kind",
           "name",
@@ -2277,6 +2312,12 @@
               "string",
               "null"
             ]
+          },
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "dose_number": {
             "type": "integer"
@@ -2299,6 +2340,7 @@
         },
         "required": [
           "administered_on",
+          "basis",
           "id",
           "kind",
           "updated_at",
@@ -2309,6 +2351,12 @@
       "RecordSummary_injuries": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "id": {
             "type": "string"
           },
@@ -2341,6 +2389,7 @@
           }
         },
         "required": [
+          "basis",
           "id",
           "kind",
           "name",
@@ -2404,6 +2453,12 @@
       "RecordSummary_medications": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "dosage": {
             "type": "string"
           },
@@ -2436,6 +2491,7 @@
           }
         },
         "required": [
+          "basis",
           "id",
           "kind",
           "name",
@@ -2448,6 +2504,12 @@
       "RecordSummary_procedures": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "id": {
             "type": "string"
           },
@@ -2477,6 +2539,7 @@
           }
         },
         "required": [
+          "basis",
           "id",
           "kind",
           "name",
@@ -2489,6 +2552,12 @@
       "RecordSummary_symptoms": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "episode_count": {
             "type": "integer"
           },
@@ -2521,6 +2590,7 @@
           }
         },
         "required": [
+          "basis",
           "episode_count",
           "id",
           "kind",
@@ -2535,6 +2605,12 @@
       "RecordSummary_treatments": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "id": {
             "type": "string"
           },
@@ -2561,6 +2637,7 @@
           }
         },
         "required": [
+          "basis",
           "id",
           "kind",
           "name",
@@ -2572,6 +2649,12 @@
       "RecordSummary_vitals": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "bmi": {
             "type": "number"
           },
@@ -2625,6 +2708,7 @@
           }
         },
         "required": [
+          "basis",
           "id",
           "kind",
           "recorded_at",
@@ -2637,6 +2721,12 @@
         "properties": {
           "allergen": {
             "type": "string"
+          },
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "created_at": {
             "type": "string"
@@ -2686,6 +2776,7 @@
         },
         "required": [
           "allergen",
+          "basis",
           "created_at",
           "critical",
           "id",
@@ -2702,6 +2793,12 @@
       "Record_conditions": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "created_at": {
             "type": "string"
           },
@@ -2761,6 +2858,7 @@
           }
         },
         "required": [
+          "basis",
           "created_at",
           "diagnosis",
           "id",
@@ -2779,6 +2877,12 @@
         "properties": {
           "address": {
             "type": "string"
+          },
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "created_at": {
             "type": "string"
@@ -2846,6 +2950,7 @@
           }
         },
         "required": [
+          "basis",
           "created_at",
           "id",
           "is_active",
@@ -2865,6 +2970,12 @@
         "properties": {
           "assessment": {
             "type": "string"
+          },
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "condition": {
             "type": "string"
@@ -2928,6 +3039,7 @@
           }
         },
         "required": [
+          "basis",
           "created_at",
           "id",
           "kind",
@@ -3037,6 +3149,12 @@
       "Record_family-history": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "birth_year": {
             "type": "integer"
           },
@@ -3111,6 +3229,7 @@
           }
         },
         "required": [
+          "basis",
           "conditions",
           "created_at",
           "id",
@@ -3130,6 +3249,12 @@
               "string",
               "null"
             ]
+          },
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "created_at": {
             "type": "string"
@@ -3191,6 +3316,7 @@
         },
         "required": [
           "administered_on",
+          "basis",
           "created_at",
           "expires_on",
           "id",
@@ -3204,6 +3330,12 @@
       "Record_injuries": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "body_part": {
             "type": "string"
           },
@@ -3269,6 +3401,7 @@
           }
         },
         "required": [
+          "basis",
           "created_at",
           "id",
           "kind",
@@ -3443,6 +3576,12 @@
           "alternative_name": {
             "type": "string"
           },
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "created_at": {
             "type": "string"
           },
@@ -3514,6 +3653,7 @@
           }
         },
         "required": [
+          "basis",
           "created_at",
           "ended_on",
           "id",
@@ -3534,6 +3674,12 @@
           },
           "anesthesia_notes": {
             "type": "string"
+          },
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "code": {
             "type": "string"
@@ -3606,6 +3752,7 @@
           }
         },
         "required": [
+          "basis",
           "created_at",
           "id",
           "kind",
@@ -3620,6 +3767,12 @@
       "Record_symptoms": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "body_site": {
             "type": "string"
           },
@@ -3697,6 +3850,7 @@
           }
         },
         "required": [
+          "basis",
           "episode_count",
           "id",
           "is_chronic",
@@ -3716,6 +3870,12 @@
       "Record_treatments": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "condition": {
             "type": "string"
           },
@@ -3802,6 +3962,7 @@
           }
         },
         "required": [
+          "basis",
           "created_at",
           "encounters",
           "ended_on",
@@ -3818,6 +3979,12 @@
       "Record_vitals": {
         "additionalProperties": false,
         "properties": {
+          "basis": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "bmi": {
             "type": "number"
           },
@@ -3910,6 +4077,7 @@
           }
         },
         "required": [
+          "basis",
           "created_at",
           "display",
           "id",

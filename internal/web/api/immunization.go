@@ -57,11 +57,14 @@ type ImmunizationSummary struct {
 	ID   string `json:"id"`
 	Kind string `json:"kind"`
 
-	VaccineName    string  `json:"vaccine_name"`
-	AdministeredOn *string `json:"administered_on"`
-	DoseNumber     *int    `json:"dose_number,omitempty"`
-	UpdatedAt      string  `json:"updated_at"`
+	VaccineName    string   `json:"vaccine_name"`
+	AdministeredOn *string  `json:"administered_on"`
+	DoseNumber     *int     `json:"dose_number,omitempty"`
+	UpdatedAt      string   `json:"updated_at"`
+	Basis          []string `json:"basis"`
 }
+
+func (s *ImmunizationSummary) SetBasis(basis []string) { s.Basis = basis }
 
 // Immunization is what the detail operations return: every recorded field of
 // data-model §4.8 plus the created and last-changed instants.

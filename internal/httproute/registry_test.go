@@ -220,6 +220,16 @@ func TestRegisteringAPageWithoutALandmarkOrASmokeURLPanics(t *testing.T) {
 			mutate:  func(r *httproute.Route) { r.SmokeURL = "sample" },
 			message: "SmokeURL",
 		},
+		{
+			name:    "a smoke variant with an unbound parameter",
+			mutate:  func(r *httproute.Route) { r.SmokeVariants = []string{"/sample/{id}"} },
+			message: "unbound parameter",
+		},
+		{
+			name:    "a relative smoke variant",
+			mutate:  func(r *httproute.Route) { r.SmokeVariants = []string{"sample"} },
+			message: "SmokeURL",
+		},
 	}
 
 	for _, testCase := range cases {

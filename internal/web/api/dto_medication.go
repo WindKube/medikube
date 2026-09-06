@@ -81,13 +81,16 @@ type MedicationSummary struct {
 	ID   string `json:"id"`
 	Kind string `json:"kind"`
 
-	Name      string  `json:"name"`
-	Dosage    string  `json:"dosage,omitempty"`
-	Frequency string  `json:"frequency,omitempty"`
-	Status    string  `json:"status"`
-	StartedOn *string `json:"started_on"`
-	UpdatedAt string  `json:"updated_at"`
+	Name      string   `json:"name"`
+	Dosage    string   `json:"dosage,omitempty"`
+	Frequency string   `json:"frequency,omitempty"`
+	Status    string   `json:"status"`
+	StartedOn *string  `json:"started_on"`
+	UpdatedAt string   `json:"updated_at"`
+	Basis     []string `json:"basis"`
 }
+
+func (s *MedicationSummary) SetBasis(basis []string) { s.Basis = basis }
 
 // Medication is what the detail operations return: every recorded field of
 // FR-015 plus the created and last-changed instants of FR-020.

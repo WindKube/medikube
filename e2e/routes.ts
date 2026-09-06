@@ -30,6 +30,7 @@ type RawRoute = {
   auth: string;
   landmark?: string;
   smoke_url?: string;
+  smoke_variants?: string[];
   summary: string;
 };
 
@@ -38,6 +39,11 @@ export type PageRoute = {
   path: string;
   landmark: Landmark;
   smokeURL: string;
+  // smokeVariants is US9's status-view catalogue (contracts/pages.md §3.5):
+  // additional concrete URLs on the SAME route, narrowed by a query the page
+  // already serves — never a second page, so they carry no opID or landmark
+  // of their own and the gate visits them under this route's.
+  smokeVariants: string[];
   auth: 'public' | 'user' | 'admin';
 };
 
@@ -101,6 +107,7 @@ export const pageRoutes: PageRoute[] = loadRoutes()
       path: route.path,
       landmark: parseLandmark(route.op_id, route.landmark),
       smokeURL: route.smoke_url,
+      smokeVariants: route.smoke_variants ?? [],
       auth: route.auth as PageRoute['auth'],
     };
   });

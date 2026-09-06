@@ -36,10 +36,13 @@ type FamilyMemberSummary struct {
 	ID   string `json:"id"`
 	Kind string `json:"kind"`
 
-	Name         string `json:"name"`
-	Relationship string `json:"relationship"`
-	UpdatedAt    string `json:"updated_at"`
+	Name         string   `json:"name"`
+	Relationship string   `json:"relationship"`
+	UpdatedAt    string   `json:"updated_at"`
+	Basis        []string `json:"basis"`
 }
+
+func (s *FamilyMemberSummary) SetBasis(basis []string) { s.Basis = basis }
 
 // FamilyMember is what the detail operations return: every recorded field of
 // FR-052/FR-053.

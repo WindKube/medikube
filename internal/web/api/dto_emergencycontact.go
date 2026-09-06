@@ -28,13 +28,16 @@ type EmergencyContactSummary struct {
 	ID   string `json:"id"`
 	Kind string `json:"kind"`
 
-	Name         string `json:"name"`
-	Relationship string `json:"relationship"`
-	Phone        string `json:"phone"`
-	IsPrimary    bool   `json:"is_primary"`
-	IsActive     bool   `json:"is_active"`
-	UpdatedAt    string `json:"updated_at"`
+	Name         string   `json:"name"`
+	Relationship string   `json:"relationship"`
+	Phone        string   `json:"phone"`
+	IsPrimary    bool     `json:"is_primary"`
+	IsActive     bool     `json:"is_active"`
+	UpdatedAt    string   `json:"updated_at"`
+	Basis        []string `json:"basis"`
 }
+
+func (s *EmergencyContactSummary) SetBasis(basis []string) { s.Basis = basis }
 
 type EmergencyContact struct {
 	EmergencyContactSummary

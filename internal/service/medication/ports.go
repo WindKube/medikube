@@ -27,6 +27,10 @@ const (
 // its values is attached to.
 const FilterStatus = "status"
 
+// FilterActive is the `?active=` parameter: true is exactly the active
+// status, false is every other one.
+const FilterActive = "active"
+
 // ParamSort is the field a refused ordering is reported against. It is the
 // query parameter's own name, because that is what the caller has to change.
 const ParamSort = "sort"

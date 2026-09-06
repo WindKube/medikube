@@ -294,6 +294,26 @@ func (h *Handler) Delete(ctx context.Context, actor access.Actor, segment, id, v
 	return entry.Service.Delete(ctx, actor, id, version)
 }
 
+// ResolveCriteria answers one kind's resolved narrowing without listing
+// anything: the same Filters and Search a call to ListOfKind with this exact
+// query would resolve to (defaults applied, contracts/records-clinical.md
+// §1), so a caller that already holds a valid Query for this kind can echo
+// `criteria` and populate each row's `basis` without a second answer to "what
+// did the caller ask for" (research D-05).
+func (h *Handler) ResolveCriteria(segment string, query Query) (Criteria, error) {
+	entry, err := h.Dispatch(segment)
+	if err != nil {
+		return Criteria{}, err
+	}
+
+	resolved, err := resolveQuery(entry, query)
+	if err != nil {
+		return Criteria{}, err
+	}
+
+	return Criteria{Filters: resolved.Filters, Search: resolved.Search}, nil
+}
+
 func (h *Handler) list(ctx context.Context, actor access.Actor, entry Entry, query Query) (domain.Page[Record], error) {
 	resolved, err := resolveQuery(entry, query)
 	if err != nil {
