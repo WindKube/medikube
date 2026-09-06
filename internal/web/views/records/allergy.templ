@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
+	"medikube/internal/web"
 )
 
 const allergyConfirmSignal = "_confirming_delete"
@@ -86,7 +87,7 @@ templ AllergyDetail(props AllergyDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Allergy, props.Allergy.ID) }
 		aria-label="Allergy"
-		data-signals={ "{" + allergyConfirmSignal + ": false, _etag: " + jsLiteral(props.Allergy.Version) + "}" }
+		data-signals={ "{" + allergyConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Allergy.Version)) + "}" }
 		data-status={ props.Allergy.StatusValue }
 		class="flex flex-col"
 	>

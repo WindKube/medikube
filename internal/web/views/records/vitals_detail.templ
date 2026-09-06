@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
+	"medikube/internal/web"
 )
 
 const vitalsConfirmSignal = "_confirming_delete"
@@ -22,7 +23,7 @@ templ VitalsDetail(props VitalsDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Vitals, props.Vitals.ID) }
 		aria-label={ vitalsDetailArticle }
-		data-signals={ "{" + vitalsConfirmSignal + ": false, _etag: " + jsLiteral(props.Vitals.Version) + "}" }
+		data-signals={ "{" + vitalsConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Vitals.Version)) + "}" }
 		class="flex flex-col"
 	>
 		<header class="flex flex-wrap items-start justify-between gap-3">

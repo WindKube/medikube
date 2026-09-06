@@ -1,5 +1,7 @@
 package records
 
+import "medikube/internal/web"
+
 // CourseMedicationEffectiveView is FR-060's `{value, source}` pair rendered
 // for one field: Value is already the display string (a date formatted, a
 // plain string as-is) and Source is one of "course", "medication" or "none" —
@@ -74,7 +76,7 @@ func (p CourseMedicationFormProps) submitExpr() string {
 	)
 
 	call := "@put(" + jsLiteral(p.UpsertBase) + " + " + medication +
-		", {headers: {'If-Match': " + jsLiteral(p.Etag) + "}, payload: " + payload +
+		", {headers: {'If-Match': " + jsLiteral(web.ETag(p.Etag)) + "}, payload: " + payload +
 		"}).then(() => window.location.reload())"
 
 	return medication + " ? (" + call + ") : ''"

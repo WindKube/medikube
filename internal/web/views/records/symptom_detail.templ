@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
+	"medikube/internal/web"
 )
 
 const symptomConfirmSignal = "_confirming_delete"
@@ -21,7 +22,7 @@ templ SymptomDetail(props SymptomDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Symptom, props.Symptom.ID) }
 		aria-label={ symptomDetailArticle }
-		data-signals={ "{" + symptomConfirmSignal + ": false, _etag: " + jsLiteral(props.Symptom.Version) + "}" }
+		data-signals={ "{" + symptomConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Symptom.Version)) + "}" }
 		data-status={ props.Symptom.StatusValue }
 		class="flex flex-col"
 	>

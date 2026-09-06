@@ -239,18 +239,18 @@ func (VitalsCodec) Draft(body any, system identity.UnitSystem) (clinical.Vitals,
 	return clinical.Vitals{
 		PatientID:          create.Patient,
 		RecordedAt:         recordedAt,
-		SystolicMmHg:       create.SystolicMmHg,
-		DiastolicMmHg:      create.DiastolicMmHg,
-		HeartRateBpm:       create.HeartRateBpm,
-		RespiratoryRateBpm: create.RespiratoryRateBpm,
-		TemperatureC:       temperatureToSI(create.TemperatureC, system),
-		SpO2Pct:            create.SpO2Pct,
-		WeightKg:           weightToSI(create.WeightKg, system),
-		HeightCm:           heightToSI(create.HeightCm, system),
-		GlucoseMmolL:       glucoseToSI(create.GlucoseMmolL, system),
+		SystolicMmHg:       zeroIsAbsentF(create.SystolicMmHg),
+		DiastolicMmHg:      zeroIsAbsentF(create.DiastolicMmHg),
+		HeartRateBpm:       zeroIsAbsentF(create.HeartRateBpm),
+		RespiratoryRateBpm: zeroIsAbsentF(create.RespiratoryRateBpm),
+		TemperatureC:       temperatureToSI(zeroIsAbsentF(create.TemperatureC), system),
+		SpO2Pct:            zeroIsAbsentF(create.SpO2Pct),
+		WeightKg:           weightToSI(zeroIsAbsentF(create.WeightKg), system),
+		HeightCm:           heightToSI(zeroIsAbsentF(create.HeightCm), system),
+		GlucoseMmolL:       glucoseToSI(zeroIsAbsentF(create.GlucoseMmolL), system),
 		GlucoseContext:     clinical.GlucoseContext(create.GlucoseContext),
-		Hba1cPct:           create.Hba1cPct,
-		PainScale:          create.PainScale,
+		Hba1cPct:           zeroIsAbsentF(create.Hba1cPct),
+		PainScale:          zeroIsAbsentF(create.PainScale),
 		Device:             create.Device,
 		PractitionerID:     deref(create.Practitioner),
 		Tags:               create.Tags,
@@ -267,18 +267,18 @@ func (VitalsCodec) Patch(body any, system identity.UnitSystem) (vitals.Patch, er
 
 	patch := vitals.Patch{
 		RecordedAt:         readOptionalClinicalInstant(&invalid, MemberVitalsRecordedAt, incoming.RecordedAt),
-		SystolicMmHg:       readOptionalFloatPtr(incoming.SystolicMmHg, identity.UnitSystemMetric, nil),
-		DiastolicMmHg:      readOptionalFloatPtr(incoming.DiastolicMmHg, identity.UnitSystemMetric, nil),
-		HeartRateBpm:       readOptionalFloatPtr(incoming.HeartRateBpm, identity.UnitSystemMetric, nil),
-		RespiratoryRateBpm: readOptionalFloatPtr(incoming.RespiratoryRateBpm, identity.UnitSystemMetric, nil),
-		TemperatureC:       readOptionalFloatPtr(incoming.TemperatureC, system, temperatureToSI),
-		SpO2Pct:            readOptionalFloatPtr(incoming.SpO2Pct, identity.UnitSystemMetric, nil),
-		WeightKg:           readOptionalFloatPtr(incoming.WeightKg, system, weightToSI),
-		HeightCm:           readOptionalFloatPtr(incoming.HeightCm, system, heightToSI),
-		GlucoseMmolL:       readOptionalFloatPtr(incoming.GlucoseMmolL, system, glucoseToSI),
+		SystolicMmHg:       zeroClearsF(readOptionalFloatPtr(incoming.SystolicMmHg, identity.UnitSystemMetric, nil)),
+		DiastolicMmHg:      zeroClearsF(readOptionalFloatPtr(incoming.DiastolicMmHg, identity.UnitSystemMetric, nil)),
+		HeartRateBpm:       zeroClearsF(readOptionalFloatPtr(incoming.HeartRateBpm, identity.UnitSystemMetric, nil)),
+		RespiratoryRateBpm: zeroClearsF(readOptionalFloatPtr(incoming.RespiratoryRateBpm, identity.UnitSystemMetric, nil)),
+		TemperatureC:       zeroClearsF(readOptionalFloatPtr(incoming.TemperatureC, system, temperatureToSI)),
+		SpO2Pct:            zeroClearsF(readOptionalFloatPtr(incoming.SpO2Pct, identity.UnitSystemMetric, nil)),
+		WeightKg:           zeroClearsF(readOptionalFloatPtr(incoming.WeightKg, system, weightToSI)),
+		HeightCm:           zeroClearsF(readOptionalFloatPtr(incoming.HeightCm, system, heightToSI)),
+		GlucoseMmolL:       zeroClearsF(readOptionalFloatPtr(incoming.GlucoseMmolL, system, glucoseToSI)),
 		GlucoseContext:     convert[clinical.GlucoseContext](incoming.GlucoseContext),
-		Hba1cPct:           readOptionalFloatPtr(incoming.Hba1cPct, identity.UnitSystemMetric, nil),
-		PainScale:          readOptionalFloatPtr(incoming.PainScale, identity.UnitSystemMetric, nil),
+		Hba1cPct:           zeroClearsF(readOptionalFloatPtr(incoming.Hba1cPct, identity.UnitSystemMetric, nil)),
+		PainScale:          zeroClearsF(readOptionalFloatPtr(incoming.PainScale, identity.UnitSystemMetric, nil)),
 		Device:             incoming.Device,
 		PractitionerID:     incoming.Practitioner,
 		Tags:               incoming.Tags,
@@ -331,4 +331,24 @@ func readOptionalFloatPtr(
 	pv := &v
 
 	return &pv
+}
+
+// zeroIsAbsentF is zeroIsAbsent for a measurement: an empty number control
+// submits 0, and no measurement here has 0 in range.
+func zeroIsAbsentF(value *float64) *float64 {
+	if value != nil && *value == 0 {
+		return nil
+	}
+
+	return value
+}
+
+func zeroClearsF(value **float64) **float64 {
+	if value != nil && *value != nil && **value == 0 {
+		var cleared *float64
+
+		return &cleared
+	}
+
+	return value
 }

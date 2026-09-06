@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
+	"medikube/internal/web"
 )
 
 const conditionConfirmSignal = "_confirming_delete"
@@ -75,7 +76,7 @@ templ ConditionDetail(props ConditionDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Condition, props.Condition.ID) }
 		aria-label="Condition"
-		data-signals={ "{" + conditionConfirmSignal + ": false, _etag: " + jsLiteral(props.Condition.Version) + "}" }
+		data-signals={ "{" + conditionConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Condition.Version)) + "}" }
 		data-status={ props.Condition.StatusValue }
 		class="flex flex-col"
 	>

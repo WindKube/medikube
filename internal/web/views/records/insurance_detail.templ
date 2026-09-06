@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
+	"medikube/internal/web"
 )
 
 const insuranceConfirmSignal = "_confirming_delete"
@@ -22,7 +23,7 @@ templ InsuranceDetail(props InsuranceDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Insurance, props.Insurance.ID) }
 		aria-label={ insuranceDetailArticle }
-		data-signals={ "{" + insuranceConfirmSignal + ": false, _etag: " + jsLiteral(props.Insurance.Version) + "}" }
+		data-signals={ "{" + insuranceConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Insurance.Version)) + "}" }
 		data-status={ props.Insurance.StatusValue }
 		class="flex flex-col"
 	>

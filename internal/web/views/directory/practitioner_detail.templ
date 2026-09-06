@@ -5,6 +5,7 @@ import (
 
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
+	"medikube/internal/web"
 )
 
 const practitionerConfirmSignal = "_confirming_delete"
@@ -24,7 +25,7 @@ templ PractitionerDetail(props PractitionerDetailProps) {
 	<article
 		id={ ids.DirectoryDetail(PractitionerSegment, props.Practitioner.ID) }
 		aria-label={ practitionerDetailArticle }
-		data-signals={ "{" + practitionerConfirmSignal + ": false, _etag: " + jsQuote(props.Practitioner.Version) + "}" }
+		data-signals={ "{" + practitionerConfirmSignal + ": false, _etag: " + jsQuote(web.ETag(props.Practitioner.Version)) + "}" }
 		class="flex flex-col"
 	>
 		<header class="flex flex-wrap items-start justify-between gap-3">

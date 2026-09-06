@@ -5,6 +5,7 @@ import (
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
+	"medikube/internal/web"
 )
 
 const (
@@ -91,7 +92,7 @@ templ TreatmentDetail(props TreatmentDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Treatment, props.Treatment.ID) }
 		aria-label="Treatment"
-		data-signals={ "{_confirming_delete: false, _etag: " + jsLiteral(props.Treatment.Version) + "}" }
+		data-signals={ "{_confirming_delete: false, _etag: " + jsLiteral(web.ETag(props.Treatment.Version)) + "}" }
 		data-status={ props.Treatment.StatusVal }
 		class="flex flex-col"
 	>

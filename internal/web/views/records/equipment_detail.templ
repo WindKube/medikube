@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
+	"medikube/internal/web"
 )
 
 const equipmentConfirmSignal = "_confirming_delete"
@@ -22,7 +23,7 @@ templ EquipmentDetail(props EquipmentDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Equipment, props.Equipment.ID) }
 		aria-label={ equipmentDetailArticle }
-		data-signals={ "{" + equipmentConfirmSignal + ": false, _etag: " + jsLiteral(props.Equipment.Version) + "}" }
+		data-signals={ "{" + equipmentConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Equipment.Version)) + "}" }
 		data-status={ props.Equipment.StatusValue }
 		class="flex flex-col"
 	>
