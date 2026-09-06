@@ -383,6 +383,104 @@ func TestUpdateProfileRefusesAValueOutsideAPublishedVocabulary(t *testing.T) {
 	assert.Empty(t, h.auditor.Events())
 }
 
+// TestUpdateProfileChecksTheLocaleAgainstTheConfiguredPredicate, T017: the
+// membership check is a fake predicate here, never i18n.IsSupported — this
+// package imports no such thing.
+func TestUpdateProfileChecksTheLocaleAgainstTheConfiguredPredicate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		predicate func(string) bool
+		wantErr   bool
+	}{
+		{name: "the predicate accepts the locale", predicate: func(string) bool { return true }},
+		{name: "the predicate rejects the locale", predicate: func(string) bool { return false }, wantErr: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			h := wireWithLocalePredicate(t, test.predicate)
+
+			locale := "xx"
+			_, err := h.service.UpdateProfile(t.Context(), h.actor(), identity.Profile{Locale: &locale})
+
+			if !test.wantErr {
+				require.NoError(t, err)
+
+				return
+			}
+
+			var invalid *domain.ValidationError
+			require.ErrorAs(t, err, &invalid)
+			require.Len(t, invalid.Fields, 1)
+			assert.Equal(t, "locale", invalid.Fields[0].Field)
+			assert.Equal(t, domain.CodeInvalidValue, invalid.Fields[0].Code)
+			assert.Empty(t, h.repository.Writes(), "the refused change was written anyway")
+		})
+	}
+}
+
+// TestUpdateProfileWithNoConfiguredPredicateAcceptsAnyFormedLocale: a harness
+// wired with no SupportedLocale at all — every other test in this file — must
+// keep accepting whatever identity.User.Validate's own format rule lets
+// through, so this package's many other UpdateProfile tests do not have to
+// know about a catalogue they never asked about.
+func TestUpdateProfileWithNoConfiguredPredicateAcceptsAnyFormedLocale(t *testing.T) {
+	t.Parallel()
+
+	h := newHarness(t)
+
+	locale := "xx"
+	updated, err := h.service.UpdateProfile(t.Context(), h.actor(), identity.Profile{Locale: &locale})
+	require.NoError(t, err)
+	assert.Equal(t, locale, updated.Locale)
+}
+
+func wireWithLocalePredicate(t *testing.T, predicate func(string) bool) harness {
+	t.Helper()
+
+	repository := identitytest.NewRepository()
+	authenticator := identitytest.NewAuthenticator(repository)
+	mailer := identitytest.NewMailer()
+	auditor := identitytest.NewAuditor()
+
+	service, err := identity.New(identity.Config{
+		Repository:      repository,
+		Authenticator:   authenticator,
+		Mailer:          mailer,
+		Auditor:         auditor,
+		Clock:           identitytest.NewClock(),
+		SupportedLocale: predicate,
+	})
+	require.NoError(t, err)
+
+	account, err := repository.Create(t.Context(), domainidentity.User{
+		Email:      identitytest.Email,
+		Name:       identitytest.Name,
+		Role:       domainidentity.DefaultRole,
+		UnitSystem: domainidentity.DefaultUnitSystem,
+		Locale:     domainidentity.DefaultLocale,
+		DateFormat: domainidentity.DefaultDateFormat,
+		Theme:      domainidentity.DefaultTheme,
+	}, identitytest.Password)
+	require.NoError(t, err)
+
+	repository.Forget()
+	authenticator.Forget()
+
+	return harness{
+		service:       service,
+		repository:    repository,
+		authenticator: authenticator,
+		mailer:        mailer,
+		auditor:       auditor,
+		account:       account,
+	}
+}
+
 func TestChangePasswordReplacesTheCredentialAndRecordsIt(t *testing.T) {
 	t.Parallel()
 
