@@ -80,7 +80,7 @@ func TestAbsentDetailsDoNotRenderAsZeroOrBlank(t *testing.T) {
 	sparse := person.Patient{
 		ID: "pat0000000003", FirstName: "Chiamaka", LastName: "Okonkwo", BirthDate: birth,
 	}
-	view := patients.NewPatientView(sparse, "", identity.UnitSystemMetric, patients.PatientLinks{})
+	view := patients.NewPatientView(t.Context(), sparse, "", identity.UnitSystemMetric, patients.PatientLinks{})
 
 	require.Empty(t, view.BloodType)
 	require.Empty(t, view.HeightCM)
@@ -107,7 +107,7 @@ func TestTheDetailShowsEveryRecordedValue(t *testing.T) {
 		HeightCM: 175, WeightKG: 70.5, Address: "12 Rowan Street",
 		RelationshipToOwner: person.RelationshipParent,
 	}
-	view := patients.NewPatientView(full, "", identity.UnitSystemMetric, patients.PatientLinks{})
+	view := patients.NewPatientView(t.Context(), full, "", identity.UnitSystemMetric, patients.PatientLinks{})
 
 	tree := viewstest.Render(t, patients.PatientDetail(patients.PatientDetailProps{Patient: view}), "div")
 	text := viewstest.Text(tree.One(t, viewstest.Region(patientChartArticle)))

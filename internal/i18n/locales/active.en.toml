@@ -2238,3 +2238,676 @@ other = "Save changes"
 [action.sign_out]
 description = "Ends every session this account has open, everywhere"
 other = "Sign out"
+
+# --- T022 additions ---------------------------------------------------------
+# --- nav (T022 additions) --------------------------------------------------
+
+[nav.patients]
+description = "The patient list's own page title and nav entry"
+other = "People"
+
+[nav.practitioners]
+description = "The practitioner list's page title, nav entry and section heading"
+other = "Practitioners"
+
+[nav.facilities]
+description = "The facility list's page title and nav entry"
+other = "Places of care"
+
+[nav.overview]
+description = "The overview page's title and landmark heading"
+other = "Overview"
+
+# --- patient (T022 additions) -----------------------------------------------
+
+[patient.list_region]
+description = "The patient list's landmark and heading, distinct from the nav label"
+other = "Patients"
+
+[patient.empty_title]
+description = "The patient list's empty state title"
+other = "Nobody recorded yet"
+
+[patient.empty_body]
+description = "The patient list's empty state body"
+other = "Add the first person and they will be listed here."
+
+[patient.add_person]
+description = "Creates a patient: the list's add button and the create form's own accessible name"
+other = "Add a person"
+
+[patient.edit_person]
+description = "The patient edit form's accessible name"
+other = "Edit person"
+
+[patient.add_them]
+description = "The patient create form's submit button"
+other = "Add them"
+
+[patient.self_marker]
+description = "Marks the account holder's own row and relationship option"
+other = "You"
+
+[patient.chart_region]
+description = "The patient detail page's landmark"
+other = "Patient chart"
+
+[patient.nothing_recorded_title]
+description = "The patient chart's page-level empty state title, also reused by the facility and practitioner empty states"
+other = "Nothing recorded yet"
+
+[patient.nothing_recorded_body]
+description = "The patient chart's page-level empty state body"
+other = "Every kind of record for this person starts here, at zero."
+
+[patient.tile_empty]
+description = "A chart tile with no records of its kind yet"
+other = "None yet — add the first one"
+
+[patient.recent_activity]
+description = "The patient chart's recent-activity heading"
+other = "Recent activity"
+
+[patient.gone_notice]
+description = "FR-017/US3-3: shown on the list after a patient's own page or delete link no longer resolves"
+other = "That person's page is no longer available."
+
+[patient.activity_record]
+description = "Recent-activity subject: the patient's own record"
+other = "This person's record"
+
+[patient.activity_medication]
+description = "Recent-activity subject: a medication record"
+other = "A medication"
+
+[patient.activity_default_record]
+description = "Recent-activity subject: a record of an unlisted kind"
+other = "A record"
+
+[patient.activity_created]
+description = "Recent-activity: a record was added"
+other = "{{.Subject}} was added"
+
+[patient.activity_updated]
+description = "Recent-activity: a record was updated"
+other = "{{.Subject}} was updated"
+
+[patient.activity_deleted]
+description = "Recent-activity: a record was deleted"
+other = "{{.Subject}} was deleted"
+
+[patient.activity_switched]
+description = "Recent-activity: this person became the active patient"
+other = "This person became the one in view"
+
+[patient.activity_photo_viewed]
+description = "Recent-activity: the patient's photo was viewed"
+other = "A photograph was viewed"
+
+[patient.activity_access_denied]
+description = "Recent-activity: an attempt to reach this person was refused"
+other = "An attempt to reach this person was refused"
+
+# --- field.patient (T022 additions) -----------------------------------------
+
+[field.patient.first_name]
+description = "The patient form's first-name field"
+other = "First name"
+
+[field.patient.last_name]
+description = "The patient form's last-name field"
+other = "Last name"
+
+[field.patient.birth_date]
+description = "The patient form's date-of-birth field"
+other = "Date of birth"
+
+[field.patient.sex]
+description = "The patient form's sex field"
+other = "Sex"
+
+[field.patient.blood_type]
+description = "The patient form's blood-type field"
+other = "Blood type"
+
+[field.patient.height_cm]
+description = "The patient form's height field"
+other = "Height"
+
+[field.patient.weight_kg]
+description = "The patient form's weight field"
+other = "Weight"
+
+[field.patient.address]
+description = "The patient form's address field"
+other = "Address"
+
+[field.patient.relationship_to_owner]
+description = "The patient form's relationship-to-owner field"
+other = "Relationship"
+
+[field.not_recorded]
+description = "A select control's own unset option, shared by the patient, facility and practitioner forms"
+other = "Not recorded"
+
+# --- enum.sex (T022 additions) -----------------------------------------------
+
+[enum.sex.female]
+description = "The patient form's sex option"
+other = "Female"
+
+[enum.sex.male]
+description = "The patient form's sex option"
+other = "Male"
+
+[enum.sex.intersex]
+description = "The patient form's sex option"
+other = "Intersex"
+
+[enum.sex.unspecified]
+description = "The patient form's sex option"
+other = "Unspecified"
+
+# --- enum.blood_type (T022 additions) ----------------------------------------
+# Blood-type notation is the same string in every language (data-model's own
+# spelling), so en and pl carry the identical value.
+
+[enum.blood_type.a_pos]
+description = "The patient form's blood-type option"
+other = "A+"
+
+[enum.blood_type.a_neg]
+description = "The patient form's blood-type option"
+other = "A-"
+
+[enum.blood_type.b_pos]
+description = "The patient form's blood-type option"
+other = "B+"
+
+[enum.blood_type.b_neg]
+description = "The patient form's blood-type option"
+other = "B-"
+
+[enum.blood_type.ab_pos]
+description = "The patient form's blood-type option"
+other = "AB+"
+
+[enum.blood_type.ab_neg]
+description = "The patient form's blood-type option"
+other = "AB-"
+
+[enum.blood_type.o_pos]
+description = "The patient form's blood-type option"
+other = "O+"
+
+[enum.blood_type.o_neg]
+description = "The patient form's blood-type option"
+other = "O-"
+
+# --- enum.relationship (T022 additions) --------------------------------------
+
+[enum.relationship.spouse]
+description = "The patient form's relationship-to-owner option"
+other = "Spouse"
+
+[enum.relationship.partner]
+description = "The patient form's relationship-to-owner option"
+other = "Partner"
+
+[enum.relationship.parent]
+description = "The patient form's relationship-to-owner option"
+other = "Parent"
+
+[enum.relationship.child]
+description = "The patient form's relationship-to-owner option"
+other = "Child"
+
+[enum.relationship.sibling]
+description = "The patient form's relationship-to-owner option"
+other = "Sibling"
+
+[enum.relationship.ward]
+description = "The patient form's relationship-to-owner option"
+other = "Ward"
+
+[enum.relationship.other]
+description = "The patient form's relationship-to-owner option"
+other = "Other"
+
+# --- form (T022 additions) ---------------------------------------------------
+
+[form.stale_notice]
+description = "Shown when a form is re-rendered from the server's current values after a stale If-Match (research D-24), shared by the patient, facility and practitioner forms"
+other = "This record changed since you loaded it; the current values are shown."
+
+# --- action (T022 additions) -------------------------------------------------
+
+[action.edit]
+description = "Opens a record's edit form, shared by the patient, facility and practitioner detail pages"
+other = "Edit"
+
+# --- confirm (T022 additions) -------------------------------------------------
+
+[confirm.delete_this_person]
+description = "The patient delete confirmation's own question"
+other = "Delete this person?"
+
+[confirm.delete_this_facility]
+description = "The facility delete confirmation's own question"
+other = "Delete this facility?"
+
+[confirm.delete_this_practitioner]
+description = "The practitioner delete confirmation's own question"
+other = "Delete this practitioner?"
+
+[confirm.keep_them]
+description = "The patient delete confirmation's cancel option"
+other = "Keep them"
+
+[confirm.delete_permanently_button]
+description = "The delete confirmation's own confirm button, shared by the patient, facility and practitioner confirmations"
+other = "Delete permanently"
+
+[confirm.facility_delete_consequence]
+description = "The facility delete confirmation's consequence sentence"
+other = "This is permanent. Any practitioner or medication naming it keeps its own record, with this reference cleared."
+
+[confirm.practitioner_delete_consequence]
+description = "The practitioner delete confirmation's consequence sentence"
+other = "This is permanent. Any patient or medication naming them keeps its own record, with this reference cleared."
+
+# --- directory (T022 additions) ----------------------------------------------
+
+[directory.empty_body]
+description = "The facility and practitioner list's empty state body"
+other = "Add the first one and it will be listed here."
+
+[directory.facility_article]
+description = "The facility detail page's landmark"
+other = "Facility"
+
+[directory.practitioner_article]
+description = "The practitioner detail page's landmark"
+other = "Practitioner"
+
+[directory.add_facility]
+description = "Creates a facility: the list's add button and the create form's own accessible name"
+other = "Add a facility"
+
+[directory.edit_facility]
+description = "The facility edit form's accessible name"
+other = "Edit facility"
+
+[directory.add_facility_submit]
+description = "The facility create form's submit button"
+other = "Add facility"
+
+[directory.add_practitioner]
+description = "Creates a practitioner: the list's add button and the create form's own accessible name"
+other = "Add a practitioner"
+
+[directory.edit_practitioner]
+description = "The practitioner edit form's accessible name"
+other = "Edit practitioner"
+
+[directory.add_practitioner_submit]
+description = "The practitioner create form's submit button"
+other = "Add practitioner"
+
+[directory.usage_practitioners]
+description = "How many practitioners name a facility, half of the facility detail's usage sentence"
+one = "{{.PluralCount}} practitioner"
+other = "{{.PluralCount}} practitioners"
+
+[directory.usage_patients]
+description = "How many patients name a practitioner, half of the practitioner detail's usage sentence"
+one = "{{.PluralCount}} patient"
+other = "{{.PluralCount}} patients"
+
+[directory.usage_records]
+description = "How many records name a facility or practitioner, half of the usage sentence"
+one = "{{.PluralCount}} record"
+other = "{{.PluralCount}} records"
+
+[directory.named_by]
+description = "Combines two usage-count phrases into the facility/practitioner detail's own footer sentence"
+other = "Named by {{.First}} and {{.Second}}."
+
+# --- field.facility (T022 additions) -----------------------------------------
+
+[field.facility.kind]
+description = "The facility form's kind field"
+other = "Kind"
+
+[field.facility.name]
+description = "The facility form's name field"
+other = "Name"
+
+[field.facility.brand]
+description = "The facility form's brand field"
+other = "Brand"
+
+[field.facility.street]
+description = "The facility form's street field"
+other = "Street"
+
+[field.facility.city]
+description = "The facility form's city field"
+other = "City"
+
+[field.facility.region]
+description = "The facility form's region field"
+other = "Region"
+
+[field.facility.postal_code]
+description = "The facility form's postal-code field"
+other = "Postal code"
+
+[field.facility.country]
+description = "The facility form's country field"
+other = "Country"
+
+[field.facility.phone]
+description = "The facility form's phone field"
+other = "Phone"
+
+[field.facility.fax]
+description = "The facility form's fax field"
+other = "Fax"
+
+[field.facility.email]
+description = "The facility form's email field"
+other = "Email"
+
+[field.facility.website]
+description = "The facility form's website field"
+other = "Website"
+
+[field.facility.portal_url]
+description = "The facility form's patient-portal URL field"
+other = "Patient portal"
+
+[field.facility.hours]
+description = "The facility form's hours field"
+other = "Hours"
+
+[field.facility.open_24h]
+description = "The facility form's open-24-hours field"
+other = "Open 24 hours"
+
+[field.facility.drive_through]
+description = "The facility form's drive-through field"
+other = "Drive-through"
+
+[field.facility.services]
+description = "The facility form's services field"
+other = "Services"
+
+[field.facility.notes]
+description = "The facility form's notes field"
+other = "Notes"
+
+# --- enum.facility_kind (T022 additions) -------------------------------------
+
+[enum.facility_kind.practice]
+description = "The facility form's kind option"
+other = "Practice"
+
+[enum.facility_kind.pharmacy]
+description = "The facility form's kind option"
+other = "Pharmacy"
+
+[enum.facility_kind.hospital]
+description = "The facility form's kind option"
+other = "Hospital"
+
+[enum.facility_kind.lab]
+description = "The facility form's kind option"
+other = "Laboratory"
+
+[enum.facility_kind.imaging]
+description = "The facility form's kind option"
+other = "Imaging centre"
+
+[enum.facility_kind.other]
+description = "The facility form's kind option"
+other = "Other"
+
+# --- field.practitioner (T022 additions) -------------------------------------
+
+[field.practitioner.name]
+description = "The practitioner form's name field"
+other = "Name"
+
+[field.practitioner.specialty]
+description = "The practitioner form's specialty field"
+other = "Specialty"
+
+[field.practitioner.facility]
+description = "The practitioner form's facility field"
+other = "Facility"
+
+[field.practitioner.phone]
+description = "The practitioner form's phone field"
+other = "Phone"
+
+[field.practitioner.email]
+description = "The practitioner form's email field"
+other = "Email"
+
+[field.practitioner.website]
+description = "The practitioner form's website field"
+other = "Website"
+
+[field.practitioner.notes]
+description = "The practitioner form's notes field"
+other = "Notes"
+
+# --- overview (T022 additions) ------------------------------------------------
+
+[overview.medication_summary_zero]
+description = "The overview page's summary when the account has no medications yet"
+other = "You have not recorded any {{.Label}} yet."
+
+[overview.medication_summary_one]
+description = "The overview page's summary with exactly one medication"
+other = "You have 1 medication recorded."
+
+[overview.medication_summary_other]
+description = "The overview page's summary with more than one medication"
+other = "You have {{.Count}} {{.Label}} recorded."
+
+[overview.go_to_medications]
+description = "The overview page's link to the medication list"
+other = "Go to your {{.Label}}"
+
+[overview.go_to_settings]
+description = "The overview page's link to settings"
+other = "Go to your settings"
+
+# --- enum.specialty.<value> (T022 additions) -------------------------------
+
+[enum.specialty.allergy_immunology]
+description = "The practitioner form's specialty option: Allergy immunology"
+other = "Allergy immunology"
+
+[enum.specialty.anesthesiology]
+description = "The practitioner form's specialty option: Anesthesiology"
+other = "Anesthesiology"
+
+[enum.specialty.cardiology]
+description = "The practitioner form's specialty option: Cardiology"
+other = "Cardiology"
+
+[enum.specialty.dentistry]
+description = "The practitioner form's specialty option: Dentistry"
+other = "Dentistry"
+
+[enum.specialty.dermatology]
+description = "The practitioner form's specialty option: Dermatology"
+other = "Dermatology"
+
+[enum.specialty.emergency_medicine]
+description = "The practitioner form's specialty option: Emergency medicine"
+other = "Emergency medicine"
+
+[enum.specialty.endocrinology]
+description = "The practitioner form's specialty option: Endocrinology"
+other = "Endocrinology"
+
+[enum.specialty.family_medicine]
+description = "The practitioner form's specialty option: Family medicine"
+other = "Family medicine"
+
+[enum.specialty.gastroenterology]
+description = "The practitioner form's specialty option: Gastroenterology"
+other = "Gastroenterology"
+
+[enum.specialty.general_surgery]
+description = "The practitioner form's specialty option: General surgery"
+other = "General surgery"
+
+[enum.specialty.genetics]
+description = "The practitioner form's specialty option: Genetics"
+other = "Genetics"
+
+[enum.specialty.geriatrics]
+description = "The practitioner form's specialty option: Geriatrics"
+other = "Geriatrics"
+
+[enum.specialty.gynecology]
+description = "The practitioner form's specialty option: Gynecology"
+other = "Gynecology"
+
+[enum.specialty.hematology]
+description = "The practitioner form's specialty option: Hematology"
+other = "Hematology"
+
+[enum.specialty.hepatology]
+description = "The practitioner form's specialty option: Hepatology"
+other = "Hepatology"
+
+[enum.specialty.infectious_disease]
+description = "The practitioner form's specialty option: Infectious disease"
+other = "Infectious disease"
+
+[enum.specialty.internal_medicine]
+description = "The practitioner form's specialty option: Internal medicine"
+other = "Internal medicine"
+
+[enum.specialty.nephrology]
+description = "The practitioner form's specialty option: Nephrology"
+other = "Nephrology"
+
+[enum.specialty.neurology]
+description = "The practitioner form's specialty option: Neurology"
+other = "Neurology"
+
+[enum.specialty.neurosurgery]
+description = "The practitioner form's specialty option: Neurosurgery"
+other = "Neurosurgery"
+
+[enum.specialty.nutrition]
+description = "The practitioner form's specialty option: Nutrition"
+other = "Nutrition"
+
+[enum.specialty.obstetrics]
+description = "The practitioner form's specialty option: Obstetrics"
+other = "Obstetrics"
+
+[enum.specialty.occupational_therapy]
+description = "The practitioner form's specialty option: Occupational therapy"
+other = "Occupational therapy"
+
+[enum.specialty.oncology]
+description = "The practitioner form's specialty option: Oncology"
+other = "Oncology"
+
+[enum.specialty.ophthalmology]
+description = "The practitioner form's specialty option: Ophthalmology"
+other = "Ophthalmology"
+
+[enum.specialty.optometry]
+description = "The practitioner form's specialty option: Optometry"
+other = "Optometry"
+
+[enum.specialty.oral_surgery]
+description = "The practitioner form's specialty option: Oral surgery"
+other = "Oral surgery"
+
+[enum.specialty.orthopedics]
+description = "The practitioner form's specialty option: Orthopedics"
+other = "Orthopedics"
+
+[enum.specialty.otolaryngology]
+description = "The practitioner form's specialty option: Otolaryngology"
+other = "Otolaryngology"
+
+[enum.specialty.pain_medicine]
+description = "The practitioner form's specialty option: Pain medicine"
+other = "Pain medicine"
+
+[enum.specialty.palliative_care]
+description = "The practitioner form's specialty option: Palliative care"
+other = "Palliative care"
+
+[enum.specialty.pathology]
+description = "The practitioner form's specialty option: Pathology"
+other = "Pathology"
+
+[enum.specialty.pediatrics]
+description = "The practitioner form's specialty option: Pediatrics"
+other = "Pediatrics"
+
+[enum.specialty.physical_therapy]
+description = "The practitioner form's specialty option: Physical therapy"
+other = "Physical therapy"
+
+[enum.specialty.plastic_surgery]
+description = "The practitioner form's specialty option: Plastic surgery"
+other = "Plastic surgery"
+
+[enum.specialty.podiatry]
+description = "The practitioner form's specialty option: Podiatry"
+other = "Podiatry"
+
+[enum.specialty.psychiatry]
+description = "The practitioner form's specialty option: Psychiatry"
+other = "Psychiatry"
+
+[enum.specialty.psychology]
+description = "The practitioner form's specialty option: Psychology"
+other = "Psychology"
+
+[enum.specialty.pulmonology]
+description = "The practitioner form's specialty option: Pulmonology"
+other = "Pulmonology"
+
+[enum.specialty.radiology]
+description = "The practitioner form's specialty option: Radiology"
+other = "Radiology"
+
+[enum.specialty.rheumatology]
+description = "The practitioner form's specialty option: Rheumatology"
+other = "Rheumatology"
+
+[enum.specialty.urology]
+description = "The practitioner form's specialty option: Urology"
+other = "Urology"
+
+[enum.specialty.other]
+description = "The practitioner form's specialty option: Other"
+other = "Other"
+
+[patient.delete_consequence_zero]
+description = "The patient delete confirmation's consequence sentence when the person has no records at all"
+other = "This is permanent. There is no recycle bin and no undo."
+
+[patient.delete_consequence]
+description = "The patient delete confirmation's consequence sentence: how many records go with the person"
+one = "This is permanent and destroys the one record kept for them. There is no recycle bin and no undo."
+other = "This is permanent and destroys all {{.PluralCount}} records kept for them. There is no recycle bin and no undo."
+
+[directory.facility_region]
+description = "The facility list's landmark and heading, distinct from the nav label (\"Places of care\")"
+other = "Facilities"

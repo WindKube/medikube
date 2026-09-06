@@ -1,8 +1,7 @@
 package directory
 
 import (
-	"strconv"
-
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web"
@@ -10,21 +9,11 @@ import (
 
 const facilityConfirmSignal = "_confirming_delete"
 
-const (
-	facilityDetailArticle = "Facility"
-	facilityConfirmTitle  = "Delete this facility?"
-	facilityConfirmBody   = "This is permanent. Any practitioner or medication naming it keeps its own record, with this reference cleared."
-	facilityConfirmLabel  = "Delete permanently"
-	facilityConfirmCancel = "Keep it"
-	facilityEditLabel     = "Edit"
-	facilityDeleteLabel   = "Delete"
-)
-
 // FacilityDetail is contracts/pages.md P6's landmark.
 templ FacilityDetail(props FacilityDetailProps) {
 	<article
 		id={ ids.DirectoryDetail(FacilitySegment, props.Facility.ID) }
-		aria-label={ facilityDetailArticle }
+		aria-label={ i18n.T(ctx, "directory.facility_article") }
 		data-signals={ "{" + facilityConfirmSignal + ": false, _etag: " + jsQuote(web.ETag(props.Facility.Version)) + "}" }
 		class="flex flex-col"
 	>
@@ -38,34 +27,37 @@ templ FacilityDetail(props FacilityDetailProps) {
 				<a
 					href={ "#" + ids.DirectoryForm(FacilitySegment, props.Facility.ID) }
 					class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-				>{ facilityEditLabel }</a>
+				>{ i18n.T(ctx, "action.edit") }</a>
 				<button
 					type="button"
 					data-on:click={ "$" + facilityConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-				>{ facilityDeleteLabel }</button>
+				>{ i18n.T(ctx, "action.delete") }</button>
 			</div>
 		</header>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
-			for _, entry := range props.Facility.Entries() {
+			for _, entry := range props.Facility.Entries(ctx) {
 				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
 				@directoryValue(entry)
 			}
 		</dl>
 		if props.Facility.UsagePractitioners > 0 || props.Facility.UsageRecords > 0 {
 			<p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
-				{ "Named by " + strconv.Itoa(props.Facility.UsagePractitioners) + " practitioner(s) and " + strconv.Itoa(props.Facility.UsageRecords) + " record(s)." }
+				{ i18n.T(ctx, "directory.named_by", map[string]any{
+					"First":  i18n.N(ctx, "directory.usage_practitioners", props.Facility.UsagePractitioners),
+					"Second": i18n.N(ctx, "directory.usage_records", props.Facility.UsageRecords),
+				}) }
 			</p>
 		}
 		@components.Confirm(components.ConfirmProps{
 			ID:           ids.DirectoryConfirm(FacilitySegment, props.Facility.ID),
 			Signal:       facilityConfirmSignal,
-			Title:        facilityConfirmTitle,
+			Title:        i18n.T(ctx, "confirm.delete_this_facility"),
 			Subject:      props.Facility.Name,
-			Consequence:  facilityConfirmBody,
-			ConfirmLabel: facilityConfirmLabel,
+			Consequence:  i18n.T(ctx, "confirm.facility_delete_consequence"),
+			ConfirmLabel: i18n.T(ctx, "confirm.delete_permanently_button"),
 			ConfirmOn:    "@delete(" + jsQuote(props.Facility.Links.Record) + ", {headers: {'If-Match': $_etag}})",
-			CancelLabel:  facilityConfirmCancel,
+			CancelLabel:  i18n.T(ctx, "confirm.keep_it"),
 		})
 	</article>
 }

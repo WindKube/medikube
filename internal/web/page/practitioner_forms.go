@@ -62,7 +62,7 @@ func (f practitionerForms) listQuery() practitionersvc.Query {
 }
 
 func (f practitionerForms) view(ctx context.Context, actor access.Actor, p domaindirectory.Practitioner) directory.PractitionerView {
-	return directory.NewPractitionerView(p, f.facilityName(ctx, actor, p.FacilityID), f.links.of(p.ID))
+	return directory.NewPractitionerView(ctx, p, f.facilityName(ctx, actor, p.FacilityID), f.links.of(p.ID))
 }
 
 func (f practitionerForms) Invalid(
@@ -90,7 +90,7 @@ func (f practitionerForms) Stale(ctx context.Context, actor access.Actor, curren
 		CancelHref:   f.links.cancelHref(view),
 		Practitioner: view,
 		Errors:       directory.NewFieldErrors(nil),
-		Notice:       staleFormNotice,
+		Notice:       staleFormNotice(ctx),
 	}), nil
 }
 

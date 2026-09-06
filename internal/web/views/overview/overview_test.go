@@ -19,7 +19,7 @@ func TestOverviewRendersTheLandmarkAndBothLinks(t *testing.T) {
 		SettingsHref:     "/settings",
 	}), "div")
 
-	tree.One(t, viewstest.Region(overview.OverviewLandmark))
+	tree.One(t, viewstest.Region("Overview"))
 	assert.Len(t, tree.All(viewstest.WithAttr("href", "/meds")), 1)
 	assert.Len(t, tree.All(viewstest.WithAttr("href", "/settings")), 1)
 	assert.Contains(t, tree.Markup, "3 meds")

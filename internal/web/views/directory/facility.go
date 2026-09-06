@@ -1,7 +1,10 @@
 package directory
 
 import (
+	"context"
+
 	"medikube/internal/domain/directory"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/records"
 )
 
@@ -29,64 +32,64 @@ const (
 	FieldFacilityNotes        = "notes"
 )
 
-var facilityFieldLabels = map[string]string{
-	FieldFacilityKind:         "Kind",
-	FieldFacilityName:         "Name",
-	FieldFacilityBrand:        "Brand",
-	FieldFacilityStreet:       "Street",
-	FieldFacilityCity:         "City",
-	FieldFacilityRegion:       "Region",
-	FieldFacilityPostalCode:   "Postal code",
-	FieldFacilityCountry:      "Country",
-	FieldFacilityPhone:        "Phone",
-	FieldFacilityFax:          "Fax",
-	FieldFacilityEmail:        "Email",
-	FieldFacilityWebsite:      "Website",
-	FieldFacilityPortalURL:    "Patient portal",
-	FieldFacilityHours:        "Hours",
-	FieldFacilityOpen24h:      "Open 24 hours",
-	FieldFacilityDriveThrough: "Drive-through",
-	FieldFacilityServices:     "Services",
-	FieldFacilityNotes:        "Notes",
+var facilityFieldLabelIDs = map[string]string{
+	FieldFacilityKind:         "field.facility.kind",
+	FieldFacilityName:         "field.facility.name",
+	FieldFacilityBrand:        "field.facility.brand",
+	FieldFacilityStreet:       "field.facility.street",
+	FieldFacilityCity:         "field.facility.city",
+	FieldFacilityRegion:       "field.facility.region",
+	FieldFacilityPostalCode:   "field.facility.postal_code",
+	FieldFacilityCountry:      "field.facility.country",
+	FieldFacilityPhone:        "field.facility.phone",
+	FieldFacilityFax:          "field.facility.fax",
+	FieldFacilityEmail:        "field.facility.email",
+	FieldFacilityWebsite:      "field.facility.website",
+	FieldFacilityPortalURL:    "field.facility.portal_url",
+	FieldFacilityHours:        "field.facility.hours",
+	FieldFacilityOpen24h:      "field.facility.open_24h",
+	FieldFacilityDriveThrough: "field.facility.drive_through",
+	FieldFacilityServices:     "field.facility.services",
+	FieldFacilityNotes:        "field.facility.notes",
 }
 
-func FacilityFieldLabel(field string) string {
-	if label, known := facilityFieldLabels[field]; known {
-		return label
+func FacilityFieldLabel(ctx context.Context, field string) string {
+	if id, known := facilityFieldLabelIDs[field]; known {
+		return i18n.T(ctx, id)
 	}
 
 	return field
 }
 
-var facilityKindLabels = map[directory.FacilityKind]string{
-	directory.FacilityKindPractice: "Practice",
-	directory.FacilityKindPharmacy: "Pharmacy",
-	directory.FacilityKindHospital: "Hospital",
-	directory.FacilityKindLab:      "Laboratory",
-	directory.FacilityKindImaging:  "Imaging centre",
-	directory.FacilityKindOther:    "Other",
+var facilityKindLabelIDs = map[directory.FacilityKind]string{
+	directory.FacilityKindPractice: "enum.facility_kind.practice",
+	directory.FacilityKindPharmacy: "enum.facility_kind.pharmacy",
+	directory.FacilityKindHospital: "enum.facility_kind.hospital",
+	directory.FacilityKindLab:      "enum.facility_kind.lab",
+	directory.FacilityKindImaging:  "enum.facility_kind.imaging",
+	directory.FacilityKindOther:    "enum.facility_kind.other",
 }
 
-func FacilityKindLabel(value directory.FacilityKind) string {
+func FacilityKindLabel(ctx context.Context, value directory.FacilityKind) string {
 	if value == "" {
 		return ""
 	}
 
-	if label, known := facilityKindLabels[value]; known {
-		return label
+	if id, known := facilityKindLabelIDs[value]; known {
+		return i18n.T(ctx, id)
 	}
 
 	return string(value)
 }
 
-func FacilityKindOptions(selected directory.FacilityKind) []records.Option {
+func FacilityKindOptions(ctx context.Context, selected directory.FacilityKind) []records.Option {
 	published := directory.FacilityKinds()
 	options := make([]records.Option, 0, len(published))
 
 	for _, value := range published {
 		options = append(options, records.Option{
 			Value:    string(value),
-			Label:    FacilityKindLabel(value),
+			Label:    FacilityKindLabel(ctx, value),
 			Selected: value == selected,
 		})
 	}
@@ -128,10 +131,10 @@ type FacilityView struct {
 	Links   FacilityLinks
 }
 
-func NewFacilityView(f directory.Facility, links FacilityLinks) FacilityView {
+func NewFacilityView(ctx context.Context, f directory.Facility, links FacilityLinks) FacilityView {
 	return FacilityView{
 		ID:           f.ID,
-		Kind:         FacilityKindLabel(f.Kind),
+		Kind:         FacilityKindLabel(ctx, f.Kind),
 		KindValue:    string(f.Kind),
 		Name:         f.Name,
 		Brand:        f.Brand,
@@ -194,11 +197,11 @@ func (f FacilityView) Value(field string) string {
 	}
 }
 
-func (f FacilityView) KindOptions() []records.Option {
-	return FacilityKindOptions(directory.FacilityKind(f.KindValue))
+func (f FacilityView) KindOptions(ctx context.Context) []records.Option {
+	return FacilityKindOptions(ctx, directory.FacilityKind(f.KindValue))
 }
 
-func (f FacilityView) Entries() []DetailEntry {
+func (f FacilityView) Entries(ctx context.Context) []DetailEntry {
 	candidates := []DetailEntry{
 		{Field: FieldFacilityKind, Value: f.Kind},
 		{Field: FieldFacilityBrand, Value: f.Brand},
@@ -224,7 +227,7 @@ func (f FacilityView) Entries() []DetailEntry {
 			continue
 		}
 
-		entry.Label = FacilityFieldLabel(entry.Field)
+		entry.Label = FacilityFieldLabel(ctx, entry.Field)
 		entries = append(entries, entry)
 	}
 
@@ -254,18 +257,18 @@ type FacilityFormProps struct {
 	Notice string
 }
 
-func (f FacilityFormProps) Label() string {
+func (f FacilityFormProps) Label(ctx context.Context) string {
 	if f.New {
-		return "Add a facility"
+		return i18n.T(ctx, "directory.add_facility")
 	}
 
-	return "Edit facility"
+	return i18n.T(ctx, "directory.edit_facility")
 }
 
-func (f FacilityFormProps) SubmitLabel() string {
+func (f FacilityFormProps) SubmitLabel(ctx context.Context) string {
 	if f.New {
-		return "Add facility"
+		return i18n.T(ctx, "directory.add_facility_submit")
 	}
 
-	return "Save changes"
+	return i18n.T(ctx, "action.save_changes")
 }

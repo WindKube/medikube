@@ -3,6 +3,7 @@ package patients
 import (
 	"strconv"
 
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 )
@@ -10,12 +11,6 @@ import (
 // DeleteConfirmSignal is the Datastar signal PatientDetail's own delete
 // button flips, shared here so the two stay one spelling.
 const DeleteConfirmSignal = "_confirming_delete"
-
-const (
-	deleteConfirmTitle = "Delete this person?"
-	deleteConfirmLabel = "Delete permanently"
-	deleteConfirmCancel = "Keep them"
-)
 
 // DeleteConfirm is FR-048's confirmation dialog: it names the person and
 // states how many records will be destroyed before anything is removed
@@ -25,11 +20,11 @@ templ DeleteConfirm(props DeleteConfirmProps) {
 	@components.Confirm(components.ConfirmProps{
 		ID:           ids.PatientDetail(props.PatientID) + "-delete-confirm",
 		Signal:       DeleteConfirmSignal,
-		Title:        deleteConfirmTitle,
+		Title:        i18n.T(ctx, "confirm.delete_this_person"),
 		Subject:      props.Name,
-		Consequence:  props.Consequence(),
-		ConfirmLabel: deleteConfirmLabel,
+		Consequence:  props.Consequence(ctx),
+		ConfirmLabel: i18n.T(ctx, "confirm.delete_permanently_button"),
 		ConfirmOn:    "@delete(" + strconv.Quote(props.DeleteHref) + ", {headers: {'If-Match': $_etag}}).then(() => window.location = " + strconv.Quote("/patients") + ")",
-		CancelLabel:  deleteConfirmCancel,
+		CancelLabel:  i18n.T(ctx, "confirm.keep_them"),
 	})
 }

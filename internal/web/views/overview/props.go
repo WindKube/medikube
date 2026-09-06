@@ -1,8 +1,5 @@
 package overview
 
-// OverviewLandmark is contracts/pages.md P3's accessible name.
-const OverviewLandmark = "Overview"
-
 // Props is what the overview page needs. It stays this small deliberately:
 // FR-050 asks for a short summary and two links, not a dashboard, and phase
 // 003's kinds add rows to MedicationCount's family rather than members here.

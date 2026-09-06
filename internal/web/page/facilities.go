@@ -26,8 +26,6 @@ const (
 	OpFacilityDetailPage = "facilityDetailPage"
 )
 
-const facilityListTitle = "Places of care"
-
 // FacilityHandlers is P5 and P6's contribution to the route table.
 func FacilityHandlers(resolve api.FacilityResolve) (httproute.Handlers, error) {
 	if resolve == nil {
@@ -69,10 +67,12 @@ func (p *facilityPages) list(e *core.RequestEvent, actor access.Actor) error {
 		return web.OwnerScoped(err)
 	}
 
+	ctx := localizeCtx(e)
+
 	views := make([]directory.FacilityView, 0, len(page.Items))
 
 	for _, item := range page.Items {
-		views = append(views, directory.NewFacilityView(item, p.links.of(item.ID)))
+		views = append(views, directory.NewFacilityView(ctx, item, p.links.of(item.ID)))
 	}
 
 	blank := directory.FacilityView{}
@@ -92,8 +92,8 @@ func (p *facilityPages) list(e *core.RequestEvent, actor access.Actor) error {
 		}),
 	}
 
-	return RenderPage(e, http.StatusOK, facilityListTitle,
-		NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path)}, main)
+	return RenderPage(e, http.StatusOK, i18n.T(ctx, "nav.facilities"),
+		NavState{SignedIn: true, Nav: p.links.nav(ctx, e.Request.URL.Path)}, main)
 }
 
 func (p *facilityPages) detail(e *core.RequestEvent, actor access.Actor) error {
@@ -118,7 +118,9 @@ func (p *facilityPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		return web.OwnerScoped(err)
 	}
 
-	view := directory.NewFacilityView(found, p.links.of(found.ID))
+	ctx := localizeCtx(e)
+
+	view := directory.NewFacilityView(ctx, found, p.links.of(found.ID))
 	view.UsagePractitioners = usage.Practitioners
 	view.UsageRecords = usage.Records
 
@@ -135,7 +137,7 @@ func (p *facilityPages) detail(e *core.RequestEvent, actor access.Actor) error {
 	}
 
 	return RenderPage(e, http.StatusOK, view.Name,
-		NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path)}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(ctx, e.Request.URL.Path)}, main)
 }
 
 type facilityLinks struct {
@@ -207,8 +209,8 @@ func (l facilityLinks) cancelHref(view directory.FacilityView) string {
 func (l facilityLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
-		{Label: facilityListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
-		{Label: practitionerListTitle, Href: l.practitionersURL, Current: strings.HasPrefix(current, l.practitionersURL)},
+		{Label: i18n.T(ctx, "nav.facilities"), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, "nav.practitioners"), Href: l.practitionersURL, Current: strings.HasPrefix(current, l.practitionersURL)},
 		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

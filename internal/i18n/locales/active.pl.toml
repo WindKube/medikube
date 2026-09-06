@@ -2270,3 +2270,684 @@ other = "Zapisz zmiany"
 [action.sign_out]
 description = "Ends every session this account has open, everywhere"
 other = "Wyloguj się"
+
+# --- T022 additions ---------------------------------------------------------
+# --- nav (T022 additions) --------------------------------------------------
+
+[nav.patients]
+description = "The patient list's own page title and nav entry"
+other = "Osoby"
+
+[nav.practitioners]
+description = "The practitioner list's page title, nav entry and section heading"
+other = "Specjaliści"
+
+[nav.facilities]
+description = "The facility list's page title and nav entry"
+other = "Placówki opieki"
+
+[nav.overview]
+description = "The overview page's title and landmark heading"
+other = "Przegląd"
+
+# --- patient (T022 additions) -----------------------------------------------
+
+[patient.list_region]
+description = "The patient list's landmark and heading, distinct from the nav label"
+other = "Pacjenci"
+
+[patient.empty_title]
+description = "The patient list's empty state title"
+other = "Nikogo jeszcze nie dodano"
+
+[patient.empty_body]
+description = "The patient list's empty state body"
+other = "Dodaj pierwszą osobę, a pojawi się tutaj."
+
+[patient.add_person]
+description = "Creates a patient: the list's add button and the create form's own accessible name"
+other = "Dodaj osobę"
+
+[patient.edit_person]
+description = "The patient edit form's accessible name"
+other = "Edytuj osobę"
+
+[patient.add_them]
+description = "The patient create form's submit button"
+other = "Dodaj"
+
+[patient.self_marker]
+description = "Marks the account holder's own row and relationship option"
+other = "Ty"
+
+[patient.chart_region]
+description = "The patient detail page's landmark"
+other = "Karta pacjenta"
+
+[patient.nothing_recorded_title]
+description = "The patient chart's page-level empty state title, also reused by the facility and practitioner empty states"
+other = "Nic jeszcze nie zapisano"
+
+[patient.nothing_recorded_body]
+description = "The patient chart's page-level empty state body"
+other = "Każdy rodzaj wpisu dla tej osoby zaczyna się tutaj, od zera."
+
+[patient.tile_empty]
+description = "A chart tile with no records of its kind yet"
+other = "Jeszcze nic — dodaj pierwszy wpis"
+
+[patient.recent_activity]
+description = "The patient chart's recent-activity heading"
+other = "Ostatnia aktywność"
+
+[patient.gone_notice]
+description = "FR-017/US3-3: shown on the list after a patient's own page or delete link no longer resolves"
+other = "Strona tej osoby nie jest już dostępna."
+
+[patient.activity_record]
+description = "Recent-activity subject: the patient's own record"
+other = "Rekord tej osoby"
+
+[patient.activity_medication]
+description = "Recent-activity subject: a medication record"
+other = "Lek"
+
+[patient.activity_default_record]
+description = "Recent-activity subject: a record of an unlisted kind"
+other = "Wpis"
+
+[patient.activity_created]
+description = "Recent-activity: a record was added"
+other = "Dodano: {{.Subject}}"
+
+[patient.activity_updated]
+description = "Recent-activity: a record was updated"
+other = "Zaktualizowano: {{.Subject}}"
+
+[patient.activity_deleted]
+description = "Recent-activity: a record was deleted"
+other = "Usunięto: {{.Subject}}"
+
+[patient.activity_switched]
+description = "Recent-activity: this person became the active patient"
+other = "Ta osoba stała się aktualnie przeglądaną"
+
+[patient.activity_photo_viewed]
+description = "Recent-activity: the patient's photo was viewed"
+other = "Wyświetlono zdjęcie"
+
+[patient.activity_access_denied]
+description = "Recent-activity: an attempt to reach this person was refused"
+other = "Odmówiono dostępu do tej osoby"
+
+# --- field.patient (T022 additions) -----------------------------------------
+
+[field.patient.first_name]
+description = "The patient form's first-name field"
+other = "Imię"
+
+[field.patient.last_name]
+description = "The patient form's last-name field"
+other = "Nazwisko"
+
+[field.patient.birth_date]
+description = "The patient form's date-of-birth field"
+other = "Data urodzenia"
+
+[field.patient.sex]
+description = "The patient form's sex field"
+other = "Płeć"
+
+[field.patient.blood_type]
+description = "The patient form's blood-type field"
+other = "Grupa krwi"
+
+[field.patient.height_cm]
+description = "The patient form's height field"
+other = "Wzrost"
+
+[field.patient.weight_kg]
+description = "The patient form's weight field"
+other = "Waga"
+
+[field.patient.address]
+description = "The patient form's address field"
+other = "Adres"
+
+[field.patient.relationship_to_owner]
+description = "The patient form's relationship-to-owner field"
+other = "Relacja"
+
+[field.not_recorded]
+description = "A select control's own unset option, shared by the patient, facility and practitioner forms"
+other = "Nie odnotowano"
+
+# --- enum.sex (T022 additions) -----------------------------------------------
+
+[enum.sex.female]
+description = "The patient form's sex option"
+other = "Kobieta"
+
+[enum.sex.male]
+description = "The patient form's sex option"
+other = "Mężczyzna"
+
+[enum.sex.intersex]
+description = "The patient form's sex option"
+other = "Interpłciowa"
+
+[enum.sex.unspecified]
+description = "The patient form's sex option"
+other = "Nieokreślona"
+
+# --- enum.blood_type (T022 additions) ----------------------------------------
+# Blood-type notation is the same string in every language (data-model's own
+# spelling), so en and pl carry the identical value.
+
+[enum.blood_type.a_pos]
+description = "The patient form's blood-type option"
+other = "A+"
+
+[enum.blood_type.a_neg]
+description = "The patient form's blood-type option"
+other = "A-"
+
+[enum.blood_type.b_pos]
+description = "The patient form's blood-type option"
+other = "B+"
+
+[enum.blood_type.b_neg]
+description = "The patient form's blood-type option"
+other = "B-"
+
+[enum.blood_type.ab_pos]
+description = "The patient form's blood-type option"
+other = "AB+"
+
+[enum.blood_type.ab_neg]
+description = "The patient form's blood-type option"
+other = "AB-"
+
+[enum.blood_type.o_pos]
+description = "The patient form's blood-type option"
+other = "O+"
+
+[enum.blood_type.o_neg]
+description = "The patient form's blood-type option"
+other = "O-"
+
+# --- enum.relationship (T022 additions) --------------------------------------
+
+[enum.relationship.spouse]
+description = "The patient form's relationship-to-owner option"
+other = "Współmałżonek"
+
+[enum.relationship.partner]
+description = "The patient form's relationship-to-owner option"
+other = "Partner"
+
+[enum.relationship.parent]
+description = "The patient form's relationship-to-owner option"
+other = "Rodzic"
+
+[enum.relationship.child]
+description = "The patient form's relationship-to-owner option"
+other = "Dziecko"
+
+[enum.relationship.sibling]
+description = "The patient form's relationship-to-owner option"
+other = "Rodzeństwo"
+
+[enum.relationship.ward]
+description = "The patient form's relationship-to-owner option"
+other = "Podopieczny"
+
+[enum.relationship.other]
+description = "The patient form's relationship-to-owner option"
+other = "Inne"
+
+# --- form (T022 additions) ---------------------------------------------------
+
+[form.stale_notice]
+description = "Shown when a form is re-rendered from the server's current values after a stale If-Match (research D-24), shared by the patient, facility and practitioner forms"
+other = "Ten rekord zmienił się od czasu wczytania; pokazano aktualne wartości."
+
+# --- action (T022 additions) -------------------------------------------------
+
+[action.edit]
+description = "Opens a record's edit form, shared by the patient, facility and practitioner detail pages"
+other = "Edytuj"
+
+# --- confirm (T022 additions) -------------------------------------------------
+
+[confirm.delete_this_person]
+description = "The patient delete confirmation's own question"
+other = "Usunąć tę osobę?"
+
+[confirm.delete_this_facility]
+description = "The facility delete confirmation's own question"
+other = "Usunąć tę placówkę?"
+
+[confirm.delete_this_practitioner]
+description = "The practitioner delete confirmation's own question"
+other = "Usunąć tego specjalistę?"
+
+[confirm.keep_them]
+description = "The patient delete confirmation's cancel option"
+other = "Zachowaj"
+
+[confirm.delete_permanently_button]
+description = "The delete confirmation's own confirm button, shared by the patient, facility and practitioner confirmations"
+other = "Usuń na stałe"
+
+[confirm.facility_delete_consequence]
+description = "The facility delete confirmation's consequence sentence"
+other = "Jest to nieodwracalne. Każdy specjalista lub lek, który ją wskazuje, zachowuje swój wpis, z wyczyszczonym odniesieniem."
+
+[confirm.practitioner_delete_consequence]
+description = "The practitioner delete confirmation's consequence sentence"
+other = "Jest to nieodwracalne. Każdy pacjent lub lek, który go wskazuje, zachowuje swój wpis, z wyczyszczonym odniesieniem."
+
+# --- directory (T022 additions) ----------------------------------------------
+
+[directory.empty_body]
+description = "The facility and practitioner list's empty state body"
+other = "Dodaj pierwszy wpis, a pojawi się tutaj."
+
+[directory.facility_article]
+description = "The facility detail page's landmark"
+other = "Placówka"
+
+[directory.practitioner_article]
+description = "The practitioner detail page's landmark"
+other = "Specjalista"
+
+[directory.add_facility]
+description = "Creates a facility: the list's add button and the create form's own accessible name"
+other = "Dodaj placówkę"
+
+[directory.edit_facility]
+description = "The facility edit form's accessible name"
+other = "Edytuj placówkę"
+
+[directory.add_facility_submit]
+description = "The facility create form's submit button"
+other = "Dodaj placówkę"
+
+[directory.add_practitioner]
+description = "Creates a practitioner: the list's add button and the create form's own accessible name"
+other = "Dodaj specjalistę"
+
+[directory.edit_practitioner]
+description = "The practitioner edit form's accessible name"
+other = "Edytuj specjalistę"
+
+[directory.add_practitioner_submit]
+description = "The practitioner create form's submit button"
+other = "Dodaj specjalistę"
+
+[directory.usage_practitioners]
+description = "How many practitioners name a facility, half of the facility detail's usage sentence"
+one = "{{.PluralCount}} specjalista"
+few = "{{.PluralCount}} specjalistów"
+many = "{{.PluralCount}} specjalistów"
+other = "{{.PluralCount}} specjalisty"
+
+[directory.usage_patients]
+description = "How many patients name a practitioner, half of the practitioner detail's usage sentence"
+one = "{{.PluralCount}} pacjent"
+few = "{{.PluralCount}} pacjentów"
+many = "{{.PluralCount}} pacjentów"
+other = "{{.PluralCount}} pacjenta"
+
+[directory.usage_records]
+description = "How many records name a facility or practitioner, half of the usage sentence"
+one = "{{.PluralCount}} rekord"
+few = "{{.PluralCount}} rekordy"
+many = "{{.PluralCount}} rekordów"
+other = "{{.PluralCount}} rekordu"
+
+[directory.named_by]
+description = "Combines two usage-count phrases into the facility/practitioner detail's own footer sentence"
+other = "Wskazuje go {{.First}} i {{.Second}}."
+
+# --- field.facility (T022 additions) -----------------------------------------
+
+[field.facility.kind]
+description = "The facility form's kind field"
+other = "Rodzaj"
+
+[field.facility.name]
+description = "The facility form's name field"
+other = "Nazwa"
+
+[field.facility.brand]
+description = "The facility form's brand field"
+other = "Marka"
+
+[field.facility.street]
+description = "The facility form's street field"
+other = "Ulica"
+
+[field.facility.city]
+description = "The facility form's city field"
+other = "Miasto"
+
+[field.facility.region]
+description = "The facility form's region field"
+other = "Region"
+
+[field.facility.postal_code]
+description = "The facility form's postal-code field"
+other = "Kod pocztowy"
+
+[field.facility.country]
+description = "The facility form's country field"
+other = "Kraj"
+
+[field.facility.phone]
+description = "The facility form's phone field"
+other = "Telefon"
+
+[field.facility.fax]
+description = "The facility form's fax field"
+other = "Faks"
+
+[field.facility.email]
+description = "The facility form's email field"
+other = "E-mail"
+
+[field.facility.website]
+description = "The facility form's website field"
+other = "Strona internetowa"
+
+[field.facility.portal_url]
+description = "The facility form's patient-portal URL field"
+other = "Portal pacjenta"
+
+[field.facility.hours]
+description = "The facility form's hours field"
+other = "Godziny"
+
+[field.facility.open_24h]
+description = "The facility form's open-24-hours field"
+other = "Czynne całą dobę"
+
+[field.facility.drive_through]
+description = "The facility form's drive-through field"
+other = "Obsługa bez wysiadania"
+
+[field.facility.services]
+description = "The facility form's services field"
+other = "Usługi"
+
+[field.facility.notes]
+description = "The facility form's notes field"
+other = "Notatki"
+
+# --- enum.facility_kind (T022 additions) -------------------------------------
+
+[enum.facility_kind.practice]
+description = "The facility form's kind option"
+other = "Poradnia"
+
+[enum.facility_kind.pharmacy]
+description = "The facility form's kind option"
+other = "Apteka"
+
+[enum.facility_kind.hospital]
+description = "The facility form's kind option"
+other = "Szpital"
+
+[enum.facility_kind.lab]
+description = "The facility form's kind option"
+other = "Laboratorium"
+
+[enum.facility_kind.imaging]
+description = "The facility form's kind option"
+other = "Ośrodek obrazowania"
+
+[enum.facility_kind.other]
+description = "The facility form's kind option"
+other = "Inne"
+
+# --- field.practitioner (T022 additions) -------------------------------------
+
+[field.practitioner.name]
+description = "The practitioner form's name field"
+other = "Nazwa"
+
+[field.practitioner.specialty]
+description = "The practitioner form's specialty field"
+other = "Specjalizacja"
+
+[field.practitioner.facility]
+description = "The practitioner form's facility field"
+other = "Placówka"
+
+[field.practitioner.phone]
+description = "The practitioner form's phone field"
+other = "Telefon"
+
+[field.practitioner.email]
+description = "The practitioner form's email field"
+other = "E-mail"
+
+[field.practitioner.website]
+description = "The practitioner form's website field"
+other = "Strona internetowa"
+
+[field.practitioner.notes]
+description = "The practitioner form's notes field"
+other = "Notatki"
+
+# --- overview (T022 additions) ------------------------------------------------
+
+[overview.medication_summary_zero]
+description = "The overview page's summary when the account has no medications yet"
+other = "Nie zapisano jeszcze żadnych {{.Label}}."
+
+[overview.medication_summary_one]
+description = "The overview page's summary with exactly one medication"
+other = "Masz zapisany 1 lek."
+
+[overview.medication_summary_other]
+description = "The overview page's summary with more than one medication"
+other = "Masz zapisane {{.Count}} {{.Label}}."
+
+[overview.go_to_medications]
+description = "The overview page's link to the medication list"
+other = "Przejdź do swoich {{.Label}}"
+
+[overview.go_to_settings]
+description = "The overview page's link to settings"
+other = "Przejdź do ustawień"
+
+# --- enum.specialty.<value> (T022 additions) -------------------------------
+
+[enum.specialty.allergy_immunology]
+description = "The practitioner form's specialty option: Allergy immunology"
+other = "Alergologia i immunologia"
+
+[enum.specialty.anesthesiology]
+description = "The practitioner form's specialty option: Anesthesiology"
+other = "Anestezjologia"
+
+[enum.specialty.cardiology]
+description = "The practitioner form's specialty option: Cardiology"
+other = "Kardiologia"
+
+[enum.specialty.dentistry]
+description = "The practitioner form's specialty option: Dentistry"
+other = "Stomatologia"
+
+[enum.specialty.dermatology]
+description = "The practitioner form's specialty option: Dermatology"
+other = "Dermatologia"
+
+[enum.specialty.emergency_medicine]
+description = "The practitioner form's specialty option: Emergency medicine"
+other = "Medycyna ratunkowa"
+
+[enum.specialty.endocrinology]
+description = "The practitioner form's specialty option: Endocrinology"
+other = "Endokrynologia"
+
+[enum.specialty.family_medicine]
+description = "The practitioner form's specialty option: Family medicine"
+other = "Medycyna rodzinna"
+
+[enum.specialty.gastroenterology]
+description = "The practitioner form's specialty option: Gastroenterology"
+other = "Gastroenterologia"
+
+[enum.specialty.general_surgery]
+description = "The practitioner form's specialty option: General surgery"
+other = "Chirurgia ogólna"
+
+[enum.specialty.genetics]
+description = "The practitioner form's specialty option: Genetics"
+other = "Genetyka"
+
+[enum.specialty.geriatrics]
+description = "The practitioner form's specialty option: Geriatrics"
+other = "Geriatria"
+
+[enum.specialty.gynecology]
+description = "The practitioner form's specialty option: Gynecology"
+other = "Ginekologia"
+
+[enum.specialty.hematology]
+description = "The practitioner form's specialty option: Hematology"
+other = "Hematologia"
+
+[enum.specialty.hepatology]
+description = "The practitioner form's specialty option: Hepatology"
+other = "Hepatologia"
+
+[enum.specialty.infectious_disease]
+description = "The practitioner form's specialty option: Infectious disease"
+other = "Choroby zakaźne"
+
+[enum.specialty.internal_medicine]
+description = "The practitioner form's specialty option: Internal medicine"
+other = "Choroby wewnętrzne"
+
+[enum.specialty.nephrology]
+description = "The practitioner form's specialty option: Nephrology"
+other = "Nefrologia"
+
+[enum.specialty.neurology]
+description = "The practitioner form's specialty option: Neurology"
+other = "Neurologia"
+
+[enum.specialty.neurosurgery]
+description = "The practitioner form's specialty option: Neurosurgery"
+other = "Neurochirurgia"
+
+[enum.specialty.nutrition]
+description = "The practitioner form's specialty option: Nutrition"
+other = "Dietetyka"
+
+[enum.specialty.obstetrics]
+description = "The practitioner form's specialty option: Obstetrics"
+other = "Położnictwo"
+
+[enum.specialty.occupational_therapy]
+description = "The practitioner form's specialty option: Occupational therapy"
+other = "Terapia zajęciowa"
+
+[enum.specialty.oncology]
+description = "The practitioner form's specialty option: Oncology"
+other = "Onkologia"
+
+[enum.specialty.ophthalmology]
+description = "The practitioner form's specialty option: Ophthalmology"
+other = "Okulistyka"
+
+[enum.specialty.optometry]
+description = "The practitioner form's specialty option: Optometry"
+other = "Optometria"
+
+[enum.specialty.oral_surgery]
+description = "The practitioner form's specialty option: Oral surgery"
+other = "Chirurgia szczękowa"
+
+[enum.specialty.orthopedics]
+description = "The practitioner form's specialty option: Orthopedics"
+other = "Ortopedia"
+
+[enum.specialty.otolaryngology]
+description = "The practitioner form's specialty option: Otolaryngology"
+other = "Laryngologia"
+
+[enum.specialty.pain_medicine]
+description = "The practitioner form's specialty option: Pain medicine"
+other = "Medycyna bólu"
+
+[enum.specialty.palliative_care]
+description = "The practitioner form's specialty option: Palliative care"
+other = "Opieka paliatywna"
+
+[enum.specialty.pathology]
+description = "The practitioner form's specialty option: Pathology"
+other = "Patologia"
+
+[enum.specialty.pediatrics]
+description = "The practitioner form's specialty option: Pediatrics"
+other = "Pediatria"
+
+[enum.specialty.physical_therapy]
+description = "The practitioner form's specialty option: Physical therapy"
+other = "Fizjoterapia"
+
+[enum.specialty.plastic_surgery]
+description = "The practitioner form's specialty option: Plastic surgery"
+other = "Chirurgia plastyczna"
+
+[enum.specialty.podiatry]
+description = "The practitioner form's specialty option: Podiatry"
+other = "Podologia"
+
+[enum.specialty.psychiatry]
+description = "The practitioner form's specialty option: Psychiatry"
+other = "Psychiatria"
+
+[enum.specialty.psychology]
+description = "The practitioner form's specialty option: Psychology"
+other = "Psychologia"
+
+[enum.specialty.pulmonology]
+description = "The practitioner form's specialty option: Pulmonology"
+other = "Pulmonologia"
+
+[enum.specialty.radiology]
+description = "The practitioner form's specialty option: Radiology"
+other = "Radiologia"
+
+[enum.specialty.rheumatology]
+description = "The practitioner form's specialty option: Rheumatology"
+other = "Reumatologia"
+
+[enum.specialty.urology]
+description = "The practitioner form's specialty option: Urology"
+other = "Urologia"
+
+[enum.specialty.other]
+description = "The practitioner form's specialty option: Other"
+other = "Inne"
+
+[patient.delete_consequence_zero]
+description = "The patient delete confirmation's consequence sentence when the person has no records at all"
+other = "Jest to nieodwracalne. Nie ma kosza ani cofania."
+
+[patient.delete_consequence]
+description = "The patient delete confirmation's consequence sentence: how many records go with the person"
+one = "Jest to nieodwracalne i niszczy jedyny zapisany dla tej osoby rekord. Nie ma kosza ani cofania."
+few = "Jest to nieodwracalne i niszczy wszystkie {{.PluralCount}} rekordy zapisane dla tej osoby. Nie ma kosza ani cofania."
+many = "Jest to nieodwracalne i niszczy wszystkie {{.PluralCount}} rekordów zapisanych dla tej osoby. Nie ma kosza ani cofania."
+other = "Jest to nieodwracalne i niszczy wszystkie {{.PluralCount}} rekordu zapisanego dla tej osoby. Nie ma kosza ani cofania."
+
+[directory.facility_region]
+description = "The facility list's landmark and heading, distinct from the nav label (\"Places of care\")"
+other = "Placówki"

@@ -1,19 +1,20 @@
 package directory
 
 import (
+	"context"
+
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/records"
 )
-
-const directoryCancelLabel = "Cancel"
 
 // PractitionerForm is both the create form and the edit form (FR-032,
 // FR-039): the same seven fields either way.
 templ PractitionerForm(props PractitionerFormProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ props.Label() }
+		aria-label={ props.Label(ctx) }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
@@ -21,18 +22,18 @@ templ PractitionerForm(props PractitionerFormProps) {
 			<p role="alert" class="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{ props.Notice }</p>
 		}
 		@directoryText(props.FormID, FieldPractitionerName, "text", true, props.Practitioner.Value(FieldPractitionerName), props.Errors)
-		@directorySelect(props.FormID, FieldPractitionerSpecialty, props.Practitioner.SpecialtyOptions(), props.Practitioner.Value(FieldPractitionerSpecialty), props.Errors)
+		@directorySelect(props.FormID, FieldPractitionerSpecialty, props.Practitioner.SpecialtyOptions(ctx), props.Practitioner.Value(FieldPractitionerSpecialty), props.Errors)
 		@directoryText(props.FormID, FieldPractitionerPhone, "text", false, props.Practitioner.Value(FieldPractitionerPhone), props.Errors)
 		@directoryText(props.FormID, FieldPractitionerEmail, "email", false, props.Practitioner.Value(FieldPractitionerEmail), props.Errors)
 		@directoryText(props.FormID, FieldPractitionerWebsite, "url", false, props.Practitioner.Value(FieldPractitionerWebsite), props.Errors)
 		@directoryTextarea(props.FormID, FieldPractitionerNotes, props.Practitioner.Value(FieldPractitionerNotes), props.Errors)
-		@directoryFormActions(props.SubmitLabel(), props.CancelHref)
+		@directoryFormActions(props.SubmitLabel(ctx), props.CancelHref)
 	</form>
 }
 
 templ directoryText(formID, field, inputType string, required bool, value string, errs FieldErrors) {
 	<div class="flex flex-col">
-		<label for={ ids.Field(formID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ fieldLabel(field) }</label>
+		<label for={ ids.Field(formID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ fieldLabel(ctx, field) }</label>
 		<input
 			id={ ids.Field(formID, field) }
 			name={ field }
@@ -52,7 +53,7 @@ templ directoryText(formID, field, inputType string, required bool, value string
 
 templ directorySelect(formID, field string, options []Option, value string, errs FieldErrors) {
 	<div class="flex flex-col">
-		<label for={ ids.Field(formID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ fieldLabel(field) }</label>
+		<label for={ ids.Field(formID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ fieldLabel(ctx, field) }</label>
 		<select
 			id={ ids.Field(formID, field) }
 			name={ field }
@@ -63,7 +64,7 @@ templ directorySelect(formID, field string, options []Option, value string, errs
 			}
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>
-			<option value="" selected?={ value == "" }>Not recorded</option>
+			<option value="" selected?={ value == "" }>{ i18n.T(ctx, "field.not_recorded") }</option>
 			for _, option := range options {
 				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
 			}
@@ -74,7 +75,7 @@ templ directorySelect(formID, field string, options []Option, value string, errs
 
 templ directoryTextarea(formID, field, value string, errs FieldErrors) {
 	<div class="flex flex-col">
-		<label for={ ids.Field(formID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ fieldLabel(field) }</label>
+		<label for={ ids.Field(formID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ fieldLabel(ctx, field) }</label>
 		<textarea
 			id={ ids.Field(formID, field) }
 			name={ field }
@@ -100,7 +101,7 @@ templ directoryFormActions(submitLabel, cancelHref string) {
 			<a
 				href={ cancelHref }
 				class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
-			>{ directoryCancelLabel }</a>
+			>{ i18n.T(ctx, "action.cancel") }</a>
 		}
 	</div>
 }
@@ -109,13 +110,13 @@ templ directoryFormActions(submitLabel, cancelHref string) {
 // picker do not each mint their own.
 type Option = records.Option
 
-func fieldLabel(field string) string {
-	if label, known := practitionerFieldLabels[field]; known {
-		return label
+func fieldLabel(ctx context.Context, field string) string {
+	if id, known := practitionerFieldLabelIDs[field]; known {
+		return i18n.T(ctx, id)
 	}
 
-	if label, known := facilityFieldLabels[field]; known {
-		return label
+	if id, known := facilityFieldLabelIDs[field]; known {
+		return i18n.T(ctx, id)
 	}
 
 	return field

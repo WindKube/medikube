@@ -4,14 +4,14 @@ package directory
 templ FacilityForm(props FacilityFormProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ props.Label() }
+		aria-label={ props.Label(ctx) }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
 		if props.Notice != "" {
 			<p role="alert" class="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{ props.Notice }</p>
 		}
-		@directorySelect(props.FormID, FieldFacilityKind, props.Facility.KindOptions(), props.Facility.Value(FieldFacilityKind), props.Errors)
+		@directorySelect(props.FormID, FieldFacilityKind, props.Facility.KindOptions(ctx), props.Facility.Value(FieldFacilityKind), props.Errors)
 		@directoryText(props.FormID, FieldFacilityName, "text", true, props.Facility.Value(FieldFacilityName), props.Errors)
 		@directoryText(props.FormID, FieldFacilityBrand, "text", false, props.Facility.Value(FieldFacilityBrand), props.Errors)
 		@directoryText(props.FormID, FieldFacilityStreet, "text", false, props.Facility.Value(FieldFacilityStreet), props.Errors)
@@ -27,6 +27,6 @@ templ FacilityForm(props FacilityFormProps) {
 		@directoryText(props.FormID, FieldFacilityHours, "text", false, props.Facility.Value(FieldFacilityHours), props.Errors)
 		@directoryTextarea(props.FormID, FieldFacilityServices, props.Facility.Value(FieldFacilityServices), props.Errors)
 		@directoryTextarea(props.FormID, FieldFacilityNotes, props.Facility.Value(FieldFacilityNotes), props.Errors)
-		@directoryFormActions(props.SubmitLabel(), props.CancelHref)
+		@directoryFormActions(props.SubmitLabel(ctx), props.CancelHref)
 	</form>
 }

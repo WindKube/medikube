@@ -36,14 +36,14 @@ func NewFacilityForms(resolve api.FacilityResolve) (api.FacilityForms, error) {
 	return facilityForms{resolve: resolve, links: links}, nil
 }
 
-func (f facilityForms) view(p domaindirectory.Facility) directory.FacilityView {
-	return directory.NewFacilityView(p, f.links.of(p.ID))
+func (f facilityForms) view(ctx context.Context, p domaindirectory.Facility) directory.FacilityView {
+	return directory.NewFacilityView(ctx, p, f.links.of(p.ID))
 }
 
 func (f facilityForms) Invalid(
-	_ context.Context, _ access.Actor, submitted domaindirectory.Facility, isNew bool, invalid *domain.ValidationError,
+	ctx context.Context, _ access.Actor, submitted domaindirectory.Facility, isNew bool, invalid *domain.ValidationError,
 ) (web.Component, error) {
-	view := f.view(submitted)
+	view := f.view(ctx, submitted)
 
 	return directory.FacilityForm(directory.FacilityFormProps{
 		FormID:     ids.DirectoryForm(directory.FacilitySegment, view.ID),
@@ -55,8 +55,8 @@ func (f facilityForms) Invalid(
 	}), nil
 }
 
-func (f facilityForms) Stale(_ context.Context, _ access.Actor, current domaindirectory.Facility) (web.Component, error) {
-	view := f.view(current)
+func (f facilityForms) Stale(ctx context.Context, _ access.Actor, current domaindirectory.Facility) (web.Component, error) {
+	view := f.view(ctx, current)
 
 	return directory.FacilityForm(directory.FacilityFormProps{
 		FormID:     ids.DirectoryForm(directory.FacilitySegment, view.ID),
@@ -65,7 +65,7 @@ func (f facilityForms) Stale(_ context.Context, _ access.Actor, current domaindi
 		CancelHref: f.links.cancelHref(view),
 		Facility:   view,
 		Errors:     directory.NewFieldErrors(nil),
-		Notice:     staleFormNotice,
+		Notice:     staleFormNotice(ctx),
 	}), nil
 }
 
@@ -82,7 +82,7 @@ func (f facilityForms) Created(ctx context.Context, actor access.Actor, created 
 
 	views := make([]directory.FacilityView, 0, len(page.Items))
 	for _, item := range page.Items {
-		views = append(views, f.view(item))
+		views = append(views, f.view(ctx, item))
 	}
 
 	blank := directory.FacilityView{}
@@ -114,7 +114,7 @@ func (f facilityForms) Updated(ctx context.Context, actor access.Actor, updated 
 		return nil, err
 	}
 
-	view := f.view(updated)
+	view := f.view(ctx, updated)
 	view.UsagePractitioners = usage.Practitioners
 	view.UsageRecords = usage.Records
 

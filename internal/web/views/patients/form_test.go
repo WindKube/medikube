@@ -26,12 +26,12 @@ func TestTheFormRendersBothAsCreateAndAsEdit(t *testing.T) {
 		{
 			name:  "create",
 			props: patients.PatientFormProps{FormID: "patient-form", New: true},
-			label: patients.FormLabelCreate,
+			label: "Add a person",
 		},
 		{
 			name:  "edit",
 			props: patients.PatientFormProps{FormID: "patient-form", Patient: self},
-			label: patients.FormLabelEdit,
+			label: "Edit person",
 		},
 	}
 
@@ -59,7 +59,7 @@ func TestAFieldRefusalIsDescribedByItsOwnError(t *testing.T) {
 		FormID: "patient-form", New: true, Errors: patients.NewFieldErrors(&invalid),
 	}), "div")
 
-	form := tree.One(t, viewstest.Form(patients.FormLabelCreate))
+	form := tree.One(t, viewstest.Form("Add a person"))
 	control := tree.One(t, viewstest.WithID(ids.Field("patient-form", patients.FieldFirstName)))
 	assert.Equal(t, "true", viewstest.Attr(control, "aria-invalid"))
 	assert.Equal(t, ids.FieldError("patient-form", patients.FieldFirstName), viewstest.Attr(control, "aria-describedby"))

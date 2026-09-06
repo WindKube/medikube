@@ -186,6 +186,14 @@ var kindLiteralExempt = map[string]string{
 	"internal/web/page/tags.go":              "false positive, the same nav() shape",
 	"internal/web/page/timeline.go":          "false positive, the same nav() shape",
 	"internal/web/page/vitals.go":            "false positive, the same nav() shape",
+
+	// T022's overview page names the medication kind through catalogue ids
+	// "overview.go_to_medications" and "overview.medication_summary_zero"
+	// (the walking-skeleton overview links to and counts medications by
+	// name, the same "id spells the kind in prose" shape as the nav() pair
+	// above), which the generated file below writes as a literal argument.
+	"internal/web/views/overview/overview_templ.go": "false positive: templ's generated write of " +
+		"i18n.T(ctx, \"overview.go_to_medications\", ...) carries the catalogue id as a literal",
 }
 
 // catalogueID is a phrase id (contracts/catalogue.md): dotted, lowercase, and

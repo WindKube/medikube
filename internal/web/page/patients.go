@@ -28,8 +28,6 @@ const (
 	OpPatientDetailPage = "patientDetailPage"
 )
 
-const patientListTitle = "People"
-
 // PatientPageOperations is contracts/pages.md P1 and P2, so cmd/medikube's
 // stub inventory knows these two are wired.
 func PatientPageOperations() []string {
@@ -95,9 +93,11 @@ func (p *patientPages) list(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
+	ctx := localizeCtx(e)
+
 	views := make([]patients.PatientView, 0, len(page.Items))
 	for _, item := range page.Items {
-		views = append(views, p.view(item, system))
+		views = append(views, p.view(ctx, item, system))
 	}
 
 	total := len(views)
@@ -112,7 +112,7 @@ func (p *patientPages) list(e *core.RequestEvent, actor access.Actor) error {
 			Patients:   views,
 			Total:      total,
 			CreateHref: "#" + ids.PatientForm(""),
-			Notice:     noticeFor(e.Request.URL.Query().Get("notice")),
+			Notice:     noticeFor(ctx, e.Request.URL.Query().Get("notice")),
 		}),
 		patients.PatientForm(patients.PatientFormProps{
 			FormID:     ids.PatientForm(""),
@@ -124,15 +124,15 @@ func (p *patientPages) list(e *core.RequestEvent, actor access.Actor) error {
 		}),
 	}
 
-	return RenderPage(e, http.StatusOK, patientListTitle, p.nav(e, actor), main)
+	return RenderPage(e, http.StatusOK, i18n.T(ctx, "nav.patients"), p.nav(e, actor), main)
 }
 
 // noticeFor is FR-017/US3-3's explanation for a stale window: a tab left
 // open on a person later deleted lands here rather than on a bare 404, and
 // this is what it reads.
-func noticeFor(notice string) string {
+func noticeFor(ctx context.Context, notice string) string {
 	if notice == "gone" {
-		return "That person's page is no longer available."
+		return i18n.T(ctx, "patient.gone_notice")
 	}
 
 	return ""
@@ -168,7 +168,9 @@ func (p *patientPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	view := p.view(chart.Patient, system)
+	ctx := localizeCtx(e)
+
+	view := p.view(ctx, chart.Patient, system)
 
 	tiles := make([]patients.CountTile, 0, len(chart.Counts))
 	for _, entry := range chart.Counts {
@@ -190,7 +192,7 @@ func (p *patientPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		patients.PatientDetail(patients.PatientDetailProps{
 			Patient:      view,
 			Tiles:        patients.NewChartTiles(view.ID, tiles),
-			Activity:     patients.NewActivityItems(events, func(string, string) string { return "" }),
+			Activity:     patients.NewActivityItems(ctx, events, func(string, string) string { return "" }),
 			TotalRecords: chart.TotalRecords,
 		}),
 		patients.PatientForm(patients.PatientFormProps{
@@ -220,13 +222,13 @@ func (p *patientPages) nav(e *core.RequestEvent, actor access.Actor) NavState {
 	return NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path), Switcher: switcher}
 }
 
-func (p *patientPages) view(found domainperson.Patient, system identity.UnitSystem) patients.PatientView {
+func (p *patientPages) view(ctx context.Context, found domainperson.Patient, system identity.UnitSystem) patients.PatientView {
 	var photoURL string
 	if found.HasPhoto {
 		photoURL = "/api/v1/patients/" + found.ID + "/photo"
 	}
 
-	return patients.NewPatientView(found, photoURL, system, patients.PatientLinks{
+	return patients.NewPatientView(ctx, found, photoURL, system, patients.PatientLinks{
 		Detail: p.links.of(found.ID),
 		Record: "/api/v1/patients/" + found.ID,
 	})
@@ -289,7 +291,7 @@ func (l patientLinks) cancelHref(view patients.PatientView) string {
 // medication list and to settings.
 func (l patientLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: patientListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, "nav.patients"), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
 		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}

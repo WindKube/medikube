@@ -26,8 +26,6 @@ const (
 	OpPractitionerDetailPage = "practitionerDetailPage"
 )
 
-const practitionerListTitle = "Practitioners"
-
 // PractitionerHandlers is P3 and P4's contribution to the route table.
 func PractitionerHandlers(resolve api.PractitionerResolve, facilities api.FacilityResolve) (httproute.Handlers, error) {
 	if resolve == nil {
@@ -71,10 +69,12 @@ func (p *practitionerPages) list(e *core.RequestEvent, actor access.Actor) error
 		return web.OwnerScoped(err)
 	}
 
+	ctx := localizeCtx(e)
+
 	views := make([]directory.PractitionerView, 0, len(page.Items))
 
 	for _, item := range page.Items {
-		views = append(views, directory.NewPractitionerView(item, p.facilityName(e, actor, item.FacilityID), p.links.of(item.ID)))
+		views = append(views, directory.NewPractitionerView(ctx, item, p.facilityName(e, actor, item.FacilityID), p.links.of(item.ID)))
 	}
 
 	blank := directory.PractitionerView{}
@@ -94,8 +94,8 @@ func (p *practitionerPages) list(e *core.RequestEvent, actor access.Actor) error
 		}),
 	}
 
-	return RenderPage(e, http.StatusOK, practitionerListTitle,
-		NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path)}, main)
+	return RenderPage(e, http.StatusOK, i18n.T(ctx, "nav.practitioners"),
+		NavState{SignedIn: true, Nav: p.links.nav(ctx, e.Request.URL.Path)}, main)
 }
 
 func (p *practitionerPages) detail(e *core.RequestEvent, actor access.Actor) error {
@@ -120,7 +120,9 @@ func (p *practitionerPages) detail(e *core.RequestEvent, actor access.Actor) err
 		return web.OwnerScoped(err)
 	}
 
-	view := directory.NewPractitionerView(found, p.facilityName(e, actor, found.FacilityID), p.links.of(found.ID))
+	ctx := localizeCtx(e)
+
+	view := directory.NewPractitionerView(ctx, found, p.facilityName(e, actor, found.FacilityID), p.links.of(found.ID))
 	view.UsagePatients = usage.Patients
 	view.UsageRecords = usage.Records
 
@@ -137,7 +139,7 @@ func (p *practitionerPages) detail(e *core.RequestEvent, actor access.Actor) err
 	}
 
 	return RenderPage(e, http.StatusOK, view.Name,
-		NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path)}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(ctx, e.Request.URL.Path)}, main)
 }
 
 func (p *practitionerPages) facilityName(e *core.RequestEvent, actor access.Actor, facilityID string) string {
@@ -227,8 +229,8 @@ func (l practitionerLinks) cancelHref(view directory.PractitionerView) string {
 func (l practitionerLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
-		{Label: practitionerListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
-		{Label: facilityListTitle, Href: l.facilitiesURL, Current: strings.HasPrefix(current, l.facilitiesURL)},
+		{Label: i18n.T(ctx, "nav.practitioners"), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, "nav.facilities"), Href: l.facilitiesURL, Current: strings.HasPrefix(current, l.facilitiesURL)},
 		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }
