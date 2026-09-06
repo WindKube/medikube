@@ -1,11 +1,11 @@
 package records
 
 import (
-	viewtags "medikube/internal/web/views/tags"
 	"strconv"
 	"strings"
 
 	"medikube/internal/domain/clinical"
+	viewtags "medikube/internal/web/views/tags"
 )
 
 func itoa(v int) string { return strconv.Itoa(v) }

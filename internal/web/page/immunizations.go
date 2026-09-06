@@ -205,8 +205,8 @@ func (p *immunizationPages) list(e *core.RequestEvent, actor access.Actor) error
 	blank := recordfamily.Record{Kind: kind.Immunization}
 	blank.Body = &api.ImmunizationCreate{Patient: query.PatientID}
 
-	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); err != nil {
-		return err
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); tagErr != nil {
+		return tagErr
 	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
@@ -282,8 +282,8 @@ func (p *immunizationPages) detail(e *core.RequestEvent, actor access.Actor) err
 		return web.OwnerScoped(err)
 	}
 
-	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &found); err != nil {
-		return err
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &found); tagErr != nil {
+		return tagErr
 	}
 
 	patientID := ""

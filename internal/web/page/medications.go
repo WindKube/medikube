@@ -271,8 +271,8 @@ func (p *medicationPages) list(e *core.RequestEvent, actor access.Actor) error {
 	blank := recordfamily.Record{Kind: kind.Medication}
 	blank.Body = &api.MedicationCreate{Patient: query.PatientID}
 
-	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); err != nil {
-		return err
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); tagErr != nil {
+		return tagErr
 	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
@@ -377,8 +377,8 @@ func (p *medicationPages) detail(e *core.RequestEvent, actor access.Actor) error
 		return web.OwnerScoped(err)
 	}
 
-	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &found); err != nil {
-		return err
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &found); tagErr != nil {
+		return tagErr
 	}
 
 	patientID := ""

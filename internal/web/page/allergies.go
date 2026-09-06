@@ -194,8 +194,8 @@ func (p *allergyPages) list(e *core.RequestEvent, actor access.Actor) error {
 	blank := recordfamily.Record{Kind: kind.Allergy}
 	blank.Body = &api.AllergyCreate{Patient: query.PatientID}
 
-	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); err != nil {
-		return err
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); tagErr != nil {
+		return tagErr
 	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
@@ -286,8 +286,8 @@ func (p *allergyPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &found); err != nil {
-		return err
+	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &found); tagErr != nil {
+		return tagErr
 	}
 
 	return p.render(e, actor, p.views.view(found).Allergen, sequence{

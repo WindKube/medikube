@@ -1,13 +1,13 @@
 package records
 
 import (
-	viewtags "medikube/internal/web/views/tags"
 	"strconv"
 	"time"
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/clinical"
 	"medikube/internal/web/views/components"
+	viewtags "medikube/internal/web/views/tags"
 )
 
 // The names the domain attaches its refusals to (internal/domain/clinical

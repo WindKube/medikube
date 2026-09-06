@@ -1,10 +1,10 @@
 package records
 
 import (
-	viewtags "medikube/internal/web/views/tags"
 	"strings"
 
 	"medikube/internal/domain/clinical"
+	viewtags "medikube/internal/web/views/tags"
 )
 
 const (

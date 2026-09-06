@@ -331,8 +331,8 @@ func (h *recordHandlers) create(e *core.RequestEvent, actor access.Actor) error 
 	if wantsFormPatch(e) {
 		blank := records.Record{Kind: entry.Kind, Body: blankBody(entry, decoded)}
 
-		if err := h.attachTagOptions(e.Request.Context(), actor, &blank); err != nil {
-			return err
+		if tagErr := h.attachTagOptions(e.Request.Context(), actor, &blank); tagErr != nil {
+			return tagErr
 		}
 
 		return web.Patch(e, entry.Views.Form(blank, nil, ""), web.ByElementID())
@@ -404,8 +404,8 @@ func (h *recordHandlers) update(e *core.RequestEvent, actor access.Actor) error 
 	}
 
 	if wantsFormPatch(e) {
-		if err := h.attachTagOptions(e.Request.Context(), actor, &updated); err != nil {
-			return err
+		if tagErr := h.attachTagOptions(e.Request.Context(), actor, &updated); tagErr != nil {
+			return tagErr
 		}
 
 		component := formComponents{titlePatch(entry.Views.Title(updated)), entry.Views.Detail(updated), entry.Views.Form(updated, nil, "")}
@@ -436,8 +436,8 @@ func (h *recordHandlers) updateFailure(e *core.RequestEvent, actor access.Actor,
 		if wantsFormPatch(e) {
 			web.SetETag(e, current.Version)
 
-			if err := h.attachTagOptions(e.Request.Context(), actor, &current); err != nil {
-				return err
+			if tagErr := h.attachTagOptions(e.Request.Context(), actor, &current); tagErr != nil {
+				return tagErr
 			}
 
 			component := formComponents{entry.Views.Detail(current), entry.Views.Form(current, nil, staleNotice)}
@@ -541,8 +541,8 @@ func (h *recordHandlers) renderInvalid(
 ) error {
 	record := records.Record{Kind: entry.Kind, Body: submitted}
 
-	if err := h.attachTagOptions(e.Request.Context(), actor, &record); err != nil {
-		return err
+	if tagErr := h.attachTagOptions(e.Request.Context(), actor, &record); tagErr != nil {
+		return tagErr
 	}
 
 	return web.Patch(e, entry.Views.Form(record, invalid, ""), web.ByElementID())
