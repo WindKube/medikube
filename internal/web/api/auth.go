@@ -185,10 +185,13 @@ func (h *authHandlers) register(e *core.RequestEvent, actor access.Actor) error 
 		return err
 	}
 
+	locale := web.Localize(e)
+
 	user, err := h.deps.Accounts.Register(e.Request.Context(), actor, identity.Registration{
 		Email:    body.Email,
 		Name:     body.Name,
 		Password: body.Password,
+		Locale:   locale.Tag.String(),
 	})
 	if err != nil {
 		return refused(err)
