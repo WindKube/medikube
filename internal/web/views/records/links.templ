@@ -55,7 +55,7 @@ templ MedicationLinksEditor(props MedicationLinksEditorProps) {
 								<button
 									type="button"
 									data-on:click={ props.removeExpr(role, role.IDs[i]) }
-									class="text-xs font-medium text-rose-800 underline underline-offset-2 hover:text-rose-900 dark:text-rose-300"
+									class="text-xs font-medium text-rose-800 underline underline-offset-2 hover:text-rose-900 dark:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"
 								>Remove</button>
 							</li>
 						}
@@ -70,7 +70,8 @@ templ MedicationLinksEditor(props MedicationLinksEditorProps) {
 			if len(props.Roles) > 1 {
 				<select
 					data-bind={ props.addRoleSignal() }
-					class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+					aria-label="Role"
+					class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 				>
 					for _, role := range props.Roles {
 						<option value={ role.Field }>{ role.Label }</option>
@@ -79,7 +80,8 @@ templ MedicationLinksEditor(props MedicationLinksEditorProps) {
 			}
 			<select
 				data-bind={ props.addMedicationSignal() }
-				class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+				aria-label="Medication"
+				class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 			>
 				<option value="">Add a medication…</option>
 				for _, option := range props.Options {
@@ -89,7 +91,7 @@ templ MedicationLinksEditor(props MedicationLinksEditorProps) {
 			<button
 				type="button"
 				data-on:click={ props.addExpr() }
-				class="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+				class="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 			>Add</button>
 		</div>
 	</section>
@@ -118,7 +120,7 @@ templ RemovableLinks(props RemovableLinksProps) {
 						<button
 							type="button"
 							data-on:click={ item.RemoveOn }
-							class="text-xs font-medium text-rose-800 underline underline-offset-2 hover:text-rose-900 dark:text-rose-300"
+							class="text-xs font-medium text-rose-800 underline underline-offset-2 hover:text-rose-900 dark:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"
 						>Remove</button>
 					</li>
 				}

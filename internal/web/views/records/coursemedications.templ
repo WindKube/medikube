@@ -23,7 +23,7 @@ templ CourseMedications(id, title string, rows []CourseMedicationRow, form Cours
 							<button
 								type="button"
 								data-on:click={ row.RemoveOn }
-								class="text-xs font-medium text-rose-800 underline underline-offset-2 hover:text-rose-900 dark:text-rose-300"
+								class="text-xs font-medium text-rose-800 underline underline-offset-2 hover:text-rose-900 dark:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700"
 							>Remove</button>
 						</div>
 						<dl class="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-[minmax(0,8rem)_minmax(0,1fr)]">
@@ -56,7 +56,7 @@ templ CourseMedicationForm(props CourseMedicationFormProps) {
 	>
 		<select
 			data-bind={ props.medicationSignal() }
-			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		>
 			<option value="">Add a medication…</option>
 			for _, option := range props.Options {
@@ -66,29 +66,33 @@ templ CourseMedicationForm(props CourseMedicationFormProps) {
 		<input
 			type="text"
 			placeholder="Dosage"
+			aria-label="Dosage"
 			data-bind={ props.dosageSignal() }
-			class="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+			class="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		/>
 		<input
 			type="text"
 			placeholder="Frequency"
+			aria-label="Frequency"
 			data-bind={ props.frequencySignal() }
-			class="w-28 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+			class="w-28 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		/>
 		<input
 			type="date"
+			aria-label="Started on"
 			data-bind={ props.startedOnSignal() }
-			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		/>
 		<input
 			type="date"
+			aria-label="Ended on"
 			data-bind={ props.endedOnSignal() }
-			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		/>
 		<button
 			type="button"
 			data-on:click={ props.submitExpr() }
-			class="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+			class="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		>Add</button>
 	</div>
 }
