@@ -1241,10 +1241,6 @@ other = "Record measurements"
 description = "The vitals edit form's aria-label"
 other = "Edit measurements"
 
-[action.delete_permanently]
-description = "The confirm dialog's own destructive button, after action.delete opened it"
-other = "Delete permanently"
-
 [action.remove]
 description = "The button that detaches one linked or attached item (a medication link, a course medication) without deleting the item itself"
 other = "Remove"
