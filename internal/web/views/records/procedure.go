@@ -1,6 +1,10 @@
 package records
 
-import "medikube/internal/domain/clinical"
+import (
+	"medikube/internal/domain/clinical"
+
+	viewtags "medikube/internal/web/views/tags"
+)
 
 const (
 	ProcedureFormLabelCreate = "Record a procedure"
@@ -181,6 +185,8 @@ type ProcedureFormProps struct {
 	Procedure ProcedureView
 	Errors    FieldErrors
 	Notice    string
+
+	Tags viewtags.FieldProps
 }
 
 func (p ProcedureFormProps) Label() string {

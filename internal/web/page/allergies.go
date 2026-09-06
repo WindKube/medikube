@@ -29,7 +29,7 @@ const (
 const allergyListTitle = "Allergies"
 
 // AllergyHandlers is the allergy pages' contribution to the route table.
-func AllergyHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
+func AllergyHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
 	links, err := newAllergyLinks()
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func AllergyHandlers(resolve api.Resolve, patients api.PatientResolve) (httprout
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &allergyPages{resolve: resolve, patients: patients, links: links, views: AllergyViews{links: links}}
+	pages := &allergyPages{resolve: resolve, patients: patients, tags: tags, links: links, views: AllergyViews{links: links}}
 
 	return httproute.Handlers{
 		OpAllergyListPage:   web.WithActor(pages.list),
@@ -97,14 +97,17 @@ func (v AllergyViews) Form(record recordfamily.Record, invalid *domain.Validatio
 	allergy := v.view(record)
 	fresh := allergy.ID == ""
 
+	formID := ids.RecordForm(kind.Allergy, allergy.ID)
+
 	return views.AllergyForm(views.AllergyFormProps{
-		FormID:     ids.RecordForm(kind.Allergy, allergy.ID),
+		FormID:     formID,
 		New:        fresh,
 		OnSubmit:   v.links.submitExpression(allergy),
 		CancelHref: v.cancelHref(allergy),
 		Allergy:    allergy,
 		Errors:     views.NewFieldErrors(invalid),
 		Notice:     notice,
+		Tags:       tagField(formID, record),
 	})
 }
 
@@ -158,6 +161,7 @@ func allergyDetailEntity(record recordfamily.Record, detail api.Allergy) clinica
 type allergyPages struct {
 	resolve  api.Resolve
 	patients api.PatientResolve
+	tags     api.TagResolve
 	links    allergyLinks
 	views    AllergyViews
 }
@@ -189,6 +193,10 @@ func (p *allergyPages) list(e *core.RequestEvent, actor access.Actor) error {
 
 	blank := recordfamily.Record{Kind: kind.Allergy}
 	blank.Body = &api.AllergyCreate{Patient: query.PatientID}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); err != nil {
+		return err
+	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
 	if err != nil {
@@ -275,6 +283,10 @@ func (p *allergyPages) detail(e *core.RequestEvent, actor access.Actor) error {
 
 	editor, err := p.medicationsEditor(e.Request.Context(), handler, actor, patientID, found, medications)
 	if err != nil {
+		return err
+	}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &found); err != nil {
 		return err
 	}
 

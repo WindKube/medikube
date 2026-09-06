@@ -1,6 +1,10 @@
 package records
 
-import "medikube/internal/domain/clinical"
+import (
+	"medikube/internal/domain/clinical"
+
+	viewtags "medikube/internal/web/views/tags"
+)
 
 const (
 	FieldDiagnosis  = "diagnosis"
@@ -164,6 +168,8 @@ type ConditionFormProps struct {
 	Condition ConditionView
 	Errors    FieldErrors
 	Notice    string
+
+	Tags viewtags.FieldProps
 }
 
 func (p ConditionFormProps) Label() string {

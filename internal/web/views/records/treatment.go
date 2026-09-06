@@ -1,6 +1,7 @@
 package records
 
 import (
+	viewtags "medikube/internal/web/views/tags"
 	"strings"
 
 	"medikube/internal/domain/clinical"
@@ -167,6 +168,8 @@ type TreatmentFormProps struct {
 	Treatment TreatmentView
 	Errors    FieldErrors
 	Notice    string
+
+	Tags viewtags.FieldProps
 }
 
 func (p TreatmentFormProps) Label() string {

@@ -1,6 +1,7 @@
 package records
 
 import (
+	viewtags "medikube/internal/web/views/tags"
 	"strconv"
 
 	"medikube/internal/domain/clinical"
@@ -163,6 +164,8 @@ type EncounterFormProps struct {
 	Encounter EncounterView
 	Errors    FieldErrors
 	Notice    string
+
+	Tags viewtags.FieldProps
 }
 
 func (p EncounterFormProps) Label() string {

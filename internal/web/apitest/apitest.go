@@ -312,6 +312,7 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 	}
 
 	searchResolve := api.SearchResolve(func() (*searchsvc.Service, []kind.Kind, error) { return searchService, searchKinds, nil })
+	tagResolve := api.TagResolve(func() (*tagsvc.Service, error) { return tagService, nil })
 
 	accounts, err := api.NewAccounts(app, api.AccountsConfig{
 		RegistrationOpen: chosen.registrationOpen,
@@ -347,7 +348,7 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 
 	table, err := handlerTable(
 		app, resolve, patientResolve, photoResolve, searchResolve, hub, chosen, accounts, directoryOps, tagOps,
-		timelineResolve, courseMedicationOps,
+		timelineResolve, courseMedicationOps, tagResolve,
 	)
 	if err != nil {
 		return nil, err
@@ -420,6 +421,7 @@ func handlerTable(
 	tagOps httproute.Handlers,
 	timelineResolve page.TimelineResolve,
 	courseMedicationOps httproute.Handlers,
+	tagResolve api.TagResolve,
 ) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
@@ -435,52 +437,52 @@ func handlerTable(
 		return linkstore.NewBackrelations(app)
 	}
 
-	recordOps, err := api.Handlers(resolve, api.WithReferences(references))
+	recordOps, err := api.Handlers(resolve, api.WithReferences(references), api.WithTags(tagResolve))
 	if err != nil {
 		return nil, err
 	}
 
-	pageOps, err := page.Handlers(resolve, patientResolve, references)
+	pageOps, err := page.Handlers(resolve, patientResolve, references, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	insurancePageOps, err := page.InsuranceHandlers(resolve, patientResolve)
+	insurancePageOps, err := page.InsuranceHandlers(resolve, patientResolve, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	equipmentPageOps, err := page.EquipmentHandlers(resolve, patientResolve)
+	equipmentPageOps, err := page.EquipmentHandlers(resolve, patientResolve, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	symptomPageOps, err := page.SymptomHandlers(resolve, patientResolve)
+	symptomPageOps, err := page.SymptomHandlers(resolve, patientResolve, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	vitalsPageOps, err := page.VitalsHandlers(resolve, patientResolve)
+	vitalsPageOps, err := page.VitalsHandlers(resolve, patientResolve, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	encounterPageOps, err := page.EncounterHandlers(resolve, patientResolve)
+	encounterPageOps, err := page.EncounterHandlers(resolve, patientResolve, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	procedurePageOps, err := page.ProcedureHandlers(resolve, patientResolve)
+	procedurePageOps, err := page.ProcedureHandlers(resolve, patientResolve, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	treatmentPageOps, err := page.TreatmentHandlers(resolve, patientResolve, courseMedicationResolve(app))
+	treatmentPageOps, err := page.TreatmentHandlers(resolve, patientResolve, courseMedicationResolve(app), tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	familyMemberPageOps, err := page.FamilyMemberHandlers(resolve, patientResolve)
+	familyMemberPageOps, err := page.FamilyMemberHandlers(resolve, patientResolve, tagResolve)
 	if err != nil {
 		return nil, err
 	}
@@ -546,12 +548,12 @@ func handlerTable(
 		return nil, err
 	}
 
-	injuryPageOps, err := page.InjuryHandlers(resolve, patientResolve)
+	injuryPageOps, err := page.InjuryHandlers(resolve, patientResolve, tagResolve)
 	if err != nil {
 		return nil, err
 	}
 
-	immunizationPageOps, err := page.ImmunizationHandlers(resolve, patientResolve)
+	immunizationPageOps, err := page.ImmunizationHandlers(resolve, patientResolve, tagResolve)
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,7 @@ package records
 import (
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/person"
+	viewtags "medikube/internal/web/views/tags"
 )
 
 // The wire spellings family history adds beyond medication's own FieldName.
@@ -209,6 +210,8 @@ type FamilyMemberFormProps struct {
 	Errors       FieldErrors
 
 	Notice string
+
+	Tags viewtags.FieldProps
 }
 
 func (p FamilyMemberFormProps) Label() string {

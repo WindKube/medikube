@@ -29,7 +29,7 @@ const (
 const conditionListTitle = "Conditions"
 
 // ConditionHandlers is the condition pages' contribution to the route table.
-func ConditionHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
+func ConditionHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
 	links, err := newConditionLinks()
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func ConditionHandlers(resolve api.Resolve, patients api.PatientResolve) (httpro
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &conditionPages{resolve: resolve, patients: patients, links: links, views: ConditionViews{links: links}}
+	pages := &conditionPages{resolve: resolve, patients: patients, tags: tags, links: links, views: ConditionViews{links: links}}
 
 	return httproute.Handlers{
 		OpConditionListPage:   web.WithActor(pages.list),
@@ -97,14 +97,17 @@ func (v ConditionViews) Form(record recordfamily.Record, invalid *domain.Validat
 	condition := v.view(record)
 	fresh := condition.ID == ""
 
+	formID := ids.RecordForm(kind.Condition, condition.ID)
+
 	return views.ConditionForm(views.ConditionFormProps{
-		FormID:     ids.RecordForm(kind.Condition, condition.ID),
+		FormID:     formID,
 		New:        fresh,
 		OnSubmit:   v.links.submitExpression(condition),
 		CancelHref: v.cancelHref(condition),
 		Condition:  condition,
 		Errors:     views.NewFieldErrors(invalid),
 		Notice:     notice,
+		Tags:       tagField(formID, record),
 	})
 }
 
@@ -161,6 +164,7 @@ func conditionDetailEntity(record recordfamily.Record, detail api.Condition) cli
 type conditionPages struct {
 	resolve  api.Resolve
 	patients api.PatientResolve
+	tags     api.TagResolve
 	links    conditionLinks
 	views    ConditionViews
 }
@@ -192,6 +196,10 @@ func (p *conditionPages) list(e *core.RequestEvent, actor access.Actor) error {
 
 	blank := recordfamily.Record{Kind: kind.Condition}
 	blank.Body = &api.ConditionCreate{Patient: query.PatientID}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); err != nil {
+		return err
+	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
 	if err != nil {
@@ -264,6 +272,10 @@ func (p *conditionPages) detail(e *core.RequestEvent, actor access.Actor) error 
 		kind.Condition.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &found); err != nil {
+		return err
 	}
 
 	patientID, medications := "", []string(nil)

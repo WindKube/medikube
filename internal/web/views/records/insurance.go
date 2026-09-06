@@ -2,6 +2,7 @@ package records
 
 import (
 	"medikube/internal/domain/clinical"
+	viewtags "medikube/internal/web/views/tags"
 )
 
 // The wire spellings insurance adds beyond medication's own FieldName,
@@ -258,6 +259,8 @@ type InsuranceFormProps struct {
 	Errors    FieldErrors
 
 	Notice string
+
+	Tags viewtags.FieldProps
 }
 
 func (p InsuranceFormProps) Label() string {

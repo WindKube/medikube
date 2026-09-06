@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
+	viewtags "medikube/internal/web/views/tags"
 	"medikube/internal/web"
 )
 
@@ -159,6 +160,7 @@ templ AllergyForm(props AllergyFormProps) {
 		@SelectControl(ControlProps{FormID: props.FormID, Field: FieldStatus, Label: "State", Value: props.Allergy.Value(FieldStatus), Errors: props.Errors}, props.Allergy.StatusOptions())
 		@TextControl(ControlProps{FormID: props.FormID, Field: FieldOnsetOn, Label: "First noticed", Value: props.Allergy.Value(FieldOnsetOn), Type: "date", Errors: props.Errors})
 		@TextareaControl(ControlProps{FormID: props.FormID, Field: FieldNotes, Label: "Notes", Value: props.Allergy.Value(FieldNotes), Errors: props.Errors})
+		@viewtags.Field(props.Tags)
 		<div class="flex flex-wrap items-center gap-3">
 			<button
 				type="submit"

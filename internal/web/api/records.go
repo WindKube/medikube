@@ -129,6 +129,12 @@ type recordHandlers struct {
 	// supplies one. A record family built without it (most test harnesses)
 	// simply never populates `references` on any detail body.
 	references ReferencesResolve
+
+	// tags is nil until WithTags supplies one, the same shape references
+	// follows: a record family built without it never attaches a tag catalog
+	// to a re-rendered form (records.AttachTagOptions is itself a no-op on a
+	// nil resolve).
+	tags TagResolve
 }
 
 // HandlersOption configures a part of the record family only some callers
@@ -140,6 +146,16 @@ type HandlersOption func(*recordHandlers)
 func WithReferences(resolve ReferencesResolve) HandlersOption {
 	return func(h *recordHandlers) {
 		h.references = resolve
+	}
+}
+
+// WithTags wires the tag service into the record family's generic form
+// re-render (FR-064, US7): every kind's Datastar form patch — a rejected
+// submission, a successful update, a stale If-Match — offers the same tag
+// picker a page load does.
+func WithTags(resolve TagResolve) HandlersOption {
+	return func(h *recordHandlers) {
+		h.tags = resolve
 	}
 }
 
@@ -297,7 +313,7 @@ func (h *recordHandlers) create(e *core.RequestEvent, actor access.Actor) error 
 	entry, decoded, err := handler.DecodeCreate(segment, body)
 	if err != nil {
 		if invalid := asValidation(err); invalid != nil && wantsFormPatch(e) {
-			return h.renderInvalid(e, entry, decoded, invalid)
+			return h.renderInvalid(e, actor, entry, decoded, invalid)
 		}
 
 		return err
@@ -306,7 +322,7 @@ func (h *recordHandlers) create(e *core.RequestEvent, actor access.Actor) error 
 	created, err := entry.Service.Create(e.Request.Context(), actor, decoded)
 	if err != nil {
 		if invalid := asValidation(err); invalid != nil && wantsFormPatch(e) {
-			return h.renderInvalid(e, entry, decoded, invalid)
+			return h.renderInvalid(e, actor, entry, decoded, invalid)
 		}
 
 		return web.OwnerScoped(err)
@@ -314,6 +330,10 @@ func (h *recordHandlers) create(e *core.RequestEvent, actor access.Actor) error 
 
 	if wantsFormPatch(e) {
 		blank := records.Record{Kind: entry.Kind, Body: blankBody(entry, decoded)}
+
+		if err := h.attachTagOptions(e.Request.Context(), actor, &blank); err != nil {
+			return err
+		}
 
 		return web.Patch(e, entry.Views.Form(blank, nil, ""), web.ByElementID())
 	}
@@ -384,6 +404,10 @@ func (h *recordHandlers) update(e *core.RequestEvent, actor access.Actor) error 
 	}
 
 	if wantsFormPatch(e) {
+		if err := h.attachTagOptions(e.Request.Context(), actor, &updated); err != nil {
+			return err
+		}
+
 		component := formComponents{titlePatch(entry.Views.Title(updated)), entry.Views.Detail(updated), entry.Views.Form(updated, nil, "")}
 
 		return web.Patch(e, component, web.ByElementID())
@@ -411,6 +435,11 @@ func (h *recordHandlers) updateFailure(e *core.RequestEvent, actor access.Actor,
 
 		if wantsFormPatch(e) {
 			web.SetETag(e, current.Version)
+
+			if err := h.attachTagOptions(e.Request.Context(), actor, &current); err != nil {
+				return err
+			}
+
 			component := formComponents{entry.Views.Detail(current), entry.Views.Form(current, nil, staleNotice)}
 
 			return web.Patch(e, component, web.ByElementID())
@@ -437,7 +466,7 @@ func (h *recordHandlers) renderInvalidUpdate(
 		return web.OwnerScoped(err)
 	}
 
-	return h.renderInvalid(e, entry, current.Body, invalid)
+	return h.renderInvalid(e, actor, entry, current.Body, invalid)
 }
 
 func (h *recordHandlers) remove(e *core.RequestEvent, actor access.Actor) error {
@@ -507,10 +536,23 @@ const staleNotice = "This record changed since you loaded it; the current values
 
 // renderInvalid answers a rejected submission with the form re-rendered from
 // what was submitted, patched into place by its own id.
-func (h *recordHandlers) renderInvalid(e *core.RequestEvent, entry records.Entry, submitted any, invalid *domain.ValidationError) error {
+func (h *recordHandlers) renderInvalid(
+	e *core.RequestEvent, actor access.Actor, entry records.Entry, submitted any, invalid *domain.ValidationError,
+) error {
 	record := records.Record{Kind: entry.Kind, Body: submitted}
 
+	if err := h.attachTagOptions(e.Request.Context(), actor, &record); err != nil {
+		return err
+	}
+
 	return web.Patch(e, entry.Views.Form(record, invalid, ""), web.ByElementID())
+}
+
+// attachTagOptions is the one place the record family's generic form
+// re-render reaches the tag service from (records.AttachTagOptions), rather
+// than each of the four call sites above doing it themselves.
+func (h *recordHandlers) attachTagOptions(ctx context.Context, actor access.Actor, record *records.Record) error {
+	return records.AttachTagOptions(ctx, actor, records.TagCatalogResolve(h.tags), record)
 }
 
 // asValidation reports the *domain.ValidationError err wraps, or nil for

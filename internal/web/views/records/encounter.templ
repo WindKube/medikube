@@ -1,6 +1,7 @@
 package records
 
 import (
+	viewtags "medikube/internal/web/views/tags"
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
@@ -157,6 +158,7 @@ templ EncounterForm(props EncounterFormProps) {
 		@encounterTextareaControl(props, FieldFollowUp)
 		@encounterTextControl(props, FieldDurationMin, "number", false)
 		@encounterTextareaControl(props, FieldNotes)
+		@viewtags.Field(props.Tags)
 		<div class="flex flex-wrap items-center gap-3">
 			<button
 				type="submit"

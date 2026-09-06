@@ -30,7 +30,7 @@ const procedureListTitle = "Procedures"
 
 // ProcedureHandlers is the procedure pages' contribution to the route table,
 // mirroring medications.go's Handlers end to end (T078).
-func ProcedureHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
+func ProcedureHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
 	links, err := newProcedureLinks()
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func ProcedureHandlers(resolve api.Resolve, patients api.PatientResolve) (httpro
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &procedurePages{resolve: resolve, patients: patients, links: links, views: ProcedureViews{links: links}}
+	pages := &procedurePages{resolve: resolve, patients: patients, tags: tags, links: links, views: ProcedureViews{links: links}}
 
 	return httproute.Handlers{
 		OpProcedureListPage:   web.WithActor(pages.list),
@@ -94,14 +94,17 @@ func (v ProcedureViews) Form(record recordfamily.Record, invalid *domain.Validat
 	procedure := v.view(record)
 	fresh := procedure.ID == ""
 
+	formID := ids.RecordForm(kind.Procedure, procedure.ID)
+
 	return views.ProcedureForm(views.ProcedureFormProps{
-		FormID:     ids.RecordForm(kind.Procedure, procedure.ID),
+		FormID:     formID,
 		New:        fresh,
 		OnSubmit:   v.links.submitExpression(procedure),
 		CancelHref: v.links.cancelHref(procedure),
 		Procedure:  procedure,
 		Errors:     views.NewFieldErrors(invalid),
 		Notice:     notice,
+		Tags:       tagField(formID, record),
 	})
 }
 
@@ -164,6 +167,7 @@ func procedureDetailEntity(record recordfamily.Record, detail api.Procedure) cli
 type procedurePages struct {
 	resolve  api.Resolve
 	patients api.PatientResolve
+	tags     api.TagResolve
 	links    procedureLinks
 	views    ProcedureViews
 }
@@ -195,6 +199,10 @@ func (p *procedurePages) list(e *core.RequestEvent, actor access.Actor) error {
 
 	blank := recordfamily.Record{Kind: kind.Procedure}
 	blank.Body = &api.ProcedureCreate{Patient: query.PatientID}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); err != nil {
+		return err
+	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
 	if err != nil {
@@ -267,6 +275,10 @@ func (p *procedurePages) detail(e *core.RequestEvent, actor access.Actor) error 
 		kind.Procedure.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &found); err != nil {
+		return err
 	}
 
 	patientID := ""

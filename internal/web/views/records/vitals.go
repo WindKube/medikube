@@ -1,6 +1,7 @@
 package records
 
 import (
+	viewtags "medikube/internal/web/views/tags"
 	"strconv"
 
 	"medikube/internal/domain/clinical"
@@ -228,6 +229,8 @@ type VitalsFormProps struct {
 	Errors FieldErrors
 
 	Notice string
+
+	Tags viewtags.FieldProps
 }
 
 func (p VitalsFormProps) Label() string {

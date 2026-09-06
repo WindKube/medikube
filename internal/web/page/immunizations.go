@@ -35,7 +35,7 @@ const immunizationListTitle = "Vaccinations"
 // medication's (the one kind whose page functions predate this naming
 // convention), and page.PractitionerHandlers / page.FacilityHandlers are the
 // precedent every other kind follows.
-func ImmunizationHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
+func ImmunizationHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
 	links, err := newImmunizationLinks()
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func ImmunizationHandlers(resolve api.Resolve, patients api.PatientResolve) (htt
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &immunizationPages{resolve: resolve, patients: patients, links: links, views: ImmunizationViews{links: links}}
+	pages := &immunizationPages{resolve: resolve, patients: patients, tags: tags, links: links, views: ImmunizationViews{links: links}}
 
 	return httproute.Handlers{
 		OpImmunizationListPage:   web.WithActor(pages.list),
@@ -103,14 +103,17 @@ func (v ImmunizationViews) Form(record recordfamily.Record, invalid *domain.Vali
 	immunization := v.view(record)
 	fresh := immunization.ID == ""
 
+	formID := ids.RecordForm(kind.Immunization, immunization.ID)
+
 	return views.ImmunizationForm(views.ImmunizationFormProps{
-		FormID:       ids.RecordForm(kind.Immunization, immunization.ID),
+		FormID:       formID,
 		New:          fresh,
 		OnSubmit:     v.links.submitExpression(immunization),
 		CancelHref:   v.cancelHref(immunization),
 		Immunization: immunization,
 		Errors:       views.NewFieldErrors(invalid),
 		Notice:       notice,
+		Tags:         tagField(formID, record),
 	})
 }
 
@@ -169,6 +172,7 @@ func immunizationDetailEntity(record recordfamily.Record, detail api.Immunizatio
 type immunizationPages struct {
 	resolve  api.Resolve
 	patients api.PatientResolve
+	tags     api.TagResolve
 	links    immunizationLinks
 	views    ImmunizationViews
 }
@@ -200,6 +204,10 @@ func (p *immunizationPages) list(e *core.RequestEvent, actor access.Actor) error
 
 	blank := recordfamily.Record{Kind: kind.Immunization}
 	blank.Body = &api.ImmunizationCreate{Patient: query.PatientID}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); err != nil {
+		return err
+	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
 	if err != nil {
@@ -272,6 +280,10 @@ func (p *immunizationPages) detail(e *core.RequestEvent, actor access.Actor) err
 		kind.Immunization.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &found); err != nil {
+		return err
 	}
 
 	patientID := ""

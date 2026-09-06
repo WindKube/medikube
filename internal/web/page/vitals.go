@@ -29,7 +29,7 @@ const (
 const vitalsListTitle = "Measurements"
 
 // VitalsHandlers is the vitals pages' contribution to the route table.
-func VitalsHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
+func VitalsHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
 	links, err := newVitalsLinks()
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func VitalsHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &vitalsPages{resolve: resolve, patients: patients, links: links, views: VitalsViews{links: links}}
+	pages := &vitalsPages{resolve: resolve, patients: patients, tags: tags, links: links, views: VitalsViews{links: links}}
 
 	return httproute.Handlers{
 		OpVitalsListPage:   web.WithActor(pages.list),
@@ -99,14 +99,17 @@ func (v VitalsViews) Form(record recordfamily.Record, invalid *domain.Validation
 	vitals := v.view(record)
 	fresh := vitals.ID == ""
 
+	formID := ids.RecordForm(kind.Vitals, vitals.ID)
+
 	return views.VitalsForm(views.VitalsFormProps{
-		FormID:     ids.RecordForm(kind.Vitals, vitals.ID),
+		FormID:     formID,
 		New:        fresh,
 		OnSubmit:   v.links.submitExpression(vitals),
 		CancelHref: v.links.cancelHref(vitals),
 		Vitals:     vitals,
 		Errors:     views.NewFieldErrors(invalid),
 		Notice:     notice,
+		Tags:       tagField(formID, record),
 	})
 }
 
@@ -171,6 +174,7 @@ func vitalsDetailEntity(record recordfamily.Record, detail api.Vitals) clinical.
 type vitalsPages struct {
 	resolve  api.Resolve
 	patients api.PatientResolve
+	tags     api.TagResolve
 	links    vitalsLinks
 	views    VitalsViews
 }
@@ -202,6 +206,10 @@ func (p *vitalsPages) list(e *core.RequestEvent, actor access.Actor) error {
 
 	blank := recordfamily.Record{Kind: kind.Vitals}
 	blank.Body = &api.VitalsCreate{Patient: query.PatientID}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); err != nil {
+		return err
+	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
 	if err != nil {
@@ -274,6 +282,10 @@ func (p *vitalsPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		kind.Vitals.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &found); err != nil {
+		return err
 	}
 
 	patientID := ""

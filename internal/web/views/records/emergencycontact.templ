@@ -1,6 +1,7 @@
 package records
 
 import (
+	viewtags "medikube/internal/web/views/tags"
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
@@ -162,6 +163,7 @@ templ EmergencyContactForm(props EmergencyContactFormProps) {
 		@CheckboxControl(ControlProps{FormID: props.FormID, Field: FieldIsPrimary, Label: "Primary contact", Value: props.Contact.Value(FieldIsPrimary)})
 		@CheckboxControl(ControlProps{FormID: props.FormID, Field: FieldIsActive, Label: "Active", Value: props.Contact.Value(FieldIsActive)})
 		@TextareaControl(ControlProps{FormID: props.FormID, Field: FieldNotes, Label: "Notes", Value: props.Contact.Value(FieldNotes), Errors: props.Errors})
+		@viewtags.Field(props.Tags)
 		<div class="flex flex-wrap items-center gap-3">
 			<button
 				type="submit"

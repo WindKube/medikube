@@ -29,7 +29,7 @@ const (
 const insuranceListTitle = "Insurance"
 
 // InsuranceHandlers is the record pages' contribution to the route table.
-func InsuranceHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
+func InsuranceHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
 	links, err := newInsuranceLinks()
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func InsuranceHandlers(resolve api.Resolve, patients api.PatientResolve) (httpro
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &insurancePages{resolve: resolve, patients: patients, links: links, views: InsuranceViews{links: links}}
+	pages := &insurancePages{resolve: resolve, patients: patients, tags: tags, links: links, views: InsuranceViews{links: links}}
 
 	return httproute.Handlers{
 		OpInsuranceListPage:   web.WithActor(pages.list),
@@ -93,14 +93,17 @@ func (v InsuranceViews) Form(record recordfamily.Record, invalid *domain.Validat
 	policy := v.view(record)
 	fresh := policy.ID == ""
 
+	formID := ids.RecordForm(kind.Insurance, policy.ID)
+
 	return views.InsuranceForm(views.InsuranceFormProps{
-		FormID:     ids.RecordForm(kind.Insurance, policy.ID),
+		FormID:     formID,
 		New:        fresh,
 		OnSubmit:   v.links.submitExpression(policy),
 		CancelHref: v.cancelHref(policy),
 		Insurance:  policy,
 		Errors:     views.NewFieldErrors(invalid),
 		Notice:     notice,
+		Tags:       tagField(formID, record),
 	})
 }
 
@@ -165,6 +168,7 @@ func insuranceDetailEntity(record recordfamily.Record, detail api.Insurance) cli
 type insurancePages struct {
 	resolve  api.Resolve
 	patients api.PatientResolve
+	tags     api.TagResolve
 	links    insuranceLinks
 	views    InsuranceViews
 }
@@ -196,6 +200,10 @@ func (p *insurancePages) list(e *core.RequestEvent, actor access.Actor) error {
 
 	blank := recordfamily.Record{Kind: kind.Insurance}
 	blank.Body = &api.InsuranceCreate{Patient: query.PatientID}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); err != nil {
+		return err
+	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
 	if err != nil {
@@ -268,6 +276,10 @@ func (p *insurancePages) detail(e *core.RequestEvent, actor access.Actor) error 
 		kind.Insurance.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &found); err != nil {
+		return err
 	}
 
 	patientID := ""

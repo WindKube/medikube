@@ -41,7 +41,9 @@ const medicationListTitle = "Medications"
 // A page that reached the router without a Landmark or a SmokeURL cannot be
 // registered at all — httproute.Handle panics on either — so wiring these two
 // is also what takes them off the 501 stub list.
-func Handlers(resolve api.Resolve, patients api.PatientResolve, references api.ReferencesResolve) (httproute.Handlers, error) {
+func Handlers(
+	resolve api.Resolve, patients api.PatientResolve, references api.ReferencesResolve, tags api.TagResolve,
+) (httproute.Handlers, error) {
 	links, err := newMedicationLinks()
 	if err != nil {
 		return nil, err
@@ -55,24 +57,27 @@ func Handlers(resolve api.Resolve, patients api.PatientResolve, references api.R
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &medicationPages{resolve: resolve, patients: patients, references: references, links: links, views: MedicationViews{links: links}}
+	pages := &medicationPages{
+		resolve: resolve, patients: patients, references: references, tags: tags,
+		links: links, views: MedicationViews{links: links},
+	}
 
 	table := httproute.Handlers{
 		OpMedicationListPage:   web.WithActor(pages.list),
 		OpMedicationDetailPage: web.WithActor(pages.detail),
 	}
 
-	allergies, err := AllergyHandlers(resolve, patients)
+	allergies, err := AllergyHandlers(resolve, patients, tags)
 	if err != nil {
 		return nil, err
 	}
 
-	conditions, err := ConditionHandlers(resolve, patients)
+	conditions, err := ConditionHandlers(resolve, patients, tags)
 	if err != nil {
 		return nil, err
 	}
 
-	emergencyContacts, err := EmergencyContactHandlers(resolve, patients)
+	emergencyContacts, err := EmergencyContactHandlers(resolve, patients, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -149,14 +154,17 @@ func (v MedicationViews) Form(record recordfamily.Record, invalid *domain.Valida
 	medication := v.view(record)
 	fresh := medication.ID == ""
 
+	formID := ids.RecordForm(kind.Medication, medication.ID)
+
 	return views.MedicationForm(views.MedicationFormProps{
-		FormID:     ids.RecordForm(kind.Medication, medication.ID),
+		FormID:     formID,
 		New:        fresh,
 		OnSubmit:   v.links.submitExpression(medication),
 		CancelHref: v.cancelHref(medication),
 		Medication: medication,
 		Errors:     views.NewFieldErrors(invalid),
 		Notice:     notice,
+		Tags:       tagField(formID, record),
 	})
 }
 
@@ -223,6 +231,7 @@ type medicationPages struct {
 	resolve    api.Resolve
 	patients   api.PatientResolve
 	references api.ReferencesResolve
+	tags       api.TagResolve
 	links      medicationLinks
 	views      MedicationViews
 }
@@ -261,6 +270,10 @@ func (p *medicationPages) list(e *core.RequestEvent, actor access.Actor) error {
 
 	blank := recordfamily.Record{Kind: kind.Medication}
 	blank.Body = &api.MedicationCreate{Patient: query.PatientID}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &blank); err != nil {
+		return err
+	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, query.PatientID)
 	if err != nil {
@@ -362,6 +375,10 @@ func (p *medicationPages) detail(e *core.RequestEvent, actor access.Actor) error
 		kind.Medication.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if err := attachTagOptions(e.Request.Context(), actor, p.tags, &found); err != nil {
+		return err
 	}
 
 	patientID := ""
