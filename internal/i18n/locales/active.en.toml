@@ -1785,6 +1785,10 @@ description = "The tag delete-confirmation panel's own body text stating how man
 one = "{{.PluralCount}} record carries this tag. Deleting it removes the tag from that record."
 other = "{{.PluralCount}} records carry this tag. Deleting it removes the tag from all of them."
 
+[tag.delete_consequence_none]
+description = "The tag delete-confirmation panel's body when no record carries the tag"
+other = "No record carries this tag. Deleting it removes nothing from anything."
+
 [field.tag.name]
 description = "The tag form's own name field label"
 other = "Name"

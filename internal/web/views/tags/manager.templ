@@ -119,7 +119,13 @@ templ Row(t TagView) {
 		>
 			<h2 class="text-base font-semibold text-rose-900 dark:text-rose-100">{ i18n.T(ctx, "confirm.delete_tag") }</h2>
 			<p class="mt-1 text-sm font-medium text-rose-900 dark:text-rose-100">{ t.Name }</p>
-			<p class="mt-2 max-w-prose text-sm text-rose-800 dark:text-rose-200">{ i18n.N(ctx, "tag.delete_consequence", t.UsageCount) }</p>
+			<p class="mt-2 max-w-prose text-sm text-rose-800 dark:text-rose-200">
+				if t.UsageCount == 0 {
+					{ i18n.T(ctx, "tag.delete_consequence_none") }
+				} else {
+					{ i18n.N(ctx, "tag.delete_consequence", t.UsageCount) }
+				}
+			</p>
 			<div class="mt-4 flex flex-wrap gap-3">
 				<button
 					type="button"

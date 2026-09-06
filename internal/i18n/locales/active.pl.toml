@@ -1815,6 +1815,10 @@ few = "Ta etykieta jest przypisana do {{.PluralCount}} wpisów. Usunięcie etyki
 many = "Ta etykieta jest przypisana do {{.PluralCount}} wpisów. Usunięcie etykiety usunie ją ze wszystkich."
 other = "Ta etykieta jest przypisana do {{.PluralCount}} wpisu. Usunięcie etykiety usunie ją ze wszystkich."
 
+[tag.delete_consequence_none]
+description = "The tag delete-confirmation panel's body when no record carries the tag"
+other = "Ta etykieta nie jest przypisana do żadnego wpisu. Jej usunięcie nic nie zmieni."
+
 [field.tag.name]
 description = "The tag form's own name field label"
 other = "Nazwa"
