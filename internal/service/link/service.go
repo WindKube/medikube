@@ -17,7 +17,7 @@ import (
 // A cross-patient member, a non-existent member and an unreachable member all
 // produce the byte-identical domain.ErrNotFound (FR-057, US6-3, SC-004):
 // clinical.SamePatient never distinguishes them, and neither does the
-// Authorizer.Record refusal below it.
+// Authorizer.Patient refusal below it.
 func ValidateSet(
 	ctx context.Context,
 	resolver Resolver,
@@ -43,8 +43,8 @@ func ValidateSet(
 		return nil, err
 	}
 
-	for _, id := range unique {
-		grant, err := authorizer.Record(ctx, actor, target, id, access.PermEdit)
+	for _, ref := range refs {
+		grant, err := authorizer.Patient(ctx, actor, ref.PatientID, access.PermEdit)
 		if err != nil {
 			return nil, err
 		}

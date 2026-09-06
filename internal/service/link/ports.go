@@ -22,9 +22,13 @@ type Resolver interface {
 	Resolve(ctx context.Context, target kind.Kind, ids []string) ([]clinical.PatientRef, error)
 }
 
-// Authorizer is the per-record checkpoint: may this actor edit this one
-// target record. data-model §7.4 requires it on every id in a link mutation,
-// not just the subject's own record.
+// Authorizer is the per-target checkpoint: may this actor reach this one
+// target's patient. data-model §7.4 requires it on every id in a link
+// mutation, not just the subject's own record; every linkable kind is
+// patient-scoped (phase 002 D-13 retired the flat "owner" column), so the
+// anchor is the patient the resolved target actually belongs to, the same
+// way every other patient-scoped service authorizes (treatment.Service,
+// medication.Service).
 type Authorizer interface {
-	Record(ctx context.Context, actor access.Actor, k kind.Kind, id string, need access.Permission) (access.Grant, error)
+	Patient(ctx context.Context, actor access.Actor, patientID string, need access.Permission) (access.Grant, error)
 }

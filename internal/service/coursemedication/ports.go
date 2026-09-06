@@ -10,7 +10,6 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/clinical"
-	"medikube/internal/domain/kind"
 )
 
 // Repository is the treatment_medications storage seam.
@@ -42,10 +41,13 @@ type Medications interface {
 	Get(ctx context.Context, id string) (clinical.Medication, error)
 }
 
-// Authorizer is the per-record checkpoint. Every mutation authorizes both
-// the treatment and the medication (data-model §7.4, "actor may edit both").
+// Authorizer is the per-patient checkpoint. Every mutation authorizes both
+// the treatment's patient and the medication's patient (data-model §7.4,
+// "actor may edit both") — both are patient-scoped kinds with no flat
+// "owner" column of their own (phase 002 D-13), so the anchor is the patient,
+// the same way treatment.Service and medication.Service authorize themselves.
 type Authorizer interface {
-	Record(ctx context.Context, actor access.Actor, k kind.Kind, id string, need access.Permission) (access.Grant, error)
+	Patient(ctx context.Context, actor access.Actor, patientID string, need access.Permission) (access.Grant, error)
 }
 
 // Patch is one upsert's body: every field optional, and an absent one means

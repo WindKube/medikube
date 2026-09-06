@@ -7,7 +7,6 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/clinical"
-	"medikube/internal/domain/kind"
 )
 
 type Service struct {
@@ -28,12 +27,13 @@ func New(repository Repository, treatments Treatments, medications Medications, 
 // List is `GET /treatments/{id}/medications`: every medication attached to
 // this course, each resolved against its own medication (FR-060).
 func (s *Service) List(ctx context.Context, actor access.Actor, treatmentID string) ([]Item, error) {
-	if _, err := s.treatments.Get(ctx, treatmentID); err != nil {
+	treatment, err := s.treatments.Get(ctx, treatmentID)
+	if err != nil {
 		return nil, err
 	}
 
-	if err := s.authorize(ctx, actor, kind.Treatment, treatmentID, access.PermView); err != nil {
-		return nil, err
+	if authErr := s.authorizePatient(ctx, actor, treatment.PatientID, access.PermView); authErr != nil {
+		return nil, authErr
 	}
 
 	rows, err := s.repository.List(ctx, treatmentID)
@@ -73,8 +73,8 @@ func (s *Service) Upsert(
 		StartedOn: derefDate(patch.StartedOn), EndedOn: derefDate(patch.EndedOn),
 	}
 
-	if err := entity.Validate(); err != nil {
-		return Item{}, false, err
+	if validateErr := entity.Validate(); validateErr != nil {
+		return Item{}, false, validateErr
 	}
 
 	stored, created, err := s.repository.Upsert(ctx, entity, expectedTreatmentVersion)
@@ -96,8 +96,8 @@ func (s *Service) Delete(ctx context.Context, actor access.Actor, treatmentID, m
 }
 
 // authorizeBothEnds is data-model §7.4's invariant applied to this one
-// contract: same patient, and Authorizer.Record on both the treatment and
-// the medication, every time (FR-057).
+// contract: same patient, and Authorizer.Patient on both the treatment's
+// patient and the medication's, every time (FR-057).
 func (s *Service) authorizeBothEnds(
 	ctx context.Context, actor access.Actor, treatmentID, medicationID string,
 ) (clinical.Treatment, clinical.Medication, error) {
@@ -106,8 +106,8 @@ func (s *Service) authorizeBothEnds(
 		return clinical.Treatment{}, clinical.Medication{}, err
 	}
 
-	if err := s.authorize(ctx, actor, kind.Treatment, treatmentID, access.PermEdit); err != nil {
-		return clinical.Treatment{}, clinical.Medication{}, err
+	if authErr := s.authorizePatient(ctx, actor, treatment.PatientID, access.PermEdit); authErr != nil {
+		return clinical.Treatment{}, clinical.Medication{}, authErr
 	}
 
 	medication, err := s.medications.Get(ctx, medicationID)
@@ -119,15 +119,15 @@ func (s *Service) authorizeBothEnds(
 		return clinical.Treatment{}, clinical.Medication{}, domain.ErrNotFound
 	}
 
-	if err := s.authorize(ctx, actor, kind.Medication, medicationID, access.PermEdit); err != nil {
+	if err := s.authorizePatient(ctx, actor, medication.PatientID, access.PermEdit); err != nil {
 		return clinical.Treatment{}, clinical.Medication{}, err
 	}
 
 	return treatment, medication, nil
 }
 
-func (s *Service) authorize(ctx context.Context, actor access.Actor, k kind.Kind, id string, need access.Permission) error {
-	grant, err := s.authorizer.Record(ctx, actor, k, id, need)
+func (s *Service) authorizePatient(ctx context.Context, actor access.Actor, patientID string, need access.Permission) error {
+	grant, err := s.authorizer.Patient(ctx, actor, patientID, need)
 	if err != nil {
 		return err
 	}

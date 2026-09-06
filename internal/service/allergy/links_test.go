@@ -31,8 +31,8 @@ func (f fakeResolver) Resolve(_ context.Context, _ kind.Kind, ids []string) ([]c
 
 type fakeLinkAuthorizer struct{}
 
-func (fakeLinkAuthorizer) Record(
-	_ context.Context, _ access.Actor, _ kind.Kind, _ string, _ access.Permission,
+func (fakeLinkAuthorizer) Patient(
+	_ context.Context, _ access.Actor, _ string, _ access.Permission,
 ) (access.Grant, error) {
 	return access.Grant{Level: access.PermOwn}, nil
 }

@@ -10,7 +10,6 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/clinical"
-	"medikube/internal/domain/kind"
 	"medikube/internal/service/coursemedication"
 )
 
@@ -94,12 +93,12 @@ type fakeAuthorizer struct {
 	denied map[string]bool
 }
 
-func (f *fakeAuthorizer) Record(
-	_ context.Context, _ access.Actor, k kind.Kind, id string, _ access.Permission,
+func (f *fakeAuthorizer) Patient(
+	_ context.Context, _ access.Actor, patientID string, _ access.Permission,
 ) (access.Grant, error) {
-	f.calls = append(f.calls, string(k)+":"+id)
+	f.calls = append(f.calls, patientID)
 
-	if f.denied[id] {
+	if f.denied[patientID] {
 		return access.Grant{}, nil
 	}
 
@@ -194,20 +193,19 @@ func TestUpsertAuthorizesBothTheTreatmentAndTheMedicationOnEveryCall(t *testing.
 
 	_, _, err := svc.Upsert(t.Context(), access.Actor{}, treatmentID, medicationA, coursemedication.Patch{}, "v1")
 	require.NoError(t, err)
-	assert.Contains(t, authorizer.calls, string(kind.Treatment)+":"+treatmentID)
-	assert.Contains(t, authorizer.calls, string(kind.Medication)+":"+medicationA)
+	assert.Equal(t, []string{patientA, patientA}, authorizer.calls,
+		"the treatment's patient and the medication's patient are each authorized, even though they are the same patient")
 
 	authorizer.calls = nil
 
 	require.NoError(t, svc.Delete(t.Context(), access.Actor{}, treatmentID, medicationA, "v1"))
-	assert.Contains(t, authorizer.calls, string(kind.Treatment)+":"+treatmentID)
-	assert.Contains(t, authorizer.calls, string(kind.Medication)+":"+medicationA)
+	assert.Equal(t, []string{patientA, patientA}, authorizer.calls)
 }
 
-func TestUpsertRefusesWhenTheAuthorizerDeniesEitherEnd(t *testing.T) {
+func TestUpsertRefusesWhenTheAuthorizerDeniesThePatient(t *testing.T) {
 	t.Parallel()
 
-	authorizer := &fakeAuthorizer{denied: map[string]bool{medicationA: true}}
+	authorizer := &fakeAuthorizer{denied: map[string]bool{patientA: true}}
 	svc, _ := newService(t, authorizer)
 
 	_, _, err := svc.Upsert(t.Context(), access.Actor{}, treatmentID, medicationA, coursemedication.Patch{}, "v1")

@@ -108,8 +108,8 @@ func (r *Repo) Upsert(
 			return fmt.Errorf("%w: finding treatment %s: %w", domain.ErrNotFound, entity.TreatmentID, err)
 		}
 
-		if err := expectVersion(treatmentRecord, entity.TreatmentID, expectedTreatmentVersion); err != nil {
-			return err
+		if versionErr := expectVersion(treatmentRecord, entity.TreatmentID, expectedTreatmentVersion); versionErr != nil {
+			return versionErr
 		}
 
 		collection, err := txApp.FindCollectionByNameOrId(Collection)
@@ -159,8 +159,8 @@ func (r *Repo) Delete(ctx context.Context, treatmentID, medicationID, expectedTr
 			return fmt.Errorf("%w: finding treatment %s: %w", domain.ErrNotFound, treatmentID, err)
 		}
 
-		if err := expectVersion(treatmentRecord, treatmentID, expectedTreatmentVersion); err != nil {
-			return err
+		if versionErr := expectVersion(treatmentRecord, treatmentID, expectedTreatmentVersion); versionErr != nil {
+			return versionErr
 		}
 
 		record, err := findLink(ctx, txApp, treatmentID, medicationID)

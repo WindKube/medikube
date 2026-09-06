@@ -37,12 +37,12 @@ type fakeAuthorizer struct {
 	calls  []string
 }
 
-func (f *fakeAuthorizer) Record(
-	_ context.Context, _ access.Actor, _ kind.Kind, id string, _ access.Permission,
+func (f *fakeAuthorizer) Patient(
+	_ context.Context, _ access.Actor, patientID string, _ access.Permission,
 ) (access.Grant, error) {
-	f.calls = append(f.calls, id)
+	f.calls = append(f.calls, patientID)
 
-	if f.denied[id] {
+	if f.denied[patientID] {
 		return access.Grant{}, nil
 	}
 
@@ -100,7 +100,7 @@ func TestValidateSetRefusalsAreByteIdentical(t *testing.T) {
 		{"unreachable member", "unreachable"},
 	}
 
-	var refusals []error
+	refusals := make([]error, 0, len(cases))
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -126,12 +126,12 @@ func TestValidateSetChecksTheAuthorizerOnEveryTarget(t *testing.T) {
 		"m1": {ID: "m1", PatientID: subjectPatient, Found: true},
 		"m2": {ID: "m2", PatientID: subjectPatient, Found: true},
 	}}
-	authorizer := &fakeAuthorizer{denied: map[string]bool{"m2": true}}
+	authorizer := &fakeAuthorizer{denied: map[string]bool{subjectPatient: true}}
 
 	_, err := link.ValidateSet(t.Context(), resolver, authorizer, access.Actor{}, subjectPatient, kind.Medication, []string{"m1", "m2"})
 	require.ErrorIs(t, err, domain.ErrNotFound)
-	assert.Contains(t, authorizer.calls, "m1")
-	assert.Contains(t, authorizer.calls, "m2")
+	assert.NotEmpty(t, authorizer.calls, "the loop reached the authorizer before refusing")
+	assert.Equal(t, subjectPatient, authorizer.calls[0], "every target is authorized by its own resolved patient")
 }
 
 func TestValidateSetOfNoIDsIsANoOp(t *testing.T) {
