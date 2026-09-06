@@ -48,13 +48,13 @@ func TestAWriteOnOneAccountReachesNoOtherAccountsStream(t *testing.T) {
 	require.Equal(t, 200, watchingB.Response.StatusCode)
 
 	// The write under test, on Amara's account.
-	hidden, _ := medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
+	_, _ = medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
 
 	// The barrier, on Boris's own account. Boris must receive this one.
-	barrier, _ := medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ibuprofen")
+	_, _ = medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ibuprofen")
 
 	seenByB := watchingB.nextPatch(patchDeadline)
-	require.Equal(t, "#"+ids.RecordRow(kind.Medication, barrier), seenByB.selector(),
+	require.Equal(t, "#"+ids.RecordRows(kind.Medication), seenByB.selector(),
 		"the first patch Boris received is not his own record — Amara's write reached his stream")
 
 	assert.Empty(t, watchingB.elementPatches(),
@@ -63,7 +63,7 @@ func TestAWriteOnOneAccountReachesNoOtherAccountsStream(t *testing.T) {
 	// Amara must have received his own write, or the assertion above would be
 	// satisfied by a stream that never delivers anything at all.
 	seenByA := watchingA.nextPatch(patchDeadline)
-	assert.Equal(t, "#"+ids.RecordRow(kind.Medication, hidden), seenByA.selector(),
+	assert.Equal(t, "#"+ids.RecordRows(kind.Medication), seenByA.selector(),
 		"Amara did not receive his own write, so the isolation assertion proves nothing")
 }
 
@@ -87,10 +87,10 @@ func TestADeletionOnOneAccountReachesNoOtherAccountsStream(t *testing.T) {
 
 	medikube.remove(t, amara, doomed, etag)
 
-	barrier, _ := medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ibuprofen")
+	_, _ = medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ibuprofen")
 
 	seenByB := watchingB.nextPatch(patchDeadline)
-	require.Equal(t, "#"+ids.RecordRow(kind.Medication, barrier), seenByB.selector(),
+	require.Equal(t, "#"+ids.RecordRows(kind.Medication), seenByB.selector(),
 		"Boris was told about a record that was deleted on somebody else's account")
 	assert.Empty(t, watchingB.elementPatches(), "a further patch reached Boris after his barrier")
 
@@ -135,10 +135,10 @@ func TestAPassiveSubscriberIsRefusedBeforeTheServiceAndAccusedOfNothing(t *testi
 
 	// The barrier: once Boris has received his own record, all three of Amara's
 	// have been through his loop.
-	barrier, _ := medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ibuprofen")
+	_, _ = medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ibuprofen")
 
 	seen := watchingB.nextPatch(patchDeadline)
-	require.Equal(t, "#"+ids.RecordRow(kind.Medication, barrier), seen.selector(),
+	require.Equal(t, "#"+ids.RecordRows(kind.Medication), seen.selector(),
 		"Amara's write reached Boris's stream")
 
 	after := denials(t, medikube, testsupport.AccountBID)
@@ -181,9 +181,9 @@ func TestTheStreamCarriesNoRecordContentItDidNotRenderForThisSubscriber(t *testi
 
 	_, _ = medikube.create(t, amara, testsupport.AccountAPatientSelfID, secret)
 
-	barrier, _ := medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ibuprofen")
+	_, _ = medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ibuprofen")
 
-	require.Equal(t, "#"+ids.RecordRow(kind.Medication, barrier), watching.nextPatch(patchDeadline).selector())
+	require.Equal(t, "#"+ids.RecordRows(kind.Medication), watching.nextPatch(patchDeadline).selector())
 
 	for _, f := range append(watching.drained(), frame{}) {
 		for _, line := range f.Data {

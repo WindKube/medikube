@@ -243,11 +243,21 @@ func TestEveryCommittedWritePublishesItsKindIDAndOwner(t *testing.T) {
 		assert.Equalf(t, streamPatientID, event.PatientID,
 			"event %d carries no owner, so every removal for it would be suppressed", index)
 	}
+
+	// Only the first of the three — the create — carries Created, because
+	// only the create hook binds it. A stream that could not tell this event
+	// apart from the update would patch a create in place instead of
+	// prepending it, which is exactly the bug (a new row never appearing
+	// without a reload) Created exists to fix.
+	assert.True(t, events[0].Created, "the create event did not carry Created")
+	assert.False(t, events[1].Created, "the update event carried Created")
+	assert.False(t, events[2].Created, "the delete event carried Created")
 }
 
 // contracts/streams.md's rule that makes per-subscriber authorization possible
-// at all: the hub carries identifiers and never record bodies. It is asserted
-// on the type, because a field is how a body would arrive — and it would arrive
+// at all: the hub carries identifiers, plus the one bit (Created) a re-fetch
+// genuinely cannot answer, and never record bodies. It is asserted on the
+// type, because a field is how a body would arrive — and it would arrive
 // working, with nothing to notice it by until somebody read a medication name
 // off another account's socket.
 func TestTheEventCarriesIdentifiersAndNothingElse(t *testing.T) {
@@ -260,9 +270,9 @@ func TestTheEventCarriesIdentifiersAndNothingElse(t *testing.T) {
 		names = append(names, field.Name)
 	}
 
-	assert.ElementsMatch(t, []string{"Kind", "RecordID", "PatientID"}, names,
-		"realtime.Event grew a field: the hub publishes ids, never bodies, and a body here would have to be "+
-			"authorised at publish time by the one participant that does not know who is listening")
+	assert.ElementsMatch(t, []string{"Kind", "RecordID", "PatientID", "Created"}, names,
+		"realtime.Event grew a field: the hub publishes ids (plus Created), never bodies, and a body here "+
+			"would have to be authorised at publish time by the one participant that does not know who is listening")
 }
 
 // A collection nobody registered is not published. audit_events is itself a

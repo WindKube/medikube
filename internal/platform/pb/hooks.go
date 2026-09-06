@@ -84,23 +84,26 @@ func BindRecordStream(app core.App, config RecordStream) error {
 		collections[k.Collection()] = k
 	}
 
-	publish(app.OnRecordAfterCreateSuccess(), streamCreateHookID, config, collections)
-	publish(app.OnRecordAfterUpdateSuccess(), streamUpdateHookID, config, collections)
-	publish(app.OnRecordAfterDeleteSuccess(), streamDeleteHookID, config, collections)
+	publish(app.OnRecordAfterCreateSuccess(), streamCreateHookID, true, config, collections)
+	publish(app.OnRecordAfterUpdateSuccess(), streamUpdateHookID, false, config, collections)
+	publish(app.OnRecordAfterDeleteSuccess(), streamDeleteHookID, false, config, collections)
 
 	return nil
 }
 
 // publish binds one of the three hooks.
 //
-// It carries no action, and that is deliberate rather than an omission: the
-// subscriber re-fetches every id it is told about, and a fetch that comes back
-// empty is exactly a row removal. An action on the wire would be a second
-// source of truth for something the fetch already answers, and the fetch is the
-// one that cannot lie.
+// It carries no action beyond created, and that is deliberate rather than an
+// omission: the subscriber re-fetches every id it is told about, and a fetch
+// that comes back empty is exactly a row removal, so delete needs nothing on
+// the wire. created is different — each call site here already knows which of
+// the three hooks it is binding, so stamping that one bit onto the event costs
+// nothing and is the only way a subscriber can tell a brand new row from one it
+// has already rendered.
 func publish(
 	on *hook.TaggedHook[*core.RecordEvent],
 	id string,
+	created bool,
 	config RecordStream,
 	collections map[string]kind.Kind,
 ) {
@@ -112,7 +115,7 @@ func publish(
 				return e.Next()
 			}
 
-			// Three fields, and there is nowhere here a name, a dose or a note
+			// Four fields, and there is nowhere here a name, a dose or a note
 			// could be written. That is what makes contracts/streams.md's
 			// "IDs, never bodies" a property of the shape rather than a rule
 			// somebody has to remember (FR-038).
@@ -129,6 +132,7 @@ func publish(
 				// misspelling reads back as the empty string and every removal
 				// would then be suppressed.
 				PatientID: e.Record.GetString(store.MedicationPatient),
+				Created:   created,
 			})
 
 			return e.Next()
