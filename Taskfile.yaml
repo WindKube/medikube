@@ -267,6 +267,7 @@ tasks:
       - task: test:go
       - task: test:specs
       - task: test:naming
+      - task: test:i18n
 
   test:go:
     desc: The Go suites, race detector on
@@ -280,6 +281,14 @@ tasks:
       - >-
         go test -race -shuffle=on -count=1 -timeout 25m
         -coverprofile=coverage.out -covermode=atomic ./...
+
+  test:i18n:
+    desc: "The catalogue gates (FR-011): missing/surplus ids, plural-form completeness, every reference resolved"
+    deps: [gen]
+    # Ordinary go test, no build tag: task test:go's ./... already runs these.
+    # This task exists so the failure has a name of its own (plan.md IX).
+    cmds:
+      - go test -count=1 ./internal/i18n/...
 
   test:phileak:
     desc: The PHI-leak suite — every sink, against a sentinel-seeded instance
