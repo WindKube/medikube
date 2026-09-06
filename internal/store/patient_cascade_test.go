@@ -9,6 +9,7 @@ import (
 
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/kind"
+	"medikube/internal/store/coursemedication"
 	"medikube/internal/store/migrations"
 	"medikube/internal/testsupport"
 	"medikube/internal/web/api"
@@ -16,11 +17,11 @@ import (
 )
 
 // T205, FR-087, SC-005. Deleting a patient must destroy 100% of their records
-// of every one of the fourteen kinds and every search_index row, leaving 0
-// rows attributed to a patient that no longer exists.
-//
-// The link and treatment_medications leg is deferred: US6 is still in flight
-// and lands its own cascade case alongside the link work.
+// of every one of the fourteen kinds, every treatment_medications row and
+// every search_index row, leaving 0 rows attributed to a patient that no
+// longer exists. The link fields themselves (relation columns on a kind's
+// own record, e.g. an encounter's condition) need no separate assertion:
+// they live on the row the loop above already proves is gone.
 func TestDeletingAPatientDestroysEveryKindOfItsRecordsAndItsSearchIndexRows(t *testing.T) {
 	t.Parallel()
 
@@ -57,6 +58,9 @@ func TestDeletingAPatientDestroysEveryKindOfItsRecordsAndItsSearchIndexRows(t *t
 	require.Equalf(t, int64(len(kind.Kinds())), searchBefore,
 		"every created record should have indexed a search_index row before the delete")
 
+	treatmentID, medicationID := findCascadeTreatmentAndMedication(t, app, patientID)
+	linkID := newCascadeTreatmentMedication(t, app, treatmentID, medicationID)
+
 	patientRecord, err := app.FindRecordById(patientsCollection, patientID)
 	require.NoError(t, err)
 	require.NoError(t, app.Delete(patientRecord))
@@ -70,6 +74,45 @@ func TestDeletingAPatientDestroysEveryKindOfItsRecordsAndItsSearchIndexRows(t *t
 	searchAfter, err := app.CountRecords(migrations.SearchIndexCollection, dbx.HashExp{"patient": patientID})
 	require.NoError(t, err)
 	require.EqualValues(t, 0, searchAfter, "a search_index row still names the deleted patient")
+
+	_, err = app.FindRecordById(coursemedication.Collection, linkID)
+	require.Error(t, err, "the course-medication join row should be gone with the treatment and medication it named")
+}
+
+// findCascadeTreatmentAndMedication returns the ids of the treatment and
+// medication fixtures cascadeFixtures seeded for the cascade patient, so the
+// test can attach a treatment_medications row to a real pair before the
+// patient is deleted.
+func findCascadeTreatmentAndMedication(t *testing.T, app core.App, patientID string) (treatmentID, medicationID string) {
+	t.Helper()
+
+	treatment, err := app.FindFirstRecordByFilter(kind.Treatment.Collection(), "patient = {:patient}",
+		dbx.Params{"patient": patientID})
+	require.NoError(t, err)
+
+	medication, err := app.FindFirstRecordByFilter(kind.Medication.Collection(), "patient = {:patient}",
+		dbx.Params{"patient": patientID})
+	require.NoError(t, err)
+
+	return treatment.Id, medication.Id
+}
+
+// newCascadeTreatmentMedication seeds one treatment_medications row directly,
+// the same way newCascadePatient seeds its collection: this test proves the
+// cascade at the storage layer, not through coursemedication.Service.
+func newCascadeTreatmentMedication(t *testing.T, app core.App, treatmentID, medicationID string) string {
+	t.Helper()
+
+	collection, err := app.FindCollectionByNameOrId(coursemedication.Collection)
+	require.NoError(t, err)
+
+	record := core.NewRecord(collection)
+	record.Set("treatment", treatmentID)
+	record.Set("medication", medicationID)
+
+	require.NoError(t, app.Save(record))
+
+	return record.Id
 }
 
 const patientsCollection = "patients"

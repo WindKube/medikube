@@ -497,10 +497,6 @@ story is in.
 
 ### Cross-cutting correctness
 
-_Note: the link and `treatment_medications` leg of T205/T206/T209/T211 (links, relationship changes,
-attaching/detaching a link) is not covered by the polish-a pass below; it lands with US6 alongside the
-link work itself._
-
 - [x] T203 [P] Write and pass `internal/store/migrations/lockdown_test.go` — one `tests.ApiScenario` per new collection proving `GET/POST/PATCH/DELETE /api/collections/<c>/records` returns `404` to a normal authenticated user, and that all five API rules are `nil` (Constitution V; **one `TestApp` per scenario, never shared**)
 - [x] T204 [P] Write and pass `internal/store/migrations/reversibility_test.go` — every migration added in this phase applies and reverts cleanly against a throwaway app, in both directions, in the order of `data-model.md` §8 (Principle IX)
 - [x] T205 [P] Write and pass `internal/store/patient_cascade_test.go` — deleting a patient destroys 100% of their records of every one of the fourteen kinds, every link, every `treatment_medications` row and every `search_index` row, leaving 0 records attributed to a non-existent patient (FR-087, SC-005)
