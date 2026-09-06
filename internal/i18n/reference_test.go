@@ -111,26 +111,19 @@ func TestEveryReferencedIDExistsInEnglish(t *testing.T) {
 }
 
 // TestScanReferencesFindsAnUndefinedID proves the scan itself catches what
-// it is meant to: a call site naming an id nothing defines.
+// it is meant to: a call site naming an id nothing defines. T038: the fixture
+// is a real file under testdata/undefined-reference/, so the failure text
+// this asserts (id + file:line) is the same shape a real omission produces.
 func TestScanReferencesFindsAnUndefinedID(t *testing.T) {
 	t.Parallel()
 
-	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(
-		filepath.Join(dir, "example.templ"),
-		[]byte(`package example
-
-templ Example() {
-	<span>{ i18n.T(ctx, "nav.nonexistent") }</span>
-}
-`),
-		0o600,
-	))
+	dir := "testdata/undefined-reference"
 
 	calls, err := scanReferences(dir)
 	require.NoError(t, err)
 	require.Len(t, calls, 1)
 	assert.Equal(t, "nav.nonexistent", calls[0].id)
+	assert.Equal(t, "example.templ:4: nav.nonexistent", calls[0].String())
 
 	catalogue, err := parseCatalogue(localeFS, localesDir)
 	require.NoError(t, err)

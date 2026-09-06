@@ -3,6 +3,8 @@ package i18n
 import (
 	"fmt"
 	"io/fs"
+	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -165,46 +167,24 @@ func TestCatalogueTheShippedFilesMatch(t *testing.T) {
 	assert.Empty(t, issues, "the shipped catalogues disagree: %v", issues)
 }
 
+// T038: a catalogue.md invariant (a)/(b) fixture backed by a real file on
+// disk under testdata/, rather than an inline fstest.MapFS, so the exact
+// failure text is checked against the same shape a real omission would
+// produce.
 func TestCatalogueDetectsAMissingID(t *testing.T) {
 	t.Parallel()
 
-	fsys := fstest.MapFS{
-		"locales/active.en.toml": &fstest.MapFile{Data: []byte(`
-[language.name]
-other = "English"
-[nav.timeline]
-other = "Timeline"
-`)},
-		"locales/active.pl.toml": &fstest.MapFile{Data: []byte(`
-[language.name]
-other = "Polski"
-`)},
-	}
-
-	issues, err := catalogueIssues(fsys, "locales")
+	issues, err := catalogueIssues(os.DirFS("testdata/missing-id"), "locales")
 	require.NoError(t, err)
-	assert.Contains(t, issues, "pl: missing nav.timeline")
+	assert.Equal(t, []string{"pl: missing nav.timeline"}, issues)
 }
 
 func TestCatalogueDetectsASurplusID(t *testing.T) {
 	t.Parallel()
 
-	fsys := fstest.MapFS{
-		"locales/active.en.toml": &fstest.MapFile{Data: []byte(`
-[language.name]
-other = "English"
-`)},
-		"locales/active.pl.toml": &fstest.MapFile{Data: []byte(`
-[language.name]
-other = "Polski"
-[nav.timeline]
-other = "Oś czasu"
-`)},
-	}
-
-	issues, err := catalogueIssues(fsys, "locales")
+	issues, err := catalogueIssues(os.DirFS("testdata/surplus-id"), "locales")
 	require.NoError(t, err)
-	assert.Contains(t, issues, "pl: surplus nav.timeline")
+	assert.Equal(t, []string{"pl: surplus nav.timeline"}, issues)
 }
 
 func TestCatalogueDetectsIncompletePluralForms(t *testing.T) {
@@ -232,4 +212,148 @@ other = "{{.PluralCount}} alergii"
 	require.NotEmpty(t, issues)
 	assert.Contains(t, issues[0], "kind.allergy")
 	assert.Contains(t, issues[0], "pl:")
+}
+
+// idPattern is US3-5/D-03: an id is dotted, lowercase, ASCII, at least one
+// dot (contracts/catalogue.md §3's "namespace, then name" shape).
+var idPattern = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$`)
+
+// idIsItsOwnText reports whether id itself, dots and underscores turned to
+// spaces and lowercased, is exactly the message's own English text — an id
+// that degenerates into a copy of what it says (contracts/catalogue.md's
+// "search.term" would collide with "Search term") would force a rename on
+// every copy edit, unlike a single meaningful word shared between an id's
+// last segment and a short label (action.save / "Save", which contracts/
+// catalogue.md §3 gives as its own example of a *good* id) — comparing the
+// full dotted id rather than only its last segment is what tells the two
+// apart. Ids whose last segment is 3 characters or fewer are skipped: short
+// abbreviations coincide with short words too often to be a useful signal.
+func idIsItsOwnText(id string, m *goi18n.Message) bool {
+	segs := strings.Split(id, ".")
+	if len(segs[len(segs)-1]) <= 3 {
+		return false
+	}
+
+	asText := strings.ReplaceAll(strings.ReplaceAll(strings.ToLower(id), ".", " "), "_", " ")
+
+	for _, form := range []string{m.Other, m.One} {
+		if form != "" && strings.ToLower(form) == asText {
+			return true
+		}
+	}
+
+	return false
+}
+
+// catalogueLintIssues is US3-5/D-03: every en message names a non-empty
+// description, every id matches idPattern, and no id is its own English text
+// (lastSegmentIsItsOwnText). Checked against active.en.toml only — a
+// translation file's own text is not what an id is named for.
+func catalogueLintIssues(fsys fs.FS, dir string) ([]string, error) {
+	files, err := parseCatalogue(fsys, dir)
+	if err != nil {
+		return nil, err
+	}
+
+	en, ok := files["en"]
+	if !ok {
+		return nil, fmt.Errorf("no active.en.toml under %s", dir)
+	}
+
+	var issues []string
+
+	for id, m := range en.messages {
+		if m.Description == "" {
+			issues = append(issues, fmt.Sprintf("%s: no description", id))
+		}
+
+		if !idPattern.MatchString(id) {
+			issues = append(issues, fmt.Sprintf("%s: id does not match %s", id, idPattern.String()))
+		}
+
+		if idIsItsOwnText(id, m) {
+			issues = append(issues, fmt.Sprintf("%s: id is its own English text", id))
+		}
+	}
+
+	sort.Strings(issues)
+
+	return issues, nil
+}
+
+// TestCatalogueLintTheShippedEnglishFile is expected to be red until
+// active.en.toml itself is fixed: at the time this test was written it
+// reports six page.*.title ids with a camelCase segment (idPattern requires
+// lowercase throughout) and one id ("search.term") that is its own English
+// text. This test does not fix active.en.toml — that file is owned by
+// another change — it only reports the violation, per US3-5/D-03.
+func TestCatalogueLintTheShippedEnglishFile(t *testing.T) {
+	t.Parallel()
+
+	issues, err := catalogueLintIssues(localeFS, localesDir)
+	require.NoError(t, err)
+	assert.Empty(t, issues, "active.en.toml fails the id/description lint: %v", issues)
+}
+
+func TestCatalogueLintDetectsAMissingDescription(t *testing.T) {
+	t.Parallel()
+
+	fsys := fstest.MapFS{
+		"locales/active.en.toml": &fstest.MapFile{Data: []byte(`
+[nav.timeline]
+other = "Timeline"
+`)},
+	}
+
+	issues, err := catalogueLintIssues(fsys, "locales")
+	require.NoError(t, err)
+	assert.Contains(t, issues, "nav.timeline: no description")
+}
+
+func TestCatalogueLintDetectsABadID(t *testing.T) {
+	t.Parallel()
+
+	fsys := fstest.MapFS{
+		"locales/active.en.toml": &fstest.MapFile{Data: []byte(`
+[NavTimeline]
+description = "Bad shape: not dotted, not lowercase"
+other = "Timeline"
+`)},
+	}
+
+	issues, err := catalogueLintIssues(fsys, "locales")
+	require.NoError(t, err)
+	assert.Contains(t, issues, "NavTimeline: id does not match "+idPattern.String())
+}
+
+func TestCatalogueLintDetectsAnIDThatIsItsOwnText(t *testing.T) {
+	t.Parallel()
+
+	fsys := fstest.MapFS{
+		"locales/active.en.toml": &fstest.MapFile{Data: []byte(`
+[search.term]
+description = "Placeholder text in the record search box"
+other = "Search term"
+`)},
+	}
+
+	issues, err := catalogueLintIssues(fsys, "locales")
+	require.NoError(t, err)
+	assert.Contains(t, issues, "search.term: id is its own English text")
+}
+
+func TestCatalogueLintDoesNotFlagASingleWordThatMatchesItsLastSegment(t *testing.T) {
+	t.Parallel()
+
+	fsys := fstest.MapFS{
+		"locales/active.en.toml": &fstest.MapFile{Data: []byte(`
+[action.save]
+description = "The submit button on every form"
+other = "Save"
+`)},
+	}
+
+	issues, err := catalogueLintIssues(fsys, "locales")
+	require.NoError(t, err)
+	assert.Empty(t, issues, "action.save is contracts/catalogue.md §3's own example of a good id")
 }

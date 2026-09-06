@@ -1,0 +1,7 @@
+[language.name]
+description = "This language's own name for itself"
+other = "Polski"
+
+[nav.timeline]
+description = "Primary navigation: the timeline link"
+other = "Oś czasu"

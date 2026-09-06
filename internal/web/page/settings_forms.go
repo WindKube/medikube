@@ -5,6 +5,7 @@ import (
 
 	"medikube/internal/domain/access"
 	domainidentity "medikube/internal/domain/identity"
+	"medikube/internal/i18n"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
 	"medikube/internal/web/views/ids"
@@ -42,7 +43,7 @@ func (f settingsForms) Updated(ctx context.Context, _ access.Actor, user domaini
 		Name:           user.Name,
 		UnitSystems:    unitSystemOptions(ctx, user.UnitSystem),
 		Locale:         user.Locale,
-		Locales:        localeOptions(user.Locale),
+		Locales:        localeOptions(i18n.Supported(), user.Locale),
 		DateFormats:    dateFormatOptions(ctx, user.DateFormat),
 		Themes:         themeOptions(ctx, user.Theme),
 	}), nil
