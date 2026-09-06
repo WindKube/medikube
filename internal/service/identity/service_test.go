@@ -38,6 +38,31 @@ func newHarness(t *testing.T) harness { return wire(t, false) }
 
 func newOpenHarness(t *testing.T) harness { return wire(t, true) }
 
+// newOpenHarnessWithLocalePredicate is registration-open plus a
+// SupportedLocale, for T035's Register-locale tests: those need both an open
+// door and a catalogue to fall back against.
+func newOpenHarnessWithLocalePredicate(t *testing.T, predicate func(string) bool) harness {
+	t.Helper()
+
+	repository := identitytest.NewRepository()
+	authenticator := identitytest.NewAuthenticator(repository)
+	mailer := identitytest.NewMailer()
+	auditor := identitytest.NewAuditor()
+
+	service, err := identity.New(identity.Config{
+		Repository:       repository,
+		Authenticator:    authenticator,
+		Mailer:           mailer,
+		Auditor:          auditor,
+		Clock:            identitytest.NewClock(),
+		RegistrationOpen: true,
+		SupportedLocale:  predicate,
+	})
+	require.NoError(t, err)
+
+	return harness{service: service, repository: repository, authenticator: authenticator, mailer: mailer, auditor: auditor}
+}
+
 func wire(t *testing.T, registrationOpen bool) harness {
 	t.Helper()
 
@@ -185,6 +210,56 @@ func TestRegisterCreatesTheAccountAndRecordsIt(t *testing.T) {
 	assert.Equal(t, created.ID, event.ActorID, "the account that was just created is who created it")
 }
 
+// TestRegisterAppliesTheSubmittedLocale is FR-004 and T035: a registration
+// carrying a locale the instance ships stores it on the new account rather
+// than DefaultLocale.
+func TestRegisterAppliesTheSubmittedLocale(t *testing.T) {
+	t.Parallel()
+
+	h := newOpenHarnessWithLocalePredicate(t, func(locale string) bool { return locale == "pl" })
+
+	created, err := h.service.Register(t.Context(), access.Anonymous(requestID), identity.Registration{
+		Email:    "new@example.test",
+		Name:     "New Person",
+		Password: identitytest.Password,
+		Locale:   "pl",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "pl", created.Locale)
+}
+
+// TestRegisterFallsBackToDefaultLocale is D-10: an empty locale, or one the
+// instance does not ship a catalogue for, falls back to
+// identity.DefaultLocale rather than refusing the sign-up.
+func TestRegisterFallsBackToDefaultLocale(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		locale string
+	}{
+		{"empty", ""},
+		{"unsupported", "xx"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			h := newOpenHarnessWithLocalePredicate(t, func(locale string) bool { return locale == "pl" })
+
+			created, err := h.service.Register(t.Context(), access.Anonymous(requestID), identity.Registration{
+				Email:    test.name + "@example.test",
+				Name:     "New Person",
+				Password: identitytest.Password,
+				Locale:   test.locale,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, domainidentity.DefaultLocale, created.Locale)
+		})
+	}
+}
+
 // TestRegistrationIsRefusedWhenTheOperatorHasClosedIt is FR-002, and the second
 // half is the half that matters: a refused registration leaves nothing behind.
 func TestRegistrationIsRefusedWhenTheOperatorHasClosedIt(t *testing.T) {
@@ -272,14 +347,15 @@ func TestRegisterReportsEveryOffendingFieldAtOnce(t *testing.T) {
 	assert.Empty(t, h.repository.Writes())
 }
 
-// TestARegistrationCanCarryNothingButTheThreeThingsFRoneAsksFor is FR-012
+// TestARegistrationCanCarryNothingButTheFourThingsFRoneAsksFor is FR-012
 // enforced by shape rather than by a check somebody can forget: there is no
 // member on the type a role or an account status could arrive in, so a caller
-// inside this process cannot promote itself either.
-func TestARegistrationCanCarryNothingButTheThreeThingsFRoneAsksFor(t *testing.T) {
+// inside this process cannot promote itself either. Locale is the one
+// addition FR-004 asks for.
+func TestARegistrationCanCarryNothingButTheFourThingsFRoneAsksFor(t *testing.T) {
 	t.Parallel()
 
-	assert.ElementsMatch(t, []string{"Email", "Name", "Password"}, membersOf(reflect.TypeOf(identity.Registration{})))
+	assert.ElementsMatch(t, []string{"Email", "Name", "Password", "Locale"}, membersOf(reflect.TypeOf(identity.Registration{})))
 }
 
 // TestAProfileCanCarryNothingButTheFiveThingsFRelevenAsksFor. Same enforcement,

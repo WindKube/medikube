@@ -60,6 +60,12 @@ type Registration struct {
 	Email    string
 	Name     string
 	Password string
+
+	// Locale is the language the session that submitted this was browsing in
+	// (FR-004, D-10). Empty falls back to identity.DefaultLocale, and a value
+	// Register does not recognise falls back the same way rather than
+	// refusing the sign-up over it.
+	Locale string
 }
 
 // Repository is the account storage seam, declared by the consumer

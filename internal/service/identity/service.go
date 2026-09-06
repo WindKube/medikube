@@ -1,11 +1,10 @@
 package identity
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
-
-	"context"
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
@@ -187,7 +186,7 @@ func (s *Service) Register(ctx context.Context, actor access.Actor, registration
 		Name:       strings.TrimSpace(registration.Name),
 		Role:       identity.DefaultRole,
 		UnitSystem: identity.DefaultUnitSystem,
-		Locale:     identity.DefaultLocale,
+		Locale:     s.registrationLocale(registration.Locale),
 		DateFormat: identity.DefaultDateFormat,
 		Theme:      identity.DefaultTheme,
 	}
@@ -341,6 +340,19 @@ func (s *Service) DeleteAccount(ctx context.Context, actor access.Actor, passwor
 	}
 
 	return s.repository.Delete(ctx, user.ID)
+}
+
+// registrationLocale is FR-004's fallback: an empty or unrecognised locale
+// falls back to identity.DefaultLocale rather than failing the sign-up — the
+// account still gets created, just in English, so a caller's browser
+// (something outside anybody's control) never blocks the one thing this
+// request is for.
+func (s *Service) registrationLocale(locale string) string {
+	if locale == "" || s.supportedLocale == nil || !s.supportedLocale(locale) {
+		return identity.DefaultLocale
+	}
+
+	return locale
 }
 
 // validateLocale reports whether locale is one this instance ships a

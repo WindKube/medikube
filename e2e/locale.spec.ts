@@ -144,3 +144,40 @@ test.describe('a Polish account touring the application', () => {
     await assertPolishPage(page, `/timeline?patient=${patientID}`, polishTitle('nav.timeline'));
   });
 });
+
+// T036 (US2-1, US2-3). A browser whose OWN locale is Polish, with no account
+// and no stored session: the sign-in page is already in Polish (FR-003), and
+// an account created from it is created Polish (FR-004) with no PATCH here —
+// unlike newPolishAccount above, which sets the locale itself because that
+// spec is about an ACCOUNT's language, not the browser's.
+test.describe('a browser whose own language is Polish, before it has an account', () => {
+  test.use({ signedInAs: 'anonymous', locale: 'pl-PL' });
+
+  test('the sign-in page is Polish, and an account created from it is Polish from the first signed-in page', async ({
+    page,
+  }) => {
+    const signInResponse = await page.goto(fixtures.pages.login.path);
+    expect(signInResponse, 'no response for the sign-in page').not.toBeNull();
+    expect(signInResponse!.status()).toBe(200);
+
+    await expect(page.locator('html')).toHaveAttribute('lang', 'pl');
+    await expect(page).toHaveTitle(polishTitle('action.sign_in'));
+    await expect(page.getByText(tomlOther('pl', 'auth.forgot_password_link'))).toBeVisible();
+
+    const email = `locale-browser-${randomUUID().slice(0, 8)}@example.test`;
+    // page.request does not carry the browser context's locale, so the header
+    // the browser itself would send is set by hand.
+    const registered = await page.request.post(fixtures.registerPath, {
+      data: { email, name: 'Locale Browser', password: fixtures.password },
+      headers: { 'Accept-Language': 'pl-PL,pl;q=0.9' },
+    });
+    expect(registered.status(), await registered.text()).toBe(201);
+
+    const me = await page.request.get('/api/v1/me');
+    expect(me.status(), await me.text()).toBe(200);
+    const body = (await me.json()) as { locale: string };
+    expect(body.locale, "the account's own locale must be Polish (FR-004)").toBe('pl');
+
+    await assertPolishPage(page, '/', polishTitle('nav.overview'));
+  });
+});

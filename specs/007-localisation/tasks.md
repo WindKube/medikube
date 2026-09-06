@@ -90,10 +90,10 @@ Each task: replace every literal phrase in its files with `i18n.T(ctx, "<id>")` 
 
 ## Phase 4: User Story 2 — Before I have an account (P2)
 
-- [ ] T033 [P] [US2] Failing HTTP tests `internal/web/page/anonymous_locale_test.go`: `/login`, `/register`, recovery with `Accept-Language: pl` → Polish title and `lang="pl"`; `Accept-Language: de` → English; `Accept-Language: pl-PL;q=0.9,en;q=0.8` → Polish (US2-1, US2-2; Edge Cases: region)
-- [ ] T034 [US2] Failing test `internal/web/api/signup_locale_test.go`: sign-up with `Accept-Language: pl` creates the account with `locale = "pl"` and the first page after sign-in is Polish; sign-in from `Accept-Language: en` for that account stays Polish (FR-004, US2-3, US2-4)
-- [ ] T035 [US2] [EDIT] `internal/service/identity/service.go` `Registration` gains `Locale string`, applied by `Register(ctx, actor, registration)`; the sign-up handler fills it from `i18n.From(ctx).Tag.String()`; `identity.DefaultLocale` remains the fallback (FR-004, D-10)
-- [ ] T036 [US2] `e2e/locale.spec.ts` [EDIT]: a browser context with `locale: 'pl-PL'` sees the Polish sign-in page; creates an account; the first signed-in page is Polish; both viewports (US2-1, US2-3)
+- [x] T033 [P] [US2] Failing HTTP tests `internal/web/page/anonymous_locale_test.go`: `/login`, `/register`, recovery with `Accept-Language: pl` → Polish title and `lang="pl"`; `Accept-Language: de` → English; `Accept-Language: pl-PL;q=0.9,en;q=0.8` → Polish (US2-1, US2-2; Edge Cases: region)
+- [x] T034 [US2] Failing test `internal/web/api/signup_locale_test.go`: sign-up with `Accept-Language: pl` creates the account with `locale = "pl"` and the first page after sign-in is Polish; sign-in from `Accept-Language: en` for that account stays Polish (FR-004, US2-3, US2-4)
+- [x] T035 [US2] [EDIT] `internal/service/identity/service.go` `Registration` gains `Locale string`, applied by `Register(ctx, actor, registration)`; the sign-up handler fills it from `i18n.From(ctx).Tag.String()`; `identity.DefaultLocale` remains the fallback (FR-004, D-10)
+- [x] T036 [US2] `e2e/locale.spec.ts` [EDIT]: a browser context with `locale: 'pl-PL'` sees the Polish sign-in page; creates an account; the first signed-in page is Polish; both viewports (US2-1, US2-3)
 
 ---
 
