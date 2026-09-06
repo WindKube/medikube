@@ -43,40 +43,43 @@ var insuranceFields = []string{
 func InsuranceFields() []string { return append([]string(nil), insuranceFields...) }
 
 func init() {
-	fieldLabels[FieldCompany] = "Insurer"
-	fieldLabels[FieldPlanName] = "Plan name"
-	fieldLabels[FieldEmployerGroup] = "Employer group"
-	fieldLabels[FieldMemberName] = "Member name"
-	fieldLabels[FieldMemberID] = "Member ID"
-	fieldLabels[FieldGroupNumber] = "Group number"
-	fieldLabels[FieldHolderName] = "Policy holder"
-	fieldLabels[FieldRelationshipToHolder] = "Relationship to holder"
-	fieldLabels[FieldEffectiveOn] = "Cover starts"
-	fieldLabels[FieldExpiresOn] = "Cover ends"
-	fieldLabels[FieldIsPrimary] = "Primary policy"
+	fieldLabels[FieldCompany] = "field.insurance.company"
+	fieldLabels[FieldPlanName] = "field.insurance.plan_name"
+	fieldLabels[FieldEmployerGroup] = "field.insurance.employer_group"
+	fieldLabels[FieldMemberName] = "field.insurance.member_name"
+	fieldLabels[FieldMemberID] = "field.insurance.member_id"
+	fieldLabels[FieldGroupNumber] = "field.insurance.group_number"
+	fieldLabels[FieldHolderName] = "field.insurance.holder_name"
+	fieldLabels[FieldRelationshipToHolder] = "field.insurance.relationship_to_holder"
+	fieldLabels[FieldEffectiveOn] = "field.insurance.effective_on"
+	fieldLabels[FieldExpiresOn] = "field.insurance.expires_on"
+	fieldLabels[FieldIsPrimary] = "field.insurance.is_primary"
 }
 
+// The values below are message ids (D-06), resolved at render time.
 var insuranceTypeLabels = map[clinical.InsuranceType]string{
-	clinical.InsuranceTypeMedical:      "Medical",
-	clinical.InsuranceTypeDental:       "Dental",
-	clinical.InsuranceTypeVision:       "Vision",
-	clinical.InsuranceTypePrescription: "Prescription",
-	clinical.InsuranceTypeOther:        "Other",
+	clinical.InsuranceTypeMedical:      "enum.insurance_type.medical",
+	clinical.InsuranceTypeDental:       "enum.insurance_type.dental",
+	clinical.InsuranceTypeVision:       "enum.insurance_type.vision",
+	clinical.InsuranceTypePrescription: "enum.insurance_type.prescription",
+	clinical.InsuranceTypeOther:        "enum.insurance_type.other",
 }
 
+// insuranceStatusLabels' Active/Inactive reuse condition_status's vocabulary
+// (identical English text); Expired/Pending are insurance-specific.
 var insuranceStatusLabels = map[clinical.InsuranceStatus]string{
-	clinical.InsuranceStatusActive:   "Active",
-	clinical.InsuranceStatusInactive: "Inactive",
-	clinical.InsuranceStatusExpired:  "Expired",
-	clinical.InsuranceStatusPending:  "Pending",
+	clinical.InsuranceStatusActive:   "enum.condition_status.active",
+	clinical.InsuranceStatusInactive: "enum.condition_status.inactive",
+	clinical.InsuranceStatusExpired:  "enum.insurance_status.expired",
+	clinical.InsuranceStatusPending:  "enum.insurance_status.pending",
 }
 
 var holderRelationshipLabels = map[clinical.HolderRelationship]string{
-	clinical.HolderRelationshipSelf:      "Self",
-	clinical.HolderRelationshipSpouse:    "Spouse",
-	clinical.HolderRelationshipChild:     "Child",
-	clinical.HolderRelationshipDependent: "Dependent",
-	clinical.HolderRelationshipOther:     "Other",
+	clinical.HolderRelationshipSelf:      "enum.holder_relationship.self",
+	clinical.HolderRelationshipSpouse:    "enum.holder_relationship.spouse",
+	clinical.HolderRelationshipChild:     "enum.holder_relationship.child",
+	clinical.HolderRelationshipDependent: "enum.holder_relationship.dependent",
+	clinical.HolderRelationshipOther:     "enum.holder_relationship.other",
 }
 
 func InsuranceTypeLabel(value clinical.InsuranceType) string {
@@ -199,7 +202,7 @@ func NewInsuranceView(entity clinical.Insurance, basis []string, links Insurance
 func (v InsuranceView) Entries() []DetailEntry {
 	primary := ""
 	if v.IsPrimary {
-		primary = "Yes"
+		primary = "enum.bool.yes"
 	}
 
 	candidates := []DetailEntry{
@@ -209,11 +212,11 @@ func (v InsuranceView) Entries() []DetailEntry {
 		{Field: FieldMemberID, Value: v.MemberID},
 		{Field: FieldGroupNumber, Value: v.GroupNumber},
 		{Field: FieldHolderName, Value: v.HolderName},
-		{Field: FieldRelationshipToHolder, Value: v.Relationship},
+		{Field: FieldRelationshipToHolder, Value: v.Relationship, Translate: true},
 		{Field: FieldEffectiveOn, Value: v.EffectiveOn, Datetime: v.EffectiveOn},
 		{Field: FieldExpiresOn, Value: v.ExpiresOn, Datetime: v.ExpiresOn},
-		{Field: FieldStatus, Value: v.Status},
-		{Field: FieldIsPrimary, Value: primary},
+		{Field: FieldStatus, Value: v.Status, Translate: true},
+		{Field: FieldIsPrimary, Value: primary, Translate: true},
 		{Field: FieldNotes, Value: v.Notes, Multiline: true},
 		{Field: FieldCreated, Value: v.Created.Human, Datetime: v.Created.Machine},
 		{Field: FieldLastChanged, Value: v.LastChanged.Human, Datetime: v.LastChanged.Machine},
@@ -265,18 +268,18 @@ type InsuranceFormProps struct {
 
 func (p InsuranceFormProps) Label() string {
 	if p.New {
-		return "Record an insurance policy"
+		return "page.insurance.record"
 	}
 
-	return "Edit insurance policy"
+	return "page.insurance.edit"
 }
 
 func (p InsuranceFormProps) SubmitLabel() string {
 	if p.New {
-		return "Record it"
+		return "action.record_it"
 	}
 
-	return "Save changes"
+	return "action.save_changes"
 }
 
 func (v InsuranceView) TypeOptions() []Option {

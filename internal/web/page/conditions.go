@@ -13,6 +13,7 @@ import (
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	recordfamily "medikube/internal/records"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -26,7 +27,8 @@ const (
 	OpConditionDetailPage = "conditionDetailPage"
 )
 
-const conditionListTitle = "Conditions"
+// conditionListTitleID is a message id (D-06), resolved at render time.
+const conditionListTitleID = "page.conditions.title"
 
 // ConditionHandlers is the condition pages' contribution to the route table.
 func ConditionHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
@@ -206,7 +208,9 @@ func (p *conditionPages) list(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	return p.render(e, actor, conditionListTitle, sequence{
+	web.Localize(e)
+
+	return p.render(e, actor, i18n.T(e.Request.Context(), conditionListTitleID), sequence{
 		context,
 		p.views.ListOfPage(listing, nextPageHref(e, listing)),
 		entry.Views.Form(blank, nil, ""),

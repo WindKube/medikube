@@ -30,30 +30,31 @@ var familyMemberFields = []string{
 func FamilyMemberFields() []string { return append([]string(nil), familyMemberFields...) }
 
 func init() {
-	fieldLabels[FieldFamilyRelationship] = "Relationship"
-	fieldLabels[FieldSex] = "Sex"
-	fieldLabels[FieldBirthYear] = "Year of birth"
-	fieldLabels[FieldDeathYear] = "Year of death"
-	fieldLabels[FieldIsDeceased] = "Deceased"
-	fieldLabels[FieldConditions] = "Conditions"
+	fieldLabels[FieldFamilyRelationship] = "field.relationship"
+	fieldLabels[FieldSex] = "field.family_member.sex"
+	fieldLabels[FieldBirthYear] = "field.family_member.birth_year"
+	fieldLabels[FieldDeathYear] = "field.family_member.death_year"
+	fieldLabels[FieldIsDeceased] = "field.family_member.is_deceased"
+	fieldLabels[FieldConditions] = "field.family_member.conditions"
 }
 
+// The values below are message ids (D-06), resolved at render time.
 var familyRelationshipLabels = map[clinical.FamilyRelationship]string{
-	clinical.FamilyRelationshipMother:      "Mother",
-	clinical.FamilyRelationshipFather:      "Father",
-	clinical.FamilyRelationshipSister:      "Sister",
-	clinical.FamilyRelationshipBrother:     "Brother",
-	clinical.FamilyRelationshipDaughter:    "Daughter",
-	clinical.FamilyRelationshipSon:         "Son",
-	clinical.FamilyRelationshipGrandmother: "Grandmother",
-	clinical.FamilyRelationshipGrandfather: "Grandfather",
-	clinical.FamilyRelationshipAunt:        "Aunt",
-	clinical.FamilyRelationshipUncle:       "Uncle",
-	clinical.FamilyRelationshipCousin:      "Cousin",
-	clinical.FamilyRelationshipNiece:       "Niece",
-	clinical.FamilyRelationshipNephew:      "Nephew",
-	clinical.FamilyRelationshipHalfSibling: "Half-sibling",
-	clinical.FamilyRelationshipOther:       "Other",
+	clinical.FamilyRelationshipMother:      "enum.family_relationship.mother",
+	clinical.FamilyRelationshipFather:      "enum.family_relationship.father",
+	clinical.FamilyRelationshipSister:      "enum.family_relationship.sister",
+	clinical.FamilyRelationshipBrother:     "enum.family_relationship.brother",
+	clinical.FamilyRelationshipDaughter:    "enum.family_relationship.daughter",
+	clinical.FamilyRelationshipSon:         "enum.family_relationship.son",
+	clinical.FamilyRelationshipGrandmother: "enum.family_relationship.grandmother",
+	clinical.FamilyRelationshipGrandfather: "enum.family_relationship.grandfather",
+	clinical.FamilyRelationshipAunt:        "enum.family_relationship.aunt",
+	clinical.FamilyRelationshipUncle:       "enum.family_relationship.uncle",
+	clinical.FamilyRelationshipCousin:      "enum.family_relationship.cousin",
+	clinical.FamilyRelationshipNiece:       "enum.family_relationship.niece",
+	clinical.FamilyRelationshipNephew:      "enum.family_relationship.nephew",
+	clinical.FamilyRelationshipHalfSibling: "enum.family_relationship.half_sibling",
+	clinical.FamilyRelationshipOther:       "enum.family_relationship.other",
 }
 
 func FamilyRelationshipLabel(value clinical.FamilyRelationship) string {
@@ -71,11 +72,12 @@ func FamilyRelationshipOptions(selected clinical.FamilyRelationship) []Option {
 	return options
 }
 
+// The values below are message ids (D-06), resolved at render time.
 var sexLabels = map[person.Sex]string{
-	person.SexFemale:      "Female",
-	person.SexMale:        "Male",
-	person.SexIntersex:    "Intersex",
-	person.SexUnspecified: "Unspecified",
+	person.SexFemale:      "enum.sex.female",
+	person.SexMale:        "enum.sex.male",
+	person.SexIntersex:    "enum.sex.intersex",
+	person.SexUnspecified: "enum.sex.unspecified",
 }
 
 func SexLabel(value person.Sex) string {
@@ -216,18 +218,18 @@ type FamilyMemberFormProps struct {
 
 func (p FamilyMemberFormProps) Label() string {
 	if p.New {
-		return "Record a relative"
+		return "page.family_member.record"
 	}
 
-	return "Edit relative"
+	return "page.family_member.edit"
 }
 
 func (p FamilyMemberFormProps) SubmitLabel() string {
 	if p.New {
-		return "Record it"
+		return "action.record_it"
 	}
 
-	return "Save changes"
+	return "action.save_changes"
 }
 
 func (v FamilyMemberView) RelationshipOptions() []Option {
@@ -257,8 +259,8 @@ func (v FamilyMemberView) Value(field string) string {
 
 func (v FamilyMemberView) Entries() []DetailEntry {
 	candidates := []DetailEntry{
-		{Field: FieldFamilyRelationship, Value: v.Relationship},
-		{Field: FieldSex, Value: v.Sex},
+		{Field: FieldFamilyRelationship, Value: v.Relationship, Translate: true},
+		{Field: FieldSex, Value: v.Sex, Translate: true},
 		{Field: FieldBirthYear, Value: v.BirthYear},
 		{Field: FieldDeathYear, Value: v.DeathYear},
 		{Field: FieldCreated, Value: v.Created.Human, Datetime: v.Created.Machine},

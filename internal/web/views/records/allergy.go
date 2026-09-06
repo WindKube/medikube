@@ -12,28 +12,32 @@ const (
 	FieldOnsetOn  = "onset_on"
 )
 
+// AllergyFormLabelCreate and AllergyFormLabelEdit are message ids (D-06):
+// the templ resolves them via i18n.T(ctx, ...) at render time.
 const (
-	AllergyFormLabelCreate = "Record an allergy"
-	AllergyFormLabelEdit   = "Edit allergy"
+	AllergyFormLabelCreate = "page.allergy.record"
+	AllergyFormLabelEdit   = "page.allergy.edit"
 )
 
+// severityLabels' values are message ids (D-06), resolved at render time.
 var severityLabels = map[clinical.Severity]string{
-	clinical.SeverityMild:            "Mild",
-	clinical.SeverityModerate:        "Moderate",
-	clinical.SeveritySevere:          "Severe",
-	clinical.SeverityLifeThreatening: "Life-threatening",
+	clinical.SeverityMild:            "enum.severity.mild",
+	clinical.SeverityModerate:        "enum.severity.moderate",
+	clinical.SeveritySevere:          "enum.severity.severe",
+	clinical.SeverityLifeThreatening: "enum.severity.life_threatening",
 }
 
 func SeverityLabel(value clinical.Severity) string {
 	return label(string(value), severityLabels[value])
 }
 
+// conditionStatusLabels' values are message ids (D-06), resolved at render time.
 var conditionStatusLabels = map[clinical.ConditionStatus]string{
-	clinical.ConditionStatusActive:   "Active",
-	clinical.ConditionStatusHealing:  "Healing",
-	clinical.ConditionStatusInactive: "Inactive",
-	clinical.ConditionStatusResolved: "Resolved",
-	clinical.ConditionStatusChronic:  "Chronic",
+	clinical.ConditionStatusActive:   "enum.condition_status.active",
+	clinical.ConditionStatusHealing:  "enum.condition_status.healing",
+	clinical.ConditionStatusInactive: "enum.condition_status.inactive",
+	clinical.ConditionStatusResolved: "enum.condition_status.resolved",
+	clinical.ConditionStatusChronic:  "enum.condition_status.chronic",
 }
 
 func ConditionStatusLabel(value clinical.ConditionStatus) string {
@@ -122,8 +126,8 @@ func (a AllergyView) StatusOptions() []Option {
 func (a AllergyView) Entries() []DetailEntry {
 	candidates := []DetailEntry{
 		{Field: FieldReaction, Value: a.Reaction, Multiline: true},
-		{Field: FieldSeverity, Value: a.Severity},
-		{Field: FieldStatus, Value: a.Status},
+		{Field: FieldSeverity, Value: a.Severity, Translate: true},
+		{Field: FieldStatus, Value: a.Status, Translate: true},
 		{Field: FieldOnsetOn, Value: a.OnsetOn, Datetime: a.OnsetOn},
 		{Field: FieldNotes, Value: a.Notes, Multiline: true},
 		{Field: FieldCreated, Value: a.Created.Human, Datetime: a.Created.Machine},
@@ -144,15 +148,16 @@ func (a AllergyView) Entries() []DetailEntry {
 	return entries
 }
 
+// Values are message ids (D-06), resolved at render time.
 var allergyFieldLabels = map[string]string{
-	FieldAllergen:    "Allergen",
-	FieldReaction:    "Reaction",
-	FieldSeverity:    "Severity",
-	FieldStatus:      "State",
-	FieldOnsetOn:     "First noticed",
-	FieldNotes:       "Notes",
-	FieldCreated:     "Recorded",
-	FieldLastChanged: "Last changed",
+	FieldAllergen:    "field.allergy.allergen",
+	FieldReaction:    "field.allergy.reaction",
+	FieldSeverity:    "field.severity",
+	FieldStatus:      "field.status",
+	FieldOnsetOn:     "field.allergy.onset_on",
+	FieldNotes:       "field.notes",
+	FieldCreated:     "field.recorded",
+	FieldLastChanged: "field.last_changed",
 }
 
 func allergyFieldLabel(field string) string {
@@ -218,8 +223,8 @@ func (p AllergyFormProps) Label() string {
 
 func (p AllergyFormProps) SubmitLabel() string {
 	if p.New {
-		return "Record it"
+		return "action.record_it"
 	}
 
-	return "Save changes"
+	return "action.save_changes"
 }

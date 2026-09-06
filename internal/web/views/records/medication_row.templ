@@ -2,6 +2,7 @@ package records
 
 import (
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/ids"
 )
 
@@ -24,25 +25,25 @@ templ MedicationRow(medication MedicationView) {
 		</th>
 		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
 			if medication.Dosage != "" {
-				<span class="sr-only">{ FieldLabel(FieldDosage) }</span>
+				<span class="sr-only">{ i18n.T(ctx, FieldLabel(FieldDosage)) }</span>
 				{ medication.Dosage }
 			}
 		</td>
 		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
 			if medication.Frequency != "" {
-				<span class="sr-only">{ FieldLabel(FieldFrequency) }</span>
+				<span class="sr-only">{ i18n.T(ctx, FieldLabel(FieldFrequency)) }</span>
 				{ medication.Frequency }
 			}
 		</td>
 		<td class="py-3 pr-4 align-top">
-			<span class="sr-only">{ FieldLabel(FieldStatus) }</span>
+			<span class="sr-only">{ i18n.T(ctx, FieldLabel(FieldStatus)) }</span>
 			<span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200">
-				{ medication.Status }
+				{ i18n.T(ctx, medication.Status) }
 			</span>
 		</td>
 		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
 			if medication.StartedOn != "" {
-				<span class="sr-only">{ FieldLabel(FieldStartedOn) }</span>
+				<span class="sr-only">{ i18n.T(ctx, FieldLabel(FieldStartedOn)) }</span>
 				<time datetime={ medication.StartedOn }>{ medication.StartedOn }</time>
 			}
 		</td>

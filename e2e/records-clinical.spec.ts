@@ -40,10 +40,23 @@ const vitalsListTitle = goString(
   "internal/web/page/vitals.go",
   "vitalsListTitle",
 );
-const familyMemberListTitle = goString(
-  "internal/web/views/records/familymember_list.templ",
-  "familyMemberListTitle",
+const englishCatalogue = readFileSync(
+  resolve(repositoryRoot, "internal/i18n/locales/active.en.toml"),
+  "utf8",
 );
+
+function catalogueEnglish(id: string): string {
+  const escaped = id.replace(/\./g, "\\.");
+  const found = new RegExp(`\\[${escaped}\\][^[]*?\\nother = "([^"]*)"`).exec(
+    englishCatalogue,
+  );
+  if (!found) {
+    throw new Error(`e2e: active.en.toml declares no ${id}`);
+  }
+  return found[1];
+}
+
+const familyMemberListTitle = catalogueEnglish("page.family_history.title");
 
 // Read from internal/testsupport/seed/seed_clinical.go rather than restated:
 // the episode's name is what the symptom detail page titles itself with, and

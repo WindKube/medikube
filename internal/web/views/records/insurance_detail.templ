@@ -2,6 +2,7 @@ package records
 
 import (
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web"
@@ -9,20 +10,21 @@ import (
 
 const insuranceConfirmSignal = "_confirming_delete"
 
+// The constants below are message ids (D-06), resolved at render time.
 const (
-	insuranceDetailArticle      = "Insurance policy"
-	insuranceConfirmTitle       = "Delete this policy?"
-	insuranceConfirmConsequence = "This is permanent. There is no recycle bin and no undo, so everything recorded here goes with it."
-	insuranceConfirmLabel      = "Delete permanently"
-	insuranceConfirmCancel     = "Keep it"
-	insuranceEditLabel         = "Edit"
-	insuranceDeleteLabel       = "Delete"
+	insuranceDetailArticle      = "a11y.insurance_detail"
+	insuranceConfirmTitle       = "confirm.delete_permanently"
+	insuranceConfirmConsequence = "confirm.delete_consequence_generic"
+	insuranceConfirmLabel       = "action.delete_permanently"
+	insuranceConfirmCancel      = "confirm.keep_it"
+	insuranceEditLabel          = "action.edit"
+	insuranceDeleteLabel        = "action.delete"
 )
 
 templ InsuranceDetail(props InsuranceDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Insurance, props.Insurance.ID) }
-		aria-label={ insuranceDetailArticle }
+		aria-label={ i18n.T(ctx, insuranceDetailArticle) }
 		data-signals={ "{" + insuranceConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Insurance.Version)) + "}" }
 		data-status={ props.Insurance.StatusValue }
 		class="flex flex-col"
@@ -38,19 +40,19 @@ templ InsuranceDetail(props InsuranceDetailProps) {
 					<a
 						href={ props.Insurance.Links.Edit }
 						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-					>{ insuranceEditLabel }</a>
+					>{ i18n.T(ctx, insuranceEditLabel) }</a>
 				}
 				<button
 					type="button"
 					id={ ids.RecordDelete(kind.Insurance, props.Insurance.ID) }
 					data-on:click={ "$" + insuranceConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-				>{ insuranceDeleteLabel }</button>
+				>{ i18n.T(ctx, insuranceDeleteLabel) }</button>
 			</div>
 		</header>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
 			for _, entry := range props.Insurance.Entries() {
-				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ i18n.T(ctx, entry.Label) }</dt>
 				@detailValue(entry)
 			}
 		</dl>
@@ -58,12 +60,12 @@ templ InsuranceDetail(props InsuranceDetailProps) {
 			ID:           ids.RecordConfirm(kind.Insurance, props.Insurance.ID),
 			ReturnTo: ids.RecordDelete(kind.Insurance, props.Insurance.ID),
 			Signal:       insuranceConfirmSignal,
-			Title:        insuranceConfirmTitle,
+			Title:        i18n.T(ctx, insuranceConfirmTitle),
 			Subject:      props.Insurance.Company,
-			Consequence:  insuranceConfirmConsequence,
-			ConfirmLabel: insuranceConfirmLabel,
+			Consequence:  i18n.T(ctx, insuranceConfirmConsequence),
+			ConfirmLabel: i18n.T(ctx, insuranceConfirmLabel),
 			ConfirmOn:    insuranceDeleteExpression(props.Insurance),
-			CancelLabel:  insuranceConfirmCancel,
+			CancelLabel:  i18n.T(ctx, insuranceConfirmCancel),
 		})
 	</article>
 }

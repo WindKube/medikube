@@ -1,6 +1,7 @@
 package records_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/testsupport/seed"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/records"
@@ -42,7 +44,8 @@ func TestTheRowShowsWhatIdentifiesTheMedication(t *testing.T) {
 		medication.Name, medication.Dosage, medication.Frequency,
 		medication.Status, medication.StartedOn,
 	} {
-		assert.Containsf(t, text, value, "FR-021 requires the row to show %q", value)
+		resolved := i18n.T(context.Background(), value)
+		assert.Containsf(t, text, resolved, "FR-021 requires the row to show %q", resolved)
 	}
 
 	link := tree.One(t, viewstest.Tag("a"))
@@ -56,9 +59,9 @@ func TestARowNeverRendersTheLabelOfAValueThatWasNotRecorded(t *testing.T) {
 	t.Parallel()
 
 	optional := []string{
-		records.FieldLabel(records.FieldDosage),
-		records.FieldLabel(records.FieldFrequency),
-		records.FieldLabel(records.FieldStartedOn),
+		i18n.T(context.Background(), records.FieldLabel(records.FieldDosage)),
+		i18n.T(context.Background(), records.FieldLabel(records.FieldFrequency)),
+		i18n.T(context.Background(), records.FieldLabel(records.FieldStartedOn)),
 	}
 	require.Len(t, optional, 3)
 

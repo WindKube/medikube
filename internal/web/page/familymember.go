@@ -14,6 +14,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/domain/person"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	recordfamily "medikube/internal/records"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -28,6 +29,11 @@ const (
 )
 
 const familyMemberListTitle = "Family history"
+
+// familyMemberListTitleID is a message id (D-06), resolved at render time.
+// The raw familyMemberListTitle stays as-is: shell.NavLink.Label (out of
+// scope, shell package) renders it unresolved.
+const familyMemberListTitleID = "page.family_history.title"
 
 // FamilyMemberHandlers is the record pages' contribution to the route table.
 func FamilyMemberHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
@@ -218,7 +224,9 @@ func (p *familyMemberPages) list(e *core.RequestEvent, actor access.Actor) error
 		return err
 	}
 
-	return p.render(e, actor, familyMemberListTitle, sequence{
+	web.Localize(e)
+
+	return p.render(e, actor, i18n.T(e.Request.Context(), familyMemberListTitleID), sequence{
 		context,
 		p.views.ListOfPage(listing, nextPageHref(e, listing)),
 		entry.Views.Form(blank, nil, ""),

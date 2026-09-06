@@ -13,6 +13,7 @@ import (
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	recordfamily "medikube/internal/records"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -26,7 +27,8 @@ const (
 	OpAllergyDetailPage = "allergyDetailPage"
 )
 
-const allergyListTitle = "Allergies"
+// allergyListTitleID is a message id (D-06), resolved at render time.
+const allergyListTitleID = "page.allergies.title"
 
 // AllergyHandlers is the allergy pages' contribution to the route table.
 func AllergyHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
@@ -203,7 +205,9 @@ func (p *allergyPages) list(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	return p.render(e, actor, allergyListTitle, sequence{
+	web.Localize(e)
+
+	return p.render(e, actor, i18n.T(e.Request.Context(), allergyListTitleID), sequence{
 		context,
 		p.views.ListOfPage(listing, nextPageHref(e, listing)),
 		entry.Views.Form(blank, nil, ""),
@@ -313,7 +317,7 @@ func (p *allergyPages) medicationsEditor(
 
 	return views.MedicationLinksEditorProps{
 		ID:         ids.RecordDetail(kind.Allergy, found.ID) + "-" + kind.Medication.Collection(),
-		Title:      "Medications",
+		Title:      i18n.T(ctx, "nav.medications"),
 		RecordHref: p.links.of(found.ID).Record,
 		Options:    options,
 		Roles:      []views.MedicationLinkRole{role},

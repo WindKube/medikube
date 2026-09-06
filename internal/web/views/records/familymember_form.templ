@@ -2,6 +2,7 @@ package records
 
 import (
 	viewtags "medikube/internal/web/views/tags"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 )
@@ -9,7 +10,7 @@ import (
 templ FamilyMemberForm(props FamilyMemberFormProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ props.Label() }
+		aria-label={ i18n.T(ctx, props.Label()) }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
@@ -30,12 +31,12 @@ templ FamilyMemberForm(props FamilyMemberFormProps) {
 			<button
 				type="submit"
 				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ props.SubmitLabel() }</button>
+			>{ i18n.T(ctx, props.SubmitLabel()) }</button>
 			if props.CancelHref != "" {
 				<a
 					href={ props.CancelHref }
 					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
-				>{ cancelLabel }</a>
+				>{ i18n.T(ctx, cancelLabel) }</a>
 			}
 		</div>
 	</form>
@@ -43,7 +44,7 @@ templ FamilyMemberForm(props FamilyMemberFormProps) {
 
 templ familyMemberTextControl(props FamilyMemberFormProps, field, inputType string, required bool) {
 	<div class="flex flex-col">
-		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ i18n.T(ctx, FieldLabel(field)) }</label>
 		<input
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -63,7 +64,7 @@ templ familyMemberTextControl(props FamilyMemberFormProps, field, inputType stri
 
 templ familyMemberSelectControl(props FamilyMemberFormProps, field string, options []Option, required bool) {
 	<div class="flex flex-col">
-		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ i18n.T(ctx, FieldLabel(field)) }</label>
 		<select
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -75,9 +76,9 @@ templ familyMemberSelectControl(props FamilyMemberFormProps, field string, optio
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>
 			if !required {
-				<option value="" selected?={ props.FamilyMember.Value(field) == "" }>{ notRecorded }</option>
+				<option value="" selected?={ props.FamilyMember.Value(field) == "" }>{ i18n.T(ctx, notRecorded) }</option>
 			}
-			for _, option := range options {
+			for _, option := range translateOptions(ctx, options) {
 				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
 			}
 		</select>
@@ -95,6 +96,6 @@ templ familyMemberCheckboxControl(props FamilyMemberFormProps) {
 			checked?={ props.FamilyMember.IsDeceased }
 			class="rounded border-slate-300 dark:border-slate-600"
 		/>
-		<label for={ ids.Field(props.FormID, FieldIsDeceased) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(FieldIsDeceased) }</label>
+		<label for={ ids.Field(props.FormID, FieldIsDeceased) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ i18n.T(ctx, FieldLabel(FieldIsDeceased)) }</label>
 	</div>
 }

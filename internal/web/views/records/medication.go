@@ -1,11 +1,13 @@
 package records
 
 import (
+	"context"
 	"strconv"
 	"time"
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/clinical"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	viewtags "medikube/internal/web/views/tags"
 )
@@ -40,8 +42,8 @@ const (
 // getByRole('form', {name}) resolves against, so they live beside the component
 // that renders them.
 const (
-	FormLabelCreate = "Record a medication"
-	FormLabelEdit   = "Edit medication"
+	FormLabelCreate = "page.medication.record"
+	FormLabelEdit   = "page.medication.edit"
 )
 
 // medicationFields is data-model §2's column order, which is the order
@@ -70,21 +72,22 @@ func MedicationFields() []string { return append([]string(nil), medicationFields
 // publishes the vocabulary in plain language ("currently taking", not
 // "active"), and a person recording their own medicine reads "How often" rather
 // than "frequency".
+// Values are message ids (D-06), resolved at render time.
 var fieldLabels = map[string]string{
-	FieldName:            "Name",
-	FieldAlternativeName: "Also known as",
-	FieldType:            "Kind",
-	FieldDosage:          "Dose",
-	FieldFrequency:       "How often",
-	FieldRoute:           "How it is taken",
-	FieldIndication:      "Reason for taking it",
-	FieldStartedOn:       "Started",
-	FieldEndedOn:         "Ended",
-	FieldStatus:          "State",
-	FieldSideEffects:     "Side effects",
-	FieldNotes:           "Notes",
-	FieldCreated:         "Recorded",
-	FieldLastChanged:     "Last changed",
+	FieldName:            "field.name",
+	FieldAlternativeName: "field.alternative_name",
+	FieldType:            "field.type",
+	FieldDosage:          "field.medication.dosage",
+	FieldFrequency:       "field.medication.frequency",
+	FieldRoute:           "field.medication.route",
+	FieldIndication:      "field.indication",
+	FieldStartedOn:       "field.medication.started_on",
+	FieldEndedOn:         "field.medication.ended_on",
+	FieldStatus:          "field.status",
+	FieldSideEffects:     "field.side_effects",
+	FieldNotes:           "field.notes",
+	FieldCreated:         "field.recorded",
+	FieldLastChanged:     "field.last_changed",
 }
 
 // FieldLabel answers with the field's own name when there is no label, so a
@@ -100,37 +103,38 @@ func FieldLabel(field string) string {
 // The display spellings of the three published vocabularies. FR-016 states them
 // in these words; the stored values stay the machine spellings that the select
 // field, the filter and the OpenAPI enum carry.
+// Values are message ids (D-06), resolved at render time.
 var (
 	medicationTypeLabels = map[clinical.MedicationType]string{
-		clinical.MedicationTypePrescription: "Prescription",
-		clinical.MedicationTypeOTC:          "Over-the-counter",
-		clinical.MedicationTypeSupplement:   "Supplement",
-		clinical.MedicationTypeHerbal:       "Herbal",
+		clinical.MedicationTypePrescription: "enum.medication_type.prescription",
+		clinical.MedicationTypeOTC:          "enum.medication_type.otc",
+		clinical.MedicationTypeSupplement:   "enum.medication_type.supplement",
+		clinical.MedicationTypeHerbal:       "enum.medication_type.herbal",
 	}
 
 	medicationRouteLabels = map[clinical.MedicationRoute]string{
-		clinical.MedicationRouteOral:          "By mouth",
-		clinical.MedicationRouteSublingual:    "Under the tongue",
-		clinical.MedicationRouteTopical:       "On the skin",
-		clinical.MedicationRouteTransdermal:   "Through a skin patch",
-		clinical.MedicationRouteInhalation:    "Inhaled",
-		clinical.MedicationRouteNasal:         "Into the nose",
-		clinical.MedicationRouteOphthalmic:    "Into the eye",
-		clinical.MedicationRouteOtic:          "Into the ear",
-		clinical.MedicationRouteRectal:        "Rectally",
-		clinical.MedicationRouteVaginal:       "Vaginally",
-		clinical.MedicationRouteIntramuscular: "Injected into a muscle",
-		clinical.MedicationRouteSubcutaneous:  "Injected under the skin",
-		clinical.MedicationRouteIntravenous:   "Injected into a vein",
-		clinical.MedicationRouteOther:         "Some other way",
+		clinical.MedicationRouteOral:          "enum.medication_route.oral",
+		clinical.MedicationRouteSublingual:    "enum.medication_route.sublingual",
+		clinical.MedicationRouteTopical:       "enum.medication_route.topical",
+		clinical.MedicationRouteTransdermal:   "enum.medication_route.transdermal",
+		clinical.MedicationRouteInhalation:    "enum.medication_route.inhalation",
+		clinical.MedicationRouteNasal:         "enum.medication_route.nasal",
+		clinical.MedicationRouteOphthalmic:    "enum.medication_route.ophthalmic",
+		clinical.MedicationRouteOtic:          "enum.medication_route.otic",
+		clinical.MedicationRouteRectal:        "enum.medication_route.rectal",
+		clinical.MedicationRouteVaginal:       "enum.medication_route.vaginal",
+		clinical.MedicationRouteIntramuscular: "enum.medication_route.intramuscular",
+		clinical.MedicationRouteSubcutaneous:  "enum.medication_route.subcutaneous",
+		clinical.MedicationRouteIntravenous:   "enum.medication_route.intravenous",
+		clinical.MedicationRouteOther:         "enum.medication_route.other",
 	}
 
 	therapyStatusLabels = map[clinical.TherapyStatus]string{
-		clinical.TherapyStatusActive:    "Currently taking",
-		clinical.TherapyStatusOnHold:    "Paused",
-		clinical.TherapyStatusCompleted: "Finished",
-		clinical.TherapyStatusStopped:   "Stopped taking",
-		clinical.TherapyStatusCancelled: "Never started",
+		clinical.TherapyStatusActive:    "enum.therapy_status.active",
+		clinical.TherapyStatusOnHold:    "enum.therapy_status.on_hold",
+		clinical.TherapyStatusCompleted: "enum.therapy_status.completed",
+		clinical.TherapyStatusStopped:   "enum.therapy_status.stopped",
+		clinical.TherapyStatusCancelled: "enum.therapy_status.cancelled",
 	}
 )
 
@@ -162,11 +166,37 @@ func label(value, known string) string {
 }
 
 // Option is one entry of a select. Value is what is submitted and stored;
-// Label is what is read.
+// Label is a message id (D-06), resolved at render time by translateOptions.
 type Option struct {
 	Value    string
 	Label    string
 	Selected bool
+}
+
+// entryValue resolves a DetailEntry's Value: translated when it is an
+// enum-derived message id (Translate), left exactly as recorded otherwise —
+// user data never passes through i18n.T (catalogue.md §6).
+func entryValue(ctx context.Context, entry DetailEntry) string {
+	if entry.Translate {
+		return i18n.T(ctx, entry.Value)
+	}
+
+	return entry.Value
+}
+
+// translateOptions resolves every option's Label from a message id to the
+// ctx's own language, at the templ call site — the one seam a Go-built
+// []Option can reach a Localizer without every enum-label function needing
+// its own ctx parameter.
+func translateOptions(ctx context.Context, options []Option) []Option {
+	translated := make([]Option, len(options))
+
+	for i, o := range options {
+		o.Label = i18n.T(ctx, o.Label)
+		translated[i] = o
+	}
+
+	return translated
 }
 
 // MedicationTypeOptions and the two below it walk the domain's own published
@@ -335,6 +365,12 @@ type DetailEntry struct {
 
 	// Multiline says the value was typed as prose and keeps its line breaks.
 	Multiline bool
+
+	// Translate says Value is itself a message id (an enum-derived display
+	// string, D-06) rather than user data — catalogue.md §6 never passes
+	// user data through i18n.T, so this is the one flag the render decides
+	// on rather than translating every value uniformly.
+	Translate bool
 }
 
 // Entries is FR-024 made a property of the mapping rather than of the template:
@@ -346,14 +382,14 @@ type DetailEntry struct {
 func (m MedicationView) Entries() []DetailEntry {
 	candidates := []DetailEntry{
 		{Field: FieldAlternativeName, Value: m.AlternativeName},
-		{Field: FieldType, Value: m.Type},
+		{Field: FieldType, Value: m.Type, Translate: true},
 		{Field: FieldDosage, Value: m.Dosage},
 		{Field: FieldFrequency, Value: m.Frequency},
-		{Field: FieldRoute, Value: m.Route},
+		{Field: FieldRoute, Value: m.Route, Translate: true},
 		{Field: FieldIndication, Value: m.Indication},
 		{Field: FieldStartedOn, Value: m.StartedOn, Datetime: m.StartedOn},
 		{Field: FieldEndedOn, Value: m.EndedOn, Datetime: m.EndedOn},
-		{Field: FieldStatus, Value: m.Status},
+		{Field: FieldStatus, Value: m.Status, Translate: true},
 		{Field: FieldSideEffects, Value: m.SideEffects, Multiline: true},
 		{Field: FieldNotes, Value: m.Notes, Multiline: true},
 		{Field: FieldCreated, Value: m.Created.Human, Datetime: m.Created.Machine},
@@ -488,9 +524,9 @@ func (m MedicationView) Value(field string) string {
 // nothing about whether they are creating or changing something.
 func (p MedicationFormProps) SubmitLabel() string {
 	if p.New {
-		return "Record it"
+		return "action.record_it"
 	}
-	return "Save changes"
+	return "action.save_changes"
 }
 
 // jsLiteral quotes a server-side value for a Datastar expression.

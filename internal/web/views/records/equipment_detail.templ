@@ -2,6 +2,7 @@ package records
 
 import (
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web"
@@ -9,20 +10,21 @@ import (
 
 const equipmentConfirmSignal = "_confirming_delete"
 
+// The constants below are message ids (D-06), resolved at render time.
 const (
-	equipmentDetailArticle      = "Equipment"
-	equipmentConfirmTitle       = "Delete this equipment record?"
-	equipmentConfirmConsequence = "This is permanent. There is no recycle bin and no undo, so everything recorded here goes with it."
-	equipmentConfirmLabel      = "Delete permanently"
-	equipmentConfirmCancel     = "Keep it"
-	equipmentEditLabel         = "Edit"
-	equipmentDeleteLabel       = "Delete"
+	equipmentDetailArticle      = "page.equipment.title"
+	equipmentConfirmTitle       = "confirm.delete_permanently"
+	equipmentConfirmConsequence = "confirm.delete_consequence_generic"
+	equipmentConfirmLabel       = "action.delete_permanently"
+	equipmentConfirmCancel      = "confirm.keep_it"
+	equipmentEditLabel          = "action.edit"
+	equipmentDeleteLabel        = "action.delete"
 )
 
 templ EquipmentDetail(props EquipmentDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Equipment, props.Equipment.ID) }
-		aria-label={ equipmentDetailArticle }
+		aria-label={ i18n.T(ctx, equipmentDetailArticle) }
 		data-signals={ "{" + equipmentConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Equipment.Version)) + "}" }
 		data-status={ props.Equipment.StatusValue }
 		class="flex flex-col"
@@ -38,19 +40,19 @@ templ EquipmentDetail(props EquipmentDetailProps) {
 					<a
 						href={ props.Equipment.Links.Edit }
 						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-					>{ equipmentEditLabel }</a>
+					>{ i18n.T(ctx, equipmentEditLabel) }</a>
 				}
 				<button
 					type="button"
 					id={ ids.RecordDelete(kind.Equipment, props.Equipment.ID) }
 					data-on:click={ "$" + equipmentConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-				>{ equipmentDeleteLabel }</button>
+				>{ i18n.T(ctx, equipmentDeleteLabel) }</button>
 			</div>
 		</header>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
 			for _, entry := range props.Equipment.Entries() {
-				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ i18n.T(ctx, entry.Label) }</dt>
 				@detailValue(entry)
 			}
 		</dl>
@@ -58,12 +60,12 @@ templ EquipmentDetail(props EquipmentDetailProps) {
 			ID:           ids.RecordConfirm(kind.Equipment, props.Equipment.ID),
 			ReturnTo: ids.RecordDelete(kind.Equipment, props.Equipment.ID),
 			Signal:       equipmentConfirmSignal,
-			Title:        equipmentConfirmTitle,
+			Title:        i18n.T(ctx, equipmentConfirmTitle),
 			Subject:      props.Equipment.Name,
-			Consequence:  equipmentConfirmConsequence,
-			ConfirmLabel: equipmentConfirmLabel,
+			Consequence:  i18n.T(ctx, equipmentConfirmConsequence),
+			ConfirmLabel: i18n.T(ctx, equipmentConfirmLabel),
 			ConfirmOn:    equipmentDeleteExpression(props.Equipment),
-			CancelLabel:  equipmentConfirmCancel,
+			CancelLabel:  i18n.T(ctx, equipmentConfirmCancel),
 		})
 	</article>
 }

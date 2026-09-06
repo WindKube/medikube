@@ -2,6 +2,7 @@ package records
 
 import (
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web"
@@ -9,21 +10,22 @@ import (
 
 const familyMemberConfirmSignal = "_confirming_delete"
 
+// The constants below are message ids (D-06), resolved at render time.
 const (
-	familyMemberDetailArticle      = "Relative"
-	familyMemberConfirmTitle       = "Delete this relative?"
-	familyMemberConfirmConsequence = "This is permanent. There is no recycle bin and no undo, so everything recorded about them, including every condition, goes with it."
-	familyMemberConfirmLabel       = "Delete permanently"
-	familyMemberConfirmCancel      = "Keep it"
-	familyMemberEditLabel          = "Edit"
-	familyMemberDeleteLabel        = "Delete"
-	familyMemberConditionsHeading  = "Conditions"
+	familyMemberDetailArticle      = "a11y.family_member_detail"
+	familyMemberConfirmTitle       = "confirm.delete_permanently"
+	familyMemberConfirmConsequence = "confirm.delete_family_member_consequence"
+	familyMemberConfirmLabel       = "action.delete_permanently"
+	familyMemberConfirmCancel      = "confirm.keep_it"
+	familyMemberEditLabel          = "action.edit"
+	familyMemberDeleteLabel        = "action.delete"
+	familyMemberConditionsHeading  = "field.family_member.conditions"
 )
 
 templ FamilyMemberDetail(props FamilyMemberDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.FamilyMember, props.FamilyMember.ID) }
-		aria-label={ familyMemberDetailArticle }
+		aria-label={ i18n.T(ctx, familyMemberDetailArticle) }
 		data-signals={ "{" + familyMemberConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.FamilyMember.Version)) + "}" }
 		class="flex flex-col"
 	>
@@ -38,25 +40,25 @@ templ FamilyMemberDetail(props FamilyMemberDetailProps) {
 					<a
 						href={ props.FamilyMember.Links.Edit }
 						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-					>{ familyMemberEditLabel }</a>
+					>{ i18n.T(ctx, familyMemberEditLabel) }</a>
 				}
 				<button
 					type="button"
 					id={ ids.RecordDelete(kind.FamilyMember, props.FamilyMember.ID) }
 					data-on:click={ "$" + familyMemberConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-				>{ familyMemberDeleteLabel }</button>
+				>{ i18n.T(ctx, familyMemberDeleteLabel) }</button>
 			</div>
 		</header>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
 			for _, entry := range props.FamilyMember.Entries() {
-				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ i18n.T(ctx, entry.Label) }</dt>
 				@detailValue(entry)
 			}
 		</dl>
 		if len(props.FamilyMember.Conditions) > 0 {
-			<section class="mt-6" aria-label={ familyMemberConditionsHeading }>
-				<h2 class="text-sm font-medium text-slate-500 dark:text-slate-400">{ familyMemberConditionsHeading }</h2>
+			<section class="mt-6" aria-label={ i18n.T(ctx, familyMemberConditionsHeading) }>
+				<h2 class="text-sm font-medium text-slate-500 dark:text-slate-400">{ i18n.T(ctx, familyMemberConditionsHeading) }</h2>
 				<ul class="mt-2 flex flex-col gap-3">
 					for _, condition := range props.FamilyMember.Conditions {
 						<li class="rounded-md border border-slate-200 p-3 dark:border-slate-700">
@@ -70,12 +72,12 @@ templ FamilyMemberDetail(props FamilyMemberDetailProps) {
 			ID:           ids.RecordConfirm(kind.FamilyMember, props.FamilyMember.ID),
 			ReturnTo: ids.RecordDelete(kind.FamilyMember, props.FamilyMember.ID),
 			Signal:       familyMemberConfirmSignal,
-			Title:        familyMemberConfirmTitle,
+			Title:        i18n.T(ctx, familyMemberConfirmTitle),
 			Subject:      props.FamilyMember.Name,
-			Consequence:  familyMemberConfirmConsequence,
-			ConfirmLabel: familyMemberConfirmLabel,
+			Consequence:  i18n.T(ctx, familyMemberConfirmConsequence),
+			ConfirmLabel: i18n.T(ctx, familyMemberConfirmLabel),
 			ConfirmOn:    familyMemberDeleteExpression(props.FamilyMember),
-			CancelLabel:  familyMemberConfirmCancel,
+			CancelLabel:  i18n.T(ctx, familyMemberConfirmCancel),
 		})
 	</article>
 }
@@ -84,13 +86,13 @@ templ familyConditionEntry(condition FamilyConditionView) {
 	<p class="font-medium text-slate-900 dark:text-slate-100">{ condition.Name }</p>
 	<p class="text-sm text-slate-700 dark:text-slate-300">
 		if condition.DiagnosedAge != "" {
-			<span>{ "diagnosed at age " + condition.DiagnosedAge }</span>
+			<span>{ i18n.T(ctx, "field.family_condition.diagnosed_at_age", map[string]any{"Age": condition.DiagnosedAge}) }</span>
 		}
 		if condition.Severity != "" {
-			<span>{ " · " + condition.Severity }</span>
+			<span>{ " · " + i18n.T(ctx, condition.Severity) }</span>
 		}
 		if condition.Status != "" {
-			<span>{ " · " + condition.Status }</span>
+			<span>{ " · " + i18n.T(ctx, condition.Status) }</span>
 		}
 	</p>
 	if condition.Notes != "" {

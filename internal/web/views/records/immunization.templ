@@ -3,24 +3,26 @@ package records
 import (
 	viewtags "medikube/internal/web/views/tags"
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web"
 )
 
+// The constants below are message ids (D-06), resolved at render time.
 const (
-	immunizationEmptyTitle  = "Nothing recorded yet"
-	immunizationEmptyBody   = "Record the first one and it will be listed here, with everything you noted about it."
-	immunizationCreateLabel = "Record a vaccination"
-	immunizationsTitle      = "Vaccinations"
+	immunizationEmptyTitle  = "empty.nothing_recorded"
+	immunizationEmptyBody   = "empty.record_first_one_body"
+	immunizationCreateLabel = "page.immunization.record"
+	immunizationsTitle      = "page.vaccinations.title"
 
-	immunizationDetailArticle     = "Vaccination"
-	immunizationConfirmTitle      = "Delete this vaccination?"
-	immunizationConfirmConsequence = "This is permanent. There is no recycle bin and no undo, so everything recorded here goes with it."
-	immunizationConfirmLabel     = "Delete permanently"
-	immunizationConfirmCancel    = "Keep it"
-	immunizationEditLabel        = "Edit"
-	immunizationDeleteLabel      = "Delete"
+	immunizationDetailArticle      = "a11y.immunization_detail"
+	immunizationConfirmTitle       = "confirm.delete_permanently"
+	immunizationConfirmConsequence = "confirm.delete_consequence_generic"
+	immunizationConfirmLabel       = "action.delete_permanently"
+	immunizationConfirmCancel      = "confirm.keep_it"
+	immunizationEditLabel          = "action.edit"
+	immunizationDeleteLabel        = "action.delete"
 
 	immunizationConfirmSignal = "_confirming_delete"
 )
@@ -29,7 +31,7 @@ const (
 templ ImmunizationList(props ImmunizationListProps) {
 	<section
 		id={ ids.RecordList(kind.Immunization) }
-		aria-label={ immunizationsTitle }
+		aria-label={ i18n.T(ctx, immunizationsTitle) }
 		class="flex flex-col"
 	>
 		<div class="flex flex-wrap items-center justify-between gap-3">
@@ -37,31 +39,31 @@ templ ImmunizationList(props ImmunizationListProps) {
 				id={ ids.RecordListHeading(kind.Immunization) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ immunizationsTitle }</h1>
+			>{ i18n.T(ctx, immunizationsTitle) }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }
 					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-				>{ immunizationCreateLabel }</a>
+				>{ i18n.T(ctx, immunizationCreateLabel) }</a>
 			}
 		</div>
 		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
 			<div data-empty class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:          ids.RecordEmpty(kind.Immunization),
-					Title:       immunizationEmptyTitle,
-					Body:        immunizationEmptyBody,
+					Title:       i18n.T(ctx, immunizationEmptyTitle),
+					Body:        i18n.T(ctx, immunizationEmptyBody),
 					ActionHref:  props.CreateHref,
-					ActionLabel: immunizationCreateLabel,
+					ActionLabel: i18n.T(ctx, immunizationCreateLabel),
 				})
 			</div>
 			<div data-rows class="mt-4 overflow-x-auto">
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
-							<th scope="col" class="pb-2 pr-4 font-medium">{ ImmunizationFieldLabel(ImmunizationFieldVaccineName) }</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">{ ImmunizationFieldLabel(ImmunizationFieldDoseNumber) }</th>
-							<th scope="col" class="pb-2 font-medium">{ ImmunizationFieldLabel(ImmunizationFieldAdministeredOn) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, ImmunizationFieldLabel(ImmunizationFieldVaccineName)) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, ImmunizationFieldLabel(ImmunizationFieldDoseNumber)) }</th>
+							<th scope="col" class="pb-2 font-medium">{ i18n.T(ctx, ImmunizationFieldLabel(ImmunizationFieldAdministeredOn)) }</th>
 						</tr>
 					</thead>
 					<tbody id={ ids.RecordRows(kind.Immunization) }>
@@ -94,13 +96,13 @@ templ ImmunizationRow(immunization ImmunizationView) {
 		</th>
 		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
 			if immunization.DoseNumber != "" {
-				<span class="sr-only">{ ImmunizationFieldLabel(ImmunizationFieldDoseNumber) }</span>
+				<span class="sr-only">{ i18n.T(ctx, ImmunizationFieldLabel(ImmunizationFieldDoseNumber)) }</span>
 				{ immunization.DoseNumber }
 			}
 		</td>
 		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
 			if immunization.AdministeredOn != "" {
-				<span class="sr-only">{ ImmunizationFieldLabel(ImmunizationFieldAdministeredOn) }</span>
+				<span class="sr-only">{ i18n.T(ctx, ImmunizationFieldLabel(ImmunizationFieldAdministeredOn)) }</span>
 				<time datetime={ immunization.AdministeredOn }>{ immunization.AdministeredOn }</time>
 			}
 		</td>
@@ -111,7 +113,7 @@ templ ImmunizationRow(immunization ImmunizationView) {
 templ ImmunizationDetail(props ImmunizationDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Immunization, props.Immunization.ID) }
-		aria-label={ immunizationDetailArticle }
+		aria-label={ i18n.T(ctx, immunizationDetailArticle) }
 		data-signals={ "{" + immunizationConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Immunization.Version)) + "}" }
 		class="flex flex-col"
 	>
@@ -126,19 +128,19 @@ templ ImmunizationDetail(props ImmunizationDetailProps) {
 					<a
 						href={ props.Immunization.Links.Edit }
 						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-					>{ immunizationEditLabel }</a>
+					>{ i18n.T(ctx, immunizationEditLabel) }</a>
 				}
 				<button
 					type="button"
 					id={ ids.RecordDelete(kind.Immunization, props.Immunization.ID) }
 					data-on:click={ "$" + immunizationConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-				>{ immunizationDeleteLabel }</button>
+				>{ i18n.T(ctx, immunizationDeleteLabel) }</button>
 			</div>
 		</header>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
 			for _, entry := range props.Immunization.Entries() {
-				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ i18n.T(ctx, entry.Label) }</dt>
 				@immunizationDetailValue(entry)
 			}
 		</dl>
@@ -146,12 +148,12 @@ templ ImmunizationDetail(props ImmunizationDetailProps) {
 			ID:           ids.RecordConfirm(kind.Immunization, props.Immunization.ID),
 			ReturnTo: ids.RecordDelete(kind.Immunization, props.Immunization.ID),
 			Signal:       immunizationConfirmSignal,
-			Title:        immunizationConfirmTitle,
+			Title:        i18n.T(ctx, immunizationConfirmTitle),
 			Subject:      props.Immunization.VaccineName,
-			Consequence:  immunizationConfirmConsequence,
-			ConfirmLabel: immunizationConfirmLabel,
+			Consequence:  i18n.T(ctx, immunizationConfirmConsequence),
+			ConfirmLabel: i18n.T(ctx, immunizationConfirmLabel),
 			ConfirmOn:    immunizationDeleteExpression(props.Immunization),
-			CancelLabel:  immunizationConfirmCancel,
+			CancelLabel:  i18n.T(ctx, immunizationConfirmCancel),
 		})
 	</article>
 }
@@ -159,10 +161,10 @@ templ ImmunizationDetail(props ImmunizationDetailProps) {
 templ immunizationDetailValue(entry DetailEntry) {
 	if entry.Datetime != "" {
 		<dd class="text-sm tabular-nums text-slate-900 dark:text-slate-100">
-			<time datetime={ entry.Datetime }>{ entry.Value }</time>
+			<time datetime={ entry.Datetime }>{ entryValue(ctx, entry) }</time>
 		</dd>
 	} else {
-		<dd class="break-words text-sm text-slate-900 dark:text-slate-100">{ entry.Value }</dd>
+		<dd class="break-words text-sm text-slate-900 dark:text-slate-100">{ entryValue(ctx, entry) }</dd>
 	}
 }
 
@@ -170,7 +172,7 @@ templ immunizationDetailValue(entry DetailEntry) {
 templ ImmunizationForm(props ImmunizationFormProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ props.Label() }
+		aria-label={ i18n.T(ctx, props.Label()) }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
@@ -194,12 +196,12 @@ templ ImmunizationForm(props ImmunizationFormProps) {
 			<button
 				type="submit"
 				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ props.SubmitLabel() }</button>
+			>{ i18n.T(ctx, props.SubmitLabel()) }</button>
 			if props.CancelHref != "" {
 				<a
 					href={ props.CancelHref }
 					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
-				>{ cancelLabel }</a>
+				>{ i18n.T(ctx, cancelLabel) }</a>
 			}
 		</div>
 	</form>
@@ -210,7 +212,7 @@ templ immunizationTextControl(props ImmunizationFormProps, field, inputType stri
 		<label
 			for={ ids.Field(props.FormID, field) }
 			class="text-sm font-medium text-slate-900 dark:text-slate-100"
-		>{ ImmunizationFieldLabel(field) }</label>
+		>{ i18n.T(ctx, ImmunizationFieldLabel(field)) }</label>
 		<input
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -233,7 +235,7 @@ templ immunizationSelectControl(props ImmunizationFormProps, field string, optio
 		<label
 			for={ ids.Field(props.FormID, field) }
 			class="text-sm font-medium text-slate-900 dark:text-slate-100"
-		>{ ImmunizationFieldLabel(field) }</label>
+		>{ i18n.T(ctx, ImmunizationFieldLabel(field)) }</label>
 		<select
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -244,8 +246,8 @@ templ immunizationSelectControl(props ImmunizationFormProps, field string, optio
 			}
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>
-			<option value="" selected?={ props.Immunization.Value(field) == "" }>{ notRecorded }</option>
-			for _, option := range options {
+			<option value="" selected?={ props.Immunization.Value(field) == "" }>{ i18n.T(ctx, notRecorded) }</option>
+			for _, option := range translateOptions(ctx, options) {
 				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
 			}
 		</select>
