@@ -68,9 +68,9 @@ func TestAllergyCreateAndPatchCarryNoServerOwnedMembers(t *testing.T) {
 func TestAllergyBasisNarrowsToCritical(t *testing.T) {
 	t.Parallel()
 
-	critical := &api.Allergy{AllergySummary: api.AllergySummary{Critical: true}}
+	critical := &api.AllergySummary{Critical: true}
 	assert.Equal(t, []string{"critical"}, api.AllergyBasis(critical, records.Criteria{}))
 
-	notCritical := &api.Allergy{AllergySummary: api.AllergySummary{Critical: false}}
+	notCritical := &api.AllergySummary{Critical: false}
 	assert.Nil(t, api.AllergyBasis(notCritical, records.Criteria{}))
 }

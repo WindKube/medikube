@@ -33,6 +33,7 @@ import (
 	"medikube/internal/records"
 	searchsvc "medikube/internal/service/search"
 	tagsvc "medikube/internal/service/tag"
+	timelinesvc "medikube/internal/service/timeline"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
 )
@@ -388,6 +389,7 @@ func TestTheCompositionRootWiresEveryRouteMediKubeServes(t *testing.T) {
 		records.NewRegistry(),
 		func() (directoryServices, error) { return directoryServices{}, nil },
 		func() (*tagsvc.Service, error) { return nil, nil },
+		func() (*timelinesvc.Service, error) { return nil, nil },
 		realtime.New(),
 		obs.NewMetrics(),
 		&obs.Tracing{},

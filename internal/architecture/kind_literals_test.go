@@ -105,6 +105,8 @@ var kindLiteralExempt = map[string]string{
 	"internal/web/api/treatment.go": "FR-028's two multi-relations are named after the collections they point to " +
 		"(data-model §4.5); the JSON struct tags carrying those names are literal by construction and cannot call " +
 		"Segment() or Collection()",
+	"internal/web/api/criteria_test.go": "false positive: a t.Run subtest name names insurance's and equipment's " +
+		"own kind in prose, the same collision every other file above has for these two kinds",
 
 	// family_member's own "conditions" field (a JSON array of FamilyCondition)
 	// spells the unrelated kind.Condition's segment/collection ("conditions")

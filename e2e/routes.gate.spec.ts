@@ -263,6 +263,22 @@ for (const route of pageRoutes) {
         ).toBeVisible();
       });
     }
+
+    // US9's status-view catalogue: a narrowed URL on the SAME route, so it
+    // gets the same seven assertions under this route's own title and
+    // landmark, never a second one of its own.
+    for (const variant of route.smokeVariants) {
+      test(`the smoke variant ${variant} passes the same seven assertions`, async ({
+        page,
+      }) => {
+        await open(page, {
+          path: variant,
+          title: await titleFor(route, page),
+          landmark: route.landmark,
+          status: 200,
+        });
+      });
+    }
   });
 }
 
