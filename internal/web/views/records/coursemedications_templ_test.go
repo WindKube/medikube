@@ -61,3 +61,21 @@ func TestCourseMedicationsRendersAnEmptyStateWithNoRows(t *testing.T) {
 	require.Empty(t, tree.All(viewstest.Tag("a")))
 	assert.NotEmpty(t, viewstest.Text(section))
 }
+
+// A row gets its own Remove button (FR-058), and the section always ends with
+// the attach form's picker regardless of how many rows there are.
+func TestCourseMedicationsRendersRemoveAndTheAttachForm(t *testing.T) {
+	t.Parallel()
+
+	tree := viewstest.Render(t, records.CourseMedications("course-medications", "Course medications", []records.CourseMedicationRow{
+		{MedicationName: "Amoxicillin", MedicationHref: "/medications/med1", RemoveOn: "@delete('/x')"},
+	}, records.CourseMedicationFormProps{
+		Options: []records.MedicationLinkOption{{ID: "med2", Name: "Ibuprofen"}},
+	}), "div")
+
+	tree.One(t, viewstest.Region("Course medications"))
+	assert.NotEmpty(t, tree.All(viewstest.Tag("button")))
+
+	picker := tree.One(t, viewstest.Tag("select"))
+	assert.Contains(t, viewstest.Text(picker), "Ibuprofen")
+}

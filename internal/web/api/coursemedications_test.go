@@ -4,10 +4,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"medikube/internal/domain/kind"
 	"medikube/internal/testsupport"
+	"medikube/internal/testsupport/seed"
 	"medikube/internal/web/apitest"
 )
 
@@ -82,4 +84,52 @@ func TestEveryCourseMedicationOperationIsOwnerScoped(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestAttachingACourseMedicationIsVisibleFromTheMedicationSideAndDetachClearsBoth
+// is T150/FR-055/FR-058's join-relation proof: PUT attaches a medication from
+// the treatment's own address, the attachment is immediately visible reading
+// the medication's own back-relation count (the other end medication's page
+// resolves into a removable link), and DELETE — the op medication's own Remove
+// button drives — clears it from both, leaving the join row gone rather than
+// merely hidden.
+func TestAttachingACourseMedicationIsVisibleFromTheMedicationSideAndDetachClearsBoth(t *testing.T) {
+	t.Parallel()
+
+	owner := newCaller(t)
+
+	treatmentID := seed.CourseMedicationTreatmentID
+	medicationID := testsupport.NameOnlyMedicationID
+	medicationTarget := recordURL(medicationID)
+
+	before := owner.get(medicationTarget)
+	require.Equal(t, http.StatusOK, before.Status, before.Body)
+
+	var beforeBody referencesEnvelope
+	before.decode(t, &beforeBody)
+	require.Equal(t, 0, beforeBody.References.Total, "this medication starts with no course attachments")
+
+	current := owner.get(treatmentRecordURL(treatmentID))
+	require.Equal(t, http.StatusOK, current.Status, current.Body)
+
+	attached := owner.do(http.MethodPut, courseMedicationItemURL(treatmentID, medicationID),
+		`{"dosage":"3mg"}`, map[string]string{"If-Match": current.etag(t)})
+	require.Equal(t, http.StatusCreated, attached.Status, attached.Body)
+
+	afterAttach := owner.get(medicationTarget)
+	require.Equal(t, http.StatusOK, afterAttach.Status, afterAttach.Body)
+
+	var afterAttachBody referencesEnvelope
+	afterAttach.decode(t, &afterAttachBody)
+	assert.Equal(t, 1, afterAttachBody.References.Total, "attaching from the treatment side is visible from the medication side")
+
+	detached := owner.delete(courseMedicationItemURL(treatmentID, medicationID), current.etag(t))
+	require.Equal(t, http.StatusNoContent, detached.Status, detached.Body)
+
+	afterDetach := owner.get(medicationTarget)
+	require.Equal(t, http.StatusOK, afterDetach.Status, afterDetach.Body)
+
+	var afterDetachBody referencesEnvelope
+	afterDetach.decode(t, &afterDetachBody)
+	assert.Equal(t, 0, afterDetachBody.References.Total, "detaching clears the medication's back-relation too")
 }
