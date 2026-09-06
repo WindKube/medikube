@@ -165,8 +165,11 @@ test.describe('a browser whose own language is Polish, before it has an account'
     await expect(page.getByText(tomlOther('pl', 'auth.forgot_password_link'))).toBeVisible();
 
     const email = `locale-browser-${randomUUID().slice(0, 8)}@example.test`;
+    // page.request does not carry the browser context's locale, so the header
+    // the browser itself would send is set by hand.
     const registered = await page.request.post(fixtures.registerPath, {
       data: { email, name: 'Locale Browser', password: fixtures.password },
+      headers: { 'Accept-Language': 'pl-PL,pl;q=0.9' },
     });
     expect(registered.status(), await registered.text()).toBe(201);
 
