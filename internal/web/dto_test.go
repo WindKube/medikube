@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	json "encoding/json/v2"
 	"errors"
 	"net/http"
@@ -224,7 +225,7 @@ func TestADecodeFailureRepeatsNothingTheClientSent(t *testing.T) {
 			assert.NotContains(t, err.Error(), one.leaked,
 				"the submitted value is in the error, and the error is logged")
 
-			body, marshalErr := json.Marshal(NewEnvelope(err, "req"))
+			body, marshalErr := json.Marshal(NewEnvelope(context.Background(), err, "req"))
 			require.NoError(t, marshalErr)
 			assert.NotContains(t, string(body), one.leaked)
 

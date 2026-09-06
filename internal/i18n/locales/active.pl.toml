@@ -1,0 +1,237 @@
+# active.pl.toml. Every id here is measured against active.en.toml
+# (internal/i18n/catalogue_test.go): no id missing, none surplus, and every
+# plural id carries all four of Polish's CLDR forms (one/few/many/other).
+
+[language.name]
+description = "This file's own language, as it names itself in the language switcher"
+other = "Polski"
+
+# --- nav ---------------------------------------------------------------
+
+[nav.timeline]
+description = "Primary navigation: the timeline link"
+other = "Oś czasu"
+
+[nav.medications]
+description = "Primary navigation: the medications link"
+other = "Leki"
+
+[nav.settings]
+description = "Primary navigation: the settings link"
+other = "Ustawienia"
+
+# --- error.<Failure.Code wire value> ------------------------------------
+
+[error.unauthenticated]
+description = "401: no valid session"
+other = "zaloguj się, aby kontynuować"
+
+[error.forbidden]
+description = "403: a resource whose existence the caller already knows"
+other = "to konto nie ma do tego uprawnień"
+
+[error.not_found]
+description = "404: not there, or an authorization failure on owner-scoped data"
+other = "nie znaleziono"
+
+[error.version_mismatch]
+description = "412: If-Match did not match"
+other = "to zmieniło się od czasu ostatniego odczytu"
+
+[error.validation_failed]
+description = "422: one or more submitted fields were rejected"
+other = "co najmniej jedno pole zostało odrzucone"
+
+[error.conflict]
+description = "409: the change conflicts with something already recorded"
+other = "koliduje z czymś już zapisanym"
+
+[error.registration_closed]
+description = "403: this instance is not open for registration"
+other = "ta instancja nie jest otwarta na rejestrację"
+
+[error.invalid_token]
+description = "400: a recovery or confirmation link is expired, used or tampered with"
+other = "ten link nie jest już aktywny; poproś o kolejny"
+
+[error.mail_unconfigured]
+description = "503: this instance has no outgoing mail configured"
+other = "ta instancja nie może wysyłać poczty; skontaktuj się z administratorem"
+
+[error.invalid_cursor]
+description = "400: a pagination cursor this instance did not issue"
+other = "to odwołanie do strony nie zostało wydane przez tę instancję"
+
+[error.rate_limited]
+description = "429: too many requests"
+other = "zbyt wiele żądań; spróbuj ponownie za chwilę"
+
+[error.client_closed]
+description = "499: the request was cancelled by the client"
+other = "żądanie zostało anulowane"
+
+[error.timeout]
+description = "504: the request took too long"
+other = "żądanie trwało zbyt długo"
+
+[error.unsupported_media_type]
+description = "415: an uploaded file's type is not accepted"
+other = "ten typ pliku nie jest akceptowany"
+
+[error.payload_too_large]
+description = "413: an uploaded file exceeds the size limit"
+other = "ten plik jest zbyt duży"
+
+[error.bad_request]
+description = "400: a request PocketBase refused before any MediKube handler saw it"
+other = "żądanie nie mogło zostać przetworzone"
+
+[error.patient_required]
+description = "400: a patient-scoped list or stream with no ?patient= named"
+other = "wskaż pacjenta, którego dotyczy to żądanie"
+
+[error.self_record_protected]
+description = "409: an attempt to delete a self-record; closing the account is the only way"
+other = "zamknięcie konta usuwa też rekord własny; nie ma dla niego osobnego usuwania"
+
+[error.duplicate_name]
+description = "409: a tag name that already exists for this owner"
+other = "tag o tej nazwie już istnieje"
+
+[error.internal_error]
+description = "500 and any other code this instance does not recognise"
+other = "błąd wewnętrzny"
+
+# --- empty ---------------------------------------------------------------
+
+[empty.nothing_recorded]
+description = "Shown under a kind's list when the patient has none of that kind yet"
+other = "Nic jeszcze nie zapisano"
+
+[empty.nothing_matches]
+description = "Shown when a search or filter narrows a list to zero results"
+other = "Nic nie pasuje"
+
+# --- action ---------------------------------------------------------------
+
+[action.save]
+description = "The submit button on a create or edit form"
+other = "Zapisz"
+
+[action.cancel]
+description = "The button that discards a form without submitting it"
+other = "Anuluj"
+
+[action.delete]
+description = "The button that opens a delete confirmation"
+other = "Usuń"
+
+# --- confirm ---------------------------------------------------------------
+
+[confirm.delete_permanently]
+description = "The delete confirmation dialog's question"
+other = "Usunąć na stałe?"
+
+[confirm.keep_it]
+description = "The delete confirmation dialog's cancel option"
+other = "Zachowaj"
+
+# --- kind.<kind>.one / .few / .many / .other -----------------------------
+
+[kind.medication]
+description = "How many medication records a list holds"
+one = "{{.PluralCount}} lek"
+few = "{{.PluralCount}} leki"
+many = "{{.PluralCount}} leków"
+other = "{{.PluralCount}} leku"
+
+[kind.allergy]
+description = "How many allergy records a list holds, e.g. \"3 allergies\""
+one = "{{.PluralCount}} alergia"
+few = "{{.PluralCount}} alergie"
+many = "{{.PluralCount}} alergii"
+other = "{{.PluralCount}} alergii"
+
+[kind.condition]
+description = "How many condition records a list holds"
+one = "{{.PluralCount}} schorzenie"
+few = "{{.PluralCount}} schorzenia"
+many = "{{.PluralCount}} schorzeń"
+other = "{{.PluralCount}} schorzenia"
+
+[kind.encounter]
+description = "How many encounter records a list holds"
+one = "{{.PluralCount}} wizyta"
+few = "{{.PluralCount}} wizyty"
+many = "{{.PluralCount}} wizyt"
+other = "{{.PluralCount}} wizyty"
+
+[kind.procedure]
+description = "How many procedure records a list holds"
+one = "{{.PluralCount}} zabieg"
+few = "{{.PluralCount}} zabiegi"
+many = "{{.PluralCount}} zabiegów"
+other = "{{.PluralCount}} zabiegu"
+
+[kind.treatment]
+description = "How many treatment records a list holds"
+one = "{{.PluralCount}} leczenie"
+few = "{{.PluralCount}} leczenia"
+many = "{{.PluralCount}} leczeń"
+other = "{{.PluralCount}} leczenia"
+
+[kind.symptom]
+description = "How many symptom records a list holds"
+one = "{{.PluralCount}} objaw"
+few = "{{.PluralCount}} objawy"
+many = "{{.PluralCount}} objawów"
+other = "{{.PluralCount}} objawu"
+
+[kind.vitals]
+description = "How many vitals (measurement) records a list holds"
+one = "{{.PluralCount}} pomiar"
+few = "{{.PluralCount}} pomiary"
+many = "{{.PluralCount}} pomiarów"
+other = "{{.PluralCount}} pomiaru"
+
+[kind.immunization]
+description = "How many immunization records a list holds"
+one = "{{.PluralCount}} szczepienie"
+few = "{{.PluralCount}} szczepienia"
+many = "{{.PluralCount}} szczepień"
+other = "{{.PluralCount}} szczepienia"
+
+[kind.injury]
+description = "How many injury records a list holds"
+one = "{{.PluralCount}} uraz"
+few = "{{.PluralCount}} urazy"
+many = "{{.PluralCount}} urazów"
+other = "{{.PluralCount}} urazu"
+
+[kind.insurance]
+description = "How many insurance records a list holds"
+one = "{{.PluralCount}} ubezpieczenie"
+few = "{{.PluralCount}} ubezpieczenia"
+many = "{{.PluralCount}} ubezpieczeń"
+other = "{{.PluralCount}} ubezpieczenia"
+
+[kind.equipment]
+description = "How many equipment records a list holds"
+one = "{{.PluralCount}} sprzęt"
+few = "{{.PluralCount}} sprzęt"
+many = "{{.PluralCount}} sprzętu"
+other = "{{.PluralCount}} sprzętu"
+
+[kind.emergency_contact]
+description = "How many emergency contact records a list holds"
+one = "{{.PluralCount}} kontakt alarmowy"
+few = "{{.PluralCount}} kontakty alarmowe"
+many = "{{.PluralCount}} kontaktów alarmowych"
+other = "{{.PluralCount}} kontaktu alarmowego"
+
+[kind.family_member]
+description = "How many family member records a list holds"
+one = "{{.PluralCount}} członek rodziny"
+few = "{{.PluralCount}} członkowie rodziny"
+many = "{{.PluralCount}} członków rodziny"
+other = "{{.PluralCount}} członków rodziny"

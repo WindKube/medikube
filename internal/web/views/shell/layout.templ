@@ -8,7 +8,7 @@ import "medikube/internal/web/views/ids"
 // and the stylesheet and Datastar runtime every page needs.
 templ Document(props DocumentProps) {
 	<!DOCTYPE html>
-	<html lang="en" class={ props.ThemeClass }>
+	<html lang={ props.Lang } class={ props.ThemeClass }>
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>

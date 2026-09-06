@@ -265,7 +265,7 @@ func TestAnErrorPageCarriesTheRequestIdAndNothingElseFromTheFailure(t *testing.T
 		"an internal failure whose every member is a driver's own words": poisoned(),
 		"a refusal carrying nothing but its code": {
 			Code:      web.CodeNotFound,
-			Message:   web.Message(web.CodeNotFound),
+			Message:   web.Message(context.Background(), web.CodeNotFound),
 			RequestID: poisonRequestID,
 		},
 	}

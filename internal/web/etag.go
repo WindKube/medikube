@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -112,9 +113,9 @@ type VersionMismatch struct {
 }
 
 // NewVersionMismatch builds the 412 body.
-func NewVersionMismatch(requestID string, current any) VersionMismatch {
+func NewVersionMismatch(ctx context.Context, requestID string, current any) VersionMismatch {
 	return VersionMismatch{
-		Error:   NewFailure(domain.ErrVersionMismatch, requestID),
+		Error:   NewFailure(ctx, domain.ErrVersionMismatch, requestID),
 		Current: current,
 	}
 }
@@ -125,5 +126,7 @@ func NewVersionMismatch(requestID string, current any) VersionMismatch {
 func WriteVersionMismatch(e *core.RequestEvent, requestID, version string, current any) error {
 	SetETag(e, version)
 
-	return WriteJSON(e, http.StatusPreconditionFailed, NewVersionMismatch(requestID, current))
+	Localize(e)
+
+	return WriteJSON(e, http.StatusPreconditionFailed, NewVersionMismatch(e.Request.Context(), requestID, current))
 }

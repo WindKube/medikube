@@ -118,10 +118,10 @@ func TestAStrangersRefusalIsByteIdenticalToAGenuineMiss(t *testing.T) {
 
 	const requestID = "0000000000000000"
 
-	miss, err := json.Marshal(NewEnvelope(domain.ErrNotFound, requestID))
+	miss, err := json.Marshal(NewEnvelope(context.Background(), domain.ErrNotFound, requestID))
 	require.NoError(t, err)
 
-	refusal, err := json.Marshal(NewEnvelope(OwnerScoped(domain.ErrForbidden), requestID))
+	refusal, err := json.Marshal(NewEnvelope(context.Background(), OwnerScoped(domain.ErrForbidden), requestID))
 	require.NoError(t, err)
 
 	assert.Equal(t, string(miss), string(refusal),
@@ -179,7 +179,7 @@ func TestAnInternalFailureDisclosesNothingItWasGiven(t *testing.T) {
 	// exactly one file in this repository and an AST guard enforces it.
 	secret := "SELECT name FROM " + kind.Medication.Collection() + " WHERE owner = '" + testsupport.AccountAID + "'"
 
-	failure := NewFailure(fmt.Errorf("the store: %s", secret), "req")
+	failure := NewFailure(context.Background(), fmt.Errorf("the store: %s", secret), "req")
 
 	assert.Equal(t, CodeInternal, failure.Code)
 	assert.Equal(t, InternalMessage, failure.Message)
@@ -200,7 +200,7 @@ func TestValidationCarriesEveryFieldAndNothingElseCarriesAny(t *testing.T) {
 	invalid.Add("name", domain.CodeRequired, "a name is required")
 	invalid.Add("ended_on", "end_before_start", "the end is before the start")
 
-	failure := NewFailure(fmt.Errorf("validating: %w", invalid.OrNil()), "req")
+	failure := NewFailure(context.Background(), fmt.Errorf("validating: %w", invalid.OrNil()), "req")
 
 	assert.Equal(t, domain.CodeValidationFailed, failure.Code)
 	assert.Equal(t, domain.ValidationMessage, failure.Message)
@@ -213,7 +213,7 @@ func TestValidationCarriesEveryFieldAndNothingElseCarriesAny(t *testing.T) {
 			continue
 		}
 
-		assert.Emptyf(t, NewFailure(row.err, "req").Fields,
+		assert.Emptyf(t, NewFailure(context.Background(), row.err, "req").Fields,
 			"%s carries fields[], which contracts/README.md gives to validation_failed alone", row.name)
 	}
 }
@@ -225,7 +225,7 @@ func TestValidationCarriesEveryFieldAndNothingElseCarriesAny(t *testing.T) {
 func TestTheEnvelopeIsByteStableAcrossMarshals(t *testing.T) {
 	t.Parallel()
 
-	envelope := NewEnvelope(domain.ErrNotFound, "01JQ8Z")
+	envelope := NewEnvelope(context.Background(), domain.ErrNotFound, "01JQ8Z")
 
 	first, err := json.Marshal(envelope)
 	require.NoError(t, err)
@@ -237,7 +237,7 @@ func TestTheEnvelopeIsByteStableAcrossMarshals(t *testing.T) {
 			"the envelope's member order is not stable, so every whole-body assertion in the suite is flaky")
 	}
 
-	assert.JSONEq(t, `{"error":{"code":"not_found","message":"`+Message(CodeNotFound)+`","request_id":"01JQ8Z"}}`, string(first))
+	assert.JSONEq(t, `{"error":{"code":"not_found","message":"`+Message(context.Background(), CodeNotFound)+`","request_id":"01JQ8Z"}}`, string(first))
 	assert.NotContains(t, string(first), `"fields"`, "fields is present outside validation_failed")
 }
 
@@ -245,15 +245,15 @@ func TestEveryCodeHasAMessageAndNoMessageNamesAResource(t *testing.T) {
 	t.Parallel()
 
 	for _, row := range contractTaxonomy() {
-		message := Message(row.code)
+		message := Message(context.Background(), row.code)
 
 		assert.NotEmptyf(t, message, "%s has no message", row.code)
 		assert.NotContainsf(t, message, "medication", "%s names the resource", row.code)
 		assert.NotContainsf(t, message, "%", "%s reads as an unfilled format string", row.code)
 	}
 
-	assert.Equal(t, InternalMessage, Message(CodeInternal), "the 500 message is a constant")
-	assert.Equal(t, InternalMessage, Message("a code nobody declared"))
+	assert.Equal(t, InternalMessage, Message(context.Background(), CodeInternal), "the 500 message is a constant")
+	assert.Equal(t, InternalMessage, Message(context.Background(), "a code nobody declared"))
 }
 
 // The middleware owns EVERY error the chain produces, not only the ones
@@ -452,7 +452,7 @@ func TestAnApiErrorFromPocketBaseKeepsItsStatusAndGetsAMediKubeCode(t *testing.T
 			assert.Equal(t, one.status, status)
 			assert.Equal(t, one.code, code)
 
-			assert.NotContains(t, NewFailure(one.err, "req").Message, "went wrong while processing",
+			assert.NotContains(t, NewFailure(context.Background(), one.err, "req").Message, "went wrong while processing",
 				"PocketBase's own prose reached the client")
 		})
 	}
@@ -477,7 +477,7 @@ func TestMapFileValidationErrorNeverPropagatesTheFilename(t *testing.T) {
 	assert.Equal(t, http.StatusUnsupportedMediaType, status)
 	assert.Equal(t, CodeUnsupportedMediaType, code)
 
-	failure := NewFailure(mapped, "req")
+	failure := NewFailure(context.Background(), mapped, "req")
 	assert.NotContains(t, failure.Message, secretFilename)
 	assert.NotContains(t, fmt.Sprintf("%#v", failure), secretFilename,
 		"no member of the envelope carries any part of the uploaded filename")

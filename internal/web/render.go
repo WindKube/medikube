@@ -82,6 +82,8 @@ var ErrUnknownPatchMode = errors.New("web: the patch mode is not one the Datasta
 // middleware, which owns every response in this application, has nothing left
 // to answer with. templ's own http.Handler buffers for the same reason.
 func Render(e *core.RequestEvent, status int, component Component) error {
+	Localize(e)
+
 	body, err := renderToString(e.Request.Context(), component)
 	if err != nil {
 		return err
@@ -160,6 +162,8 @@ func Patch(e *core.RequestEvent, component Component, options ...PatchOption) er
 	if opts.mode != "" && !validPatchMode(opts.mode) {
 		return ErrUnknownPatchMode
 	}
+
+	Localize(e)
 
 	body, err := renderToString(e.Request.Context(), component)
 	if err != nil {

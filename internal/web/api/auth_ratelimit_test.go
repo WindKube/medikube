@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"testing"
@@ -71,7 +72,7 @@ func TestRepeatedFailedSignInsAreBlocked(t *testing.T) {
 	// client of this API is written against.
 	require.NotZero(t, last.Status)
 	assert.Equal(t, web.CodeRateLimited, last.envelope(t).Error.Code)
-	assert.Equal(t, web.Message(web.CodeRateLimited), last.envelope(t).Error.Message)
+	assert.Equal(t, web.Message(context.Background(), web.CodeRateLimited), last.envelope(t).Error.Message)
 	assert.NotEmpty(t, last.envelope(t).Error.RequestID)
 	assert.NotContains(t, last.Body, testsupport.AccountAEmail)
 }

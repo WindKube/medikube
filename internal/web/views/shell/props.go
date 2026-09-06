@@ -54,6 +54,12 @@ type DocumentProps struct {
 	// it, so the nine pages cannot spell the suffix nine ways.
 	Title string
 
+	// Lang is the resolved Localizer's own BCP 47 tag (i18n.Localizer.Tag),
+	// written onto <html lang> (FR-007). RenderPage sets it from the same
+	// Localizer it puts on the request's context, so the two can never
+	// disagree.
+	Lang string
+
 	// SignedIn decides the contents of the navigation landmark and never its
 	// existence. contracts/pages.md is explicit: navigation[name="Primary"] is
 	// on every page in the application, because phase 005's public invitation

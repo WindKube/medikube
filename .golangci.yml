@@ -155,6 +155,26 @@ linters:
             - pkg: github.com/pocketbase/pocketbase/plugins/jsvm
               desc: Forbidden by the constitution. MediKube ships no scripting runtime.
 
+        # Amendment 1.4.0. go-i18n and the x/text pieces it needs (language
+        # matching, Accept-Language parsing) are confined to internal/i18n —
+        # the one package translated, and the one place a shipped language is
+        # derived rather than declared (plan.md's Structure Decision).
+        i18n-stays-in-its-package:
+          list-mode: lax
+          files:
+            - $all
+            - "!**/internal/i18n/**"
+          deny:
+            - pkg: github.com/nicksnyder/go-i18n
+              desc: >-
+                Constitution amendment 1.4.0. Only internal/i18n imports
+                go-i18n; every consumer reads it through i18n.T/i18n.N/i18n.From.
+            - pkg: golang.org/x/text
+              desc: >-
+                Constitution amendment 1.4.0. golang.org/x/text/language is
+                internal/i18n's own concern (Resolve's Accept-Language
+                matching); a consumer names a Localizer, never a language.Tag.
+
     forbidigo:
       # Type information, so a renamed import or a method on an embedded field
       # cannot walk past these patterns.
