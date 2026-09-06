@@ -1,5 +1,7 @@
 package records
 
+import "strings"
+
 // LinkedRecordItem is one related record rendered by links.templ: enough to
 // name what it is, what to call it, and where to open it (FR-059). It is
 // deliberately not tied to any one kind's DTO — a treatment's condition, a
@@ -45,8 +47,10 @@ type MedicationLinksEditorProps struct {
 	Roles      []MedicationLinkRole
 }
 
-func (p MedicationLinksEditorProps) addMedicationSignal() string { return p.ID + "_add_medication" }
-func (p MedicationLinksEditorProps) addRoleSignal() string       { return p.ID + "_add_role" }
+func (p MedicationLinksEditorProps) addMedicationSignal() string {
+	return signalBase(p.ID) + "_add_medication"
+}
+func (p MedicationLinksEditorProps) addRoleSignal() string { return signalBase(p.ID) + "_add_role" }
 
 // medicationRoleSignals declares $_add_role's initial value, defaulted to the
 // first role — a symptom's select otherwise binds to an empty string until
@@ -209,3 +213,8 @@ func CourseMedicationRemoveExpr(href, etag string) string {
 	return "@delete(" + jsLiteral(href) + ", {headers: {'If-Match': " + jsLiteral(etag) +
 		"}}).then(() => window.location.reload())"
 }
+
+// signalBase turns an element id into a signal name: hyphens are not
+// identifier characters, and the underscore keeps the editor's own state out
+// of every form submit on the page.
+func signalBase(id string) string { return "_" + strings.ReplaceAll(id, "-", "_") }

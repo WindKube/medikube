@@ -54,11 +54,11 @@ type CourseMedicationFormProps struct {
 	Options    []MedicationLinkOption
 }
 
-func (p CourseMedicationFormProps) medicationSignal() string { return p.ID + "_medication" }
-func (p CourseMedicationFormProps) dosageSignal() string     { return p.ID + "_dosage" }
-func (p CourseMedicationFormProps) frequencySignal() string  { return p.ID + "_frequency" }
-func (p CourseMedicationFormProps) startedOnSignal() string  { return p.ID + "_started_on" }
-func (p CourseMedicationFormProps) endedOnSignal() string    { return p.ID + "_ended_on" }
+func (p CourseMedicationFormProps) medicationSignal() string { return signalBase(p.ID) + "_medication" }
+func (p CourseMedicationFormProps) dosageSignal() string     { return signalBase(p.ID) + "_dosage" }
+func (p CourseMedicationFormProps) frequencySignal() string  { return signalBase(p.ID) + "_frequency" }
+func (p CourseMedicationFormProps) startedOnSignal() string  { return signalBase(p.ID) + "_started_on" }
+func (p CourseMedicationFormProps) endedOnSignal() string    { return signalBase(p.ID) + "_ended_on" }
 
 // submitExpr PUTs whichever medication is picked with whichever overrides
 // were typed, each falling back to null (and so, server-side, to the
