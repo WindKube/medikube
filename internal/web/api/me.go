@@ -11,6 +11,7 @@ import (
 	"medikube/internal/domain/access"
 	domainidentity "medikube/internal/domain/identity"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	"medikube/internal/records"
 	"medikube/internal/service/patient"
 	"medikube/internal/web"
@@ -171,15 +172,11 @@ func (h *accountHandlers) update(e *core.RequestEvent, actor access.Actor) error
 	}
 
 	if wantsFormPatch(e) && h.deps.Forms != nil {
-		// The locale a submit just changed is not yet reflected in e.Auth,
-		// which was resolved at the start of the request: web.Localize keys
-		// on it, so the form would re-render in the language the account was
-		// signed in with rather than the one it just chose. Setting it here,
-		// on the same in-memory record Localize reads, is what makes this
-		// response answer in the new language rather than the next one.
-		if e.Auth != nil {
-			e.Auth.Set("locale", user.Locale)
-		}
+		// The request's Localizer was resolved from the locale the account
+		// had when the request began. The form must answer in the one it just
+		// chose, so the context is re-resolved before it renders.
+		ctx := e.Request.Context()
+		e.Request = e.Request.WithContext(i18n.With(ctx, i18n.Resolve(user.Locale, e.Request.Header.Get("Accept-Language"))))
 
 		component, formErr := h.deps.Forms.Updated(e.Request.Context(), actor, user)
 		if formErr != nil {
