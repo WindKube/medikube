@@ -116,7 +116,7 @@ other = "błąd wewnętrzny"
 
 [empty.nothing_recorded]
 description = "Shown under a kind's list when the patient has none of that kind yet"
-other = "Nie zapisano jeszcze: {{.Kind}}"
+other = "Nic jeszcze nie zapisano"
 
 [empty.nothing_recorded_body]
 description = "The nothing-recorded empty state's second line"

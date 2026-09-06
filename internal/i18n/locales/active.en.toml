@@ -116,7 +116,7 @@ other = "internal error"
 
 [empty.nothing_recorded]
 description = "Shown under a kind's list when the patient has none of that kind yet"
-other = "No {{.Kind}} recorded yet"
+other = "Nothing recorded yet"
 
 [empty.nothing_recorded_body]
 description = "The nothing-recorded empty state's second line"
