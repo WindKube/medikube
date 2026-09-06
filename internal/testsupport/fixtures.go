@@ -161,6 +161,15 @@ const (
 	TagFlaggedID  = "mktagamara00003"
 )
 
+// LinkedTreatmentID is US6's demonstration case (internal/testsupport/seed/care.go,
+// internal/testsupport/seed/links.go): the one seeded treatment whose Condition
+// relation resolves to a real row and which has one course medication attached.
+// LinkedTreatmentMedicationID is that course medication.
+const (
+	LinkedTreatmentID           = "mktrtamara00002"
+	LinkedTreatmentMedicationID = "mkmedamara00001"
+)
+
 // AuthToken mints a PocketBase auth token for a seeded account, which is what
 // an HTTP test presents as the caller.
 //

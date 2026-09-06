@@ -368,6 +368,12 @@ func Apply(app core.App) error {
 			return err
 		}
 
+		// Links name rows every kind above has already written, so it runs
+		// last among the clinical kinds.
+		if err := applyLinks(tx); err != nil {
+			return err
+		}
+
 		if err := applyActivePatients(tx); err != nil {
 			return err
 		}

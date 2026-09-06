@@ -46,6 +46,8 @@ var dataChangingJSONOnly = map[string]string{
 	"createTag":                "contracts/tags.md: answers the JSON envelope",
 	"updateTag":                "contracts/tags.md: answers the JSON envelope",
 	"deleteTag":                "contracts/tags.md: answers the JSON envelope",
+	"upsertCourseMedication":   "the treatment-medication join contract: answers the JSON envelope",
+	"deleteCourseMedication":   "the treatment-medication join contract: answers the JSON envelope",
 }
 
 func TestEveryDataChangingRouteIsAccountedForByFeedback(t *testing.T) {

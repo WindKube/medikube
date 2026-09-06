@@ -79,6 +79,10 @@ type Treatment struct {
 	Notes     string   `json:"notes,omitempty"`
 	Tags      []string `json:"tags,omitempty"`
 	CreatedAt string   `json:"created_at"`
+
+	// References is FR-006's pre-delete count (internal/web/api/references.go):
+	// every treatment_medications row naming this treatment.
+	References *ReferencesSummary `json:"references,omitempty"`
 }
 
 // GetTags implements records.Tagged so the search index stays in step with

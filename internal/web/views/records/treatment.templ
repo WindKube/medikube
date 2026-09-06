@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
+	"medikube/internal/web/views/shared"
 )
 
 const (
@@ -121,15 +122,15 @@ templ TreatmentDetail(props TreatmentDetailProps) {
 				@detailValue(entry)
 			}
 		</dl>
-		@components.Confirm(components.ConfirmProps{
-			ID:           ids.RecordConfirm(kind.Treatment, props.Treatment.ID),
-			Signal:       "_confirming_delete",
-			Title:        "Delete this treatment?",
-			Subject:      props.Treatment.Name,
-			Consequence:  "This is permanent. There is no recycle bin and no undo.",
-			ConfirmLabel: "Delete permanently",
-			ConfirmOn:    treatmentDeleteExpression(props.Treatment),
-			CancelLabel:  "Keep it",
+		@shared.DeleteConfirm(shared.DeleteConfirmProps{
+			ID:             ids.RecordConfirm(kind.Treatment, props.Treatment.ID),
+			Signal:         "_confirming_delete",
+			Title:          "Delete this treatment?",
+			Subject:        props.Treatment.Name,
+			ReferenceCount: props.ReferenceCount,
+			ConfirmLabel:   "Delete permanently",
+			ConfirmOn:      treatmentDeleteExpression(props.Treatment),
+			CancelLabel:    "Keep it",
 		})
 	</article>
 }

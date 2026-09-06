@@ -191,7 +191,8 @@ type AllergyListProps struct {
 }
 
 type AllergyDetailProps struct {
-	Allergy AllergyView
+	Allergy     AllergyView
+	Medications MedicationLinksEditorProps
 }
 
 type AllergyFormProps struct {

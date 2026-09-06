@@ -52,6 +52,8 @@ func TestTheAppliedMigrationSetEqualsTheRegisteredSet(t *testing.T) {
 		"1756400530_care_" + kind.Condition.Collection() + ".go",
 		"1756400600_" + kind.FamilyMember.Collection() + ".go",
 		"1756400700_family_member_tags.go",
+		"1756400800_links_" + kind.Medication.Collection() + ".go",
+		"1756400810_" + TreatmentMedicationsCollection + ".go",
 	}
 
 	require.Equal(t, expected, Files(),

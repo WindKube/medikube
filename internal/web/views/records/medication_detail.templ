@@ -2,8 +2,8 @@ package records
 
 import (
 	"medikube/internal/domain/kind"
-	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
+	"medikube/internal/web/views/shared"
 )
 
 // confirmSignal reveals the delete confirmation. The element is rendered with
@@ -13,13 +13,12 @@ import (
 const confirmSignal = "_confirming_delete"
 
 const (
-	detailArticle     = "Medication"
-	confirmTitle      = "Delete this medication?"
-	confirmConsequence = "This is permanent. There is no recycle bin and no undo, so everything recorded here goes with it."
-	confirmLabel      = "Delete permanently"
-	confirmCancel     = "Keep it"
-	editLabel         = "Edit"
-	deleteLabel       = "Delete"
+	detailArticle = "Medication"
+	confirmTitle  = "Delete this medication?"
+	confirmLabel  = "Delete permanently"
+	confirmCancel = "Keep it"
+	editLabel     = "Edit"
+	deleteLabel   = "Delete"
 )
 
 // MedicationDetail is contracts/pages.md P5's landmark: every value recorded
@@ -59,15 +58,18 @@ templ MedicationDetail(props MedicationDetailProps) {
 				@detailValue(entry)
 			}
 		</dl>
-		@components.Confirm(components.ConfirmProps{
-			ID:           ids.RecordConfirm(kind.Medication, props.Medication.ID),
-			Signal:       confirmSignal,
-			Title:        confirmTitle,
-			Subject:      props.Medication.Name,
-			Consequence:  confirmConsequence,
-			ConfirmLabel: confirmLabel,
-			ConfirmOn:    deleteExpression(props.Medication),
-			CancelLabel:  confirmCancel,
+		if props.Links.ID != "" {
+			@RemovableLinks(props.Links)
+		}
+		@shared.DeleteConfirm(shared.DeleteConfirmProps{
+			ID:             ids.RecordConfirm(kind.Medication, props.Medication.ID),
+			Signal:         confirmSignal,
+			Title:          confirmTitle,
+			Subject:        props.Medication.Name,
+			ReferenceCount: props.ReferenceCount,
+			ConfirmLabel:   confirmLabel,
+			ConfirmOn:      deleteExpression(props.Medication),
+			CancelLabel:    confirmCancel,
 		})
 	</article>
 }

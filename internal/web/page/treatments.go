@@ -30,7 +30,9 @@ const treatmentListTitle = "Treatments"
 
 // TreatmentHandlers is the treatment pages' contribution to the route table,
 // mirroring medications.go's Handlers end to end (T078).
-func TreatmentHandlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
+func TreatmentHandlers(
+	resolve api.Resolve, patients api.PatientResolve, courseMedications api.CourseMedicationResolve,
+) (httproute.Handlers, error) {
 	links, err := newTreatmentLinks()
 	if err != nil {
 		return nil, err
@@ -44,7 +46,10 @@ func TreatmentHandlers(resolve api.Resolve, patients api.PatientResolve) (httpro
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &treatmentPages{resolve: resolve, patients: patients, links: links, views: TreatmentViews{links: links}}
+	pages := &treatmentPages{
+		resolve: resolve, patients: patients, courseMedications: courseMedications,
+		links: links, views: TreatmentViews{links: links},
+	}
 
 	return httproute.Handlers{
 		OpTreatmentListPage:   web.WithActor(pages.list),
@@ -86,6 +91,10 @@ func (v TreatmentViews) Row(record recordfamily.Record) recordfamily.Renderer {
 
 func (v TreatmentViews) Detail(record recordfamily.Record) recordfamily.Renderer {
 	return views.TreatmentDetail(views.TreatmentDetailProps{Treatment: v.view(record)})
+}
+
+func (v TreatmentViews) detailWithReferenceCount(record recordfamily.Record, referenceCount int) recordfamily.Renderer {
+	return views.TreatmentDetail(views.TreatmentDetailProps{Treatment: v.view(record), ReferenceCount: referenceCount})
 }
 
 func (v TreatmentViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {
@@ -160,10 +169,11 @@ func treatmentDetailEntity(record recordfamily.Record, detail api.Treatment) cli
 }
 
 type treatmentPages struct {
-	resolve  api.Resolve
-	patients api.PatientResolve
-	links    treatmentLinks
-	views    TreatmentViews
+	resolve           api.Resolve
+	patients          api.PatientResolve
+	courseMedications api.CourseMedicationResolve
+	links             treatmentLinks
+	views             TreatmentViews
 }
 
 func (p *treatmentPages) list(e *core.RequestEvent, actor access.Actor) error {
@@ -261,15 +271,17 @@ func (p *treatmentPages) detail(e *core.RequestEvent, actor access.Actor) error 
 		return err
 	}
 
-	found, err := handler.Get(e.Request.Context(), actor,
-		kind.Treatment.Segment(), e.Request.PathValue(api.PathID))
+	treatmentID := e.Request.PathValue(api.PathID)
+
+	found, err := handler.Get(e.Request.Context(), actor, kind.Treatment.Segment(), treatmentID)
 	if err != nil {
 		return web.OwnerScoped(err)
 	}
 
-	patientID := ""
+	patientID, conditionID := "", ""
 	if detail, ok := found.Body.(*api.Treatment); ok {
 		patientID = detail.Patient
+		conditionID = detail.Condition
 	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, patientID)
@@ -277,11 +289,127 @@ func (p *treatmentPages) detail(e *core.RequestEvent, actor access.Actor) error 
 		return err
 	}
 
+	linked, err := p.linkedCondition(e.Request.Context(), handler, actor, conditionID)
+	if err != nil {
+		return err
+	}
+
+	courseMedications, options, err := p.courseMedicationRows(e.Request.Context(), handler, actor, patientID, treatmentID, found.Version)
+	if err != nil {
+		return err
+	}
+
+	sectionID := ids.RecordDetail(kind.Treatment, treatmentID) + "-" + kind.Medication.Collection()
+
 	return p.render(e, actor, p.views.view(found).Name, sequence{
 		context,
-		entry.Views.Detail(found),
+		p.views.detailWithReferenceCount(found, len(courseMedications)),
+		views.LinkedRecords(ids.RecordDetail(kind.Treatment, treatmentID)+"-links", "Linked records", linked),
+		views.CourseMedications(sectionID, "Course medications", courseMedications, views.CourseMedicationFormProps{
+			ID:         sectionID + "-form",
+			UpsertBase: p.links.courseMedicationsBase(treatmentID),
+			Etag:       found.Version,
+			Options:    options,
+		}),
 		entry.Views.Form(found, nil, ""),
 	})
+}
+
+// linkedCondition is the treatment's own `condition` relation rendered as an
+// openable link rather than the bare id Entries() shows in the <dl> (FR-059).
+// An empty conditionID or one the handler cannot read (deleted, or not this
+// actor's) renders no items at all — a broken link is worse than nothing.
+func (p *treatmentPages) linkedCondition(
+	ctx context.Context, handler *recordfamily.Handler, actor access.Actor, conditionID string,
+) ([]views.LinkedRecordItem, error) {
+	if conditionID == "" {
+		return nil, nil
+	}
+
+	found, err := handler.Get(ctx, actor, kind.Condition.Segment(), conditionID)
+	if err != nil {
+		return nil, nil //nolint:nilerr // a condition this actor can no longer reach renders no link, not a page error
+	}
+
+	condition, ok := found.Body.(*api.Condition)
+	if !ok || condition.Diagnosis == "" {
+		return nil, nil
+	}
+
+	return []views.LinkedRecordItem{
+		{Kind: string(kind.Condition), Summary: condition.Diagnosis, Href: p.links.conditionHref(conditionID)},
+	}, nil
+}
+
+// courseMedicationRows resolves FR-060/FR-061's attached medications, each
+// with its effective values and their provenance, plus the patient's own
+// medications for the attach form's picker.
+func (p *treatmentPages) courseMedicationRows(
+	ctx context.Context, handler *recordfamily.Handler, actor access.Actor, patientID, treatmentID, treatmentEtag string,
+) ([]views.CourseMedicationRow, []views.MedicationLinkOption, error) {
+	options, err := patientMedicationOptions(ctx, handler, actor, patientID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if p.courseMedications == nil {
+		return nil, options, nil
+	}
+
+	service, err := p.courseMedications()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	items, err := service.List(ctx, actor, treatmentID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rows := make([]views.CourseMedicationRow, 0, len(items))
+
+	for _, item := range items {
+		itemHref := p.links.courseMedicationItemHref(treatmentID, item.Medication.ID)
+
+		rows = append(rows, views.CourseMedicationRow{
+			MedicationID:   item.Medication.ID,
+			MedicationName: item.Medication.Name,
+			MedicationHref: p.links.medicationHref(item.Medication.ID),
+			RemoveOn:       views.CourseMedicationRemoveExpr(itemHref, treatmentEtag),
+			Dosage:         courseMedicationEffective(item.Effective.Dosage),
+			Frequency:      courseMedicationEffective(item.Effective.Frequency),
+			Duration:       courseMedicationEffective(item.Effective.Duration),
+			Timing:         courseMedicationEffective(item.Effective.Timing),
+			Prescriber:     courseMedicationEffective(item.Effective.Prescriber),
+			Pharmacy:       courseMedicationEffective(item.Effective.Pharmacy),
+			StartedOn:      courseMedicationEffective(item.Effective.StartedOn),
+			EndedOn:        courseMedicationEffective(item.Effective.EndedOn),
+		})
+	}
+
+	return rows, options, nil
+}
+
+func courseMedicationEffective(effective clinical.Effective) views.CourseMedicationEffectiveView {
+	return views.CourseMedicationEffectiveView{
+		Value:  effectiveDisplayValue(effective.Value),
+		Source: string(effective.Source),
+	}
+}
+
+// effectiveDisplayValue renders whatever clinical.Effective carried as a
+// string: a domain.Date's own String() for a date field, fmt.Sprint for
+// everything else (every other effective field is already a string).
+func effectiveDisplayValue(value any) string {
+	if date, ok := value.(domain.Date); ok {
+		return date.String()
+	}
+
+	if value == nil {
+		return ""
+	}
+
+	return fmt.Sprint(value)
 }
 
 func (p *treatmentPages) session(actor access.Actor) (*recordfamily.Handler, error) {
@@ -303,24 +431,30 @@ func (p *treatmentPages) render(e *core.RequestEvent, actor access.Actor, title 
 }
 
 type treatmentLinks struct {
-	listPage        string
-	medicationsPage string
-	detailPage      string
-	settingsPage    string
-	patientsPage    string
-	record          string
-	collection      string
+	listPage             string
+	medicationsPage      string
+	detailPage           string
+	conditionDetailPage  string
+	medicationDetailPage string
+	settingsPage         string
+	patientsPage         string
+	record               string
+	collection           string
+	courseMedications    string
 }
 
 func newTreatmentLinks() (treatmentLinks, error) {
 	paths, err := routePaths(map[string]string{
-		OpTreatmentListPage:   "",
-		OpTreatmentDetailPage: "",
-		OpSettingsPage:        "",
-		OpMedicationListPage:  "",
-		OpPatientListPage:     "",
-		api.OpGetRecord:       "",
-		api.OpCreateRecord:    "",
+		OpTreatmentListPage:         "",
+		OpTreatmentDetailPage:       "",
+		OpConditionDetailPage:       "",
+		OpMedicationDetailPage:      "",
+		OpSettingsPage:              "",
+		OpMedicationListPage:        "",
+		OpPatientListPage:           "",
+		api.OpGetRecord:             "",
+		api.OpCreateRecord:          "",
+		api.OpListCourseMedications: "",
 	})
 	if err != nil {
 		return treatmentLinks{}, err
@@ -329,14 +463,47 @@ func newTreatmentLinks() (treatmentLinks, error) {
 	segment := kind.Treatment.Segment()
 
 	return treatmentLinks{
-		listPage:        paths[OpTreatmentListPage],
-		medicationsPage: paths[OpMedicationListPage],
-		detailPage:      paths[OpTreatmentDetailPage],
-		settingsPage:    paths[OpSettingsPage],
-		patientsPage:    paths[OpPatientListPage],
-		record:          strings.ReplaceAll(paths[api.OpGetRecord], "{"+api.PathKind+"}", segment),
-		collection:      strings.ReplaceAll(paths[api.OpCreateRecord], "{"+api.PathKind+"}", segment),
+		listPage:             paths[OpTreatmentListPage],
+		medicationsPage:      paths[OpMedicationListPage],
+		detailPage:           paths[OpTreatmentDetailPage],
+		conditionDetailPage:  paths[OpConditionDetailPage],
+		medicationDetailPage: paths[OpMedicationDetailPage],
+		settingsPage:         paths[OpSettingsPage],
+		patientsPage:         paths[OpPatientListPage],
+		record:               strings.ReplaceAll(paths[api.OpGetRecord], "{"+api.PathKind+"}", segment),
+		collection:           strings.ReplaceAll(paths[api.OpCreateRecord], "{"+api.PathKind+"}", segment),
+		courseMedications:    paths[api.OpListCourseMedications],
 	}, nil
+}
+
+// courseMedicationsBase and courseMedicationItemHref build
+// contracts/treatment-medications.md's own nested addresses for one
+// treatment: the join's list route, not one of the generic six.
+func (l treatmentLinks) courseMedicationsBase(treatmentID string) string {
+	return strings.ReplaceAll(l.courseMedications, "{"+api.PathID+"}", treatmentID)
+}
+
+func (l treatmentLinks) courseMedicationItemHref(treatmentID, medicationID string) string {
+	return l.courseMedicationsBase(treatmentID) + "/" + medicationID
+}
+
+// conditionHref and medicationHref build another kind's detail page address
+// from the id this treatment names — links.templ's Href, so "openable link"
+// is a real page rather than a bare id (FR-059).
+func (l treatmentLinks) conditionHref(id string) string {
+	if id == "" {
+		return ""
+	}
+
+	return strings.ReplaceAll(l.conditionDetailPage, "{"+api.PathID+"}", id)
+}
+
+func (l treatmentLinks) medicationHref(id string) string {
+	if id == "" {
+		return ""
+	}
+
+	return strings.ReplaceAll(l.medicationDetailPage, "{"+api.PathID+"}", id)
 }
 
 func (l treatmentLinks) of(recordID string) views.TreatmentLinks {

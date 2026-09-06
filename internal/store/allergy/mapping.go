@@ -22,18 +22,19 @@ func recordFromAllergy(record *core.Record) (clinical.Allergy, error) {
 	}
 
 	return clinical.Allergy{
-		ID:        record.Id,
-		PatientID: record.GetString(fieldPatient),
-		Allergen:  record.GetString(fieldAllergen),
-		Reaction:  record.GetString(fieldReaction),
-		Severity:  clinical.Severity(record.GetString(fieldSeverity)),
-		Status:    clinical.ConditionStatus(record.GetString(fieldStatus)),
-		OnsetOn:   onsetOn,
-		Notes:     record.GetString(fieldNotes),
-		Tags:      record.GetStringSlice(fieldTags),
-		CreatedAt: recordInstant(record, fieldCreated),
-		UpdatedAt: recordInstant(record, fieldUpdated),
-		Version:   store.Version(record),
+		ID:            record.Id,
+		PatientID:     record.GetString(fieldPatient),
+		Allergen:      record.GetString(fieldAllergen),
+		Reaction:      record.GetString(fieldReaction),
+		Severity:      clinical.Severity(record.GetString(fieldSeverity)),
+		Status:        clinical.ConditionStatus(record.GetString(fieldStatus)),
+		OnsetOn:       onsetOn,
+		Notes:         record.GetString(fieldNotes),
+		Tags:          record.GetStringSlice(fieldTags),
+		MedicationIDs: record.GetStringSlice(fieldMedications),
+		CreatedAt:     recordInstant(record, fieldCreated),
+		UpdatedAt:     recordInstant(record, fieldUpdated),
+		Version:       store.Version(record),
 	}, nil
 }
 
@@ -50,6 +51,7 @@ func allergyToRecord(record *core.Record, entity clinical.Allergy) error {
 	setDate(record, fieldOnsetOn, entity.OnsetOn)
 	record.Set(fieldNotes, entity.Notes)
 	record.Set(fieldTags, entity.Tags)
+	record.Set(fieldMedications, entity.MedicationIDs)
 
 	return nil
 }

@@ -131,6 +131,12 @@ const (
 
 	RelativeName = "Adaeze-Okonkwo-Van-Der-Berg"
 	TagName      = "clandoxerith-remission-marker"
+
+	// US6's course-medication join: its own dosage/timing, distinct from a
+	// medication's own Dosage/Frequency above, so a leak of one cannot be
+	// mistaken for a leak of the other.
+	CourseMedicationDosage = "5.5mg-course-specific"
+	CourseMedicationTiming = "with-the-evening-meal-only"
 )
 
 // Sentinel is one planted value and what it stands for. The meaning is printed
@@ -188,6 +194,8 @@ func Sentinels() []Sentinel {
 		{ContactPhone, "their emergency contact's phone number"},
 		{RelativeName, "the name of a relative recorded in family history, which identifies a third person"},
 		{TagName, "the name of a tag (FR-085, FR-086, SC-011)"},
+		{CourseMedicationDosage, "the dose a course of treatment overrides the medication's own with"},
+		{CourseMedicationTiming, "when during the day the course says to take it"},
 	}
 }
 
@@ -1047,6 +1055,7 @@ func drive(t testing.TB, c *client) {
 	driveConditions(c)
 	driveEmergencyContacts(c)
 	driveSearch(c)
+	driveCourseMedications(c)
 }
 
 const onePixelPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
@@ -1892,6 +1901,58 @@ func driveSearch(c *client) {
 	c.token(testsupport.AccountBEmail)
 	c.do(http.MethodGet, "/api/v1/search?patient="+patientID+"&q="+SearchTerm, "")
 	c.token(testsupport.AccountAEmail)
+}
+
+// courseMedicationsOfKind and courseMedicationAddress build
+// contracts/treatment-medications.md's own nested shape: not one of the six
+// generic recordRoutes, so not built from recordsOf/recordAddressOf.
+func courseMedicationsOfKind(treatmentID string) string {
+	return recordAddressOf(kind.Treatment, treatmentID) + "/" + kind.Medication.Segment()
+}
+
+func courseMedicationAddress(treatmentID, medicationID string) string {
+	return courseMedicationsOfKind(treatmentID) + "/" + medicationID
+}
+
+// driveCourseMedications walks the join US6 adds on top of an already-seeded
+// treatment and medication: list, attach with the join's own dosage/timing
+// sentinels, a stranger's refusal, and detach. Neither Upsert nor Delete ever
+// bumps the treatment record's own version (internal/store/coursemedication's
+// Upsert/Delete only read it through expectVersion), so the one ETag fetched
+// up front stays valid throughout, the same way coursemedications_test.go's
+// HTTP suite relies on it.
+func driveCourseMedications(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	treatmentID := testsupport.TreatmentNameOnlyID
+	medicationID := testsupport.NameOnlyMedicationID
+
+	read := c.do(http.MethodGet, recordAddressOf(kind.Treatment, treatmentID), "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+
+	etag := read.Header.Get("ETag")
+	require.NotEmpty(c.t, etag, "no ETag, so the precondition steps below would not be preconditions")
+
+	list := courseMedicationsOfKind(treatmentID)
+	c.do(http.MethodGet, list, "")
+
+	address := courseMedicationAddress(treatmentID, medicationID)
+
+	body := jsonBody(c.t, api.CourseMedicationPut{
+		Dosage: ptr(CourseMedicationDosage),
+		Timing: ptr(CourseMedicationTiming),
+	})
+
+	attached := c.doWith(http.MethodPut, address, body, map[string]string{"If-Match": etag})
+	require.Equal(c.t, http.StatusCreated, attached.Status, "%s", attached.Body)
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, list, "")
+	c.do(http.MethodGet, address, "")
+	c.doWith(http.MethodPut, address, body, map[string]string{"If-Match": etag})
+
+	c.token(testsupport.AccountAEmail)
+	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": etag})
 }
 
 // decodedID reads the id out of a created record's body without asserting on

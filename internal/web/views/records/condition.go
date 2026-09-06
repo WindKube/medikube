@@ -151,7 +151,8 @@ type ConditionListProps struct {
 }
 
 type ConditionDetailProps struct {
-	Condition ConditionView
+	Condition   ConditionView
+	Medications MedicationLinksEditorProps
 }
 
 type ConditionFormProps struct {

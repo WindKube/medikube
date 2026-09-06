@@ -25,6 +25,10 @@ const (
 	fieldUpdated      = "updated"
 )
 
+// fieldMedications is migration 17's addition (data-model §4.2, FR-021),
+// derived rather than spelled a second time; see allergy's own schema.go.
+var fieldMedications = kind.Medication.Collection()
+
 func asciiLower(value string) string {
 	folded := []byte(value)
 	for i, b := range folded {

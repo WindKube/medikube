@@ -32,6 +32,13 @@ const (
 	fieldUpdated       = "updated"
 )
 
+// fieldTreatedByMedications and fieldCausedByMedications are derived from the
+// medications collection's own name rather than spelled whole (research D-05).
+var (
+	fieldTreatedByMedications = "treated_by_" + kind.Medication.Collection()
+	fieldCausedByMedications  = "caused_by_" + kind.Medication.Collection()
+)
+
 // ErrUnexpectedCollection is a record handed to the wrong mapper.
 var ErrUnexpectedCollection = errors.New("store/symptom: the record is not from this collection")
 
@@ -53,25 +60,27 @@ func FromRecord(record *core.Record) (clinical.Symptom, error) {
 	}
 
 	return clinical.Symptom{
-		ID:              record.Id,
-		PatientID:       record.GetString(fieldPatient),
-		Name:            record.GetString(fieldName),
-		Category:        clinical.SymptomCategory(record.GetString(fieldCategory)),
-		Severity:        clinical.Severity(record.GetString(fieldSeverity)),
-		OccurredAt:      occurredAt,
-		DurationMinutes: recordIntPtr(record, fieldDurationMin),
-		PainScale:       recordIntPtr(record, fieldPainScale),
-		BodySite:        record.GetString(fieldBodySite),
-		Triggers:        record.GetStringSlice(fieldTriggers),
-		ReliefMethods:   record.GetStringSlice(fieldReliefMethods),
-		Impact:          clinical.SymptomImpact(record.GetString(fieldImpact)),
-		ResolvedAt:      resolvedAt,
-		IsChronic:       record.GetBool(fieldIsChronic),
-		Tags:            record.GetStringSlice(fieldTags),
-		Status:          clinical.ConditionStatus(record.GetString(fieldStatus)),
-		CreatedAt:       record.GetDateTime(fieldCreated).Time().UTC().Truncate(time.Millisecond),
-		UpdatedAt:       record.GetDateTime(fieldUpdated).Time().UTC().Truncate(time.Millisecond),
-		Version:         store.Version(record),
+		ID:                     record.Id,
+		PatientID:              record.GetString(fieldPatient),
+		Name:                   record.GetString(fieldName),
+		Category:               clinical.SymptomCategory(record.GetString(fieldCategory)),
+		Severity:               clinical.Severity(record.GetString(fieldSeverity)),
+		OccurredAt:             occurredAt,
+		DurationMinutes:        recordIntPtr(record, fieldDurationMin),
+		PainScale:              recordIntPtr(record, fieldPainScale),
+		BodySite:               record.GetString(fieldBodySite),
+		Triggers:               record.GetStringSlice(fieldTriggers),
+		ReliefMethods:          record.GetStringSlice(fieldReliefMethods),
+		Impact:                 clinical.SymptomImpact(record.GetString(fieldImpact)),
+		ResolvedAt:             resolvedAt,
+		IsChronic:              record.GetBool(fieldIsChronic),
+		Tags:                   record.GetStringSlice(fieldTags),
+		Status:                 clinical.ConditionStatus(record.GetString(fieldStatus)),
+		TreatedByMedicationIDs: record.GetStringSlice(fieldTreatedByMedications),
+		CausedByMedicationIDs:  record.GetStringSlice(fieldCausedByMedications),
+		CreatedAt:              record.GetDateTime(fieldCreated).Time().UTC().Truncate(time.Millisecond),
+		UpdatedAt:              record.GetDateTime(fieldUpdated).Time().UTC().Truncate(time.Millisecond),
+		Version:                store.Version(record),
 	}, nil
 }
 
@@ -103,6 +112,8 @@ func ToRecord(record *core.Record, s clinical.Symptom) error {
 	record.Set(fieldIsChronic, s.IsChronic)
 	record.Set(fieldTags, s.Tags)
 	record.Set(fieldStatus, string(s.Status))
+	record.Set(fieldTreatedByMedications, orEmpty(s.TreatedByMedicationIDs))
+	record.Set(fieldCausedByMedications, orEmpty(s.CausedByMedicationIDs))
 
 	return nil
 }

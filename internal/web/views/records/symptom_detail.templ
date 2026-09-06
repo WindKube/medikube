@@ -2,20 +2,19 @@ package records
 
 import (
 	"medikube/internal/domain/kind"
-	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
+	"medikube/internal/web/views/shared"
 )
 
 const symptomConfirmSignal = "_confirming_delete"
 
 const (
-	symptomDetailArticle    = "Symptom episode"
-	symptomConfirmTitle     = "Delete this symptom episode?"
-	symptomConfirmConsequence = "This is permanent. There is no recycle bin and no undo, so everything recorded here goes with it."
-	symptomConfirmLabel     = "Delete permanently"
-	symptomConfirmCancel    = "Keep it"
-	symptomEditLabel        = "Edit"
-	symptomDeleteLabel      = "Delete"
+	symptomDetailArticle = "Symptom episode"
+	symptomConfirmTitle  = "Delete this symptom episode?"
+	symptomConfirmLabel  = "Delete permanently"
+	symptomConfirmCancel = "Keep it"
+	symptomEditLabel     = "Edit"
+	symptomDeleteLabel   = "Delete"
 )
 
 templ SymptomDetail(props SymptomDetailProps) {
@@ -55,15 +54,18 @@ templ SymptomDetail(props SymptomDetailProps) {
 				@detailValue(entry)
 			}
 		</dl>
-		@components.Confirm(components.ConfirmProps{
-			ID:           ids.RecordConfirm(kind.Symptom, props.Symptom.ID),
-			Signal:       symptomConfirmSignal,
-			Title:        symptomConfirmTitle,
-			Subject:      props.Symptom.Name,
-			Consequence:  symptomConfirmConsequence,
-			ConfirmLabel: symptomConfirmLabel,
-			ConfirmOn:    deleteSymptomExpression(props.Symptom),
-			CancelLabel:  symptomConfirmCancel,
+		if props.Medications.ID != "" {
+			@MedicationLinksEditor(props.Medications)
+		}
+		@shared.DeleteConfirm(shared.DeleteConfirmProps{
+			ID:             ids.RecordConfirm(kind.Symptom, props.Symptom.ID),
+			Signal:         symptomConfirmSignal,
+			Title:          symptomConfirmTitle,
+			Subject:        props.Symptom.Name,
+			ReferenceCount: 0,
+			ConfirmLabel:   symptomConfirmLabel,
+			ConfirmOn:      deleteSymptomExpression(props.Symptom),
+			CancelLabel:    symptomConfirmCancel,
 		})
 	</article>
 }

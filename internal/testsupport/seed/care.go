@@ -102,6 +102,10 @@ func Treatments() []clinical.Treatment {
 			StartedOn:   date(2025, 8, 20), Frequency: "twice weekly",
 			ExpectedOutcome: "Improved exercise tolerance", Status: clinical.TherapyStatusActive,
 			Encounters: []string{"mkencamara00002", "mkencamara00003"},
+			// FR-028's own relation, and US6's demonstration case for
+			// FR-059's linked-records rendering (T142): the one seeded
+			// treatment whose Condition resolves to a real row.
+			ConditionID: ResolvedConditionID,
 		},
 		{
 			ID: "mktrtamara00003", PatientID: accountAPatientSelfID,

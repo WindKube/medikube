@@ -609,6 +609,9 @@ var filterDSLExempt = map[string]string{
 	"internal/store/symptom/aggregate.go":             "FR-031's correlated GROUP BY (patient, LOWER(name)) aggregate has no store.Query shape to build it from; the {:param} here is dbx's own bound-parameter syntax passed to app.DB().NewQuery(...).Bind(...), never PocketBase's filter DSL, and no request input reaches it",
 	"internal/store/symptom/repo_integration_test.go": "an EXPLAIN QUERY PLAN over the same aggregate.go query, bound the same way through app.DB().NewQuery(...).Bind(...); the {:param} is dbx's bound-parameter syntax and not PocketBase's filter DSL",
 	"internal/store/tag/rename_scale_test.go":         "T154's bulk-only WHERE clause discriminates the scale test's own rows from the fixture's; the {:prefix} is dbx.Params bound through dbx.NewExp, never PocketBase's filter DSL, and no request input reaches it",
+	"internal/store/coursemedication/repo.go": "List's published ordering reaches across the relation into the " +
+		"related row's own name column via PocketBase's dot-notation resolver — a join store.Schema has no shape " +
+		"for that; Upsert and Delete's own lookups are a bound store.Query (findLink), and this is the one call left",
 }
 
 // PocketBase's own entry points into its filter DSL. A call to one of these is

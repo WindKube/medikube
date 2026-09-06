@@ -44,6 +44,10 @@ func clinicalUserRoute(route httproute.Route) bool {
 // (collectionURL, crossKindURL, recordURL) are told apart below.
 func routeShape(path string) string {
 	switch {
+	case strings.HasSuffix(path, "/{id}/medications/{medicationId}"):
+		return "courseItem"
+	case strings.HasSuffix(path, "/{id}/medications"):
+		return "courseList"
 	case strings.HasSuffix(path, "/{kind}/{id}"):
 		return "one"
 	case strings.HasSuffix(path, "/{kind}"):
@@ -292,6 +296,10 @@ func pathShape(expr ast.Expr, idents map[string]string) string {
 		return "ofKind"
 	case "recordURL":
 		return "one"
+	case "courseMedicationListURL":
+		return "courseList"
+	case "courseMedicationItemURL":
+		return "courseItem"
 	default:
 		return ""
 	}

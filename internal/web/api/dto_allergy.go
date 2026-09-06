@@ -12,10 +12,11 @@ import (
 )
 
 const (
-	MemberAllergen = "allergen"
-	MemberReaction = "reaction"
-	MemberSeverity = "severity"
-	MemberOnsetOn  = "onset_on"
+	MemberAllergen    = "allergen"
+	MemberReaction    = "reaction"
+	MemberSeverity    = "severity"
+	MemberOnsetOn     = "onset_on"
+	MemberMedications = "medications"
 )
 
 var allergyMembers = []string{
@@ -26,6 +27,7 @@ var allergyMembers = []string{
 	MemberStatus,
 	MemberOnsetOn,
 	MemberNotes,
+	MemberMedications,
 }
 
 // AllergySummary is what the list operations return. Critical is FR-018's
@@ -52,6 +54,11 @@ type Allergy struct {
 	Reaction string `json:"reaction,omitempty"`
 	Notes    string `json:"notes,omitempty"`
 
+	// Medications is FR-017's multi-relation: every medication this allergy
+	// concerns. Replace-set semantics travel through
+	// service/allergy.Patch.MedicationIDs (FR-056).
+	Medications []string `json:"medications,omitempty"`
+
 	Tags      []string `json:"tags"`
 	CreatedAt string   `json:"created_at"`
 }
@@ -61,20 +68,26 @@ type Allergy struct {
 func (a *Allergy) GetTags() []string { return a.Tags }
 
 type AllergyCreate struct {
-	Patient  string   `json:"patient"`
-	Allergen string   `json:"allergen"`
-	Reaction string   `json:"reaction,omitempty"`
-	Severity string   `json:"severity"`
-	Status   string   `json:"status,omitempty"`
-	OnsetOn  *string  `json:"onset_on,omitempty"`
-	Notes    string   `json:"notes,omitempty"`
-	Tags     []string `json:"tags,omitempty"`
+	Patient     string   `json:"patient"`
+	Allergen    string   `json:"allergen"`
+	Reaction    string   `json:"reaction,omitempty"`
+	Severity    string   `json:"severity"`
+	Status      string   `json:"status,omitempty"`
+	OnsetOn     *string  `json:"onset_on,omitempty"`
+	Notes       string   `json:"notes,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	Medications []string `json:"medications,omitempty"`
 }
 
 // TagIDs implements records.Taggable: a create always supplies its tags,
 // even when that is none.
 func (c *AllergyCreate) TagIDs() (ids []string, supplied bool) { return c.Tags, true }
 
+// AllergyPatch is the PATCH body. Medications is a plain, non-pointer slice
+// rather than web.Optional[[]string], mirroring InjuryPatch.Medications:
+// encoding/json already tells absent (nil) apart from
+// supplied-including-empty for a slice field, which is exactly
+// service/allergy.Patch.MedicationIDs's *[]string contract.
 type AllergyPatch struct {
 	Allergen *string              `json:"allergen,omitempty"`
 	Reaction *string              `json:"reaction,omitempty"`
@@ -86,7 +99,8 @@ type AllergyPatch struct {
 	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
 	// applied tags alone, a non-nil one — including an empty array —
 	// replaces the whole set.
-	Tags *[]string `json:"tags,omitempty"`
+	Tags        *[]string `json:"tags,omitempty"`
+	Medications []string  `json:"medications,omitempty"`
 }
 
 // TagIDs implements records.Taggable.
@@ -155,6 +169,7 @@ func (c AllergyCodec) Detail(a clinical.Allergy) any {
 		Reaction:       a.Reaction,
 		Notes:          a.Notes,
 		Tags:           nonNil(a.Tags),
+		Medications:    a.MedicationIDs,
 		CreatedAt:      wireInstant(a.CreatedAt),
 	}
 }
@@ -174,14 +189,15 @@ func (AllergyCodec) Draft(body any) (clinical.Allergy, error) {
 	}
 
 	return clinical.Allergy{
-		PatientID: create.Patient,
-		Allergen:  create.Allergen,
-		Reaction:  create.Reaction,
-		Severity:  clinical.Severity(create.Severity),
-		Status:    clinical.ConditionStatus(create.Status),
-		OnsetOn:   onsetOn,
-		Notes:     create.Notes,
-		Tags:      create.Tags,
+		PatientID:     create.Patient,
+		Allergen:      create.Allergen,
+		Reaction:      create.Reaction,
+		Severity:      clinical.Severity(create.Severity),
+		Status:        clinical.ConditionStatus(create.Status),
+		OnsetOn:       onsetOn,
+		Notes:         create.Notes,
+		Tags:          create.Tags,
+		MedicationIDs: create.Medications,
 	}, nil
 }
 
@@ -201,6 +217,10 @@ func (AllergyCodec) Patch(body any) (allergy.Patch, error) {
 		OnsetOn:  readOptionalDate(&invalid, MemberOnsetOn, incoming.OnsetOn),
 		Notes:    incoming.Notes,
 		Tags:     incoming.Tags,
+	}
+
+	if incoming.Medications != nil {
+		patch.MedicationIDs = &incoming.Medications
 	}
 
 	if err := sortFieldOrder(&invalid, allergyMembers); err != nil {

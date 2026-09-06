@@ -154,7 +154,8 @@ type TreatmentListProps struct {
 }
 
 type TreatmentDetailProps struct {
-	Treatment TreatmentView
+	Treatment      TreatmentView
+	ReferenceCount int
 }
 
 type TreatmentFormProps struct {

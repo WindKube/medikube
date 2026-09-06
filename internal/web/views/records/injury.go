@@ -249,7 +249,8 @@ type InjuryListProps struct {
 
 // InjuryDetailProps is one injury and its delete confirmation.
 type InjuryDetailProps struct {
-	Injury InjuryView
+	Injury      InjuryView
+	Medications MedicationLinksEditorProps
 }
 
 // InjuryFormProps is the create form and the edit form.

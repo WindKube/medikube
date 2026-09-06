@@ -158,6 +158,7 @@ func table() []Route {
 	routes = append(routes, authRoutes()...)
 	routes = append(routes, accountRoutes()...)
 	routes = append(routes, recordRoutes()...)
+	routes = append(routes, courseMedicationRoutes()...)
 	routes = append(routes, patientRoutes()...)
 	routes = append(routes, directoryRoutes()...)
 	routes = append(routes, tagRoutes()...)
@@ -348,6 +349,33 @@ func recordRoutes() []Route {
 			// a 300-per-10-seconds budget is meaningless; being cut off by it
 			// on a reconnect storm is not.
 			Unbind: []string{apis.DefaultRateLimitMiddlewareId},
+		},
+	}
+}
+
+// contracts/treatment-medications.md. Nested one level under the record a
+// treatment already is: {id} is the treatment, {medicationId} the medication
+// the join row names. Payload-carrying, so it is its own three routes rather
+// than the generic six recordRoutes publishes for every other kind.
+func courseMedicationRoutes() []Route {
+	one := apiBase + "/records/" + kind.Treatment.Collection() + "/{id}/medications"
+	oneMedication := one + "/{medicationId}"
+
+	return []Route{
+		{
+			OpID: "listCourseMedications", Method: http.MethodGet, Path: one,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Every medication attached to this course of treatment, each with its effective values and their provenance.",
+		},
+		{
+			OpID: "upsertCourseMedication", Method: http.MethodPut, Path: oneMedication,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Attach a medication to the course, or update its dosage/frequency/etc. Idempotent: a second call updates rather than duplicates.",
+		},
+		{
+			OpID: "deleteCourseMedication", Method: http.MethodDelete, Path: oneMedication,
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "Detach the medication from the course. Both the treatment and the medication survive untouched.",
 		},
 	}
 }

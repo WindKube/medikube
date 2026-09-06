@@ -89,7 +89,7 @@ var ErrNoRecords = errors.New("api: the record operations were wired without a w
 // Handlers is the record family's contribution to the route table: six
 // operations, every registered kind, no route of its own. Phase 003 registers
 // eleven more kinds and this function does not change.
-func Handlers(resolve Resolve) (httproute.Handlers, error) {
+func Handlers(resolve Resolve, options ...HandlersOption) (httproute.Handlers, error) {
 	if resolve == nil {
 		return nil, ErrNoRecords
 	}
@@ -100,6 +100,10 @@ func Handlers(resolve Resolve) (httproute.Handlers, error) {
 	}
 
 	handlers := &recordHandlers{resolve: resolve, one: one}
+
+	for _, option := range options {
+		option(handlers)
+	}
 
 	return httproute.Handlers{
 		OpListRecords:       web.WithActor(handlers.list),
@@ -119,6 +123,23 @@ type recordHandlers struct {
 	// the address a client is sent to is by construction the address the
 	// router serves and cannot drift from it.
 	one string
+
+	// references is references.go's own resolver, nil until WithReferences
+	// supplies one. A record family built without it (most test harnesses)
+	// simply never populates `references` on any detail body.
+	references ReferencesResolve
+}
+
+// HandlersOption configures a part of the record family only some callers
+// need, the same shape allergy.WithLinks and friends already use.
+type HandlersOption func(*recordHandlers)
+
+// WithReferences wires references.go's pre-delete counts (FR-006) into
+// `getRecord`.
+func WithReferences(resolve ReferencesResolve) HandlersOption {
+	return func(h *recordHandlers) {
+		h.references = resolve
+	}
 }
 
 // recordPathTemplate recovers getRecord's path from the route inventory.
@@ -313,6 +334,10 @@ func (h *recordHandlers) get(e *core.RequestEvent, actor access.Actor) error {
 		e.Request.PathValue(PathKind), e.Request.PathValue(PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
+	}
+
+	if err := h.attachReferences(e.Request.Context(), found.Kind, found.ID, found.Body); err != nil {
+		return err
 	}
 
 	return h.writeRecord(e, http.StatusOK, found)

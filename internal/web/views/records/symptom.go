@@ -275,7 +275,8 @@ type SymptomListProps struct {
 }
 
 type SymptomDetailProps struct {
-	Symptom SymptomView
+	Symptom     SymptomView
+	Medications MedicationLinksEditorProps
 }
 
 type SymptomFormProps struct {

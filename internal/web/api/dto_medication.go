@@ -110,6 +110,12 @@ type Medication struct {
 	Notes           string   `json:"notes,omitempty"`
 	Tags            []string `json:"tags,omitempty"`
 	CreatedAt       string   `json:"created_at"`
+
+	// References is FR-006's pre-delete count: every record naming this
+	// medication, including a treatment_medications row, grouped by kind.
+	// Populated by internal/web/api/references.go, never by this codec —
+	// Detail is a pure function of the entity and has no database access.
+	References *ReferencesSummary `json:"references,omitempty"`
 }
 
 // GetTags implements records.Tagged so the search index stays in step with

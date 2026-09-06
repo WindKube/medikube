@@ -90,6 +90,14 @@ var searchInventory = []string{
 	"search",
 }
 
+// contracts/treatment-medications.md's three (US6), kept separate the same
+// way directoryInventory is.
+var courseMedicationInventory = []string{
+	"listCourseMedications",
+	"upsertCourseMedication",
+	"deleteCourseMedication",
+}
+
 // The operations that resolve an id or a kind out of the stored data. For these
 // the authorization rule is not merely "a session is required": another
 // account's id and an id that never existed answer identically (FR-033).
@@ -187,6 +195,7 @@ func TestTheAPIOperationsAreExactlyTheContractInventory(t *testing.T) {
 
 	expected := append(append(append([]string{}, contractInventory...), directoryInventory...), tagInventory...)
 	expected = append(expected, searchInventory...)
+	expected = append(expected, courseMedicationInventory...)
 	assert.ElementsMatch(t, append(expected, externals...), found)
 }
 
@@ -198,7 +207,7 @@ func TestEveryOperationIDIsUnique(t *testing.T) {
 
 	loaded := roundTrip(t, generate(t, twoKindInput()))
 
-	assert.Len(t, operationsByID(t, loaded), 58)
+	assert.Len(t, operationsByID(t, loaded), 61)
 }
 
 func TestEveryOperationCarriesItsAuthorizationRule(t *testing.T) {

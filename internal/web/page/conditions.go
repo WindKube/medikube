@@ -87,6 +87,10 @@ func (v ConditionViews) Detail(record recordfamily.Record) recordfamily.Renderer
 	return views.ConditionDetail(views.ConditionDetailProps{Condition: v.view(record)})
 }
 
+func (v ConditionViews) detailWithMedications(record recordfamily.Record, medications views.MedicationLinksEditorProps) recordfamily.Renderer {
+	return views.ConditionDetail(views.ConditionDetailProps{Condition: v.view(record), Medications: medications})
+}
+
 func (v ConditionViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {
 	condition := v.view(record)
 	fresh := condition.ID == ""
@@ -260,9 +264,9 @@ func (p *conditionPages) detail(e *core.RequestEvent, actor access.Actor) error 
 		return web.OwnerScoped(err)
 	}
 
-	patientID := ""
+	patientID, medications := "", []string(nil)
 	if detail, ok := found.Body.(*api.Condition); ok {
-		patientID = detail.Patient
+		patientID, medications = detail.Patient, detail.Medications
 	}
 
 	context, err := p.patientContext(e.Request.Context(), actor, patientID)
@@ -270,11 +274,39 @@ func (p *conditionPages) detail(e *core.RequestEvent, actor access.Actor) error 
 		return err
 	}
 
+	editor, err := p.medicationsEditor(e.Request.Context(), handler, actor, patientID, found, medications)
+	if err != nil {
+		return err
+	}
+
 	return p.render(e, actor, p.views.view(found).Diagnosis, sequence{
 		context,
-		entry.Views.Detail(found),
+		p.views.detailWithMedications(found, editor),
 		entry.Views.Form(found, nil, ""),
 	})
+}
+
+// medicationsEditor builds FR-055's editor: the patient's own medications as
+// the picker, and this condition's own `medications` field as the one role it
+// writes.
+func (p *conditionPages) medicationsEditor(
+	ctx context.Context, handler *recordfamily.Handler, actor access.Actor, patientID string,
+	found recordfamily.Record, medicationIDs []string,
+) (views.MedicationLinksEditorProps, error) {
+	options, err := patientMedicationOptions(ctx, handler, actor, patientID)
+	if err != nil {
+		return views.MedicationLinksEditorProps{}, err
+	}
+
+	role := medicationLinkRole(api.MemberMedications, "", medicationIDs, options, p.links.medicationHref)
+
+	return views.MedicationLinksEditorProps{
+		ID:         ids.RecordDetail(kind.Condition, found.ID) + "-" + kind.Medication.Collection(),
+		Title:      "Medications",
+		RecordHref: p.links.of(found.ID).Record,
+		Options:    options,
+		Roles:      []views.MedicationLinkRole{role},
+	}, nil
 }
 
 func (p *conditionPages) session(actor access.Actor) (*recordfamily.Handler, error) {
@@ -296,24 +328,26 @@ func (p *conditionPages) render(e *core.RequestEvent, actor access.Actor, title 
 }
 
 type conditionLinks struct {
-	listPage        string
-	detailPage      string
-	settingsPage    string
-	patientsPage    string
-	medicationsPage string
-	record          string
-	collection      string
+	listPage             string
+	detailPage           string
+	settingsPage         string
+	patientsPage         string
+	medicationsPage      string
+	medicationDetailPage string
+	record               string
+	collection           string
 }
 
 func newConditionLinks() (conditionLinks, error) {
 	paths, err := routePaths(map[string]string{
-		OpConditionListPage:   "",
-		OpConditionDetailPage: "",
-		OpSettingsPage:        "",
-		OpPatientListPage:     "",
-		OpMedicationListPage:  "",
-		api.OpGetRecord:       "",
-		api.OpCreateRecord:    "",
+		OpConditionListPage:    "",
+		OpConditionDetailPage:  "",
+		OpSettingsPage:         "",
+		OpPatientListPage:      "",
+		OpMedicationListPage:   "",
+		OpMedicationDetailPage: "",
+		api.OpGetRecord:        "",
+		api.OpCreateRecord:     "",
 	})
 	if err != nil {
 		return conditionLinks{}, err
@@ -322,14 +356,23 @@ func newConditionLinks() (conditionLinks, error) {
 	segment := kind.Condition.Segment()
 
 	return conditionLinks{
-		listPage:        paths[OpConditionListPage],
-		detailPage:      paths[OpConditionDetailPage],
-		settingsPage:    paths[OpSettingsPage],
-		patientsPage:    paths[OpPatientListPage],
-		medicationsPage: paths[OpMedicationListPage],
-		record:          strings.ReplaceAll(paths[api.OpGetRecord], "{"+api.PathKind+"}", segment),
-		collection:      strings.ReplaceAll(paths[api.OpCreateRecord], "{"+api.PathKind+"}", segment),
+		listPage:             paths[OpConditionListPage],
+		detailPage:           paths[OpConditionDetailPage],
+		settingsPage:         paths[OpSettingsPage],
+		patientsPage:         paths[OpPatientListPage],
+		medicationsPage:      paths[OpMedicationListPage],
+		medicationDetailPage: paths[OpMedicationDetailPage],
+		record:               strings.ReplaceAll(paths[api.OpGetRecord], "{"+api.PathKind+"}", segment),
+		collection:           strings.ReplaceAll(paths[api.OpCreateRecord], "{"+api.PathKind+"}", segment),
 	}, nil
+}
+
+func (l conditionLinks) medicationHref(id string) string {
+	if id == "" {
+		return ""
+	}
+
+	return strings.ReplaceAll(l.medicationDetailPage, "{"+api.PathID+"}", id)
 }
 
 func (l conditionLinks) of(recordID string) views.ConditionLinks {

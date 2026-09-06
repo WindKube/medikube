@@ -46,13 +46,14 @@ func anonymousParameters(recordID string) map[string]string {
 	return map[string]string{
 		// Never the plural spelled by hand: internal/domain/kind declares it
 		// once and the AST guard bites a second spelling.
-		"{kind}":       kind.Medication.Segment(),
-		"{id}":         recordID,
-		"{recordId}":   recordID,
-		"{patientId}":  testsupport.AccountAPatientSelfID,
-		"{collection}": kind.Medication.Collection(),
-		"{token}":      "not-a-token-this-instance-ever-issued",
-		"{filename}":   "attachment.pdf",
+		"{kind}":         kind.Medication.Segment(),
+		"{id}":           recordID,
+		"{recordId}":     recordID,
+		"{patientId}":    testsupport.AccountAPatientSelfID,
+		"{medicationId}": testsupport.NameOnlyMedicationID,
+		"{collection}":   kind.Medication.Collection(),
+		"{token}":        "not-a-token-this-instance-ever-issued",
+		"{filename}":     "attachment.pdf",
 		// The admin UI's catch-all. Empty is the UI's own root, which is the
 		// URL a person actually opens.
 		"{path...}": "",

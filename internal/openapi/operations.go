@@ -758,6 +758,47 @@ func operationDocs() map[string]operationDoc {
 				"`empty_reason: \"no_matches\"` — byte-identical to a term matching nothing at all (FR-074, SC-004).",
 		},
 
+		// contracts/treatment-medications.md (US6): the one payload-carrying
+		// join, nested under the treatment. Every effective_* member is a
+		// {value, source} pair; source is course, medication or none.
+		"listCourseMedications": {
+			successStatus: http.StatusOK,
+			successNote:   "Every medication attached to this course of treatment, each with its effective values and their provenance.",
+			errors:        []int{http.StatusUnauthorized, http.StatusNotFound, http.StatusInternalServerError},
+			ownerScoped:   true,
+			notes:         "Ordering is medication.name, id. A treatment belonging to another account is 404, byte-identical to one that never existed.",
+		},
+		"upsertCourseMedication": {
+			successStatus: http.StatusOK,
+			successNote:   "The link's updated values. 201 with Location the first time this medication is attached to this course.",
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusPreconditionFailed,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			headers:     []param{ifMatch},
+			ownerScoped: true,
+			notes: "If-Match is the treatment's own ETag, checked and required for the same reason as updateRecord's. Authorizer.Record runs on both the " +
+				"treatment and the medication, every time; a medication that does not exist, is unreachable, or belongs to a different patient than the " +
+				"treatment is 404, identical in all three cases (FR-057). The same pair upserted twice yields one row: the second call is 200, not 201 (FR-061).",
+		},
+		"deleteCourseMedication": {
+			successStatus: http.StatusNoContent,
+			successNote:   "The link is gone. Both the treatment and the medication survive untouched (FR-058).",
+			errors: []int{
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusPreconditionFailed,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			headers:     []param{ifMatch},
+			ownerScoped: true,
+			notes:       "If-Match is the treatment's own ETag. Deleting either end of the relationship cascades this join row away on its own.",
+		},
+
 		// contracts/README.md, "Documented PocketBase-native paths that stay public"
 		"nativeAdminUI":                   nativeDoc("It ships in production, hardened: mandatory superuser MFA, mandatory IP allowlist, every session audited."),
 		"nativeSuperuserAuthWithPassword": nativeDoc("The admin UI's own authentication."),

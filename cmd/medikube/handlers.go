@@ -24,6 +24,7 @@ import (
 	"medikube/internal/records/kinds"
 	accessservice "medikube/internal/service/access"
 	auditservice "medikube/internal/service/audit"
+	coursemedicationsvc "medikube/internal/service/coursemedication"
 	"medikube/internal/service/encounter"
 	"medikube/internal/service/equipment"
 	facilitysvc "medikube/internal/service/facility"
@@ -44,6 +45,7 @@ import (
 	allergystore "medikube/internal/store/allergy"
 	auditstore "medikube/internal/store/audit"
 	conditionstore "medikube/internal/store/condition"
+	coursemedicationstore "medikube/internal/store/coursemedication"
 	emergencycontactstore "medikube/internal/store/emergencycontact"
 	encounterstore "medikube/internal/store/encounter"
 	equipmentstore "medikube/internal/store/equipment"
@@ -53,6 +55,7 @@ import (
 	storeimmunization "medikube/internal/store/immunization"
 	storeinjury "medikube/internal/store/injury"
 	insurancestore "medikube/internal/store/insurance"
+	linkstore "medikube/internal/store/link"
 	medicationstore "medikube/internal/store/medication"
 	patientstore "medikube/internal/store/patient"
 	practitionerstore "medikube/internal/store/practitioner"
@@ -114,7 +117,7 @@ func operations(
 	patientResolve, photoResolve := patientFamily(app, cfg, registry, measurements, tracing)
 
 	// The real ones win. This is the only line each later group touches.
-	served, err := wired(resolve, searchResolve, patientResolve, timelineResolve, hub)
+	served, err := wired(app, resolve, searchResolve, patientResolve, timelineResolve, hub)
 	if err != nil {
 		return nil, err
 	}
@@ -263,6 +266,18 @@ func operations(
 	maps.Copy(table, practitionerOps)
 	maps.Copy(table, facilityOps)
 
+	// contracts/treatment-medications.md (US6): the one payload-carrying join,
+	// wired the same lazy way as the directory above.
+	courseMedicationOps, err := api.CourseMedicationHandlers(api.CourseMedicationDeps{
+		Resolve: courseMedicationFamily(app),
+		Records: resolve,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, courseMedicationOps)
+
 	// contracts/pages.md P3-P6, the same four resolvers as the JSON operations
 	// above.
 	practitionerPages, err := page.PractitionerHandlers(practitionerResolve, facilityResolve)
@@ -327,17 +342,17 @@ func assetHandlers() httproute.Handlers {
 // record pages and the Datastar stream are in; the account surface needs the
 // application and is assembled by operations above.
 func wired(
-	resolve api.Resolve, searchResolve api.SearchResolve, patients api.PatientResolve,
+	app core.App, resolve api.Resolve, searchResolve api.SearchResolve, patients api.PatientResolve,
 	timelineResolve page.TimelineResolve, hub *realtime.Hub,
 ) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
-	records, err := api.Handlers(resolve)
+	records, err := api.Handlers(resolve, api.WithReferences(referencesFamily(app)))
 	if err != nil {
 		return nil, err
 	}
 
-	pages, err := page.Handlers(resolve, patients)
+	pages, err := page.Handlers(resolve, patients, referencesFamily(app))
 	if err != nil {
 		return nil, err
 	}
@@ -382,7 +397,7 @@ func wired(
 		return nil, err
 	}
 
-	treatmentPages, err := page.TreatmentHandlers(resolve, patients)
+	treatmentPages, err := page.TreatmentHandlers(resolve, patients, courseMedicationFamily(app))
 	if err != nil {
 		return nil, err
 	}
@@ -658,6 +673,83 @@ func recordFamily(
 	return resolve, tagResolve, searchResolve, timelineResolve
 }
 
+// courseMedicationFamily resolves the treatment_medications service, once, on
+// first use — the same reason recordFamily is a function: its repository
+// needs the cursor codec, which is keyed from a secret the migrations have
+// only just created.
+//
+// It builds its own authorizer and repositories rather than sharing
+// registerKinds', the same way patientFamily and directoryFamily each build
+// their own: every family here is a self-contained resolver, not a shared
+// mutable state the composition root would otherwise have to sequence.
+// referencesFamily wires internal/web/api/references.go's back-relation
+// reader (FR-006). Unlike the other families here it needs no cursor codec or
+// authorizer of its own — it only reads, never authorizes, because a
+// pre-delete count is the SAME actor's own record read one layer deeper
+// (the caller already passed getRecord's authorization to reach the body
+// this attaches to).
+func referencesFamily(app core.App) api.ReferencesResolve {
+	return func() (*linkstore.Backrelations, error) {
+		return linkstore.NewBackrelations(app)
+	}
+}
+
+func courseMedicationFamily(app core.App) api.CourseMedicationResolve {
+	return sync.OnceValues(func() (*coursemedicationsvc.Service, error) {
+		secret, err := store.CursorSecret(app, "")
+		if err != nil {
+			return nil, err
+		}
+
+		cursors, err := store.NewCursorCodec(secret)
+		if err != nil {
+			return nil, err
+		}
+
+		owners, err := store.NewOwners(app)
+		if err != nil {
+			return nil, err
+		}
+
+		trail, err := auditstore.New(app)
+		if err != nil {
+			return nil, err
+		}
+
+		auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
+		if err != nil {
+			return nil, err
+		}
+
+		patientOwners, err := store.NewPatientOwners(app)
+		if err != nil {
+			return nil, err
+		}
+
+		authorizer, err := accessservice.New(owners, accessservice.WithPatients(patientOwners, auditor))
+		if err != nil {
+			return nil, err
+		}
+
+		treatments, err := treatmentstore.New(app, cursors)
+		if err != nil {
+			return nil, err
+		}
+
+		medications, err := medicationstore.New(app, cursors)
+		if err != nil {
+			return nil, err
+		}
+
+		repository, err := coursemedicationstore.New(app)
+		if err != nil {
+			return nil, err
+		}
+
+		return coursemedicationsvc.New(repository, treatments, medications, authorizer)
+	})
+}
+
 // buildSearchService wires US8's read side, once registerKinds has finished:
 // registry.Kinds() is only complete afterwards, and it is what a grouped
 // search's default kind selection and group order both read. tags is the
@@ -857,6 +949,11 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 		return nil, nil, err
 	}
 
+	linkResolver, err := linkstore.NewResolver(app)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	allergyViews, err := page.NewAllergyViews()
 	if err != nil {
 		return nil, nil, err
@@ -868,13 +965,15 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	}
 
 	if err = kinds.RegisterAllergy(registry, kinds.AllergyWiring{
-		Repository:   allergyRepo,
-		Authorizer:   authorizer,
-		Codec:        api.AllergyCodec{},
-		Schema:       api.AllergySchema(),
-		Views:        allergyViews,
-		SearchFields: api.AllergySearchFields,
-		Basis:        api.AllergyBasis,
+		Repository:     allergyRepo,
+		Authorizer:     authorizer,
+		Codec:          api.AllergyCodec{},
+		Schema:         api.AllergySchema(),
+		Views:          allergyViews,
+		SearchFields:   api.AllergySearchFields,
+		Basis:          api.AllergyBasis,
+		LinkResolver:   linkResolver,
+		LinkAuthorizer: authorizer,
 	}); err != nil {
 		return nil, nil, err
 	}
@@ -890,13 +989,15 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	}
 
 	if err = kinds.RegisterCondition(registry, kinds.ConditionWiring{
-		Repository:   conditionRepo,
-		Authorizer:   authorizer,
-		Codec:        api.ConditionCodec{},
-		Schema:       api.ConditionSchema(),
-		Views:        conditionViews,
-		SearchFields: api.ConditionSearchFields,
-		Basis:        api.ConditionBasis,
+		Repository:     conditionRepo,
+		Authorizer:     authorizer,
+		Codec:          api.ConditionCodec{},
+		Schema:         api.ConditionSchema(),
+		Views:          conditionViews,
+		SearchFields:   api.ConditionSearchFields,
+		Basis:          api.ConditionBasis,
+		LinkResolver:   linkResolver,
+		LinkAuthorizer: authorizer,
 	}); err != nil {
 		return nil, nil, err
 	}
@@ -1004,13 +1105,15 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 	}
 
 	if symptomRegisterErr := symptom.Register(registry, symptom.Wiring{
-		Repository:   symptomRepo,
-		Authorizer:   authorizer,
-		Codec:        api.SymptomCodec{},
-		Schema:       api.SymptomSchema(),
-		Views:        symptomViews,
-		SearchFields: api.SymptomSearchFields,
-		Basis:        api.SymptomBasis,
+		Repository:     symptomRepo,
+		Authorizer:     authorizer,
+		Codec:          api.SymptomCodec{},
+		Schema:         api.SymptomSchema(),
+		Views:          symptomViews,
+		SearchFields:   api.SymptomSearchFields,
+		Basis:          api.SymptomBasis,
+		LinkResolver:   linkResolver,
+		LinkAuthorizer: authorizer,
 	}); symptomRegisterErr != nil {
 		return nil, nil, symptomRegisterErr
 	}
@@ -1273,6 +1376,14 @@ func directoryOperations() []string {
 	}
 }
 
+// courseMedicationOperations is contracts/treatment-medications.md's three,
+// wired directly in operations() the same way directoryOperations' group is.
+func courseMedicationOperations() []string {
+	return []string{
+		api.OpListCourseMedications, api.OpUpsertCourseMedication, api.OpDeleteCourseMedication,
+	}
+}
+
 // unimplemented lists, sorted, the operations still answered by the stub.
 //
 // It resolves nothing: the handler table's shape is decided by which groups
@@ -1280,6 +1391,7 @@ func directoryOperations() []string {
 // handed in here is one that is never called.
 func unimplemented() []string {
 	implemented, err := wired(
+		nil,
 		func() (*records.Handler, error) { return nil, nil },
 		func() (*searchsvc.Service, []kind.Kind, error) { return nil, nil, nil },
 		func() (*patient.Service, error) { return nil, nil },
@@ -1315,6 +1427,10 @@ func unimplemented() []string {
 	implemented[page.OpOverviewPage] = nil
 
 	for _, opID := range directoryOperations() {
+		implemented[opID] = nil
+	}
+
+	for _, opID := range courseMedicationOperations() {
 		implemented[opID] = nil
 	}
 

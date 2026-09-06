@@ -274,8 +274,11 @@ tasks:
     # -count=1 defeats the test cache: these assert against a real embedded
     # database and a cached PASS from a previous schema is not evidence.
     cmds:
+      # The store suites clone a real instance per test and run for eight to
+      # nine minutes each under the race detector — one busy runner away from
+      # Go's default ten-minute cap, so the cap is set where it can be seen.
       - >-
-        go test -race -shuffle=on -count=1
+        go test -race -shuffle=on -count=1 -timeout 25m
         -coverprofile=coverage.out -covermode=atomic ./...
 
   test:phileak:
