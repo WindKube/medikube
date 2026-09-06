@@ -27,7 +27,7 @@ const (
 	OpVitalsDetailPage = "measurementsDetailPage"
 )
 
-const vitalsListTitleID = "page.vitalsListPage.title"
+const vitalsListTitleID = "page.vitals.title"
 
 // VitalsHandlers is the vitals pages' contribution to the route table.
 func VitalsHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {

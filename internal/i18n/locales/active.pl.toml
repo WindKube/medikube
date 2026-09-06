@@ -1225,7 +1225,7 @@ other = "Objawy"
 description = "The treatment list page's own <title> and heading"
 other = "Leczenie"
 
-[page.vitalsListPage.title]
+[page.vitals.title]
 description = "The vitals (measurements) list page's own <title> and heading, also this detail page's title when no date has been recorded yet"
 other = "Pomiary"
 

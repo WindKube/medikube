@@ -10,7 +10,7 @@ import (
 templ VitalsList(props VitalsListProps) {
 	<section
 		id={ ids.RecordList(kind.Vitals) }
-		aria-label={ i18n.T(ctx, "page.vitalsListPage.title") }
+		aria-label={ i18n.T(ctx, "page.vitals.title") }
 		class="flex flex-col"
 	>
 		<div class="flex flex-wrap items-center justify-between gap-3">
@@ -18,7 +18,7 @@ templ VitalsList(props VitalsListProps) {
 				id={ ids.RecordListHeading(kind.Vitals) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ i18n.T(ctx, "page.vitalsListPage.title") }</h1>
+			>{ i18n.T(ctx, "page.vitals.title") }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }
