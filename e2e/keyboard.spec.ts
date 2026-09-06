@@ -1,24 +1,22 @@
-// T215, SC-018. Keyboard-only record -> correct -> delete, for one kind per
-// user story that has shipped on this branch (condition, encounter, vitals,
-// immunization, insurance, family member), at both viewports (this file runs
-// once per Playwright project, same as every other spec here). Every step
-// focuses its control directly rather than tabbing the whole document -
-// e2e/a11y.spec.ts already proves every page's controls are Tab-reachable in
-// order; this file's own job is the sequence of keyboard ACTIONS (typing,
-// Enter, Space) that a11y.spec.ts does not attempt - and a visible focus
-// indicator is asserted at every one of them.
+// T215, SC-018. Keyboard-only record -> correct -> tag -> delete, for one
+// kind per user story that has shipped on this branch (condition, encounter,
+// vitals, immunization, insurance, family member), at both viewports (this
+// file runs once per Playwright project, same as every other spec here).
+// Every step focuses its control directly rather than tabbing the whole
+// document - e2e/a11y.spec.ts already proves every page's controls are
+// Tab-reachable in order; this file's own job is the sequence of keyboard
+// ACTIONS (typing, Enter, Space) that a11y.spec.ts does not attempt - and a
+// visible focus indicator is asserted at every one of them.
 //
 // The "relate" step is skipped: US6 (record-to-record links) is being
 // integrated separately and is not on this branch.
 //
-// The "tag" step is also skipped, for a reason discovered while writing this
-// file rather than assumed going in: US7's tag manager (/tags) only manages
-// tag definitions (create, rename, delete, usage count) - tags.Picker is
-// never mounted on any clinical record's own create or edit form in this
-// build, so there is no control anywhere to attach a tag to a condition, an
-// encounter, a set of measurements, a vaccination, a policy or a relative.
-// The API supports it (a record's `tags` field patches like any other), but
-// nothing keyboard-operable exists to drive it from these pages yet.
+// The "tag" step creates one tag on /tags (keyboard-only, same as every
+// other control here) and applies it from the record's own edit form via
+// tags.Field, the shared picker every kind's form now mounts (US7, FR-064):
+// its suggestion button is focused and activated with Enter, the same way
+// every other control in this file is, and the applied tag's removable chip
+// is asserted both before and after the save round-trip.
 //
 // A fresh account and a fresh patient per case (mirroring a11y.spec.ts's own
 // T163 cases) is what "only operate on records you create in the test" means
@@ -94,6 +92,43 @@ async function typeText(
   const page = locator.page();
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.insertText(value);
+}
+
+// newTag creates one tag on /tags, keyboard-only: Name is the only required
+// field, and the manager's own list confirms it landed before this returns,
+// so the record-editing step below has a real tag id to pick.
+async function newTag(page: Page, name: string): Promise<void> {
+  await page.goto("/tags");
+  await expect(page).toHaveTitle(fixtures.title("Tags"));
+
+  const manager = page.getByRole("region", { name: "Tags" });
+  const createForm = manager.getByRole("form", { name: "Add a tag" });
+
+  await typeText(createForm.getByLabel("Name", { exact: true }), "Name", name);
+
+  const submit = createForm.getByRole("button", { name: "Add tag" });
+  await activate(submit, "Add tag");
+
+  await expect(
+    manager.getByRole("listitem").filter({ hasText: name }),
+  ).toBeVisible();
+}
+
+// applyTag drives tags.Field, the shared picker every kind's form mounts
+// (US7, FR-064): type the tag's name to narrow the suggestion list to it,
+// focus that suggestion directly and activate it with Enter - the same
+// shape every other control in this file is driven with - then assert the
+// applied tag rendered as its own removable chip.
+async function applyTag(form: Locator, name: string): Promise<void> {
+  const field = form.getByRole("combobox", { name: "Tags" });
+  await typeText(field, "Tags", name);
+
+  const option = form.getByRole("option", { name });
+  await activate(option, `tag option "${name}"`);
+
+  await expect(
+    form.getByRole("button", { name: `Remove ${name}` }),
+  ).toBeVisible();
 }
 
 // selectByTyping relies on a native <select>'s own typeahead: typing a
@@ -291,6 +326,11 @@ for (const kind of kinds) {
       await newPatient(page);
 
       const name = scratch(test.info().project.name, kind.label);
+      const tagName = scratch(
+        test.info().project.name,
+        `${kind.label} tag`,
+      ).slice(0, 40);
+      await newTag(page, tagName);
 
       await page.goto(`/${kind.segment}`);
       await expect(page).toHaveTitle(fixtures.title(kind.listTitle));
@@ -348,6 +388,8 @@ for (const kind of kinds) {
       });
       await typeText(correctionControl, kind.correctionLabel, corrected);
 
+      await applyTag(editForm, tagName);
+
       const save = editForm.getByRole("button", { name: "Save changes" });
       await activate(save, "Save changes");
 
@@ -359,9 +401,14 @@ for (const kind of kinds) {
         await expect(page).toHaveTitle(fixtures.title(corrected));
       }
 
+      // The tag applied above round-tripped through the save: the
+      // re-rendered form (patched in place, same as the correction) still
+      // shows it as a chip rather than reverting to blank.
+      await expect(
+        editForm.getByRole("button", { name: `Remove ${tagName}` }),
+      ).toBeVisible();
+
       // T215: the "relate" step is US6, not on this branch (see file header).
-      // T215: the "tag" step has no keyboard-operable control on this page
-      // yet (see file header) - nothing here to drive with the keyboard.
 
       const deleteButton = article.getByRole("button", { name: "Delete" });
       await activate(deleteButton, "Delete");
