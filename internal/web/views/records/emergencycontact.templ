@@ -103,6 +103,7 @@ templ EmergencyContactDetail(props EmergencyContactDetailProps) {
 				}
 				<button
 					type="button"
+					id={ ids.RecordDelete(kind.EmergencyContact, props.Contact.ID) }
 					data-on:click={ "$" + contactConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300"
 				>Delete</button>
@@ -127,6 +128,7 @@ templ EmergencyContactDetail(props EmergencyContactDetailProps) {
 		</dl>
 		@shared.DeleteConfirm(shared.DeleteConfirmProps{
 			ID:             ids.RecordConfirm(kind.EmergencyContact, props.Contact.ID),
+			ReturnTo: ids.RecordDelete(kind.EmergencyContact, props.Contact.ID),
 			Signal:         contactConfirmSignal,
 			Title:          "Delete this contact?",
 			Subject:        props.Contact.Name,

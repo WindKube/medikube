@@ -38,6 +38,7 @@ const (
 	roleDetail   = "detail"
 	roleForm     = "form"
 	roleConfirm  = "confirm"
+	roleDelete   = "delete"
 	roleField    = "field"
 	roleError    = "error"
 	roleHeading  = "heading"
@@ -104,6 +105,13 @@ func RecordDetailHeading(k kind.Kind, recordID string) string {
 // RecordForm takes an empty recordID for the create form, which has no record
 // to name yet.
 func RecordForm(k kind.Kind, recordID string) string { return join(prefix(k), roleForm, recordID) }
+
+// RecordDelete is the button that opens RecordConfirm; the confirmation's
+// cancel returns focus to it.
+func RecordDelete(k kind.Kind, recordID string) string { return join(prefix(k), roleDelete, recordID) }
+
+// PageTitle is the document title, patched alongside a re-rendered detail.
+const PageTitle = "page-title"
 
 // RecordConfirm is the delete confirmation, a rendered element and never a
 // window.confirm (FR-028, contracts/pages.md).

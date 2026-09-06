@@ -42,6 +42,7 @@ templ FamilyMemberDetail(props FamilyMemberDetailProps) {
 				}
 				<button
 					type="button"
+					id={ ids.RecordDelete(kind.FamilyMember, props.FamilyMember.ID) }
 					data-on:click={ "$" + familyMemberConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
 				>{ familyMemberDeleteLabel }</button>
@@ -67,6 +68,7 @@ templ FamilyMemberDetail(props FamilyMemberDetailProps) {
 		}
 		@components.Confirm(components.ConfirmProps{
 			ID:           ids.RecordConfirm(kind.FamilyMember, props.FamilyMember.ID),
+			ReturnTo: ids.RecordDelete(kind.FamilyMember, props.FamilyMember.ID),
 			Signal:       familyMemberConfirmSignal,
 			Title:        familyMemberConfirmTitle,
 			Subject:      props.FamilyMember.Name,

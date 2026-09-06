@@ -87,6 +87,14 @@ func (v VitalsViews) Detail(record recordfamily.Record) recordfamily.Renderer {
 	return views.VitalsDetail(views.VitalsDetailProps{Vitals: v.view(record)})
 }
 
+func (v VitalsViews) Title(record recordfamily.Record) string {
+	if title := v.view(record).RecordedAt; title != "" {
+		return title
+	}
+
+	return vitalsListTitle
+}
+
 func (v VitalsViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {
 	vitals := v.view(record)
 	fresh := vitals.ID == ""
@@ -278,12 +286,7 @@ func (p *vitalsPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	title := p.views.view(found).RecordedAt
-	if title == "" {
-		title = vitalsListTitle
-	}
-
-	return p.render(e, actor, title, sequence{
+	return p.render(e, actor, p.views.Title(found), sequence{
 		context,
 		entry.Views.Detail(found),
 		entry.Views.Form(found, nil, ""),

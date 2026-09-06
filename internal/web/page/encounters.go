@@ -88,6 +88,8 @@ func (v EncounterViews) Detail(record recordfamily.Record) recordfamily.Renderer
 	return views.EncounterDetail(views.EncounterDetailProps{Encounter: v.view(record)})
 }
 
+func (v EncounterViews) Title(record recordfamily.Record) string { return v.view(record).Reason }
+
 func (v EncounterViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {
 	encounter := v.view(record)
 	fresh := encounter.ID == ""

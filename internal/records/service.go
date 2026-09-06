@@ -114,6 +114,9 @@ type Views interface {
 	List(page domain.Page[Record]) Renderer
 	Row(record Record) Renderer
 	Detail(record Record) Renderer
+	// Title is the detail page's own title, so a patch that re-renders the
+	// detail can carry the document title with it.
+	Title(record Record) string
 	// notice is a stale If-Match's explanation, rendered inside the form
 	// alongside the record's current values (research D-24); every other
 	// caller passes the empty string.

@@ -95,6 +95,10 @@ func (v ImmunizationViews) Detail(record recordfamily.Record) recordfamily.Rende
 	return views.ImmunizationDetail(views.ImmunizationDetailProps{Immunization: v.view(record)})
 }
 
+func (v ImmunizationViews) Title(record recordfamily.Record) string {
+	return v.view(record).VaccineName
+}
+
 func (v ImmunizationViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {
 	immunization := v.view(record)
 	fresh := immunization.ID == ""

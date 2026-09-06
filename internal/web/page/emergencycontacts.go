@@ -89,6 +89,8 @@ func (v EmergencyContactViews) Detail(record recordfamily.Record) recordfamily.R
 	return views.EmergencyContactDetail(views.EmergencyContactDetailProps{Contact: v.view(record)})
 }
 
+func (v EmergencyContactViews) Title(record recordfamily.Record) string { return v.view(record).Name }
+
 func (v EmergencyContactViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {
 	contact := v.view(record)
 	fresh := contact.ID == ""

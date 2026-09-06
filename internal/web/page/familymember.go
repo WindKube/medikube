@@ -88,6 +88,8 @@ func (v FamilyMemberViews) Detail(record recordfamily.Record) recordfamily.Rende
 	return views.FamilyMemberDetail(views.FamilyMemberDetailProps{FamilyMember: v.view(record)})
 }
 
+func (v FamilyMemberViews) Title(record recordfamily.Record) string { return v.view(record).Name }
+
 func (v FamilyMemberViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {
 	item := v.view(record)
 	fresh := item.ID == ""

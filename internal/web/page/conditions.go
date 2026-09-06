@@ -87,6 +87,8 @@ func (v ConditionViews) Detail(record recordfamily.Record) recordfamily.Renderer
 	return views.ConditionDetail(views.ConditionDetailProps{Condition: v.view(record)})
 }
 
+func (v ConditionViews) Title(record recordfamily.Record) string { return v.view(record).Diagnosis }
+
 func (v ConditionViews) detailWithMedications(record recordfamily.Record, medications views.MedicationLinksEditorProps) recordfamily.Renderer {
 	return views.ConditionDetail(views.ConditionDetailProps{Condition: v.view(record), Medications: medications})
 }

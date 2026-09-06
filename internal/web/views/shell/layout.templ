@@ -12,7 +12,7 @@ templ Document(props DocumentProps) {
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
-			<title>{ Title(props.Title) }</title>
+			<title id={ ids.PageTitle }>{ Title(props.Title) }</title>
 			<link rel="stylesheet" href={ AppCSSHref }/>
 			<script type="module" src={ DatastarJSHref }></script>
 		</head>

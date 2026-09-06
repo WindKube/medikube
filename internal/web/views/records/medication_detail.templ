@@ -48,6 +48,7 @@ templ MedicationDetail(props MedicationDetailProps) {
 				}
 				<button
 					type="button"
+					id={ ids.RecordDelete(kind.Medication, props.Medication.ID) }
 					data-on:click={ "$" + confirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
 				>{ deleteLabel }</button>
@@ -64,6 +65,7 @@ templ MedicationDetail(props MedicationDetailProps) {
 		}
 		@shared.DeleteConfirm(shared.DeleteConfirmProps{
 			ID:             ids.RecordConfirm(kind.Medication, props.Medication.ID),
+			ReturnTo: ids.RecordDelete(kind.Medication, props.Medication.ID),
 			Signal:         confirmSignal,
 			Title:          confirmTitle,
 			Subject:        props.Medication.Name,

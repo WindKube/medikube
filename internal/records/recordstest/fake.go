@@ -327,6 +327,7 @@ type Views struct{}
 func (Views) List(domain.Page[records.Record]) records.Renderer { return static(RenderedList) }
 func (Views) Row(records.Record) records.Renderer               { return static(RenderedRow) }
 func (Views) Detail(records.Record) records.Renderer            { return static(RenderedDetail) }
+func (Views) Title(records.Record) string                       { return "" }
 
 func (Views) Form(records.Record, *domain.ValidationError, string) records.Renderer {
 	return static(RenderedForm)

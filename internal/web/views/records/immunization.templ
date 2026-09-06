@@ -129,6 +129,7 @@ templ ImmunizationDetail(props ImmunizationDetailProps) {
 				}
 				<button
 					type="button"
+					id={ ids.RecordDelete(kind.Immunization, props.Immunization.ID) }
 					data-on:click={ "$" + immunizationConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
 				>{ immunizationDeleteLabel }</button>
@@ -142,6 +143,7 @@ templ ImmunizationDetail(props ImmunizationDetailProps) {
 		</dl>
 		@components.Confirm(components.ConfirmProps{
 			ID:           ids.RecordConfirm(kind.Immunization, props.Immunization.ID),
+			ReturnTo: ids.RecordDelete(kind.Immunization, props.Immunization.ID),
 			Signal:       immunizationConfirmSignal,
 			Title:        immunizationConfirmTitle,
 			Subject:      props.Immunization.VaccineName,

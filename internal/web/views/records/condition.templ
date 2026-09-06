@@ -95,6 +95,7 @@ templ ConditionDetail(props ConditionDetailProps) {
 				}
 				<button
 					type="button"
+					id={ ids.RecordDelete(kind.Condition, props.Condition.ID) }
 					data-on:click={ "$" + conditionConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300"
 				>Delete</button>
@@ -111,6 +112,7 @@ templ ConditionDetail(props ConditionDetailProps) {
 		}
 		@shared.DeleteConfirm(shared.DeleteConfirmProps{
 			ID:             ids.RecordConfirm(kind.Condition, props.Condition.ID),
+			ReturnTo: ids.RecordDelete(kind.Condition, props.Condition.ID),
 			Signal:         conditionConfirmSignal,
 			Title:          "Delete this condition?",
 			Subject:        props.Condition.Diagnosis,

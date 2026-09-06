@@ -17,6 +17,7 @@ import (
 	"medikube/internal/obs"
 	"medikube/internal/records"
 	"medikube/internal/web"
+	"medikube/internal/web/views/shell"
 )
 
 // The operation ids of contracts/records.md's six operations. They are the keys
@@ -383,7 +384,7 @@ func (h *recordHandlers) update(e *core.RequestEvent, actor access.Actor) error 
 	}
 
 	if wantsFormPatch(e) {
-		component := formComponents{entry.Views.Detail(updated), entry.Views.Form(updated, nil, "")}
+		component := formComponents{titlePatch(entry.Views.Title(updated)), entry.Views.Detail(updated), entry.Views.Form(updated, nil, "")}
 
 		return web.Patch(e, component, web.ByElementID())
 	}
@@ -715,4 +716,18 @@ func readBody(e *core.RequestEvent) ([]byte, error) {
 	}
 
 	return raw, nil
+}
+
+// titlePatch carries the document title with a re-rendered detail: the
+// article's heading changes on save, and the tab must say the same thing.
+type titlePatch string
+
+func (t titlePatch) Render(_ context.Context, w io.Writer) error {
+	if t == "" {
+		return nil
+	}
+
+	_, err := io.WriteString(w, shell.TitleElement(string(t)))
+
+	return err
 }

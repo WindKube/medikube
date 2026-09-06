@@ -111,6 +111,7 @@ templ TreatmentDetail(props TreatmentDetailProps) {
 				}
 				<button
 					type="button"
+					id={ ids.RecordDelete(kind.Treatment, props.Treatment.ID) }
 					data-on:click="$_confirming_delete = true"
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
 				>Delete</button>
@@ -124,6 +125,7 @@ templ TreatmentDetail(props TreatmentDetailProps) {
 		</dl>
 		@shared.DeleteConfirm(shared.DeleteConfirmProps{
 			ID:             ids.RecordConfirm(kind.Treatment, props.Treatment.ID),
+			ReturnTo: ids.RecordDelete(kind.Treatment, props.Treatment.ID),
 			Signal:         "_confirming_delete",
 			Title:          "Delete this treatment?",
 			Subject:        props.Treatment.Name,
