@@ -1055,6 +1055,9 @@ func drive(t testing.TB, c *client) {
 	driveConditions(c)
 	driveEmergencyContacts(c)
 	driveSearch(c)
+	driveEncounters(c)
+	driveProcedures(c)
+	driveTreatments(c)
 	driveCourseMedications(c)
 }
 
@@ -1820,13 +1823,16 @@ func driveEmergencyContacts(c *client) {
 	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
 }
 
-// sentinelFamilyMember plants the free-text sentinel a family history entry
-// carries: a relative's name.
+// sentinelFamilyMember plants the free-text sentinels a family history entry
+// carries: a relative's name, and — family_member has no top-level notes
+// field of its own — the per-condition notes data-model §6.1's
+// FamilyCondition carries.
 func sentinelFamilyMember(patientID string) api.FamilyMemberCreate {
 	return api.FamilyMemberCreate{
 		Patient:      patientID,
 		Name:         RelativeName,
 		Relationship: "sister",
+		Conditions:   []api.FamilyCondition{{Name: MedicationName, Notes: Notes}},
 	}
 }
 
@@ -1866,7 +1872,136 @@ func driveFamilyMembers(c *client) {
 	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
 }
 
-// driveSearch: the one search operation and its page, with the typed-in-word
+// sentinelEncounter, sentinelProcedure and sentinelTreatment are US6's own
+// version of sentinelMedication above, each with its own notes sentinel:
+// driveCourseMedications below only reads a treatment through a seeded
+// fixture, so these are what plants and mutates a fresh one of each of the
+// three US6 kinds through the six generic operations.
+func sentinelEncounter(patientID string) api.EncounterCreate {
+	occurredOn := "2026-01-10"
+
+	return api.EncounterCreate{Patient: patientID, Reason: MedicationName, OccurredOn: &occurredOn, Notes: Notes}
+}
+
+func sentinelProcedure(patientID string) api.ProcedureCreate {
+	occurredOn := "2026-01-10"
+
+	return api.ProcedureCreate{
+		Patient: patientID, Name: MedicationName, OccurredOn: &occurredOn, Status: "completed", Notes: Notes,
+	}
+}
+
+func sentinelTreatment(patientID string) api.TreatmentCreate {
+	startedOn := "2026-01-10"
+
+	return api.TreatmentCreate{Patient: patientID, Name: MedicationName, StartedOn: &startedOn, Notes: Notes}
+}
+
+// driveEncounters, driveProcedures and driveTreatments are driveSymptoms's
+// twin for each of US6's own three kinds.
+func driveEncounters(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+
+	created := c.do(http.MethodPost, recordsOf(kind.Encounter), jsonBody(c.t, sentinelEncounter(patientID)))
+	require.Equal(c.t, http.StatusCreated, created.Status, "%s", created.Body)
+
+	id := decodedID(c.t, created.Body)
+	address := recordAddressOf(kind.Encounter, id)
+
+	read := c.do(http.MethodGet, address, "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+
+	etag := read.Header.Get("ETag")
+	require.NotEmpty(c.t, etag, "no ETag, so the precondition step below would not be one")
+
+	c.do(http.MethodGet, recordsOf(kind.Encounter)+"?patient="+patientID, "")
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, address, "")
+
+	c.token(testsupport.AccountAEmail)
+
+	patch := jsonBody(c.t, api.EncounterPatch{Notes: ptr(Notes)})
+	c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": `"not-the-current-version"`})
+
+	updated := c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": etag})
+	require.Equal(c.t, http.StatusOK, updated.Status, "%s", updated.Body)
+
+	current := updated.Header.Get("ETag")
+	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
+}
+
+func driveProcedures(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+
+	created := c.do(http.MethodPost, recordsOf(kind.Procedure), jsonBody(c.t, sentinelProcedure(patientID)))
+	require.Equal(c.t, http.StatusCreated, created.Status, "%s", created.Body)
+
+	id := decodedID(c.t, created.Body)
+	address := recordAddressOf(kind.Procedure, id)
+
+	read := c.do(http.MethodGet, address, "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+
+	etag := read.Header.Get("ETag")
+	require.NotEmpty(c.t, etag, "no ETag, so the precondition step below would not be one")
+
+	c.do(http.MethodGet, recordsOf(kind.Procedure)+"?patient="+patientID, "")
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, address, "")
+
+	c.token(testsupport.AccountAEmail)
+
+	patch := jsonBody(c.t, api.ProcedurePatch{Notes: ptr(Notes)})
+	c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": `"not-the-current-version"`})
+
+	updated := c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": etag})
+	require.Equal(c.t, http.StatusOK, updated.Status, "%s", updated.Body)
+
+	current := updated.Header.Get("ETag")
+	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
+}
+
+func driveTreatments(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+
+	created := c.do(http.MethodPost, recordsOf(kind.Treatment), jsonBody(c.t, sentinelTreatment(patientID)))
+	require.Equal(c.t, http.StatusCreated, created.Status, "%s", created.Body)
+
+	id := decodedID(c.t, created.Body)
+	address := recordAddressOf(kind.Treatment, id)
+
+	read := c.do(http.MethodGet, address, "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+
+	etag := read.Header.Get("ETag")
+	require.NotEmpty(c.t, etag, "no ETag, so the precondition step below would not be one")
+
+	c.do(http.MethodGet, recordsOf(kind.Treatment)+"?patient="+patientID, "")
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, address, "")
+
+	c.token(testsupport.AccountAEmail)
+
+	patch := jsonBody(c.t, api.TreatmentPatch{Notes: ptr(Notes)})
+	c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": `"not-the-current-version"`})
+
+	updated := c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": etag})
+	require.Equal(c.t, http.StatusOK, updated.Status, "%s", updated.Body)
+
+	current := updated.Header.Get("ETag")
+	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
+}
+
+// driveSearch: the one search operation and its query string — the leg FR-075/research
 // sentinel driven through the API's query string — the leg FR-075/research
 // D-12 govern, and where the JSON `criteria` object must answer with
 // `q_present` and never the term itself.

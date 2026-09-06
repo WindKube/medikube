@@ -74,6 +74,58 @@ func TestEveryExpectedKindHasACompleteRegistration(t *testing.T) {
 	}
 }
 
+// TestAnIncompleteRegistrationIsRefused is T200: it proves the completeness
+// gate actually goes red rather than assuming it, by registering a
+// deliberately incomplete kind into a throwaway registry and asserting the
+// refusal — one case per field T200 names (the seed fixture id, i.e. the
+// smoke case's data; SearchFields; the default sort).
+func TestAnIncompleteRegistrationIsRefused(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		mutate  func(*records.Registration)
+		missing string
+	}{
+		{
+			name:    "no smoke case (seed fixture id)",
+			mutate:  func(r *records.Registration) { r.SeedFixtureID = "" },
+			missing: "seed fixture id",
+		},
+		{
+			name:    "no search fields",
+			mutate:  func(r *records.Registration) { r.SearchFields = nil },
+			missing: "search fields",
+		},
+		{
+			name:    "no default sort",
+			mutate:  func(r *records.Registration) { r.Schema.Sorts = nil },
+			missing: records.ConsumerSchema,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			registration := recordstest.Registration(kind.Medication, audit.TargetKindMedication)
+			tc.mutate(&registration)
+
+			registry := records.NewRegistry()
+			err := registry.Register(registration)
+
+			require.Error(t, err, "a registration stripped of %q should have been refused", tc.missing)
+
+			var incomplete *records.IncompleteError
+			require.ErrorAsf(t, err, &incomplete, "the refusal was not an IncompleteError: %v", err)
+			require.Containsf(t, incomplete.Missing, tc.missing, "the refusal did not name %q", tc.missing)
+
+			_, registered := registry.FromKind(kind.Medication)
+			require.False(t, registered, "the incomplete registration was still added to the registry")
+		})
+	}
+}
+
 func TestEveryExpectedKindIsDocumentedInTheOpenAPIInput(t *testing.T) {
 	t.Parallel()
 

@@ -2,6 +2,7 @@ package coursemedication_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,6 +10,7 @@ import (
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
+	"medikube/internal/domain/audit"
 	"medikube/internal/domain/clinical"
 	"medikube/internal/service/coursemedication"
 )
@@ -105,6 +107,16 @@ func (f *fakeAuthorizer) Patient(
 	return access.Grant{Level: access.PermOwn}, nil
 }
 
+type fakeAuditor struct {
+	events []audit.Event
+}
+
+func (f *fakeAuditor) Record(_ context.Context, event audit.Event) error {
+	f.events = append(f.events, event)
+
+	return nil
+}
+
 const (
 	patientA    = "patientA"
 	patientB    = "patientB"
@@ -116,7 +128,18 @@ const (
 func newService(t *testing.T, authorizer *fakeAuthorizer) (*coursemedication.Service, *fakeRepository) {
 	t.Helper()
 
+	svc, repo, _ := newServiceWithAuditor(t, authorizer)
+
+	return svc, repo
+}
+
+func newServiceWithAuditor(
+	t *testing.T, authorizer *fakeAuthorizer,
+) (*coursemedication.Service, *fakeRepository, *fakeAuditor) {
+	t.Helper()
+
 	repo := newFakeRepository()
+	auditor := &fakeAuditor{}
 
 	treatments := fakeTreatments{byID: map[string]clinical.Treatment{
 		treatmentID: {ID: treatmentID, PatientID: patientA, Version: "v1"},
@@ -126,10 +149,10 @@ func newService(t *testing.T, authorizer *fakeAuthorizer) (*coursemedication.Ser
 		medicationB: {ID: medicationB, PatientID: patientB},
 	}}
 
-	svc, err := coursemedication.New(repo, treatments, medications, authorizer)
+	svc, err := coursemedication.New(repo, treatments, medications, authorizer, auditor)
 	require.NoError(t, err)
 
-	return svc, repo
+	return svc, repo, auditor
 }
 
 func TestUpsertTwiceYieldsOneRowAndCreatedOnlyOnce(t *testing.T) {
@@ -223,4 +246,44 @@ func TestUpsertRefusesAnUnknownTreatmentOrMedication(t *testing.T) {
 
 	_, _, err = svc.Upsert(t.Context(), access.Actor{}, treatmentID, "doesNotExist", coursemedication.Patch{}, "v1")
 	require.ErrorIs(t, err, domain.ErrNotFound)
+}
+
+// T209, FR-084, FR-085. Attaching, re-attaching and detaching a course
+// medication are relationship changes the generic per-kind audit hooks never
+// see (treatment_medications is a join, not a kind.Kind), so the service
+// must write its own row for each — and that row must carry no dose,
+// frequency, timing or any other course-specific value.
+func TestUpsertAndDeleteEachProduceOneAuditEventWithNoCourseDetail(t *testing.T) {
+	t.Parallel()
+
+	authorizer := &fakeAuthorizer{}
+	svc, _, auditor := newServiceWithAuditor(t, authorizer)
+
+	dosage := "500mg twice daily"
+
+	_, created, err := svc.Upsert(t.Context(), access.Actor{UserID: "u1", RequestID: "r1"},
+		treatmentID, medicationA, coursemedication.Patch{Dosage: &dosage}, "v1")
+	require.NoError(t, err)
+	assert.True(t, created)
+	require.Len(t, auditor.events, 1)
+	assert.Equal(t, audit.ActionCreate, auditor.events[0].Action)
+
+	_, created, err = svc.Upsert(t.Context(), access.Actor{UserID: "u1", RequestID: "r2"},
+		treatmentID, medicationA, coursemedication.Patch{Dosage: &dosage}, "v1")
+	require.NoError(t, err)
+	assert.False(t, created)
+	require.Len(t, auditor.events, 2)
+	assert.Equal(t, audit.ActionUpdate, auditor.events[1].Action)
+
+	require.NoError(t, svc.Delete(t.Context(), access.Actor{UserID: "u1", RequestID: "r3"}, treatmentID, medicationA, "v1"))
+	require.Len(t, auditor.events, 3)
+	assert.Equal(t, audit.ActionDelete, auditor.events[2].Action)
+
+	for _, event := range auditor.events {
+		assert.Equal(t, audit.TargetKindTreatment, event.TargetKind)
+		assert.Equal(t, treatmentID, event.TargetID)
+		assert.Equal(t, patientA, event.PatientID)
+		assert.NotContains(t, fmt.Sprintf("%+v", event), dosage,
+			"the course medication's own dosage must never reach the audit trail")
+	}
 }

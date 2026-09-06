@@ -1308,7 +1308,7 @@ func newCourseMedicationService(app core.App) (*coursemedicationsvc.Service, err
 		return nil, err
 	}
 
-	return coursemedicationsvc.New(repository, treatments, medications, authorizer)
+	return coursemedicationsvc.New(repository, treatments, medications, authorizer, auditor)
 }
 
 func courseMedicationHandlers(app core.App, resolve api.Resolve) (httproute.Handlers, error) {
@@ -1320,6 +1320,9 @@ func courseMedicationHandlers(app core.App, resolve api.Resolve) (httproute.Hand
 	return api.CourseMedicationHandlers(api.CourseMedicationDeps{
 		Resolve: func() (*coursemedicationsvc.Service, error) { return service, nil },
 		Records: resolve,
+		References: func() (*linkstore.Backrelations, error) {
+			return linkstore.NewBackrelations(app)
+		},
 	})
 }
 

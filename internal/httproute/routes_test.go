@@ -296,7 +296,7 @@ func TestTheTableCarriesTheFortyFourPages(t *testing.T) {
 		},
 		{
 			"insuranceDetailPage", "/" + kind.Insurance.Segment() + "/{id}", httproute.AuthUser,
-			`article[name="Insurance"]`, "/" + kind.Insurance.Segment() + "/" + seed.InsurancePrimaryID,
+			kind.Insurance.DetailLandmark(), "/" + kind.Insurance.Segment() + "/" + seed.InsurancePrimaryID,
 		},
 		{
 			"equipmentListPage", "/" + kind.Equipment.Segment(), httproute.AuthUser, `region[name="Equipment"]`,

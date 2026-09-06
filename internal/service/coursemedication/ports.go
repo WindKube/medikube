@@ -9,6 +9,7 @@ import (
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
+	"medikube/internal/domain/audit"
 	"medikube/internal/domain/clinical"
 )
 
@@ -48,6 +49,15 @@ type Medications interface {
 // the same way treatment.Service and medication.Service authorize themselves.
 type Authorizer interface {
 	Patient(ctx context.Context, actor access.Actor, patientID string, need access.Permission) (access.Grant, error)
+}
+
+// Auditor is FR-084's "every relationship created or removed": a course
+// medication is a relationship between a treatment and a medication, not a
+// kind.Kind, so it goes unrecorded by internal/platform/pb's record-CRUD
+// hooks (those fire per collection off kind.Kinds()) unless this service
+// writes its own row.
+type Auditor interface {
+	Record(ctx context.Context, event audit.Event) error
 }
 
 // Patch is one upsert's body: every field optional, and an absent one means
