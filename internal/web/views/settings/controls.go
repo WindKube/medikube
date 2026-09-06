@@ -44,11 +44,11 @@ type fieldProps struct {
 // control assembles one, given the form's id and its refusals. The `extra`
 // describes what the control points at besides its own refusal — the published
 // rules, or the sentence that says what the phrase must be.
-func control(formID string, errs components.FieldErrors, field fieldProps, extra ...string) fieldProps {
+func control(ctx context.Context, formID string, errs components.FieldErrors, field fieldProps, extra ...string) fieldProps {
 	field.ID = ids.Field(formID, field.Name)
 	field.ErrorID = ids.FieldError(formID, field.Name)
 	field.Invalid = errs.Has(field.Name)
-	field.Messages = errs.Messages(field.Name)
+	field.Messages = errs.Messages(ctx, field.Name)
 
 	described := make([]string, 0, len(extra)+2)
 	if field.Invalid {
@@ -72,23 +72,23 @@ func control(formID string, errs components.FieldErrors, field fieldProps, extra
 // Controls is the profile form's five, in the order FR-011 names them.
 func (p ProfileProps) Controls(ctx context.Context) []fieldProps {
 	return []fieldProps{
-		control(p.FormID, p.Errors, fieldProps{
+		control(ctx, p.FormID, p.Errors, fieldProps{
 			Name: FieldName, Label: i18n.T(ctx, "field.display_name"), Type: "text",
 			Value: p.Name, Autocomplete: "name", Required: true,
 		}),
-		control(p.FormID, p.Errors, fieldProps{
+		control(ctx, p.FormID, p.Errors, fieldProps{
 			Name: FieldUnitSystem, Label: i18n.T(ctx, "field.settings.measurement_units"), Options: p.UnitSystems,
 		}),
-		control(p.FormID, p.Errors, fieldProps{
+		control(ctx, p.FormID, p.Errors, fieldProps{
 			Name: FieldLocale, Options: p.Locales, Required: true,
 			Label:     i18n.T(ctx, "settings.language.label"),
 			Hint:      i18n.T(ctx, "settings.language.description"),
 			AriaLabel: i18n.T(ctx, "settings.language.label"),
 		}),
-		control(p.FormID, p.Errors, fieldProps{
+		control(ctx, p.FormID, p.Errors, fieldProps{
 			Name: FieldDateFormat, Label: i18n.T(ctx, "field.settings.date_presentation"), Options: p.DateFormats,
 		}),
-		control(p.FormID, p.Errors, fieldProps{
+		control(ctx, p.FormID, p.Errors, fieldProps{
 			Name: FieldTheme, Label: i18n.T(ctx, "field.settings.appearance"), Options: p.Themes,
 		}),
 	}
@@ -99,11 +99,11 @@ func (p ProfileProps) Controls(ctx context.Context) []fieldProps {
 // control rather than sitting beside it unread.
 func (p PasswordProps) Controls(ctx context.Context) []fieldProps {
 	return []fieldProps{
-		control(p.FormID, p.Errors, fieldProps{
+		control(ctx, p.FormID, p.Errors, fieldProps{
 			Name: FieldCurrentPassword, Label: i18n.T(ctx, "field.settings.current_password"), Type: "password",
 			Autocomplete: "current-password", Required: true,
 		}),
-		control(p.FormID, p.Errors, fieldProps{
+		control(ctx, p.FormID, p.Errors, fieldProps{
 			Name: FieldNewPassword, Label: i18n.T(ctx, "field.new_password"), Type: "password",
 			Autocomplete: "new-password", Required: true,
 		}, PasswordRulesID),
@@ -115,8 +115,8 @@ func (p PasswordProps) Controls(ctx context.Context) []fieldProps {
 func (p PasswordProps) RuleSentences(ctx context.Context) []string {
 	sentences := []string{
 		i18n.T(ctx, "auth.password_rule_length", map[string]any{
-			"Min": p.Rules.MinLength,
-			"Max": p.Rules.MaxLength,
+			"Min": i18n.N(ctx, "auth.password_length_unit", p.Rules.MinLength),
+			"Max": i18n.N(ctx, "auth.password_length_unit", p.Rules.MaxLength),
 		}),
 	}
 
@@ -134,11 +134,11 @@ func (p PasswordProps) RuleSentences(ctx context.Context) []string {
 // Controls is the deletion form's two proofs (FR-013).
 func (p DangerZoneProps) Controls(ctx context.Context) []fieldProps {
 	return []fieldProps{
-		control(p.FormID, p.Errors, fieldProps{
+		control(ctx, p.FormID, p.Errors, fieldProps{
 			Name: FieldPassword, Label: i18n.T(ctx, "field.settings.your_password"), Type: "password",
 			Autocomplete: "current-password", Required: true,
 		}),
-		control(p.FormID, p.Errors, fieldProps{
+		control(ctx, p.FormID, p.Errors, fieldProps{
 			Name: FieldConfirmation, Label: i18n.T(ctx, "field.settings.type_phrase_to_confirm", map[string]any{"Phrase": p.Phrase}), Type: "text",
 			Autocomplete: "off", Required: true,
 			Hint: i18n.T(ctx, "field.settings.confirmation_hint"),

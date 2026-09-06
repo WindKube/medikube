@@ -29,11 +29,7 @@ const (
 	OpInjuryDetailPage = "injuryDetailPage"
 )
 
-const injuryListTitle = "Injuries"
-
-// injuryListTitleID is a message id (D-06), resolved at render time. The raw
-// injuryListTitle stays as-is: shell.NavLink.Label (out of scope, shell
-// package) renders it unresolved.
+// injuryListTitleID is a message id (D-06), resolved at render time.
 const injuryListTitleID = "page.injuries.title"
 
 // InjuryHandlers is injuries' contribution to the route table. It is named
@@ -278,6 +274,12 @@ func (p *injuryPages) patientContext(ctx context.Context, actor access.Actor, pa
 }
 
 func (p *injuryPages) detail(e *core.RequestEvent, actor access.Actor) error {
+	// localizeCtx before anything else: medicationsEditor below resolves a
+	// translated title as a plain Go string rather than inside a lazily
+	// rendered templ block, so it needs the Localizer on ctx already — not
+	// only the one p.render's own nav call resolves afterwards.
+	ctx := localizeCtx(e)
+
 	handler, err := p.session(actor)
 	if err != nil {
 		return err
@@ -288,13 +290,13 @@ func (p *injuryPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	found, err := handler.Get(e.Request.Context(), actor,
+	found, err := handler.Get(ctx, actor,
 		kind.Injury.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
 	}
 
-	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &found); tagErr != nil {
+	if tagErr := attachTagOptions(ctx, actor, p.tags, &found); tagErr != nil {
 		return tagErr
 	}
 
@@ -303,12 +305,12 @@ func (p *injuryPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		patientID, medications = detail.Patient, detail.Medications
 	}
 
-	context, err := p.patientContext(e.Request.Context(), actor, patientID)
+	context, err := p.patientContext(ctx, actor, patientID)
 	if err != nil {
 		return err
 	}
 
-	editor, err := p.medicationsEditor(e.Request.Context(), handler, actor, patientID, found, medications)
+	editor, err := p.medicationsEditor(ctx, handler, actor, patientID, found, medications)
 	if err != nil {
 		return err
 	}
@@ -454,7 +456,7 @@ func (v InjuryViews) cancelHref(injury views.InjuryView) string {
 func (l injuryLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
-		{Label: injuryListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, injuryListTitleID), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

@@ -1,8 +1,13 @@
 package web
 
 import (
+	"context"
+	"strings"
+	"unicode"
+
 	"github.com/pocketbase/pocketbase/core"
 
+	"medikube/internal/domain/kind"
 	"medikube/internal/i18n"
 )
 
@@ -33,4 +38,22 @@ func Localize(e *core.RequestEvent) *i18n.Localizer {
 	e.Request = e.Request.WithContext(i18n.With(ctx, l))
 
 	return l
+}
+
+// KindLabel is a kind's own plural display name, title-cased for a heading
+// or a tile (the patient chart's count tiles): i18n.N's "other" form of
+// kind.<enum> (D-06), forced with a count of 2 and the leading "2 " it
+// carries trimmed back off, since a tile label is never itself a count —
+// mirrors internal/web/page.kindNoun, which does the same for the singular
+// "one" form.
+func KindLabel(ctx context.Context, k kind.Kind) string {
+	noun := strings.TrimPrefix(i18n.N(ctx, "kind."+k.Enum(), 2), "2 ")
+	if noun == "" {
+		return noun
+	}
+
+	r := []rune(noun)
+	r[0] = unicode.ToUpper(r[0])
+
+	return string(r)
 }

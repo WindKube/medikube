@@ -87,7 +87,7 @@ templ textControl(props MedicationFormProps, field, inputType string, required b
 			}
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		/>
-		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(ctx, field))
 	</div>
 }
 
@@ -114,7 +114,7 @@ templ selectControl(props MedicationFormProps, field string, options []Option, o
 				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
 			}
 		</select>
-		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(ctx, field))
 	</div>
 }
 
@@ -135,6 +135,6 @@ templ textareaControl(props MedicationFormProps, field string) {
 			}
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>{ props.Medication.Value(field) }</textarea>
-		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(ctx, field))
 	</div>
 }

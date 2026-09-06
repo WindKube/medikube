@@ -61,9 +61,9 @@ func NewEncounterView(e clinical.Encounter, links EncounterLinks) EncounterView 
 		PatientID:    e.PatientID,
 		Reason:       e.Reason,
 		OccurredOn:   e.OccurredOn.String(),
-		VisitType:    string(e.VisitType),
+		VisitType:    VisitTypeLabel(e.VisitType),
 		VisitTypeVal: string(e.VisitType),
-		Priority:     string(e.Priority),
+		Priority:     VisitPriorityLabel(e.Priority),
 		PriorityVal:  string(e.Priority),
 		Assessment:   e.Assessment,
 		Plan:         e.Plan,
@@ -85,8 +85,8 @@ func NewEncounterView(e clinical.Encounter, links EncounterLinks) EncounterView 
 func (e EncounterView) Entries() []DetailEntry {
 	candidates := []DetailEntry{
 		{Field: FieldOccurredOn, Value: e.OccurredOn, Datetime: e.OccurredOn},
-		{Field: FieldVisitType, Value: e.VisitType},
-		{Field: FieldPriority, Value: e.Priority},
+		{Field: FieldVisitType, Value: e.VisitType, Translate: true},
+		{Field: FieldPriority, Value: e.Priority, Translate: true},
 		{Field: FieldAssessment, Value: e.Assessment, Multiline: true},
 		{Field: FieldPlan, Value: e.Plan, Multiline: true},
 		{Field: FieldFollowUp, Value: e.FollowUp, Multiline: true},
@@ -138,10 +138,33 @@ func (e EncounterView) Value(field string) string {
 }
 
 func (e EncounterView) VisitTypeOptions() []Option {
-	return enumOptions(clinical.VisitTypes(), clinical.VisitType(e.VisitTypeVal))
+	published := clinical.VisitTypes()
+	options := make([]Option, 0, len(published))
+
+	for _, value := range published {
+		options = append(options, Option{
+			Value:    string(value),
+			Label:    VisitTypeLabel(value),
+			Selected: value == clinical.VisitType(e.VisitTypeVal),
+		})
+	}
+
+	return options
 }
+
 func (e EncounterView) PriorityOptions() []Option {
-	return enumOptions(clinical.VisitPriorities(), clinical.VisitPriority(e.PriorityVal))
+	published := clinical.VisitPriorities()
+	options := make([]Option, 0, len(published))
+
+	for _, value := range published {
+		options = append(options, Option{
+			Value:    string(value),
+			Label:    VisitPriorityLabel(value),
+			Selected: value == clinical.VisitPriority(e.PriorityVal),
+		})
+	}
+
+	return options
 }
 
 // EncounterListProps is one page of the list.
@@ -187,14 +210,36 @@ func encounterDeleteExpression(e EncounterView) string {
 	return "@delete(" + jsLiteral(e.Links.Record) + ", {headers: {'If-Match': $_etag}})"
 }
 
-// enumOptions walks a published vocabulary generically, so a form cannot
-// offer a value the domain refuses or withhold one it accepts.
-func enumOptions[T ~string](published []T, selected T) []Option {
-	options := make([]Option, 0, len(published))
-	for _, value := range published {
-		options = append(options, Option{Value: string(value), Label: string(value), Selected: value == selected})
+// The display spellings of encounter's two published vocabularies.
+// Values are message ids (D-06), resolved at render time.
+var (
+	visitTypeLabels = map[clinical.VisitType]string{
+		clinical.VisitTypeOffice:     "enum.visit_type.office",
+		clinical.VisitTypeTelehealth: "enum.visit_type.telehealth",
+		clinical.VisitTypeUrgentCare: "enum.visit_type.urgent_care",
+		clinical.VisitTypeEmergency:  "enum.visit_type.emergency",
+		clinical.VisitTypeInpatient:  "enum.visit_type.inpatient",
+		clinical.VisitTypeFollowUp:   "enum.visit_type.follow_up",
+		clinical.VisitTypeAnnual:     "enum.visit_type.annual",
+		clinical.VisitTypeOther:      "enum.visit_type.other",
 	}
-	return options
+
+	visitPriorityLabels = map[clinical.VisitPriority]string{
+		clinical.VisitPriorityRoutine:   "enum.visit_priority.routine",
+		clinical.VisitPriorityUrgent:    "enum.visit_priority.urgent",
+		clinical.VisitPriorityEmergency: "enum.visit_priority.emergency",
+	}
+)
+
+// VisitTypeLabel and VisitPriorityLabel answer with the stored spelling for a
+// value they do not know, and with nothing at all for the absent value —
+// mirroring medication.go's MedicationTypeLabel.
+func VisitTypeLabel(value clinical.VisitType) string {
+	return label(string(value), visitTypeLabels[value])
+}
+
+func VisitPriorityLabel(value clinical.VisitPriority) string {
+	return label(string(value), visitPriorityLabels[value])
 }
 
 func durationString(minutes int) string {

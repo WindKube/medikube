@@ -27,11 +27,7 @@ const (
 	OpInsuranceDetailPage = "insuranceDetailPage"
 )
 
-const insuranceListTitle = "Insurance"
-
-// insuranceListTitleID is a message id (D-06), resolved at render time. The
-// raw insuranceListTitle stays as-is: shell.NavLink.Label (out of scope,
-// shell package) renders it unresolved.
+// insuranceListTitleID is a message id (D-06), resolved at render time.
 const insuranceListTitleID = "page.insurance.title"
 
 // InsuranceHandlers is the record pages' contribution to the route table.
@@ -402,7 +398,7 @@ func (v InsuranceViews) cancelHref(policy views.InsuranceView) string {
 func (l insuranceLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationPage, Current: strings.HasPrefix(current, l.medicationPage)},
-		{Label: insuranceListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, insuranceListTitleID), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

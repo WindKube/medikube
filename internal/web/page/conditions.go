@@ -262,6 +262,12 @@ func (p *conditionPages) patientContext(ctx context.Context, actor access.Actor,
 }
 
 func (p *conditionPages) detail(e *core.RequestEvent, actor access.Actor) error {
+	// localizeCtx before anything else: medicationsEditor below resolves a
+	// translated title as a plain Go string rather than inside a lazily
+	// rendered templ block, so it needs the Localizer on ctx already — not
+	// only the one p.render's own nav call resolves afterwards.
+	ctx := localizeCtx(e)
+
 	handler, err := p.session(actor)
 	if err != nil {
 		return err
@@ -272,13 +278,13 @@ func (p *conditionPages) detail(e *core.RequestEvent, actor access.Actor) error 
 		return err
 	}
 
-	found, err := handler.Get(e.Request.Context(), actor,
+	found, err := handler.Get(ctx, actor,
 		kind.Condition.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
 	}
 
-	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &found); tagErr != nil {
+	if tagErr := attachTagOptions(ctx, actor, p.tags, &found); tagErr != nil {
 		return tagErr
 	}
 
@@ -287,12 +293,12 @@ func (p *conditionPages) detail(e *core.RequestEvent, actor access.Actor) error 
 		patientID, medications = detail.Patient, detail.Medications
 	}
 
-	context, err := p.patientContext(e.Request.Context(), actor, patientID)
+	context, err := p.patientContext(ctx, actor, patientID)
 	if err != nil {
 		return err
 	}
 
-	editor, err := p.medicationsEditor(e.Request.Context(), handler, actor, patientID, found, medications)
+	editor, err := p.medicationsEditor(ctx, handler, actor, patientID, found, medications)
 	if err != nil {
 		return err
 	}
@@ -320,7 +326,7 @@ func (p *conditionPages) medicationsEditor(
 
 	return views.MedicationLinksEditorProps{
 		ID:         ids.RecordDetail(kind.Condition, found.ID) + "-" + kind.Medication.Collection(),
-		Title:      "Medications",
+		Title:      i18n.T(ctx, "nav.medications"),
 		RecordHref: p.links.of(found.ID).Record,
 		Options:    options,
 		Roles:      []views.MedicationLinkRole{role},

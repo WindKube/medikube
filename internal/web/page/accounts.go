@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -13,6 +14,7 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	domainidentity "medikube/internal/domain/identity"
+	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
 	"medikube/internal/i18n"
 	"medikube/internal/service/identity"
@@ -305,7 +307,7 @@ func (p *accountPages) render(
 // counts the API answered with. Sorted, because ranging a map is not, and a
 // confirmation that reordered itself between renders is one nobody can read
 // twice.
-func holdings(counts api.MeCounts) []settings.Holding {
+func holdings(ctx context.Context, counts api.MeCounts) []settings.Holding {
 	segments := make([]string, 0, len(counts))
 	for segment := range counts {
 		segments = append(segments, segment)
@@ -315,7 +317,14 @@ func holdings(counts api.MeCounts) []settings.Holding {
 
 	rendered := make([]settings.Holding, 0, len(segments))
 	for _, segment := range segments {
-		rendered = append(rendered, settings.Holding{Label: segment, Count: counts[segment]})
+		count := counts[segment]
+
+		text := strconv.Itoa(count) + " " + segment
+		if k, ok := kind.FromSegment(segment); ok {
+			text = i18n.N(ctx, "kind."+k.Enum(), count)
+		}
+
+		rendered = append(rendered, settings.Holding{Text: text})
 	}
 
 	return rendered

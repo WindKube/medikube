@@ -29,11 +29,7 @@ const (
 	OpImmunizationDetailPage = "immunizationDetailPage"
 )
 
-const immunizationListTitle = "Vaccinations"
-
 // immunizationListTitleID is a message id (D-06), resolved at render time.
-// The raw immunizationListTitle stays as-is: shell.NavLink.Label (out of
-// scope, shell package) renders it unresolved.
 const immunizationListTitleID = "page.vaccinations.title"
 
 // ImmunizationHandlers is the record pages' contribution to the route table,
@@ -405,7 +401,7 @@ func (v ImmunizationViews) cancelHref(immunization views.ImmunizationView) strin
 func (l immunizationLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
-		{Label: immunizationListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, immunizationListTitleID), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

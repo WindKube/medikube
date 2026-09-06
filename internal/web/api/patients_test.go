@@ -330,7 +330,7 @@ func TestAPatientCreateOverDatastarAnswersHTML(t *testing.T) {
 			status:  http.StatusOK,
 			content: []string{
 				ids.PatientForm(""),
-				"a first name is required",
+				"This is required.",
 			},
 		},
 		{

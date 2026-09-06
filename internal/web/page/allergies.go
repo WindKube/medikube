@@ -259,6 +259,12 @@ func (p *allergyPages) patientContext(ctx context.Context, actor access.Actor, p
 }
 
 func (p *allergyPages) detail(e *core.RequestEvent, actor access.Actor) error {
+	// localizeCtx before anything else: medicationsEditor below resolves a
+	// translated title as a plain Go string rather than inside a lazily
+	// rendered templ block, so it needs the Localizer on ctx already — not
+	// only the one p.render's own nav call resolves afterwards.
+	ctx := localizeCtx(e)
+
 	handler, err := p.session(actor)
 	if err != nil {
 		return err
@@ -269,7 +275,7 @@ func (p *allergyPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	found, err := handler.Get(e.Request.Context(), actor,
+	found, err := handler.Get(ctx, actor,
 		kind.Allergy.Segment(), e.Request.PathValue(api.PathID))
 	if err != nil {
 		return web.OwnerScoped(err)
@@ -280,17 +286,17 @@ func (p *allergyPages) detail(e *core.RequestEvent, actor access.Actor) error {
 		patientID, medications = detail.Patient, detail.Medications
 	}
 
-	context, err := p.patientContext(e.Request.Context(), actor, patientID)
+	context, err := p.patientContext(ctx, actor, patientID)
 	if err != nil {
 		return err
 	}
 
-	editor, err := p.medicationsEditor(e.Request.Context(), handler, actor, patientID, found, medications)
+	editor, err := p.medicationsEditor(ctx, handler, actor, patientID, found, medications)
 	if err != nil {
 		return err
 	}
 
-	if tagErr := attachTagOptions(e.Request.Context(), actor, p.tags, &found); tagErr != nil {
+	if tagErr := attachTagOptions(ctx, actor, p.tags, &found); tagErr != nil {
 		return tagErr
 	}
 

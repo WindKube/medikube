@@ -38,9 +38,9 @@ templ ProcedureList(props ProcedureListProps) {
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
-							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldName) }</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldStatus) }</th>
-							<th scope="col" class="pb-2 font-medium">{ FieldLabel(FieldOccurredOn) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, FieldLabel(FieldName)) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, FieldLabel(FieldStatus)) }</th>
+							<th scope="col" class="pb-2 font-medium">{ i18n.T(ctx, FieldLabel(FieldOccurredOn)) }</th>
 						</tr>
 					</thead>
 					<tbody id={ ids.RecordRows(kind.Procedure) }>
@@ -68,12 +68,12 @@ templ ProcedureRow(p ProcedureView) {
 			>{ p.Name }</a>
 		</th>
 		<td class="py-3 pr-4 align-top">
-			<span class="sr-only">{ FieldLabel(FieldStatus) }</span>
+			<span class="sr-only">{ i18n.T(ctx, FieldLabel(FieldStatus)) }</span>
 			<span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200">{ p.Status }</span>
 		</td>
 		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
 			if p.OccurredOn != "" {
-				<span class="sr-only">{ FieldLabel(FieldOccurredOn) }</span>
+				<span class="sr-only">{ i18n.T(ctx, FieldLabel(FieldOccurredOn)) }</span>
 				<time datetime={ p.OccurredOn }>{ p.OccurredOn }</time>
 			}
 		</td>
@@ -111,7 +111,7 @@ templ ProcedureDetail(props ProcedureDetailProps) {
 		</header>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
 			for _, entry := range props.Procedure.Entries() {
-				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ i18n.T(ctx, entry.Label) }</dt>
 				@detailValue(entry)
 			}
 		</dl>
@@ -173,7 +173,7 @@ templ ProcedureForm(props ProcedureFormProps) {
 
 templ procedureTextControl(props ProcedureFormProps, field, inputType string, required bool) {
 	<div class="flex flex-col">
-		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ i18n.T(ctx, FieldLabel(field)) }</label>
 		<input
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -187,13 +187,13 @@ templ procedureTextControl(props ProcedureFormProps, field, inputType string, re
 			}
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		/>
-		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(ctx, field))
 	</div>
 }
 
 templ procedureSelectControl(props ProcedureFormProps, field string, options []Option) {
 	<div class="flex flex-col">
-		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ i18n.T(ctx, FieldLabel(field)) }</label>
 		<select
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -209,13 +209,13 @@ templ procedureSelectControl(props ProcedureFormProps, field string, options []O
 				<option value={ option.Value } selected?={ option.Selected }>{ i18n.T(ctx, option.Label) }</option>
 			}
 		</select>
-		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(ctx, field))
 	</div>
 }
 
 templ procedureTextareaControl(props ProcedureFormProps, field string) {
 	<div class="flex flex-col">
-		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ i18n.T(ctx, FieldLabel(field)) }</label>
 		<textarea
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -227,6 +227,6 @@ templ procedureTextareaControl(props ProcedureFormProps, field string) {
 			}
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>{ props.Procedure.Value(field) }</textarea>
-		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(field))
+		@components.FieldError(ids.FieldError(props.FormID, field), props.Errors.Messages(ctx, field))
 	</div>
 }

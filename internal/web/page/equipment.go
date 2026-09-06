@@ -27,11 +27,7 @@ const (
 	OpEquipmentDetailPage = "equipmentDetailPage"
 )
 
-const equipmentListTitle = "Equipment"
-
-// equipmentListTitleID is a message id (D-06), resolved at render time. The
-// raw equipmentListTitle stays as-is: shell.NavLink.Label (out of scope,
-// shell package) renders it unresolved.
+// equipmentListTitleID is a message id (D-06), resolved at render time.
 const equipmentListTitleID = "page.equipment.title"
 
 // EquipmentHandlers is the record pages' contribution to the route table.
@@ -401,7 +397,7 @@ func (v EquipmentViews) cancelHref(item views.EquipmentView) string {
 func (l equipmentLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationPage, Current: strings.HasPrefix(current, l.medicationPage)},
-		{Label: equipmentListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, equipmentListTitleID), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

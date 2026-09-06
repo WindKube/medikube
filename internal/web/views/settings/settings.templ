@@ -10,8 +10,8 @@ import "medikube/internal/i18n"
 // operations with three separate refusals — a change to a preference must not
 // clear a half-typed password — and one component because the landmark is one.
 templ Settings(props SettingsProps) {
-	<section aria-label={ SettingsLandmark } class="flex flex-col gap-8">
-		<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ SettingsLandmark }</h1>
+	<section aria-label={ i18n.T(ctx, "nav.settings") } class="flex flex-col gap-8">
+		<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ i18n.T(ctx, "nav.settings") }</h1>
 		@Profile(props.Profile)
 		@Password(props.Password)
 		<div class="flex max-w-xl flex-col items-start gap-2">

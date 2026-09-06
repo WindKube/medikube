@@ -14,11 +14,11 @@ import "medikube/internal/i18n"
 templ Profile(props ProfileProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ ProfileLandmark }
+		aria-label={ i18n.T(ctx, "settings.profile_title") }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-xl flex-col gap-5"
 	>
-		<h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{ ProfileLandmark }</h2>
+		<h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{ i18n.T(ctx, "settings.profile_title") }</h2>
 		<div class="flex flex-col gap-1 rounded-md border border-slate-200 p-3 dark:border-slate-800">
 			<p class="text-sm font-medium text-slate-900 dark:text-slate-100">{ i18n.T(ctx, "field.email") }</p>
 			<p class="text-sm text-slate-700 dark:text-slate-300">{ props.Email }</p>

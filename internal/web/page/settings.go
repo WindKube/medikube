@@ -66,7 +66,7 @@ func (p *accountPages) settings(e *core.RequestEvent, actor access.Actor) error 
 			FormID:   ids.DeleteAccountForm,
 			OnSubmit: p.links.remove(p.links.me, settings.FieldPassword, settings.FieldConfirmation),
 			Phrase:   domainidentity.DeleteConfirmationPhrase,
-			Holdings: holdings(counts),
+			Holdings: holdings(ctx, counts),
 		},
 	}))
 }

@@ -1,6 +1,7 @@
 package records
 
 import (
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 )
@@ -33,7 +34,7 @@ templ TextControl(p ControlProps) {
 			}
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		/>
-		@components.FieldError(ids.FieldError(p.FormID, p.Field), p.Errors.Messages(p.Field))
+		@components.FieldError(ids.FieldError(p.FormID, p.Field), p.Errors.Messages(ctx, p.Field))
 	</div>
 }
 
@@ -51,7 +52,7 @@ templ TextareaControl(p ControlProps) {
 			}
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>{ p.Value }</textarea>
-		@components.FieldError(ids.FieldError(p.FormID, p.Field), p.Errors.Messages(p.Field))
+		@components.FieldError(ids.FieldError(p.FormID, p.Field), p.Errors.Messages(ctx, p.Field))
 	</div>
 }
 
@@ -70,13 +71,13 @@ templ SelectControl(p ControlProps, options []Option) {
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>
 			if !p.Required {
-				<option value="">Not recorded</option>
+				<option value="">{ i18n.T(ctx, "action.not_recorded") }</option>
 			}
 			for _, option := range options {
 				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
 			}
 		</select>
-		@components.FieldError(ids.FieldError(p.FormID, p.Field), p.Errors.Messages(p.Field))
+		@components.FieldError(ids.FieldError(p.FormID, p.Field), p.Errors.Messages(ctx, p.Field))
 	</div>
 }
 

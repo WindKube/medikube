@@ -76,7 +76,7 @@ func (p *overviewPage) serve(e *core.RequestEvent, actor access.Actor) error {
 
 	main := overview.Overview(overview.Props{
 		MedicationCount:  counts[kind.Medication.Segment()],
-		MedicationsLabel: kind.Medication.Segment(),
+		MedicationsLabel: i18n.T(ctx, "nav.medications"),
 		MedicationsHref:  p.medications.listPage,
 		SettingsHref:     p.account.settingsPage,
 	})

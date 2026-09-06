@@ -112,6 +112,42 @@ other = "tag o tej nazwie już istnieje"
 description = "500 and any other code this instance does not recognise"
 other = "błąd wewnętrzny"
 
+# --- error.field.<code> — a form field's own refusal (T031, US1-4) ---------
+#
+# Only the codes internal/domain/validation.go shares across every entity: a
+# code an entity raises itself (end_before_start, same_as_email, …) carries
+# no generic phrasing that would not just repeat what the domain's own
+# English message already says, so it is left in English rather than forced
+# into one here.
+
+[error.field.required]
+description = "A required field was left empty"
+other = "To pole jest wymagane."
+
+[error.field.invalid_value]
+description = "A field's value is not one MediKube accepts"
+other = "To nie jest wartość akceptowana przez MediKube."
+
+[error.field.invalid_date]
+description = "A field's value is not a date MediKube accepts"
+other = "To nie jest data akceptowana przez MediKube."
+
+[error.field.too_long]
+description = "A field's value is longer than MediKube accepts"
+other = "To jest za długie."
+
+[error.field.too_short]
+description = "A field's value is shorter than MediKube accepts"
+other = "To jest za krótkie."
+
+[error.field.out_of_range]
+description = "A field's numeric value falls outside the range MediKube accepts"
+other = "To wykracza poza zakres akceptowany przez MediKube."
+
+[error.field.unknown_field]
+description = "A field the request named is not one MediKube recognises"
+other = "MediKube nie rozpoznaje tego pola."
+
 # --- empty ---------------------------------------------------------------
 
 [empty.nothing_recorded]
@@ -256,7 +292,7 @@ description = "How many family member records a list holds"
 one = "{{.PluralCount}} członek rodziny"
 few = "{{.PluralCount}} członkowie rodziny"
 many = "{{.PluralCount}} członków rodziny"
-other = "{{.PluralCount}} członków rodziny"
+other = "{{.PluralCount}} członka rodziny"
 
 # --- field.<generic> --------------------------------------------------------
 
@@ -295,6 +331,90 @@ other = "Pokrewieństwo"
 [field.manufacturer]
 description = "Generic 'Manufacturer' field label, shared across kinds"
 other = "Producent"
+
+[field.reason]
+description = "Encounter's 'Reason for the visit' field label"
+other = "Powód wizyty"
+
+[field.occurred_on]
+description = "Generic 'Date' field label, shared across encounter and procedure"
+other = "Data"
+
+[field.visit_type]
+description = "Encounter's 'Visit type' field label"
+other = "Rodzaj wizyty"
+
+[field.priority]
+description = "Encounter's 'Priority' field label"
+other = "Priorytet"
+
+[field.assessment]
+description = "Encounter's 'Assessment' field label"
+other = "Ocena"
+
+[field.plan]
+description = "Encounter's 'Plan' field label"
+other = "Plan"
+
+[field.follow_up]
+description = "Encounter's 'Follow-up' field label"
+other = "Dalsze działania"
+
+[field.duration_minutes]
+description = "Procedure's 'Duration (minutes)' field label"
+other = "Czas trwania (minuty)"
+
+[field.code]
+description = "Generic 'Code' field label, shared across kinds"
+other = "Kod"
+
+[field.description]
+description = "Generic 'Description' field label, shared across kinds"
+other = "Opis"
+
+[field.outcome]
+description = "Generic 'Outcome' field label, shared across kinds"
+other = "Wynik"
+
+[field.setting]
+description = "Generic 'Setting' field label, shared across kinds"
+other = "Miejsce"
+
+[field.complications]
+description = "Procedure's 'Complications' field label"
+other = "Powikłania"
+
+[field.anesthesia]
+description = "Procedure's 'Anesthesia' field label"
+other = "Znieczulenie"
+
+[field.anesthesia_notes]
+description = "Procedure's 'Anesthesia notes' field label"
+other = "Uwagi do znieczulenia"
+
+[field.expected_outcome]
+description = "Treatment's 'Expected outcome' field label"
+other = "Oczekiwany wynik"
+
+[field.related_practitioner]
+description = "Generic 'Practitioner' relation field label, shared across kinds"
+other = "Specjalista"
+
+[field.place_of_care]
+description = "Generic 'Place of care' (facility) relation field label, shared across kinds"
+other = "Miejsce opieki"
+
+[field.related_condition]
+description = "Generic 'Related condition' relation field label, shared across kinds"
+other = "Powiązane schorzenie"
+
+[field.related_encounters]
+description = "Generic 'Related visits' (encounters) relation field label, shared across kinds"
+other = "Powiązane wizyty"
+
+[field.related_equipment]
+description = "Generic 'Related devices' (equipment) relation field label, shared across kinds"
+other = "Powiązany sprzęt"
 
 [field.indication]
 description = "Medication's 'Reason for taking it' field label"
@@ -354,6 +474,50 @@ other = "Ciężkie"
 description = "Severity vocabulary value: life-threatening"
 other = "Zagrażające życiu"
 
+[enum.visit_type.office]
+description = "Encounter visit-type vocabulary value: office"
+other = "Wizyta w gabinecie"
+
+[enum.visit_type.telehealth]
+description = "Encounter visit-type vocabulary value: telehealth"
+other = "Teleporada"
+
+[enum.visit_type.urgent_care]
+description = "Encounter visit-type vocabulary value: urgent_care"
+other = "Pomoc doraźna"
+
+[enum.visit_type.emergency]
+description = "Encounter visit-type vocabulary value: emergency"
+other = "Nagły przypadek"
+
+[enum.visit_type.inpatient]
+description = "Encounter visit-type vocabulary value: inpatient"
+other = "Hospitalizacja"
+
+[enum.visit_type.follow_up]
+description = "Encounter visit-type vocabulary value: follow_up"
+other = "Wizyta kontrolna"
+
+[enum.visit_type.annual]
+description = "Encounter visit-type vocabulary value: annual"
+other = "Wizyta roczna"
+
+[enum.visit_type.other]
+description = "Encounter visit-type vocabulary value: other"
+other = "Inne"
+
+[enum.visit_priority.routine]
+description = "Encounter visit-priority vocabulary value: routine"
+other = "Rutynowa"
+
+[enum.visit_priority.urgent]
+description = "Encounter visit-priority vocabulary value: urgent"
+other = "Pilna"
+
+[enum.visit_priority.emergency]
+description = "Encounter visit-priority vocabulary value: emergency"
+other = "Nagła"
+
 [enum.condition_status.active]
 description = "Condition status vocabulary value: active"
 other = "Aktywne"
@@ -392,7 +556,7 @@ other = "To działanie jest nieodwracalne. Nie ma kosza ani cofania."
 
 [empty.record_first_one_body]
 description = "Generic empty-state body inviting the first record, shared by encounter, immunization, injury and medication"
-other = "Zapisz pierwszy wpis, a pojawi się on tutaj wraz ze wszystkim, co odnotowano."
+other = "Zapisz pierwszy rekord, a pojawi się on tutaj wraz ze wszystkim, co odnotowano."
 
 # --- allergy (T023) -----------------------------------------------------------
 
@@ -1811,17 +1975,17 @@ other = "Usunąć tę etykietę?"
 
 [tag.usage_count]
 description = "A tag row's own usage count, e.g. \"4 records\""
-one = "{{.PluralCount}} wpis"
-few = "{{.PluralCount}} wpisy"
-many = "{{.PluralCount}} wpisów"
-other = "{{.PluralCount}} wpisu"
+one = "{{.PluralCount}} rekord"
+few = "{{.PluralCount}} rekordy"
+many = "{{.PluralCount}} rekordów"
+other = "{{.PluralCount}} rekordu"
 
 [tag.delete_consequence]
 description = "The tag delete-confirmation panel's own body text stating how many records carry the tag"
-one = "Ta etykieta jest przypisana do {{.PluralCount}} wpisu. Usunięcie etykiety usunie ją z tego wpisu."
-few = "Ta etykieta jest przypisana do {{.PluralCount}} wpisów. Usunięcie etykiety usunie ją ze wszystkich."
-many = "Ta etykieta jest przypisana do {{.PluralCount}} wpisów. Usunięcie etykiety usunie ją ze wszystkich."
-other = "Ta etykieta jest przypisana do {{.PluralCount}} wpisu. Usunięcie etykiety usunie ją ze wszystkich."
+one = "Ta etykieta jest przypisana do {{.PluralCount}} rekordu. Usunięcie etykiety usunie ją z tego rekordu."
+few = "Ta etykieta jest przypisana do {{.PluralCount}} rekordów. Usunięcie etykiety usunie ją ze wszystkich."
+many = "Ta etykieta jest przypisana do {{.PluralCount}} rekordów. Usunięcie etykiety usunie ją ze wszystkich."
+other = "Ta etykieta jest przypisana do {{.PluralCount}} rekordu. Usunięcie etykiety usunie ją ze wszystkich."
 
 [tag.delete_consequence_none]
 description = "The tag delete-confirmation panel's body when no record carries the tag"
@@ -1881,7 +2045,7 @@ other = "Ta osoba nie ma jeszcze żadnych zapisanych danych."
 
 [search.no_matches_body]
 description = "The search page's own empty state body when a search matched nothing"
-other = "Żadne wpisy nie pasują do tego wyszukiwania."
+other = "Żadne rekordy nie pasują do tego wyszukiwania."
 
 [search.no_matches]
 description = "The search page's own no-matches empty state heading"
@@ -1954,6 +2118,10 @@ many = "Tego nie można cofnąć. Odnosi się do niego {{.PluralCount}} innych r
 other = "Tego nie można cofnąć. Odnosi się do niego {{.PluralCount}} innego rekordu."
 
 # --- a11y ------------------------------------------------------------------
+
+[a11y.primary_nav]
+description = "The primary navigation landmark's accessible name (nav[aria-label])"
+other = "Główna"
 
 [a11y.skip_to_content]
 description = "The skip link at the very top of every page"
@@ -2112,8 +2280,15 @@ description = "The dead-confirmation-link offer's own link text"
 other = "Zaloguj się i poproś o nowe potwierdzenie"
 
 [auth.password_rule_length]
-description = "The published password rule stating the length bounds"
-other = "Co najmniej {{.Min}} znaków, i co najwyżej {{.Max}}."
+description = "The published password rule stating the length bounds. Min/Max already carry their own unit word (auth.password_length_unit, D-06/FR-008), so this message names none of its own."
+other = "Co najmniej {{.Min}}, i co najwyżej {{.Max}}."
+
+[auth.password_length_unit]
+description = "A count of characters, wrapped into auth.password_rule_length so Polish's few/many/other forms agree with the number (FR-008)"
+one = "{{.PluralCount}} znak"
+few = "{{.PluralCount}} znaki"
+many = "{{.PluralCount}} znaków"
+other = "{{.PluralCount}} znaku"
 
 [auth.password_rule_not_email]
 description = "The published password rule: not the account's own email address"
@@ -2217,6 +2392,22 @@ other = "Ciemny"
 
 # --- settings (T021 additions) --------------------------------------------
 
+[settings.profile_title]
+description = "The settings page's profile form heading, aria-label and submit-adjacent name"
+other = "Profil"
+
+[settings.password_title]
+description = "The settings page's password-change form heading, aria-label and submit button"
+other = "Zmień hasło"
+
+[settings.danger_zone_title]
+description = "The settings page's danger-zone section heading and aria-label"
+other = "Strefa niebezpieczna"
+
+[settings.delete_account_title]
+description = "The settings page's account-deletion form aria-label and submit button"
+other = "Usuń konto"
+
 [settings.sessions_title]
 description = "The settings page's sessions section heading"
 other = "Sesje"
@@ -2318,11 +2509,11 @@ other = "Nic jeszcze nie zapisano"
 
 [patient.nothing_recorded_body]
 description = "The patient chart's page-level empty state body"
-other = "Każdy rodzaj wpisu dla tej osoby zaczyna się tutaj, od zera."
+other = "Każdy rodzaj rekordu dla tej osoby zaczyna się tutaj, od zera."
 
 [patient.tile_empty]
 description = "A chart tile with no records of its kind yet"
-other = "Jeszcze nic — dodaj pierwszy wpis"
+other = "Jeszcze nic — dodaj pierwszy rekord"
 
 [patient.recent_activity]
 description = "The patient chart's recent-activity heading"
@@ -2342,7 +2533,7 @@ other = "Lek"
 
 [patient.activity_default_record]
 description = "Recent-activity subject: a record of an unlisted kind"
-other = "Wpis"
+other = "Rekord"
 
 [patient.activity_created]
 description = "Recent-activity: a record was added"
@@ -2504,17 +2695,17 @@ other = "Usuń na stałe"
 
 [confirm.facility_delete_consequence]
 description = "The facility delete confirmation's consequence sentence"
-other = "Jest to nieodwracalne. Każdy specjalista lub lek, który ją wskazuje, zachowuje swój wpis, z wyczyszczonym odniesieniem."
+other = "Jest to nieodwracalne. Każdy specjalista lub lek, który ją wskazuje, zachowuje swój rekord, z wyczyszczonym odniesieniem."
 
 [confirm.practitioner_delete_consequence]
 description = "The practitioner delete confirmation's consequence sentence"
-other = "Jest to nieodwracalne. Każdy pacjent lub lek, który go wskazuje, zachowuje swój wpis, z wyczyszczonym odniesieniem."
+other = "Jest to nieodwracalne. Każdy pacjent lub lek, który go wskazuje, zachowuje swój rekord, z wyczyszczonym odniesieniem."
 
 # --- directory (T022 additions) ----------------------------------------------
 
 [directory.empty_body]
 description = "The facility and practitioner list's empty state body"
-other = "Dodaj pierwszy wpis, a pojawi się tutaj."
+other = "Dodaj pierwszy rekord, a pojawi się tutaj."
 
 [directory.facility_article]
 description = "The facility detail page's landmark"
@@ -2709,13 +2900,9 @@ other = "Notatki"
 description = "The overview page's summary when the account has no medications yet"
 other = "Nie zapisano jeszcze żadnych {{.Label}}."
 
-[overview.medication_summary_one]
-description = "The overview page's summary with exactly one medication"
-other = "Masz zapisany 1 lek."
-
-[overview.medication_summary_other]
-description = "The overview page's summary with more than one medication"
-other = "Masz zapisane {{.Count}} {{.Label}}."
+[overview.medication_summary]
+description = "The overview page's summary of how many medications are recorded, wrapping kind.medication's own plural form so Polish's few/many/other forms agree (US1-5, FR-008)"
+other = "Masz zapisane: {{.Kind}}."
 
 [overview.go_to_medications]
 description = "The overview page's link to the medication list"

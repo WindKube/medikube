@@ -27,11 +27,7 @@ const (
 	OpEncounterDetailPage = "encounterDetailPage"
 )
 
-const encounterListTitle = "Encounters"
-
-// encounterListTitleID is a message id (D-06), resolved at render time. The
-// raw encounterListTitle stays as-is: shell.NavLink.Label (out of scope,
-// shell package) renders it unresolved.
+// encounterListTitleID is a message id (D-06), resolved at render time.
 const encounterListTitleID = "page.encounters.title"
 
 // EncounterHandlers is the encounter pages' contribution to the route table,
@@ -390,7 +386,7 @@ func (l encounterLinks) cancelHref(encounter views.EncounterView) string {
 func (l encounterLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
-		{Label: encounterListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, encounterListTitleID), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

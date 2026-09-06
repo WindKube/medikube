@@ -1,11 +1,13 @@
 package shell
 
+import "medikube/internal/i18n"
+
 // nav is contracts/pages.md's navigation landmark, present on every page
 // signed in or out — what changes is its CONTENTS, never its existence,
 // because phase 005's public invitation page is opened by somebody with no
 // session who needs exactly the two links a signed-out nav holds.
 templ nav(links []NavLink, switcher templ.Component) {
-	<nav id="primary-nav" role="navigation" aria-label="Primary">
+	<nav id="primary-nav" role="navigation" aria-label={ i18n.T(ctx, "a11y.primary_nav") }>
 		<ul class="flex flex-wrap gap-4">
 			for _, link := range links {
 				<li>

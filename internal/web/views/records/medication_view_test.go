@@ -1,6 +1,7 @@
 package records_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -202,6 +203,6 @@ func TestFieldErrorsAreEmptyWhenThereAreNone(t *testing.T) {
 	errs := records.NewFieldErrors(nil)
 
 	assert.False(t, errs.Has(records.FieldName))
-	assert.Empty(t, errs.Messages(records.FieldName))
+	assert.Empty(t, errs.Messages(context.Background(), records.FieldName))
 	assert.Empty(t, errs.Fields())
 }

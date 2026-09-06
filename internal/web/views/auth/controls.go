@@ -68,7 +68,7 @@ type fieldProps struct {
 	Messages    []string
 }
 
-func (p LoginProps) field(field, label, inputType, autocomplete, value string) fieldProps {
+func (p LoginProps) field(ctx context.Context, field, label, inputType, autocomplete, value string) fieldProps {
 	return fieldProps{
 		ID:           p.FieldID(field),
 		Name:         field,
@@ -80,11 +80,11 @@ func (p LoginProps) field(field, label, inputType, autocomplete, value string) f
 		Invalid:      p.Errors.Has(field),
 		DescribedBy:  p.DescribedBy(field),
 		ErrorID:      p.ErrorID(field),
-		Messages:     p.Errors.Messages(field),
+		Messages:     p.Errors.Messages(ctx, field),
 	}
 }
 
-func (p RegisterProps) field(field, label, inputType, autocomplete, value string) fieldProps {
+func (p RegisterProps) field(ctx context.Context, field, label, inputType, autocomplete, value string) fieldProps {
 	return fieldProps{
 		ID:           p.FieldID(field),
 		Name:         field,
@@ -96,7 +96,7 @@ func (p RegisterProps) field(field, label, inputType, autocomplete, value string
 		Invalid:      p.Errors.Has(field),
 		DescribedBy:  p.DescribedBy(field),
 		ErrorID:      p.ErrorID(field),
-		Messages:     p.Errors.Messages(field),
+		Messages:     p.Errors.Messages(ctx, field),
 	}
 }
 
@@ -109,8 +109,8 @@ func (p RegisterProps) field(field, label, inputType, autocomplete, value string
 func (p RegisterProps) RuleSentences(ctx context.Context) []string {
 	sentences := []string{
 		i18n.T(ctx, "auth.password_rule_length", map[string]any{
-			"Min": p.Rules.MinLength,
-			"Max": p.Rules.MaxLength,
+			"Min": i18n.N(ctx, "auth.password_length_unit", p.Rules.MinLength),
+			"Max": i18n.N(ctx, "auth.password_length_unit", p.Rules.MaxLength),
 		}),
 	}
 
@@ -157,7 +157,7 @@ func (p ResetPasswordProps) ErrorID(field string) string { return fieldErrorID(p
 // person typed.
 func (p VerifyEmailProps) FieldID(field string) string { return fieldID(p.FormID, field) }
 
-func (p ForgotPasswordProps) field(field, label, inputType, autocomplete, value string) fieldProps {
+func (p ForgotPasswordProps) field(ctx context.Context, field, label, inputType, autocomplete, value string) fieldProps {
 	return fieldProps{
 		ID:           p.FieldID(field),
 		Name:         field,
@@ -169,11 +169,11 @@ func (p ForgotPasswordProps) field(field, label, inputType, autocomplete, value 
 		Invalid:      p.Errors.Has(field),
 		DescribedBy:  p.DescribedBy(field),
 		ErrorID:      p.ErrorID(field),
-		Messages:     p.Errors.Messages(field),
+		Messages:     p.Errors.Messages(ctx, field),
 	}
 }
 
-func (p ResetPasswordProps) field(field, label, inputType, autocomplete, value string) fieldProps {
+func (p ResetPasswordProps) field(ctx context.Context, field, label, inputType, autocomplete, value string) fieldProps {
 	return fieldProps{
 		ID:           p.FieldID(field),
 		Name:         field,
@@ -185,7 +185,7 @@ func (p ResetPasswordProps) field(field, label, inputType, autocomplete, value s
 		Invalid:      p.Errors.Has(field),
 		DescribedBy:  p.DescribedBy(field),
 		ErrorID:      p.ErrorID(field),
-		Messages:     p.Errors.Messages(field),
+		Messages:     p.Errors.Messages(ctx, field),
 	}
 }
 

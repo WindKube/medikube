@@ -27,8 +27,8 @@ templ Login(props LoginProps) {
 				class="rounded-md border border-amber-500 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
 			>{ i18n.T(ctx, "auth.session_expired") }</p>
 		}
-		@field(props.field(FieldEmail, i18n.T(ctx, "field.email"), "email", "username", props.Email))
-		@field(props.field(FieldPassword, i18n.T(ctx, "field.password"), "password", "current-password", ""))
+		@field(props.field(ctx, FieldEmail, i18n.T(ctx, "field.email"), "email", "username", props.Email))
+		@field(props.field(ctx, FieldPassword, i18n.T(ctx, "field.password"), "password", "current-password", ""))
 		<button
 			type="submit"
 			class="inline-flex items-center justify-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
