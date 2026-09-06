@@ -27,8 +27,10 @@ func courseMedicationSourceLabel(source string) string {
 // FR-061): the medication it resolves against and every effective field with
 // its provenance.
 type CourseMedicationRow struct {
+	MedicationID   string
 	MedicationName string
 	MedicationHref string
+	RemoveOn       string
 
 	Dosage     CourseMedicationEffectiveView
 	Frequency  CourseMedicationEffectiveView
@@ -38,6 +40,44 @@ type CourseMedicationRow struct {
 	Pharmacy   CourseMedicationEffectiveView
 	StartedOn  CourseMedicationEffectiveView
 	EndedOn    CourseMedicationEffectiveView
+}
+
+// CourseMedicationFormProps is FR-060/FR-061's upsert form: pick one of the
+// patient's own medications not already attached, and optionally override
+// dosage, frequency, when it started and when it ended — every other field
+// falls back to the medication's own value by being left out of the PUT body
+// entirely (contracts/treatment-medications.md §2).
+type CourseMedicationFormProps struct {
+	ID         string
+	UpsertBase string
+	Etag       string
+	Options    []MedicationLinkOption
+}
+
+func (p CourseMedicationFormProps) medicationSignal() string { return p.ID + "_medication" }
+func (p CourseMedicationFormProps) dosageSignal() string     { return p.ID + "_dosage" }
+func (p CourseMedicationFormProps) frequencySignal() string  { return p.ID + "_frequency" }
+func (p CourseMedicationFormProps) startedOnSignal() string  { return p.ID + "_started_on" }
+func (p CourseMedicationFormProps) endedOnSignal() string    { return p.ID + "_ended_on" }
+
+// submitExpr PUTs whichever medication is picked with whichever overrides
+// were typed, each falling back to null (and so, server-side, to the
+// medication's own value) when left blank.
+func (p CourseMedicationFormProps) submitExpr() string {
+	medication := "$" + p.medicationSignal()
+
+	payload := jsObject(
+		jsField{"dosage", "($" + p.dosageSignal() + " || null)"},
+		jsField{"frequency", "($" + p.frequencySignal() + " || null)"},
+		jsField{"started_on", "($" + p.startedOnSignal() + " || null)"},
+		jsField{"ended_on", "($" + p.endedOnSignal() + " || null)"},
+	)
+
+	call := "@put(" + jsLiteral(p.UpsertBase) + " + " + medication +
+		", {headers: {'If-Match': " + jsLiteral(p.Etag) + "}, payload: " + payload +
+		"}).then(() => window.location.reload())"
+
+	return medication + " ? (" + call + ") : ''"
 }
 
 // Fields is every effective field this row carries, labelled for rendering.

@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
+	"medikube/internal/web/views/shared"
 )
 
 const (
@@ -112,14 +113,13 @@ templ InjuryRow(injury InjuryView) {
 }
 
 const (
-	injuryConfirmSignal      = "_confirming_delete"
-	injuryDetailArticle      = "Injury"
-	injuryConfirmTitle       = "Delete this injury?"
-	injuryConfirmConsequence = "This is permanent. There is no recycle bin and no undo, so everything recorded here goes with it."
-	injuryConfirmLabel       = "Delete permanently"
-	injuryConfirmCancel      = "Keep it"
-	injuryEditLabel          = "Edit"
-	injuryDeleteLabel        = "Delete"
+	injuryConfirmSignal = "_confirming_delete"
+	injuryDetailArticle = "Injury"
+	injuryConfirmTitle  = "Delete this injury?"
+	injuryConfirmLabel  = "Delete permanently"
+	injuryConfirmCancel = "Keep it"
+	injuryEditLabel     = "Edit"
+	injuryDeleteLabel   = "Delete"
 )
 
 // InjuryDetail is this kind's detail landmark, mirroring MedicationDetail.
@@ -157,15 +157,18 @@ templ InjuryDetail(props InjuryDetailProps) {
 				@detailValue(entry)
 			}
 		</dl>
-		@components.Confirm(components.ConfirmProps{
-			ID:           ids.RecordConfirm(kind.Injury, props.Injury.ID),
-			Signal:       injuryConfirmSignal,
-			Title:        injuryConfirmTitle,
-			Subject:      props.Injury.Name,
-			Consequence:  injuryConfirmConsequence,
-			ConfirmLabel: injuryConfirmLabel,
-			ConfirmOn:    injuryDeleteExpression(props.Injury),
-			CancelLabel:  injuryConfirmCancel,
+		if props.Medications.ID != "" {
+			@MedicationLinksEditor(props.Medications)
+		}
+		@shared.DeleteConfirm(shared.DeleteConfirmProps{
+			ID:             ids.RecordConfirm(kind.Injury, props.Injury.ID),
+			Signal:         injuryConfirmSignal,
+			Title:          injuryConfirmTitle,
+			Subject:        props.Injury.Name,
+			ReferenceCount: 0,
+			ConfirmLabel:   injuryConfirmLabel,
+			ConfirmOn:      injuryDeleteExpression(props.Injury),
+			CancelLabel:    injuryConfirmCancel,
 		})
 	</article>
 }

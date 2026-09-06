@@ -27,3 +27,102 @@ templ LinkedRecords(id, title string, items []LinkedRecordItem) {
 		}
 	</section>
 }
+
+const medicationLinksEmpty = "No medications linked yet."
+
+// MedicationLinksEditor is FR-055's editor, mounted on the owning kind's own
+// detail page (allergy, condition, injury, symptom): every currently linked
+// medication with a Remove button, and a picker to add another, for one role
+// or (symptom) either of two.
+templ MedicationLinksEditor(props MedicationLinksEditorProps) {
+	<section id={ props.ID } aria-label={ props.Title } class="mt-6 flex flex-col gap-3">
+		<h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{ props.Title }</h2>
+		for _, role := range props.Roles {
+			<div class="flex flex-col gap-1">
+				if role.Label != "" {
+					<h3 class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{ role.Label }</h3>
+				}
+				if len(role.Items) == 0 {
+					<p class="text-sm text-slate-500 dark:text-slate-400">{ medicationLinksEmpty }</p>
+				} else {
+					<ul class="flex flex-col gap-1">
+						for i, item := range role.Items {
+							<li class="flex items-center gap-2">
+								<a
+									href={ templ.SafeURL(item.Href) }
+									class="text-sm text-teal-800 underline underline-offset-2 hover:text-teal-900 dark:text-teal-400 dark:hover:text-teal-300"
+								>{ item.Summary }</a>
+								<button
+									type="button"
+									data-on:click={ props.removeExpr(role, role.IDs[i]) }
+									class="text-xs font-medium text-rose-800 underline underline-offset-2 hover:text-rose-900 dark:text-rose-300"
+								>Remove</button>
+							</li>
+						}
+					</ul>
+				}
+			</div>
+		}
+		<div
+			data-signals={ "{" + props.addMedicationSignal() + ": '', " + medicationRoleSignals(props) + "}" }
+			class="flex flex-wrap items-center gap-2"
+		>
+			if len(props.Roles) > 1 {
+				<select
+					data-bind={ props.addRoleSignal() }
+					class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+				>
+					for _, role := range props.Roles {
+						<option value={ role.Field }>{ role.Label }</option>
+					}
+				</select>
+			}
+			<select
+				data-bind={ props.addMedicationSignal() }
+				class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+			>
+				<option value="">Add a medication…</option>
+				for _, option := range props.Options {
+					<option value={ option.ID }>{ option.Name }</option>
+				}
+			</select>
+			<button
+				type="button"
+				data-on:click={ props.addExpr() }
+				class="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+			>Add</button>
+		</div>
+	</section>
+}
+
+// RemovableLinks is FR-059's other end, mounted on medication's own detail
+// page: every record naming it, openable, each with its own Remove — pre-built
+// by the page layer, since each row's target is a different record with its
+// own version.
+templ RemovableLinks(props RemovableLinksProps) {
+	<section id={ props.ID } aria-label={ props.Title } class="mt-6 flex flex-col gap-2">
+		<h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{ props.Title }</h2>
+		if len(props.Items) == 0 {
+			<p class="text-sm text-slate-500 dark:text-slate-400">{ linkedRecordsEmpty }</p>
+		} else {
+			<ul class="flex flex-col gap-1">
+				for _, item := range props.Items {
+					<li class="flex items-center gap-2">
+						<span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+							{ item.Kind }
+						</span>
+						<a
+							href={ templ.SafeURL(item.Href) }
+							class="text-sm text-teal-800 underline underline-offset-2 hover:text-teal-900 dark:text-teal-400 dark:hover:text-teal-300"
+						>{ item.Summary }</a>
+						<button
+							type="button"
+							data-on:click={ item.RemoveOn }
+							class="text-xs font-medium text-rose-800 underline underline-offset-2 hover:text-rose-900 dark:text-rose-300"
+						>Remove</button>
+					</li>
+				}
+			</ul>
+		}
+	</section>
+}

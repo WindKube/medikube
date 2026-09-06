@@ -106,6 +106,9 @@ templ ConditionDetail(props ConditionDetailProps) {
 				@detailValue(entry)
 			}
 		</dl>
+		if props.Medications.ID != "" {
+			@MedicationLinksEditor(props.Medications)
+		}
 		@shared.DeleteConfirm(shared.DeleteConfirmProps{
 			ID:             ids.RecordConfirm(kind.Condition, props.Condition.ID),
 			Signal:         conditionConfirmSignal,

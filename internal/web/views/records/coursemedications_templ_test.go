@@ -23,7 +23,7 @@ func TestCourseMedicationsRendersEveryEffectiveValueWithItsProvenance(t *testing
 			Dosage:         records.CourseMedicationEffectiveView{Value: "500mg", Source: "course"},
 			Frequency:      records.CourseMedicationEffectiveView{Value: "twice daily", Source: "medication"},
 		},
-	}), "div")
+	}, records.CourseMedicationFormProps{}), "div")
 
 	section := tree.One(t, viewstest.Region("Course medications"))
 	text := viewstest.Text(section)
@@ -45,7 +45,7 @@ func TestCourseMedicationsOmitsAFieldWithNoValue(t *testing.T) {
 
 	tree := viewstest.Render(t, records.CourseMedications("course-medications", "Course medications", []records.CourseMedicationRow{
 		{MedicationName: "Amoxicillin", MedicationHref: "/" + kind.Medication.Collection() + "/med1"},
-	}), "div")
+	}, records.CourseMedicationFormProps{}), "div")
 
 	section := tree.One(t, viewstest.Region("Course medications"))
 	require.Empty(t, tree.All(viewstest.Tag("dt")))
@@ -55,7 +55,7 @@ func TestCourseMedicationsOmitsAFieldWithNoValue(t *testing.T) {
 func TestCourseMedicationsRendersAnEmptyStateWithNoRows(t *testing.T) {
 	t.Parallel()
 
-	tree := viewstest.Render(t, records.CourseMedications("course-medications", "Course medications", nil), "div")
+	tree := viewstest.Render(t, records.CourseMedications("course-medications", "Course medications", nil, records.CourseMedicationFormProps{}), "div")
 
 	section := tree.One(t, viewstest.Region("Course medications"))
 	require.Empty(t, tree.All(viewstest.Tag("a")))

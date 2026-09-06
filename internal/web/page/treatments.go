@@ -290,18 +290,23 @@ func (p *treatmentPages) detail(e *core.RequestEvent, actor access.Actor) error 
 		return err
 	}
 
-	courseMedications, err := p.courseMedicationRows(e.Request.Context(), actor, treatmentID)
+	courseMedications, options, err := p.courseMedicationRows(e.Request.Context(), handler, actor, patientID, treatmentID, found.Version)
 	if err != nil {
 		return err
 	}
+
+	sectionID := ids.RecordDetail(kind.Treatment, treatmentID) + "-" + kind.Medication.Collection()
 
 	return p.render(e, actor, p.views.view(found).Name, sequence{
 		context,
 		entry.Views.Detail(found),
 		views.LinkedRecords(ids.RecordDetail(kind.Treatment, treatmentID)+"-links", "Linked records", linked),
-		views.CourseMedications(
-			ids.RecordDetail(kind.Treatment, treatmentID)+"-"+kind.Medication.Collection(), "Course medications", courseMedications,
-		),
+		views.CourseMedications(sectionID, "Course medications", courseMedications, views.CourseMedicationFormProps{
+			ID:         sectionID + "-form",
+			UpsertBase: p.links.courseMedicationsBase(treatmentID),
+			Etag:       found.Version,
+			Options:    options,
+		}),
 		entry.Views.Form(found, nil, ""),
 	})
 }
@@ -333,30 +338,40 @@ func (p *treatmentPages) linkedCondition(
 }
 
 // courseMedicationRows resolves FR-060/FR-061's attached medications, each
-// with its effective values and their provenance.
+// with its effective values and their provenance, plus the patient's own
+// medications for the attach form's picker.
 func (p *treatmentPages) courseMedicationRows(
-	ctx context.Context, actor access.Actor, treatmentID string,
-) ([]views.CourseMedicationRow, error) {
+	ctx context.Context, handler *recordfamily.Handler, actor access.Actor, patientID, treatmentID, treatmentEtag string,
+) ([]views.CourseMedicationRow, []views.MedicationLinkOption, error) {
+	options, err := patientMedicationOptions(ctx, handler, actor, patientID)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	if p.courseMedications == nil {
-		return nil, nil
+		return nil, options, nil
 	}
 
 	service, err := p.courseMedications()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	items, err := service.List(ctx, actor, treatmentID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	rows := make([]views.CourseMedicationRow, 0, len(items))
 
 	for _, item := range items {
+		itemHref := p.links.courseMedicationItemHref(treatmentID, item.Medication.ID)
+
 		rows = append(rows, views.CourseMedicationRow{
+			MedicationID:   item.Medication.ID,
 			MedicationName: item.Medication.Name,
 			MedicationHref: p.links.medicationHref(item.Medication.ID),
+			RemoveOn:       views.CourseMedicationRemoveExpr(itemHref, treatmentEtag),
 			Dosage:         courseMedicationEffective(item.Effective.Dosage),
 			Frequency:      courseMedicationEffective(item.Effective.Frequency),
 			Duration:       courseMedicationEffective(item.Effective.Duration),
@@ -368,7 +383,7 @@ func (p *treatmentPages) courseMedicationRows(
 		})
 	}
 
-	return rows, nil
+	return rows, options, nil
 }
 
 func courseMedicationEffective(effective clinical.Effective) views.CourseMedicationEffectiveView {
@@ -421,19 +436,21 @@ type treatmentLinks struct {
 	patientsPage         string
 	record               string
 	collection           string
+	courseMedications    string
 }
 
 func newTreatmentLinks() (treatmentLinks, error) {
 	paths, err := routePaths(map[string]string{
-		OpTreatmentListPage:    "",
-		OpTreatmentDetailPage:  "",
-		OpConditionDetailPage:  "",
-		OpMedicationDetailPage: "",
-		OpSettingsPage:         "",
-		OpMedicationListPage:   "",
-		OpPatientListPage:      "",
-		api.OpGetRecord:        "",
-		api.OpCreateRecord:     "",
+		OpTreatmentListPage:         "",
+		OpTreatmentDetailPage:       "",
+		OpConditionDetailPage:       "",
+		OpMedicationDetailPage:      "",
+		OpSettingsPage:              "",
+		OpMedicationListPage:        "",
+		OpPatientListPage:           "",
+		api.OpGetRecord:             "",
+		api.OpCreateRecord:          "",
+		api.OpListCourseMedications: "",
 	})
 	if err != nil {
 		return treatmentLinks{}, err
@@ -451,7 +468,19 @@ func newTreatmentLinks() (treatmentLinks, error) {
 		patientsPage:         paths[OpPatientListPage],
 		record:               strings.ReplaceAll(paths[api.OpGetRecord], "{"+api.PathKind+"}", segment),
 		collection:           strings.ReplaceAll(paths[api.OpCreateRecord], "{"+api.PathKind+"}", segment),
+		courseMedications:    paths[api.OpListCourseMedications],
 	}, nil
+}
+
+// courseMedicationsBase and courseMedicationItemHref build
+// contracts/treatment-medications.md's own nested addresses for one
+// treatment: the join's list route, not one of the generic six.
+func (l treatmentLinks) courseMedicationsBase(treatmentID string) string {
+	return strings.ReplaceAll(l.courseMedications, "{"+api.PathID+"}", treatmentID)
+}
+
+func (l treatmentLinks) courseMedicationItemHref(treatmentID, medicationID string) string {
+	return l.courseMedicationsBase(treatmentID) + "/" + medicationID
 }
 
 // conditionHref and medicationHref build another kind's detail page address

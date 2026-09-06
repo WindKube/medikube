@@ -122,6 +122,9 @@ templ AllergyDetail(props AllergyDetailProps) {
 				@detailValue(entry)
 			}
 		</dl>
+		if props.Medications.ID != "" {
+			@MedicationLinksEditor(props.Medications)
+		}
 		@shared.DeleteConfirm(shared.DeleteConfirmProps{
 			ID:             ids.RecordConfirm(kind.Allergy, props.Allergy.ID),
 			Signal:         allergyConfirmSignal,

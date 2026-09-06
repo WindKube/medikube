@@ -153,6 +153,9 @@ var kindLiteralExempt = map[string]string{
 		"and equipment/insurance _templ.go files above",
 	"internal/web/views/records/coursemedications_templ_test.go": "false positive: the render test's own id and " +
 		"title fixtures (\"course-medications\", \"Course medications\") mirror the production section they test",
+	"internal/web/views/records/links_templ.go": "a false positive: templ embeds its own source filename as a " +
+		"literal for its error reporting, and the medication-links editor's empty-state prose says \"medications\" " +
+		"because that is what the feature is called, the same shape as coursemedications_templ.go above",
 }
 
 func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {

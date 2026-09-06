@@ -4,8 +4,9 @@ const courseMedicationsEmpty = "No medications attached to this course yet."
 
 // CourseMedications is FR-060/FR-061's rendering: every medication attached
 // to a treatment, with its effective dosage/frequency/etc and, for each,
-// whose value it actually is — the course's own or the medication's default.
-templ CourseMedications(id, title string, rows []CourseMedicationRow) {
+// whose value it actually is — the course's own or the medication's default —
+// plus a Remove button per row and the upsert form that attaches another.
+templ CourseMedications(id, title string, rows []CourseMedicationRow, form CourseMedicationFormProps) {
 	<section id={ id } aria-label={ title } class="flex flex-col gap-3">
 		<h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{ title }</h2>
 		if len(rows) == 0 {
@@ -14,10 +15,17 @@ templ CourseMedications(id, title string, rows []CourseMedicationRow) {
 			<ul class="flex flex-col gap-4">
 				for _, row := range rows {
 					<li class="rounded-md border border-slate-200 p-3 dark:border-slate-700">
-						<a
-							href={ templ.SafeURL(row.MedicationHref) }
-							class="text-sm font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900 dark:text-teal-400 dark:hover:text-teal-300"
-						>{ row.MedicationName }</a>
+						<div class="flex items-center justify-between gap-2">
+							<a
+								href={ templ.SafeURL(row.MedicationHref) }
+								class="text-sm font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900 dark:text-teal-400 dark:hover:text-teal-300"
+							>{ row.MedicationName }</a>
+							<button
+								type="button"
+								data-on:click={ row.RemoveOn }
+								class="text-xs font-medium text-rose-800 underline underline-offset-2 hover:text-rose-900 dark:text-rose-300"
+							>Remove</button>
+						</div>
 						<dl class="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-[minmax(0,8rem)_minmax(0,1fr)]">
 							for _, field := range row.Fields() {
 								<dt class="text-xs font-medium text-slate-500 dark:text-slate-400">{ field.Label }</dt>
@@ -33,5 +41,54 @@ templ CourseMedications(id, title string, rows []CourseMedicationRow) {
 				}
 			</ul>
 		}
+		@CourseMedicationForm(form)
 	</section>
+}
+
+// CourseMedicationForm is the attach form: a picker of the patient's own
+// medications not already on this course, and the four overrides FR-060
+// lets a course set for itself.
+templ CourseMedicationForm(props CourseMedicationFormProps) {
+	<div
+		data-signals={ "{" + props.medicationSignal() + ": '', " + props.dosageSignal() + ": '', " +
+			props.frequencySignal() + ": '', " + props.startedOnSignal() + ": '', " + props.endedOnSignal() + ": ''}" }
+		class="mt-2 flex flex-wrap items-end gap-2"
+	>
+		<select
+			data-bind={ props.medicationSignal() }
+			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		>
+			<option value="">Add a medication…</option>
+			for _, option := range props.Options {
+				<option value={ option.ID }>{ option.Name }</option>
+			}
+		</select>
+		<input
+			type="text"
+			placeholder="Dosage"
+			data-bind={ props.dosageSignal() }
+			class="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		/>
+		<input
+			type="text"
+			placeholder="Frequency"
+			data-bind={ props.frequencySignal() }
+			class="w-28 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		/>
+		<input
+			type="date"
+			data-bind={ props.startedOnSignal() }
+			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		/>
+		<input
+			type="date"
+			data-bind={ props.endedOnSignal() }
+			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+		/>
+		<button
+			type="button"
+			data-on:click={ props.submitExpr() }
+			class="inline-flex items-center rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+		>Add</button>
+	</div>
 }
