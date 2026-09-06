@@ -128,6 +128,8 @@ const (
 	ICD10Code       = "Z00.Y1"
 	ContactName     = "Thandiwe-Okonkwo-Nakamura"
 	ContactPhone    = "+1-555-0199-a-sentinel-number"
+
+	RelativeName = "Adaeze-Okonkwo-Van-Der-Berg"
 )
 
 // Sentinel is one planted value and what it stands for. The meaning is printed
@@ -183,6 +185,7 @@ func Sentinels() []Sentinel {
 		{ICD10Code, "the code for that condition"},
 		{ContactName, "who to call in an emergency, which names a relationship"},
 		{ContactPhone, "their emergency contact's phone number"},
+		{RelativeName, "the name of a relative recorded in family history, which identifies a third person"},
 	}
 }
 
@@ -971,6 +974,10 @@ func recordAddressOf(k kind.Kind, id string) string { return recordsOf(k) + "/" 
 // pageOf is pageOfKind generalised the same way.
 func pageOf(k kind.Kind) string { return "/" + k.Segment() }
 
+func familyMembersOfKind() string { return "/api/v1/records/" + kind.FamilyMember.Segment() }
+
+func familyMemberAddress(id string) string { return familyMembersOfKind() + "/" + id }
+
 // sentinelPatientFor plants one minimal patient for the given account,
 // directly against the database: the registration-time hook that provisions a
 // self-record automatically (FR-005) is a different story's work, so an
@@ -1006,6 +1013,8 @@ func procedurePageOfKind() string { return "/" + kind.Procedure.Segment() }
 
 func treatmentPageOfKind() string { return "/" + kind.Treatment.Segment() }
 
+func familyMemberPageOfKind() string { return "/" + kind.FamilyMember.Segment() }
+
 // drive walks the whole inventory.
 //
 // The order is a person's, not a route table's: an account is created before it
@@ -1025,6 +1034,7 @@ func drive(t testing.TB, c *client) {
 	driveEquipment(c)
 	driveSymptoms(c)
 	driveVitals(c)
+	driveFamilyMembers(c)
 	drivePatients(c)
 	driveDirectory(c)
 	drivePages(c)
@@ -1767,6 +1777,52 @@ func driveEmergencyContacts(c *client) {
 	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
 }
 
+// sentinelFamilyMember plants the free-text sentinel a family history entry
+// carries: a relative's name.
+func sentinelFamilyMember(patientID string) api.FamilyMemberCreate {
+	return api.FamilyMemberCreate{
+		Patient:      patientID,
+		Name:         RelativeName,
+		Relationship: "sister",
+	}
+}
+
+// driveFamilyMembers is driveSymptoms's twin for the family_member kind, with
+// a relative's name as its own person-identifying sentinel.
+func driveFamilyMembers(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+
+	created := c.do(http.MethodPost, familyMembersOfKind(), jsonBody(c.t, sentinelFamilyMember(patientID)))
+	require.Equal(c.t, http.StatusCreated, created.Status, "%s", created.Body)
+
+	id := decodedID(c.t, created.Body)
+	address := familyMemberAddress(id)
+
+	read := c.do(http.MethodGet, address, "")
+	require.Equal(c.t, http.StatusOK, read.Status, "%s", read.Body)
+
+	etag := read.Header.Get("ETag")
+	require.NotEmpty(c.t, etag, "no ETag, so the precondition step below would not be one")
+
+	c.do(http.MethodGet, familyMembersOfKind()+"?patient="+patientID, "")
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, address, "")
+
+	c.token(testsupport.AccountAEmail)
+
+	patch := jsonBody(c.t, api.FamilyMemberPatch{Name: ptr(RelativeName)})
+	c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": `"not-the-current-version"`})
+
+	updated := c.doWith(http.MethodPatch, address, patch, map[string]string{"If-Match": etag})
+	require.Equal(c.t, http.StatusOK, updated.Status, "%s", updated.Body)
+
+	current := updated.Header.Get("ETag")
+	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
+}
+
 // decodedID reads the id out of a created record's body without asserting on
 // the rest of the shape, which is another suite's business.
 func decodedID(t testing.TB, body string) string {
@@ -1898,6 +1954,16 @@ func drivePages(c *client) {
 		"/" + kind.Insurance.Segment() + "/" + seed.InsurancePrimaryID,
 		"/" + kind.Equipment.Segment() + "?patient=" + testsupport.AccountAPatientSelfID,
 		"/" + kind.Equipment.Segment() + "/" + seed.EquipmentOverdueID,
+	} {
+		c.do(http.MethodGet, path, "")
+	}
+
+	// US10's family history: the list stays empty on account A's self patient
+	// (the smoke case for the empty state), while the detail page reads one
+	// of the relatives seeded against account A's parent patient instead.
+	for _, path := range []string{
+		familyMemberPageOfKind() + "?patient=" + testsupport.AccountAPatientSelfID,
+		familyMemberPageOfKind() + "/" + seed.FamilyMemberGrandmotherID,
 	} {
 		c.do(http.MethodGet, path, "")
 	}

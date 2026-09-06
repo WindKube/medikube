@@ -1,0 +1,69 @@
+package records
+
+import (
+	"medikube/internal/domain/kind"
+	"medikube/internal/web/views/components"
+	"medikube/internal/web/views/ids"
+)
+
+const (
+	familyMemberEmptyTitle  = "Nothing recorded yet"
+	familyMemberEmptyBody   = "Record the first relative and it will be listed here, with everything you noted about them."
+	familyMemberCreateLabel = "Record a relative"
+	familyMemberListTitle   = "Family history"
+)
+
+templ FamilyMemberList(props FamilyMemberListProps) {
+	<section
+		id={ ids.RecordList(kind.FamilyMember) }
+		aria-label={ familyMemberListTitle }
+		class="flex flex-col"
+	>
+		<div class="flex flex-wrap items-center justify-between gap-3">
+			<h1
+				id={ ids.RecordListHeading(kind.FamilyMember) }
+				tabindex="-1"
+				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+			>{ familyMemberListTitle }</h1>
+			if props.CreateHref != "" {
+				<a
+					href={ props.CreateHref }
+					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+				>{ familyMemberCreateLabel }</a>
+			}
+		</div>
+		if len(props.FamilyMembers) == 0 {
+			<div class="mt-6">
+				@components.EmptyState(components.EmptyStateProps{
+					ID:          ids.RecordEmpty(kind.FamilyMember),
+					Title:       familyMemberEmptyTitle,
+					Body:        familyMemberEmptyBody,
+					ActionHref:  props.CreateHref,
+					ActionLabel: familyMemberCreateLabel,
+				})
+			</div>
+		} else {
+			<div class="mt-4 overflow-x-auto">
+				<table class="w-full border-collapse text-left text-sm">
+					<thead>
+						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldName) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldFamilyRelationship) }</th>
+							<th scope="col" class="pb-2 font-medium">{ FieldLabel(FieldIsDeceased) }</th>
+						</tr>
+					</thead>
+					<tbody id={ ids.RecordRows(kind.FamilyMember) }>
+						for _, item := range props.FamilyMembers {
+							@FamilyMemberRow(item)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		@components.Pagination(components.PaginationProps{
+			ID:           ids.RecordPager(kind.FamilyMember),
+			PreviousHref: props.PreviousHref,
+			NextHref:     props.NextHref,
+		})
+	</section>
+}

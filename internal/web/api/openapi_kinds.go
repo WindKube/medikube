@@ -24,6 +24,7 @@ func OpenAPIKinds() []openapi.Kind {
 		kind.Encounter:        EncounterSchema(),
 		kind.Procedure:        ProcedureSchema(),
 		kind.Treatment:        TreatmentSchema(),
+		kind.FamilyMember:     FamilyMemberSchema(),
 	}
 
 	kinds := make([]openapi.Kind, 0, len(schemas))

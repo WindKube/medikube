@@ -143,7 +143,7 @@ func TestExactlyEightOperationsArePublic(t *testing.T) {
 // contracts/pages.md, "The pages". The landmark strings are what a Playwright
 // getByRole selector contains, so changing one is a breaking change to the gate
 // and has to break this test first.
-func TestTheTableCarriesTheThirtyNinePages(t *testing.T) {
+func TestTheTableCarriesTheFortyOnePages(t *testing.T) {
 	t.Parallel()
 
 	segment := kind.Medication.Segment()
@@ -292,8 +292,16 @@ func TestTheTableCarriesTheThirtyNinePages(t *testing.T) {
 			"equipmentDetailPage", "/" + kind.Equipment.Segment() + "/{id}", httproute.AuthUser,
 			`article[name="Equipment"]`, "/" + kind.Equipment.Segment() + "/" + seed.EquipmentOverdueID,
 		},
+		{
+			"familyHistoryListPage", "/" + kind.FamilyMember.Segment(), httproute.AuthUser, `region[name="Family history"]`,
+			"/" + kind.FamilyMember.Segment() + "?patient=" + seed.AccountAPatientSelfID,
+		},
+		{
+			"familyHistoryDetailPage", "/" + kind.FamilyMember.Segment() + "/{id}", httproute.AuthUser,
+			`article[name="Relative"]`, "/" + kind.FamilyMember.Segment() + "/" + seed.FamilyMemberGrandmotherID,
+		},
 	}
-	require.Len(t, want, 39)
+	require.Len(t, want, 41)
 
 	byOpID := inventoryByOpID(t)
 

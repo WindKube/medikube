@@ -464,18 +464,18 @@ and that a second account can reach none of them.
 
 ### Tests for User Story 10 ⚠️ write first, confirm red
 
-- [ ] T190 [P] [US10] Failing tests in `internal/domain/clinical/familycondition_test.go`: `[]FamilyCondition` validates each entry (`name` required, `diagnosed_age` 0..130, `severity` and `status` from the shared ladders, `notes` ≤2000), bounds the list at 50, and reports **all** offending entries in one `*ValidationError` (FR-053, FR-004)
-- [ ] T191 [P] [US10] Failing tests in `internal/domain/clinical/familymember_test.go` and `internal/service/familymember/service_test.go` (FR-052): `name` and `relationship` required from the fixed vocabulary, with sex, birth year, death year and the deceased flag optional, filed against the person whose family it is; `birth_year`/`death_year` bounded 1850..2200; `death_year < birth_year` refused with **both** values reported (FR-054, US10-3); default sort `relationship ASC, LOWER(name) ASC, id DESC`
-- [ ] T192 [P] [US10] Failing repository test running `recordstest.RepositoryContract` in `internal/store/familymember/repo_test.go`, plus a `conditions` JSON round-trip against a real `tests.NewTestApp`
-- [ ] T193 [P] [US10] Failing DTO round-trip test in `internal/web/api/familymember_test.go` (the `conditions` array marshals as `[]` never `null` and rejects unknown members) and a templ render test in `internal/web/views/records/familymember_templ_test.go`
-- [ ] T194 [P] [US10] Failing HTTP + authorization scenarios in `internal/web/api/familymember_http_test.go` — the full FR-092 matrix, including that a second account's request is indistinguishable from the relative not existing (US10-4)
-- [ ] T195 [P] [US10] Failing `recordstest.KindContract` invocation in `internal/records/kinds/familymember_contract_test.go`
+- [x] T190 [P] [US10] Failing tests in `internal/domain/clinical/familycondition_test.go`: `[]FamilyCondition` validates each entry (`name` required, `diagnosed_age` 0..130, `severity` and `status` from the shared ladders, `notes` ≤2000), bounds the list at 50, and reports **all** offending entries in one `*ValidationError` (FR-053, FR-004)
+- [x] T191 [P] [US10] Failing tests in `internal/domain/clinical/familymember_test.go` and `internal/service/familymember/service_test.go` (FR-052): `name` and `relationship` required from the fixed vocabulary, with sex, birth year, death year and the deceased flag optional, filed against the person whose family it is; `birth_year`/`death_year` bounded 1850..2200; `death_year < birth_year` refused with **both** values reported (FR-054, US10-3); default sort `relationship ASC, LOWER(name) ASC, id DESC`
+- [x] T192 [P] [US10] Failing repository test running `recordstest.RepositoryContract` in `internal/store/familymember/repo_test.go`, plus a `conditions` JSON round-trip against a real `tests.NewTestApp`
+- [x] T193 [P] [US10] Failing DTO round-trip test in `internal/web/api/familymember_test.go` (the `conditions` array marshals as `[]` never `null` and rejects unknown members) and a templ render test in `internal/web/views/records/familymember_templ_test.go`
+- [x] T194 [P] [US10] Failing HTTP + authorization scenarios in `internal/web/api/familymember_http_test.go` — the full FR-092 matrix, including that a second account's request is indistinguishable from the relative not existing (US10-4)
+- [x] T195 [P] [US10] Failing `recordstest.KindContract` invocation in `internal/records/kinds/familymember_contract_test.go`
 
 ### Implementation for User Story 10
 
-- [ ] T196 [P] [US10] Implement `internal/domain/clinical/familycondition.go` and `internal/domain/clinical/familymember.go` (FR-052)
-- [ ] T197 [P] [US10] Implement `internal/service/familymember/{service.go,ports.go,query.go,patch.go}` + `familymembertest/fake.go`, and `internal/store/migrations/<ts>_family_members.go` + `internal/store/familymember/{repo.go,mapper.go}`
-- [ ] T198 [US10] Implement DTO `internal/web/api/familymember.go`, its `adapter.go` codec, `internal/web/views/records/familymember.templ`, and register the kind in `internal/records/kinds/familymember.go`; extend `internal/cli/seed.go` — **leaving `/family-history` empty on the primary seeded patient** — and add Playwright smoke cases for `/family-history` and `/family-history/{id}` at both viewports in `e2e/specs/records.spec.ts`
+- [x] T196 [P] [US10] Implement `internal/domain/clinical/familycondition.go` and `internal/domain/clinical/familymember.go` (FR-052)
+- [x] T197 [P] [US10] Implement `internal/service/familymember/{service.go,ports.go,query.go,patch.go}` + `familymembertest/fake.go`, and `internal/store/migrations/<ts>_family_members.go` + `internal/store/familymember/{repo.go,mapper.go}`
+- [x] T198 [US10] Implement DTO `internal/web/api/familymember.go`, its `adapter.go` codec, `internal/web/views/records/familymember.templ`, and register the kind in `internal/records/kinds/familymember.go`; extend `internal/cli/seed.go` — **leaving `/family-history` empty on the primary seeded patient** — and add Playwright smoke cases for `/family-history` and `/family-history/{id}` at both viewports in `e2e/specs/records.spec.ts`
 
 **Checkpoint**: all fourteen kinds registered. Every user story demonstrable.
 

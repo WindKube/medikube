@@ -47,6 +47,7 @@ import (
 	"medikube/internal/service/encounter"
 	"medikube/internal/service/equipment"
 	facilitysvc "medikube/internal/service/facility"
+	"medikube/internal/service/familymember"
 	serviceidentity "medikube/internal/service/identity"
 	"medikube/internal/service/insurance"
 	"medikube/internal/service/medication"
@@ -65,6 +66,7 @@ import (
 	storeencounter "medikube/internal/store/encounter"
 	storeequipment "medikube/internal/store/equipment"
 	facilitystore "medikube/internal/store/facility"
+	storefamilymember "medikube/internal/store/familymember"
 	storeidentity "medikube/internal/store/identity"
 	storeimmunization "medikube/internal/store/immunization"
 	storeinjury "medikube/internal/store/injury"
@@ -435,6 +437,11 @@ func handlerTable(
 		return nil, err
 	}
 
+	familyMemberPageOps, err := page.FamilyMemberHandlers(resolve, patientResolve)
+	if err != nil {
+		return nil, err
+	}
+
 	streamOps, err := stream.Handlers(stream.Deps{
 		Resolve:   resolve,
 		Hub:       hub,
@@ -513,7 +520,7 @@ func handlerTable(
 
 	groups := []httproute.Handlers{
 		recordOps, pageOps, symptomPageOps, vitalsPageOps, encounterPageOps, procedurePageOps, treatmentPageOps,
-		streamOps, accountOps, accountPages, overviewPage, assets,
+		familyMemberPageOps, streamOps, accountOps, accountPages, overviewPage, assets,
 		patientOps, photoOps, activePatientOps, patientPages, directoryOps, injuryPageOps, immunizationPageOps,
 		insurancePageOps, equipmentPageOps,
 	}
@@ -926,6 +933,28 @@ func registerKinds(
 		Views:        treatmentViews,
 		SearchFields: api.TreatmentSearchFields,
 		Basis:        api.TreatmentBasis,
+	}); registerErr != nil {
+		return nil, nil, nil, nil, registerErr
+	}
+
+	familyMemberViews, err := page.NewFamilyMemberViews()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	familyMemberRepo, err := storefamilymember.New(app, codec)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if registerErr := familymember.Register(registry, familymember.Wiring{
+		Repository:   familyMemberRepo,
+		Authorizer:   authorizer,
+		Codec:        api.FamilyMemberCodec{},
+		Schema:       api.FamilyMemberSchema(),
+		Views:        familyMemberViews,
+		SearchFields: api.FamilyMemberSearchFields,
+		Basis:        api.FamilyMemberBasis,
 	}); registerErr != nil {
 		return nil, nil, nil, nil, registerErr
 	}
