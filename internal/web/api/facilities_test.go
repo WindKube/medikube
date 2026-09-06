@@ -393,7 +393,7 @@ func TestCreateFacilityOverDatastarAnswersHTML(t *testing.T) {
 		answer := caller.do(http.MethodPost, facilitiesURL(), `{}`, datastar)
 		require.Equal(t, http.StatusOK, answer.Status, answer.Body)
 		assert.Contains(t, answer.Body, ids.DirectoryForm(directory.FacilitySegment, ""))
-		assert.Contains(t, answer.Body, "a kind is required")
+		assert.Contains(t, answer.Body, "This is required.")
 	})
 
 	t.Run("the same invalid create with no Datastar-Request header still answers 422 JSON", func(t *testing.T) {

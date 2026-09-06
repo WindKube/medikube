@@ -168,7 +168,7 @@ templ Form(props FormProps) {
 				}
 				class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
 			/>
-			@components.FieldError(ids.FieldError(props.FormID, FieldName), props.Errors.Messages(FieldName))
+			@components.FieldError(ids.FieldError(props.FormID, FieldName), props.Errors.Messages(ctx, FieldName))
 		</div>
 		<div>
 			<label for={ ids.Field(props.FormID, FieldColor) } class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ i18n.T(ctx, "field.tag.color") }</label>
@@ -185,7 +185,7 @@ templ Form(props FormProps) {
 				}
 				class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
 			/>
-			@components.FieldError(ids.FieldError(props.FormID, FieldColor), props.Errors.Messages(FieldColor))
+			@components.FieldError(ids.FieldError(props.FormID, FieldColor), props.Errors.Messages(ctx, FieldColor))
 		</div>
 		<div class="flex flex-wrap gap-3">
 			<button
