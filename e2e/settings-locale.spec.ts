@@ -30,6 +30,8 @@ function polish(id: string): string {
   return found[1];
 }
 
+const profilePl = polish('settings.profile_title');
+const settingsPl = polish('nav.settings');
 const saveChangesPl = polish('action.save_changes');
 
 async function newAccount(page: Page): Promise<{ email: string; password: string }> {
@@ -67,14 +69,19 @@ test.describe('the settings page language control', () => {
     // Same response, no navigation: the re-rendered form already carries the
     // Polish label and aria-label (settings.language.label), which is what
     // proves this came back on the PATCH itself rather than a later reload.
-    const languagePl = profile.getByRole('combobox', { name: 'Język' });
+    // The form's own landmark is Polish too once it comes back, so it is
+    // found by its Polish name from here on.
+    const profilePolish = settings.getByRole('form', { name: profilePl });
+    const languagePl = profilePolish.getByRole('combobox', { name: 'Język' });
     await expect(languagePl, 'the re-rendered form is still in English').toBeVisible();
     await expect(languagePl).toHaveValue('pl');
-    await expect(profile).toContainText('Język');
+    await expect(profilePolish).toContainText('Język');
 
     // Reload: the choice is a stored account preference, not a page state.
     await page.reload();
-    const afterReload = settings.getByRole('form', { name: fixtures.settingsLandmarks.profile });
+    const afterReload = page
+      .getByRole('region', { name: settingsPl })
+      .getByRole('form', { name: profilePl });
     await expect(afterReload.getByRole('combobox', { name: 'Język' })).toHaveValue('pl');
 
     // Sign out and back in: still Polish, because it lives on the account and
@@ -88,7 +95,7 @@ test.describe('the settings page language control', () => {
     expect(signedIn.status(), await signedIn.text()).toBe(200);
 
     await page.goto(fixtures.pages.settings.path);
-    const afterSignIn = page.getByRole('form', { name: fixtures.settingsLandmarks.profile });
+    const afterSignIn = page.getByRole('form', { name: profilePl });
     const languageAfterSignIn = afterSignIn.getByRole('combobox', { name: 'Język' });
     await expect(languageAfterSignIn, 'the language reverted to English after signing back in').toBeVisible();
     await expect(languageAfterSignIn).toHaveValue('pl');
@@ -99,7 +106,8 @@ test.describe('the settings page language control', () => {
     await languageAfterSignIn.selectOption({ label: 'English' });
     await afterSignIn.getByRole('button', { name: saveChangesPl }).click();
 
-    const languageEn = afterSignIn.getByRole('combobox', { name: 'Language' });
+    const afterSwitchBack = page.getByRole('form', { name: fixtures.settingsLandmarks.profile });
+    const languageEn = afterSwitchBack.getByRole('combobox', { name: 'Language' });
     await expect(languageEn, 'the re-rendered form did not switch back to English').toBeVisible();
     await expect(languageEn).toHaveValue('en');
   });
