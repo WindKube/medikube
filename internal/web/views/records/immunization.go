@@ -26,9 +26,10 @@ const (
 	ImmunizationFieldLastChanged = "last_changed"
 )
 
+// The values below are message ids (D-06), resolved at render time.
 const (
-	ImmunizationFormLabelCreate = "Record a vaccination"
-	ImmunizationFormLabelEdit   = "Edit vaccination"
+	ImmunizationFormLabelCreate = "page.immunization.record"
+	ImmunizationFormLabelEdit   = "page.immunization.edit"
 )
 
 // immunizationFields is data-model §4.8's column order.
@@ -48,18 +49,19 @@ var immunizationFields = []string{
 // it for one display could not reorder every form.
 func ImmunizationFields() []string { return append([]string(nil), immunizationFields...) }
 
+// The values below are message ids (D-06), resolved at render time.
 var immunizationFieldLabels = map[string]string{
-	ImmunizationFieldVaccineName:    "Vaccine",
-	ImmunizationFieldTradeName:      "Brand name",
-	ImmunizationFieldAdministeredOn: "Given on",
-	ImmunizationFieldDoseNumber:     "Dose number",
-	ImmunizationFieldLotNumber:      "Batch number",
-	ImmunizationFieldManufacturer:   "Manufacturer",
-	ImmunizationFieldSite:           "Site",
-	ImmunizationFieldRoute:          "How it was given",
-	ImmunizationFieldExpiresOn:      "Expires",
-	ImmunizationFieldCreated:        "Recorded",
-	ImmunizationFieldLastChanged:    "Last changed",
+	ImmunizationFieldVaccineName:    "field.immunization.vaccine_name",
+	ImmunizationFieldTradeName:      "field.immunization.trade_name",
+	ImmunizationFieldAdministeredOn: "field.immunization.administered_on",
+	ImmunizationFieldDoseNumber:     "field.immunization.dose_number",
+	ImmunizationFieldLotNumber:      "field.immunization.lot_number",
+	ImmunizationFieldManufacturer:   "field.manufacturer",
+	ImmunizationFieldSite:           "field.immunization.site",
+	ImmunizationFieldRoute:          "field.immunization.route",
+	ImmunizationFieldExpiresOn:      "field.immunization.expires_on",
+	ImmunizationFieldCreated:        "field.recorded",
+	ImmunizationFieldLastChanged:    "field.last_changed",
 }
 
 // ImmunizationFieldLabel answers with the field's own name when there is no
@@ -71,23 +73,24 @@ func ImmunizationFieldLabel(field string) string {
 	return field
 }
 
+// The values below are message ids (D-06), resolved at render time.
 var (
 	immunizationSiteLabels = map[clinical.ImmunizationSite]string{
-		clinical.ImmunizationSiteLeftArm:    "Left arm",
-		clinical.ImmunizationSiteRightArm:   "Right arm",
-		clinical.ImmunizationSiteLeftThigh:  "Left thigh",
-		clinical.ImmunizationSiteRightThigh: "Right thigh",
-		clinical.ImmunizationSiteOral:       "Oral",
-		clinical.ImmunizationSiteNasal:      "Nasal",
-		clinical.ImmunizationSiteOther:      "Other",
+		clinical.ImmunizationSiteLeftArm:    "enum.immunization_site.left_arm",
+		clinical.ImmunizationSiteRightArm:   "enum.immunization_site.right_arm",
+		clinical.ImmunizationSiteLeftThigh:  "enum.immunization_site.left_thigh",
+		clinical.ImmunizationSiteRightThigh: "enum.immunization_site.right_thigh",
+		clinical.ImmunizationSiteOral:       "enum.immunization_site.oral",
+		clinical.ImmunizationSiteNasal:      "enum.immunization_site.nasal",
+		clinical.ImmunizationSiteOther:      "enum.immunization_site.other",
 	}
 
 	immunizationRouteLabels = map[clinical.ImmunizationRoute]string{
-		clinical.ImmunizationRouteIntramuscular: "Injected into a muscle",
-		clinical.ImmunizationRouteSubcutaneous:  "Injected under the skin",
-		clinical.ImmunizationRouteIntradermal:   "Injected into the skin",
-		clinical.ImmunizationRouteOral:          "By mouth",
-		clinical.ImmunizationRouteIntranasal:    "Into the nose",
+		clinical.ImmunizationRouteIntramuscular: "enum.immunization_route.intramuscular",
+		clinical.ImmunizationRouteSubcutaneous:  "enum.immunization_route.subcutaneous",
+		clinical.ImmunizationRouteIntradermal:   "enum.immunization_route.intradermal",
+		clinical.ImmunizationRouteOral:          "enum.immunization_route.oral",
+		clinical.ImmunizationRouteIntranasal:    "enum.immunization_route.intranasal",
 	}
 )
 
@@ -201,8 +204,8 @@ func (v ImmunizationView) Entries() []DetailEntry {
 		{Field: ImmunizationFieldDoseNumber, Value: v.DoseNumber},
 		{Field: ImmunizationFieldLotNumber, Value: v.LotNumber},
 		{Field: ImmunizationFieldManufacturer, Value: v.Manufacturer},
-		{Field: ImmunizationFieldSite, Value: v.Site},
-		{Field: ImmunizationFieldRoute, Value: v.Route},
+		{Field: ImmunizationFieldSite, Value: v.Site, Translate: true},
+		{Field: ImmunizationFieldRoute, Value: v.Route, Translate: true},
 		{Field: ImmunizationFieldExpiresOn, Value: v.ExpiresOn, Datetime: v.ExpiresOn},
 		{Field: ImmunizationFieldCreated, Value: v.Created.Human, Datetime: v.Created.Machine},
 		{Field: ImmunizationFieldLastChanged, Value: v.LastChanged.Human, Datetime: v.LastChanged.Machine},
@@ -294,9 +297,9 @@ func (v ImmunizationView) Value(field string) string {
 
 func (p ImmunizationFormProps) SubmitLabel() string {
 	if p.New {
-		return "Record it"
+		return "action.record_it"
 	}
-	return "Save changes"
+	return "action.save_changes"
 }
 
 func immunizationDeleteExpression(immunization ImmunizationView) string {

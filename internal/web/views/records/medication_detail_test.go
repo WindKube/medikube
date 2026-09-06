@@ -1,12 +1,14 @@
 package records_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/testsupport/seed"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/records"
@@ -54,7 +56,8 @@ func TestTheDetailShowsEveryRecordedValue(t *testing.T) {
 		medication.EndedOn, medication.Status, medication.SideEffects, medication.Notes,
 	} {
 		require.NotEmpty(t, value, "the fixture left a field empty, so this assertion proves nothing")
-		assert.Containsf(t, text, value, "FR-024 requires %q to be shown", value)
+		resolved := i18n.T(context.Background(), value)
+		assert.Containsf(t, text, resolved, "FR-024 requires %q to be shown", resolved)
 	}
 }
 
@@ -69,7 +72,7 @@ func TestTheDetailShowsTheLastChangedTime(t *testing.T) {
 
 	article := tree.One(t, viewstest.Article(medicationArticle))
 
-	assert.Contains(t, viewstest.Text(article), records.FieldLabel(records.FieldLastChanged))
+	assert.Contains(t, viewstest.Text(article), i18n.T(context.Background(), records.FieldLabel(records.FieldLastChanged)))
 
 	stamps := viewstest.Find(article, viewstest.And(
 		viewstest.Tag("time"), viewstest.WithAttr("datetime", medication.LastChanged.Machine)))
@@ -128,7 +131,7 @@ func TestTheDetailOmitsTheLabelOfEveryFieldThatWasNotFilledIn(t *testing.T) {
 	require.Len(t, absent, 10)
 
 	for _, field := range absent {
-		assert.NotContainsf(t, text, records.FieldLabel(field),
+		assert.NotContainsf(t, text, i18n.T(context.Background(), records.FieldLabel(field)),
 			"%q was never recorded and the detail labels it anyway", field)
 	}
 }

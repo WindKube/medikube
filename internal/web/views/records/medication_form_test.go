@@ -1,6 +1,7 @@
 package records_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/records"
 	"medikube/internal/web/views/viewstest"
@@ -142,7 +144,7 @@ func TestEveryRecordedFieldHasAControl(t *testing.T) {
 
 			label := tree.One(t, viewstest.And(
 				viewstest.Tag("label"), viewstest.WithAttr("for", ids.Field(props.FormID, field))))
-			assert.Equal(t, records.FieldLabel(field), viewstest.Text(label))
+			assert.Equal(t, i18n.T(context.Background(), records.FieldLabel(field)), viewstest.Text(label))
 		})
 	}
 }
@@ -279,7 +281,7 @@ func TestTheCreateAndTheEditFormAreBothNamed(t *testing.T) {
 
 			tree := viewstest.Render(t, records.MedicationForm(testCase.props), "div")
 
-			form := tree.One(t, viewstest.Form(testCase.label))
+			form := tree.One(t, viewstest.Form(i18n.T(context.Background(), testCase.label)))
 			assert.Equal(t, testCase.props.FormID, viewstest.Attr(form, "id"))
 			assert.Equal(t, testCase.props.OnSubmit, viewstest.Attr(form, "data-on:submit__prevent"))
 		})

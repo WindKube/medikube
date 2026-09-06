@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/ids"
 )
 
@@ -19,22 +20,22 @@ templ InsuranceRow(policy InsuranceView) {
 				class="text-teal-800 underline underline-offset-2 hover:text-teal-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-teal-300 dark:hover:text-teal-200"
 			>{ policy.Company }</a>
 			if policy.IsPrimary {
-				<span class="ml-2 inline-flex rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800 dark:bg-teal-950 dark:text-teal-200">Primary</span>
+				<span class="ml-2 inline-flex rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800 dark:bg-teal-950 dark:text-teal-200">{ i18n.T(ctx, "enum.bool.primary") }</span>
 			}
 		</th>
 		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
-			<span class="sr-only">{ FieldLabel(FieldType) }</span>
-			{ policy.Type }
+			<span class="sr-only">{ i18n.T(ctx, FieldLabel(FieldType)) }</span>
+			{ i18n.T(ctx, policy.Type) }
 		</td>
 		<td class="py-3 pr-4 align-top">
-			<span class="sr-only">{ FieldLabel(FieldStatus) }</span>
+			<span class="sr-only">{ i18n.T(ctx, FieldLabel(FieldStatus)) }</span>
 			<span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200">
-				{ policy.Status }
+				{ i18n.T(ctx, policy.Status) }
 			</span>
 		</td>
 		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
 			if policy.ExpiresOn != "" {
-				<span class="sr-only">{ FieldLabel(FieldExpiresOn) }</span>
+				<span class="sr-only">{ i18n.T(ctx, FieldLabel(FieldExpiresOn)) }</span>
 				<time datetime={ policy.ExpiresOn }>{ policy.ExpiresOn }</time>
 			}
 			if len(policy.Basis) > 0 {

@@ -2,6 +2,7 @@ package records
 
 import (
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
 	"medikube/internal/web"
@@ -13,13 +14,14 @@ import (
 // render gate at all.
 const confirmSignal = "_confirming_delete"
 
+// The constants below are message ids (D-06), resolved at render time.
 const (
-	detailArticle = "Medication"
-	confirmTitle  = "Delete this medication?"
-	confirmLabel  = "Delete permanently"
-	confirmCancel = "Keep it"
-	editLabel     = "Edit"
-	deleteLabel   = "Delete"
+	detailArticle = "a11y.medication_detail"
+	confirmTitle  = "confirm.delete_permanently"
+	confirmLabel  = "action.delete"
+	confirmCancel = "confirm.keep_it"
+	editLabel     = "action.edit"
+	deleteLabel   = "action.delete"
 )
 
 // MedicationDetail is contracts/pages.md P5's landmark: every value recorded
@@ -28,7 +30,7 @@ const (
 templ MedicationDetail(props MedicationDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Medication, props.Medication.ID) }
-		aria-label={ detailArticle }
+		aria-label={ i18n.T(ctx, detailArticle) }
 		data-signals={ "{" + confirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Medication.Version)) + "}" }
 		data-status={ props.Medication.StatusValue }
 		class="flex flex-col"
@@ -44,19 +46,19 @@ templ MedicationDetail(props MedicationDetailProps) {
 					<a
 						href={ props.Medication.Links.Edit }
 						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-					>{ editLabel }</a>
+					>{ i18n.T(ctx, editLabel) }</a>
 				}
 				<button
 					type="button"
 					id={ ids.RecordDelete(kind.Medication, props.Medication.ID) }
 					data-on:click={ "$" + confirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-				>{ deleteLabel }</button>
+				>{ i18n.T(ctx, deleteLabel) }</button>
 			</div>
 		</header>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
 			for _, entry := range props.Medication.Entries() {
-				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ i18n.T(ctx, entry.Label) }</dt>
 				@detailValue(entry)
 			}
 		</dl>
@@ -67,24 +69,24 @@ templ MedicationDetail(props MedicationDetailProps) {
 			ID:             ids.RecordConfirm(kind.Medication, props.Medication.ID),
 			ReturnTo: ids.RecordDelete(kind.Medication, props.Medication.ID),
 			Signal:         confirmSignal,
-			Title:          confirmTitle,
+			Title:          i18n.T(ctx, confirmTitle),
 			Subject:        props.Medication.Name,
 			ReferenceCount: props.ReferenceCount,
-			ConfirmLabel:   confirmLabel,
+			ConfirmLabel:   i18n.T(ctx, confirmLabel),
 			ConfirmOn:      deleteExpression(props.Medication),
-			CancelLabel:    confirmCancel,
+			CancelLabel:    i18n.T(ctx, confirmCancel),
 		})
 	</article>
 }
 
 templ detailValue(entry DetailEntry) {
 	if entry.Multiline {
-		<dd class="whitespace-pre-line break-words text-sm text-slate-900 dark:text-slate-100">{ entry.Value }</dd>
+		<dd class="whitespace-pre-line break-words text-sm text-slate-900 dark:text-slate-100">{ entryValue(ctx, entry) }</dd>
 	} else if entry.Datetime != "" {
 		<dd class="text-sm tabular-nums text-slate-900 dark:text-slate-100">
-			<time datetime={ entry.Datetime }>{ entry.Value }</time>
+			<time datetime={ entry.Datetime }>{ entryValue(ctx, entry) }</time>
 		</dd>
 	} else {
-		<dd class="break-words text-sm text-slate-900 dark:text-slate-100">{ entry.Value }</dd>
+		<dd class="break-words text-sm text-slate-900 dark:text-slate-100">{ entryValue(ctx, entry) }</dd>
 	}
 }

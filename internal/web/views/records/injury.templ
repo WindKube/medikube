@@ -3,24 +3,26 @@ package records
 import (
 	viewtags "medikube/internal/web/views/tags"
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
 	"medikube/internal/web"
 )
 
+// The constants below are message ids (D-06), resolved at render time.
 const (
-	injuryEmptyTitle  = "Nothing recorded yet"
-	injuryEmptyBody   = "Record the first one and it will be listed here, with everything you noted about it."
-	injuryCreateLabel = "Record an injury"
-	injuriesTitle     = "Injuries"
+	injuryEmptyTitle  = "empty.nothing_recorded"
+	injuryEmptyBody   = "empty.record_first_one_body"
+	injuryCreateLabel = "page.injury.record"
+	injuriesTitle     = "page.injuries.title"
 )
 
 // InjuryList is this kind's list landmark, mirroring MedicationList.
 templ InjuryList(props InjuryListProps) {
 	<section
 		id={ ids.RecordList(kind.Injury) }
-		aria-label={ injuriesTitle }
+		aria-label={ i18n.T(ctx, injuriesTitle) }
 		class="flex flex-col"
 	>
 		<div class="flex flex-wrap items-center justify-between gap-3">
@@ -28,33 +30,33 @@ templ InjuryList(props InjuryListProps) {
 				id={ ids.RecordListHeading(kind.Injury) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ injuriesTitle }</h1>
+			>{ i18n.T(ctx, injuriesTitle) }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }
 					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-				>{ injuryCreateLabel }</a>
+				>{ i18n.T(ctx, injuryCreateLabel) }</a>
 			}
 		</div>
 		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
 			<div data-empty class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:          ids.RecordEmpty(kind.Injury),
-					Title:       injuryEmptyTitle,
-					Body:        injuryEmptyBody,
+					Title:       i18n.T(ctx, injuryEmptyTitle),
+					Body:        i18n.T(ctx, injuryEmptyBody),
 					ActionHref:  props.CreateHref,
-					ActionLabel: injuryCreateLabel,
+					ActionLabel: i18n.T(ctx, injuryCreateLabel),
 				})
 			</div>
 			<div data-rows class="mt-4 overflow-x-auto">
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
-							<th scope="col" class="pb-2 pr-4 font-medium">{ InjuryFieldLabel(InjuryFieldName) }</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">{ InjuryFieldLabel(InjuryFieldType) }</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">{ InjuryFieldLabel(InjuryFieldSeverity) }</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">{ InjuryFieldLabel(InjuryFieldStatus) }</th>
-							<th scope="col" class="pb-2 font-medium">{ InjuryFieldLabel(InjuryFieldOccurredOn) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, InjuryFieldLabel(InjuryFieldName)) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, InjuryFieldLabel(InjuryFieldType)) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, InjuryFieldLabel(InjuryFieldSeverity)) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, InjuryFieldLabel(InjuryFieldStatus)) }</th>
+							<th scope="col" class="pb-2 font-medium">{ i18n.T(ctx, InjuryFieldLabel(InjuryFieldOccurredOn)) }</th>
 						</tr>
 					</thead>
 					<tbody id={ ids.RecordRows(kind.Injury) }>
@@ -88,46 +90,47 @@ templ InjuryRow(injury InjuryView) {
 		</th>
 		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
 			if injury.Type != "" {
-				<span class="sr-only">{ InjuryFieldLabel(InjuryFieldType) }</span>
-				{ injury.Type }
+				<span class="sr-only">{ i18n.T(ctx, InjuryFieldLabel(InjuryFieldType)) }</span>
+				{ i18n.T(ctx, injury.Type) }
 			}
 		</td>
 		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
 			if injury.Severity != "" {
-				<span class="sr-only">{ InjuryFieldLabel(InjuryFieldSeverity) }</span>
-				{ injury.Severity }
+				<span class="sr-only">{ i18n.T(ctx, InjuryFieldLabel(InjuryFieldSeverity)) }</span>
+				{ i18n.T(ctx, injury.Severity) }
 			}
 		</td>
 		<td class="py-3 pr-4 align-top">
-			<span class="sr-only">{ InjuryFieldLabel(InjuryFieldStatus) }</span>
+			<span class="sr-only">{ i18n.T(ctx, InjuryFieldLabel(InjuryFieldStatus)) }</span>
 			<span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200">
-				{ injury.Status }
+				{ i18n.T(ctx, injury.Status) }
 			</span>
 		</td>
 		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
 			if injury.OccurredOn != "" {
-				<span class="sr-only">{ InjuryFieldLabel(InjuryFieldOccurredOn) }</span>
+				<span class="sr-only">{ i18n.T(ctx, InjuryFieldLabel(InjuryFieldOccurredOn)) }</span>
 				<time datetime={ injury.OccurredOn }>{ injury.OccurredOn }</time>
 			}
 		</td>
 	</tr>
 }
 
+// The constants below are message ids (D-06), resolved at render time.
 const (
 	injuryConfirmSignal = "_confirming_delete"
-	injuryDetailArticle = "Injury"
-	injuryConfirmTitle  = "Delete this injury?"
-	injuryConfirmLabel  = "Delete permanently"
-	injuryConfirmCancel = "Keep it"
-	injuryEditLabel     = "Edit"
-	injuryDeleteLabel   = "Delete"
+	injuryDetailArticle = "a11y.injury_detail"
+	injuryConfirmTitle  = "confirm.delete_permanently"
+	injuryConfirmLabel  = "action.delete"
+	injuryConfirmCancel = "confirm.keep_it"
+	injuryEditLabel     = "action.edit"
+	injuryDeleteLabel   = "action.delete"
 )
 
 // InjuryDetail is this kind's detail landmark, mirroring MedicationDetail.
 templ InjuryDetail(props InjuryDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Injury, props.Injury.ID) }
-		aria-label={ injuryDetailArticle }
+		aria-label={ i18n.T(ctx, injuryDetailArticle) }
 		data-signals={ "{" + injuryConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Injury.Version)) + "}" }
 		data-status={ props.Injury.StatusValue }
 		class="flex flex-col"
@@ -143,19 +146,19 @@ templ InjuryDetail(props InjuryDetailProps) {
 					<a
 						href={ props.Injury.Links.Edit }
 						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-					>{ injuryEditLabel }</a>
+					>{ i18n.T(ctx, injuryEditLabel) }</a>
 				}
 				<button
 					type="button"
 					id={ ids.RecordDelete(kind.Injury, props.Injury.ID) }
 					data-on:click={ "$" + injuryConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-				>{ injuryDeleteLabel }</button>
+				>{ i18n.T(ctx, injuryDeleteLabel) }</button>
 			</div>
 		</header>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
 			for _, entry := range props.Injury.Entries() {
-				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ i18n.T(ctx, entry.Label) }</dt>
 				@detailValue(entry)
 			}
 		</dl>
@@ -166,12 +169,12 @@ templ InjuryDetail(props InjuryDetailProps) {
 			ID:             ids.RecordConfirm(kind.Injury, props.Injury.ID),
 			ReturnTo: ids.RecordDelete(kind.Injury, props.Injury.ID),
 			Signal:         injuryConfirmSignal,
-			Title:          injuryConfirmTitle,
+			Title:          i18n.T(ctx, injuryConfirmTitle),
 			Subject:        props.Injury.Name,
 			ReferenceCount: 0,
-			ConfirmLabel:   injuryConfirmLabel,
+			ConfirmLabel:   i18n.T(ctx, injuryConfirmLabel),
 			ConfirmOn:      injuryDeleteExpression(props.Injury),
-			CancelLabel:    injuryConfirmCancel,
+			CancelLabel:    i18n.T(ctx, injuryConfirmCancel),
 		})
 	</article>
 }
@@ -181,7 +184,7 @@ templ InjuryDetail(props InjuryDetailProps) {
 templ InjuryForm(props InjuryFormProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ props.Label() }
+		aria-label={ i18n.T(ctx, props.Label()) }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
@@ -205,12 +208,12 @@ templ InjuryForm(props InjuryFormProps) {
 			<button
 				type="submit"
 				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ props.SubmitLabel() }</button>
+			>{ i18n.T(ctx, props.SubmitLabel()) }</button>
 			if props.CancelHref != "" {
 				<a
 					href={ props.CancelHref }
 					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
-				>{ cancelLabel }</a>
+				>{ i18n.T(ctx, cancelLabel) }</a>
 			}
 		</div>
 	</form>
@@ -221,7 +224,7 @@ templ injuryTextControl(props InjuryFormProps, field, inputType string, required
 		<label
 			for={ ids.Field(props.FormID, field) }
 			class="text-sm font-medium text-slate-900 dark:text-slate-100"
-		>{ InjuryFieldLabel(field) }</label>
+		>{ i18n.T(ctx, InjuryFieldLabel(field)) }</label>
 		<input
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -244,7 +247,7 @@ templ injurySelectControl(props InjuryFormProps, field string, options []Option,
 		<label
 			for={ ids.Field(props.FormID, field) }
 			class="text-sm font-medium text-slate-900 dark:text-slate-100"
-		>{ InjuryFieldLabel(field) }</label>
+		>{ i18n.T(ctx, InjuryFieldLabel(field)) }</label>
 		<select
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -256,9 +259,9 @@ templ injurySelectControl(props InjuryFormProps, field string, options []Option,
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>
 			if optional {
-				<option value="" selected?={ props.Injury.Value(field) == "" }>{ notRecorded }</option>
+				<option value="" selected?={ props.Injury.Value(field) == "" }>{ i18n.T(ctx, notRecorded) }</option>
 			}
-			for _, option := range options {
+			for _, option := range translateOptions(ctx, options) {
 				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
 			}
 		</select>
@@ -271,7 +274,7 @@ templ injuryTextareaControl(props InjuryFormProps, field string) {
 		<label
 			for={ ids.Field(props.FormID, field) }
 			class="text-sm font-medium text-slate-900 dark:text-slate-100"
-		>{ InjuryFieldLabel(field) }</label>
+		>{ i18n.T(ctx, InjuryFieldLabel(field)) }</label>
 		<textarea
 			id={ ids.Field(props.FormID, field) }
 			name={ field }

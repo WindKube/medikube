@@ -26,9 +26,10 @@ const (
 	InjuryFieldLastChanged = "last_changed"
 )
 
+// The values below are message ids (D-06), resolved at render time.
 const (
-	InjuryFormLabelCreate = "Record an injury"
-	InjuryFormLabelEdit   = "Edit injury"
+	InjuryFormLabelCreate = "page.injury.record"
+	InjuryFormLabelEdit   = "page.injury.edit"
 )
 
 // injuryFields is data-model §4.9's column order.
@@ -48,18 +49,19 @@ var injuryFields = []string{
 // one display could not reorder every form.
 func InjuryFields() []string { return append([]string(nil), injuryFields...) }
 
+// The values below are message ids (D-06), resolved at render time.
 var injuryFieldLabels = map[string]string{
-	InjuryFieldName:          "Name",
-	InjuryFieldType:          "Kind of injury",
-	InjuryFieldBodyPart:      "Part of the body",
-	InjuryFieldLaterality:    "Side",
-	InjuryFieldOccurredOn:    "Happened on",
-	InjuryFieldMechanism:     "How it happened",
-	InjuryFieldSeverity:      "Severity",
-	InjuryFieldStatus:        "State",
-	InjuryFieldRecoveryNotes: "Recovery notes",
-	InjuryFieldCreated:       "Recorded",
-	InjuryFieldLastChanged:   "Last changed",
+	InjuryFieldName:          "field.name",
+	InjuryFieldType:          "field.injury.type",
+	InjuryFieldBodyPart:      "field.injury.body_part",
+	InjuryFieldLaterality:    "field.injury.laterality",
+	InjuryFieldOccurredOn:    "field.injury.occurred_on",
+	InjuryFieldMechanism:     "field.injury.mechanism",
+	InjuryFieldSeverity:      "field.severity",
+	InjuryFieldStatus:        "field.status",
+	InjuryFieldRecoveryNotes: "field.injury.recovery_notes",
+	InjuryFieldCreated:       "field.recorded",
+	InjuryFieldLastChanged:   "field.last_changed",
 }
 
 // InjuryFieldLabel answers with the field's own name when there is no label,
@@ -71,26 +73,27 @@ func InjuryFieldLabel(field string) string {
 	return field
 }
 
+// The values below are message ids (D-06), resolved at render time.
 var (
 	injuryTypeLabels = map[clinical.InjuryType]string{
-		clinical.InjuryTypeSprain:      "Sprain",
-		clinical.InjuryTypeStrain:      "Strain",
-		clinical.InjuryTypeFracture:    "Fracture",
-		clinical.InjuryTypeDislocation: "Dislocation",
-		clinical.InjuryTypeLaceration:  "Laceration",
-		clinical.InjuryTypeContusion:   "Contusion (bruise)",
-		clinical.InjuryTypeBurn:        "Burn",
-		clinical.InjuryTypeConcussion:  "Concussion",
-		clinical.InjuryTypePuncture:    "Puncture",
-		clinical.InjuryTypeAbrasion:    "Abrasion (scrape)",
-		clinical.InjuryTypeOther:       "Other",
+		clinical.InjuryTypeSprain:      "enum.injury_type.sprain",
+		clinical.InjuryTypeStrain:      "enum.injury_type.strain",
+		clinical.InjuryTypeFracture:    "enum.injury_type.fracture",
+		clinical.InjuryTypeDislocation: "enum.injury_type.dislocation",
+		clinical.InjuryTypeLaceration:  "enum.injury_type.laceration",
+		clinical.InjuryTypeContusion:   "enum.injury_type.contusion",
+		clinical.InjuryTypeBurn:        "enum.injury_type.burn",
+		clinical.InjuryTypeConcussion:  "enum.injury_type.concussion",
+		clinical.InjuryTypePuncture:    "enum.injury_type.puncture",
+		clinical.InjuryTypeAbrasion:    "enum.injury_type.abrasion",
+		clinical.InjuryTypeOther:       "enum.injury_type.other",
 	}
 
 	lateralityLabels = map[clinical.Laterality]string{
-		clinical.LateralityLeft:          "Left",
-		clinical.LateralityRight:         "Right",
-		clinical.LateralityBilateral:     "Both sides",
-		clinical.LateralityNotApplicable: "Not applicable",
+		clinical.LateralityLeft:          "enum.laterality.left",
+		clinical.LateralityRight:         "enum.laterality.right",
+		clinical.LateralityBilateral:     "enum.laterality.bilateral",
+		clinical.LateralityNotApplicable: "enum.laterality.not_applicable",
 	}
 )
 
@@ -214,13 +217,13 @@ func (v InjuryView) Medications() string {
 // Entries is FR-024 made a property of the mapping, mirroring MedicationView.
 func (v InjuryView) Entries() []DetailEntry {
 	candidates := []DetailEntry{
-		{Field: InjuryFieldType, Value: v.Type},
+		{Field: InjuryFieldType, Value: v.Type, Translate: true},
 		{Field: InjuryFieldBodyPart, Value: v.BodyPart},
-		{Field: InjuryFieldLaterality, Value: v.Laterality},
+		{Field: InjuryFieldLaterality, Value: v.Laterality, Translate: true},
 		{Field: InjuryFieldOccurredOn, Value: v.OccurredOn, Datetime: v.OccurredOn},
 		{Field: InjuryFieldMechanism, Value: v.Mechanism, Multiline: true},
-		{Field: InjuryFieldSeverity, Value: v.Severity},
-		{Field: InjuryFieldStatus, Value: v.Status},
+		{Field: InjuryFieldSeverity, Value: v.Severity, Translate: true},
+		{Field: InjuryFieldStatus, Value: v.Status, Translate: true},
 		{Field: InjuryFieldRecoveryNotes, Value: v.RecoveryNotes, Multiline: true},
 		{Field: InjuryFieldCreated, Value: v.Created.Human, Datetime: v.Created.Machine},
 		{Field: InjuryFieldLastChanged, Value: v.LastChanged.Human, Datetime: v.LastChanged.Machine},
@@ -321,9 +324,9 @@ func (v InjuryView) Value(field string) string {
 
 func (p InjuryFormProps) SubmitLabel() string {
 	if p.New {
-		return "Record it"
+		return "action.record_it"
 	}
-	return "Save changes"
+	return "action.save_changes"
 }
 
 func injuryDeleteExpression(injury InjuryView) string {

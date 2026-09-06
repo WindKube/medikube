@@ -1,6 +1,7 @@
 package records_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/testsupport/seed"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/records"
@@ -181,7 +183,7 @@ func TestTheImmunizationFormRendersEveryFieldAndAdjacentErrors(t *testing.T) {
 	tree := viewstest.Render(t, records.ImmunizationForm(props), "div")
 
 	form := tree.One(t, viewstest.Tag("form"))
-	assert.Equal(t, records.ImmunizationFormLabelEdit, viewstest.Attr(form, "aria-label"))
+	assert.Equal(t, i18n.T(context.Background(), records.ImmunizationFormLabelEdit), viewstest.Attr(form, "aria-label"))
 
 	control := tree.One(t, viewstest.WithAttr("name", records.ImmunizationFieldVaccineName))
 	described := viewstest.Attr(control, "aria-describedby")

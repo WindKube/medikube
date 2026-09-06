@@ -1,6 +1,7 @@
 package records_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/testsupport/seed"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/records"
@@ -152,7 +154,7 @@ func TestTheInjuryDetailShowsTheLaterality(t *testing.T) {
 
 	text := viewstest.Text(tree.One(t, viewstest.Article("Injury")))
 
-	assert.Contains(t, text, records.InjuryFieldLabel(records.InjuryFieldLaterality))
+	assert.Contains(t, text, i18n.T(context.Background(), records.InjuryFieldLabel(records.InjuryFieldLaterality)))
 	assert.Contains(t, text, "Right")
 }
 
@@ -199,7 +201,7 @@ func TestTheInjuryFormRendersEveryFieldAndAdjacentErrors(t *testing.T) {
 	tree := viewstest.Render(t, records.InjuryForm(props), "div")
 
 	form := tree.One(t, viewstest.Tag("form"))
-	assert.Equal(t, records.InjuryFormLabelEdit, viewstest.Attr(form, "aria-label"))
+	assert.Equal(t, i18n.T(context.Background(), records.InjuryFormLabelEdit), viewstest.Attr(form, "aria-label"))
 
 	control := tree.One(t, viewstest.WithAttr("name", records.InjuryFieldName))
 	described := viewstest.Attr(control, "aria-describedby")

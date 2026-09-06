@@ -16,6 +16,7 @@ import (
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	recordfamily "medikube/internal/records"
 	"medikube/internal/store/link"
 	"medikube/internal/web"
@@ -35,6 +36,13 @@ const (
 // The two page titles of contracts/pages.md, without the product suffix, which
 // shell.Title adds. P5's is the record's own name.
 const medicationListTitle = "Medications"
+
+// medicationListTitleID is a message id (D-06), resolved at render time; the
+// text is identical to the shared nav.medications id, so it is reused here
+// rather than duplicated. The raw medicationListTitle stays as-is: it feeds
+// shell.NavLink.Label across the whole app (out of scope, shell package),
+// which renders it unresolved.
+const medicationListTitleID = "nav.medications"
 
 // Handlers is the record pages' contribution to the route table.
 //
@@ -280,7 +288,9 @@ func (p *medicationPages) list(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	return p.render(e, actor, medicationListTitle, sequence{
+	web.Localize(e)
+
+	return p.render(e, actor, i18n.T(e.Request.Context(), medicationListTitleID), sequence{
 		context,
 		p.views.ListOfPage(listing, nextPageHref(e, listing)),
 		entry.Views.Form(blank, nil, ""),

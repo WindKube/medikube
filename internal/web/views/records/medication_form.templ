@@ -2,13 +2,15 @@ package records
 
 import (
 	viewtags "medikube/internal/web/views/tags"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 )
 
+// cancelLabel and notRecorded are message ids (D-06), resolved at render time.
 const (
-	cancelLabel  = "Cancel"
-	notRecorded  = "Not recorded"
+	cancelLabel  = "action.cancel"
+	notRecorded  = "action.not_recorded"
 	textareaRows = "4"
 )
 
@@ -23,7 +25,7 @@ const (
 templ MedicationForm(props MedicationFormProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ props.Label() }
+		aria-label={ i18n.T(ctx, props.Label()) }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
@@ -55,12 +57,12 @@ templ MedicationForm(props MedicationFormProps) {
 			<button
 				type="submit"
 				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ props.SubmitLabel() }</button>
+			>{ i18n.T(ctx, props.SubmitLabel()) }</button>
 			if props.CancelHref != "" {
 				<a
 					href={ props.CancelHref }
 					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
-				>{ cancelLabel }</a>
+				>{ i18n.T(ctx, cancelLabel) }</a>
 			}
 		</div>
 	</form>
@@ -71,7 +73,7 @@ templ textControl(props MedicationFormProps, field, inputType string, required b
 		<label
 			for={ ids.Field(props.FormID, field) }
 			class="text-sm font-medium text-slate-900 dark:text-slate-100"
-		>{ FieldLabel(field) }</label>
+		>{ i18n.T(ctx, FieldLabel(field)) }</label>
 		<input
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -94,7 +96,7 @@ templ selectControl(props MedicationFormProps, field string, options []Option, o
 		<label
 			for={ ids.Field(props.FormID, field) }
 			class="text-sm font-medium text-slate-900 dark:text-slate-100"
-		>{ FieldLabel(field) }</label>
+		>{ i18n.T(ctx, FieldLabel(field)) }</label>
 		<select
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -106,9 +108,9 @@ templ selectControl(props MedicationFormProps, field string, options []Option, o
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>
 			if optional {
-				<option value="" selected?={ props.Medication.Value(field) == "" }>{ notRecorded }</option>
+				<option value="" selected?={ props.Medication.Value(field) == "" }>{ i18n.T(ctx, notRecorded) }</option>
 			}
-			for _, option := range options {
+			for _, option := range translateOptions(ctx, options) {
 				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
 			}
 		</select>
@@ -121,7 +123,7 @@ templ textareaControl(props MedicationFormProps, field string) {
 		<label
 			for={ ids.Field(props.FormID, field) }
 			class="text-sm font-medium text-slate-900 dark:text-slate-100"
-		>{ FieldLabel(field) }</label>
+		>{ i18n.T(ctx, FieldLabel(field)) }</label>
 		<textarea
 			id={ ids.Field(props.FormID, field) }
 			name={ field }

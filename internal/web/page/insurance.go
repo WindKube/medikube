@@ -13,6 +13,7 @@ import (
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	recordfamily "medikube/internal/records"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -27,6 +28,11 @@ const (
 )
 
 const insuranceListTitle = "Insurance"
+
+// insuranceListTitleID is a message id (D-06), resolved at render time. The
+// raw insuranceListTitle stays as-is: shell.NavLink.Label (out of scope,
+// shell package) renders it unresolved.
+const insuranceListTitleID = "page.insurance.title"
 
 // InsuranceHandlers is the record pages' contribution to the route table.
 func InsuranceHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
@@ -210,7 +216,9 @@ func (p *insurancePages) list(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	return p.render(e, actor, insuranceListTitle, sequence{
+	web.Localize(e)
+
+	return p.render(e, actor, i18n.T(e.Request.Context(), insuranceListTitleID), sequence{
 		context,
 		p.views.ListOfPage(listing, nextPageHref(e, listing)),
 		entry.Views.Form(blank, nil, ""),
