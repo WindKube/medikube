@@ -20,6 +20,16 @@ other = "Leki"
 description = "Primary navigation: the settings link"
 other = "Ustawienia"
 
+# --- settings.language -------------------------------------------------
+
+[settings.language.label]
+description = "The settings page's language preference control"
+other = "Język"
+
+[settings.language.description]
+description = "Hint text under the language control, explaining what it changes"
+other = "Język, w którym wyświetlane jest to konto."
+
 # --- error.<Failure.Code wire value> ------------------------------------
 
 [error.unauthenticated]

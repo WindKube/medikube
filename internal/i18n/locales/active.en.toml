@@ -20,6 +20,16 @@ other = "Medications"
 description = "Primary navigation: the settings link"
 other = "Settings"
 
+# --- settings.language -------------------------------------------------
+
+[settings.language.label]
+description = "The settings page's language preference control"
+other = "Language"
+
+[settings.language.description]
+description = "Hint text under the language control, explaining what it changes"
+other = "The language this account is shown in."
+
 # --- error.<Failure.Code wire value> ------------------------------------
 
 [error.unauthenticated]

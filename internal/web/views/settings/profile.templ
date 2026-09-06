@@ -41,7 +41,7 @@ templ Profile(props ProfileProps) {
 				The address cannot be changed in this version.
 			</p>
 		</div>
-		for _, control := range props.Controls() {
+		for _, control := range props.Controls(ctx) {
 			@field(control)
 		}
 		<div>

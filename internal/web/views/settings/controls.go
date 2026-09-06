@@ -1,9 +1,11 @@
 package settings
 
 import (
+	"context"
 	"strconv"
 	"strings"
 
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 )
@@ -34,6 +36,10 @@ type fieldProps struct {
 
 	// Options non-empty renders a select rather than an input.
 	Options []Option
+
+	// AriaLabel is an explicit accessible name, for a control the catalogue
+	// names directly rather than through the adjacent <label> alone.
+	AriaLabel string
 }
 
 // control assembles one, given the form's id and its refusals. The `extra`
@@ -65,7 +71,13 @@ func control(formID string, errs components.FieldErrors, field fieldProps, extra
 }
 
 // Controls is the profile form's five, in the order FR-011 names them.
-func (p ProfileProps) Controls() []fieldProps {
+//
+// The language control is the one translated here: its own label, hint and
+// aria-label come from the catalogue (settings.language.*, T018), because a
+// language picker offered only in English is the one control on this page a
+// Polish account could not use to fix that. The other four keep their English
+// literals for now — extracting them is T021's, in parallel.
+func (p ProfileProps) Controls(ctx context.Context) []fieldProps {
 	return []fieldProps{
 		control(p.FormID, p.Errors, fieldProps{
 			Name: FieldName, Label: "Display name", Type: "text",
@@ -75,8 +87,10 @@ func (p ProfileProps) Controls() []fieldProps {
 			Name: FieldUnitSystem, Label: "Measurement units", Options: p.UnitSystems,
 		}),
 		control(p.FormID, p.Errors, fieldProps{
-			Name: FieldLocale, Label: "Language", Type: "text", Value: p.Locale, Required: true,
-			Hint: "A two-letter code, optionally with a region, such as en or en-GB.",
+			Name: FieldLocale, Options: p.Locales, Required: true,
+			Label:     i18n.T(ctx, "settings.language.label"),
+			Hint:      i18n.T(ctx, "settings.language.description"),
+			AriaLabel: i18n.T(ctx, "settings.language.label"),
 		}),
 		control(p.FormID, p.Errors, fieldProps{
 			Name: FieldDateFormat, Label: "Date presentation", Options: p.DateFormats,

@@ -21,6 +21,9 @@ templ field(props fieldProps) {
 				id={ props.ID }
 				name={ props.Name }
 				data-bind={ props.Name }
+				if props.AriaLabel != "" {
+					aria-label={ props.AriaLabel }
+				}
 				if props.Invalid {
 					aria-invalid="true"
 				}
