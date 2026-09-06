@@ -205,7 +205,7 @@ func TestEveryDeclaredErrorViewRendersInsideTheFullShellCarryingItsOwnLandmark(t
 					// Smoke assertion 4. The error views carry no title column
 					// in contracts/pages.md, so the tab says what the landmark
 					// says — one string, not two spellings of one idea.
-					assert.Contains(t, markup, "<title>"+html.EscapeString(shell.Title(name))+"</title>")
+					assert.Contains(t, markup, shell.TitleElement(name))
 
 					// The one thing an error page carries out of the failure.
 					assert.Contains(t, viewstest.Text(landmark), poisonRequestID,

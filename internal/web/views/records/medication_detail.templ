@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
+	"medikube/internal/web"
 )
 
 // confirmSignal reveals the delete confirmation. The element is rendered with
@@ -28,7 +29,7 @@ templ MedicationDetail(props MedicationDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Medication, props.Medication.ID) }
 		aria-label={ detailArticle }
-		data-signals={ "{" + confirmSignal + ": false, _etag: " + jsLiteral(props.Medication.Version) + "}" }
+		data-signals={ "{" + confirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Medication.Version)) + "}" }
 		data-status={ props.Medication.StatusValue }
 		class="flex flex-col"
 	>
@@ -47,6 +48,7 @@ templ MedicationDetail(props MedicationDetailProps) {
 				}
 				<button
 					type="button"
+					id={ ids.RecordDelete(kind.Medication, props.Medication.ID) }
 					data-on:click={ "$" + confirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
 				>{ deleteLabel }</button>
@@ -63,6 +65,7 @@ templ MedicationDetail(props MedicationDetailProps) {
 		}
 		@shared.DeleteConfirm(shared.DeleteConfirmProps{
 			ID:             ids.RecordConfirm(kind.Medication, props.Medication.ID),
+			ReturnTo: ids.RecordDelete(kind.Medication, props.Medication.ID),
 			Signal:         confirmSignal,
 			Title:          confirmTitle,
 			Subject:        props.Medication.Name,

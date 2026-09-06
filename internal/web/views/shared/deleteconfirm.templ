@@ -1,6 +1,9 @@
 package shared
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // DeleteConfirmProps is FR-006's confirmation: named, permanent, and honest
 // about how many other records point at the one about to go. It is rendered
@@ -8,8 +11,9 @@ import "fmt"
 // same rule components.Confirm follows — so it exists for the render gate
 // whether or not it is on screen.
 type DeleteConfirmProps struct {
-	ID     string
-	Signal string
+	ID       string
+	Signal   string
+	ReturnTo string
 
 	Title string
 	// Subject is what is about to be destroyed, named — never "this item".
@@ -35,6 +39,15 @@ func (p DeleteConfirmProps) consequence() string {
 	}
 }
 
+func (p DeleteConfirmProps) cancelExpression() string {
+	expression := "$" + p.Signal + " = false"
+	if p.ReturnTo != "" {
+		expression += "; document.getElementById(" + strconv.Quote(p.ReturnTo) + ")?.focus()"
+	}
+
+	return expression
+}
+
 templ DeleteConfirm(props DeleteConfirmProps) {
 	<section
 		id={ props.ID }
@@ -53,7 +66,7 @@ templ DeleteConfirm(props DeleteConfirmProps) {
 			>{ props.ConfirmLabel }</button>
 			<button
 				type="button"
-				data-on:click={ "$" + props.Signal + " = false" }
+				data-on:click={ props.cancelExpression() }
 				class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
 			>{ props.CancelLabel }</button>
 		</div>

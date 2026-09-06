@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
+	"medikube/internal/web"
 )
 
 const (
@@ -28,8 +29,8 @@ templ ProcedureList(props ProcedureListProps) {
 				>{ procedureCreate }</a>
 			}
 		</div>
-		if len(props.Procedures) == 0 {
-			<div class="mt-6">
+		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
+			<div data-empty class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:          ids.RecordEmpty(kind.Procedure),
 					Title:       procedureEmptyTitle,
@@ -38,8 +39,7 @@ templ ProcedureList(props ProcedureListProps) {
 					ActionLabel: procedureCreate,
 				})
 			</div>
-		} else {
-			<div class="mt-4 overflow-x-auto">
+			<div data-rows class="mt-4 overflow-x-auto">
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
@@ -55,7 +55,7 @@ templ ProcedureList(props ProcedureListProps) {
 					</tbody>
 				</table>
 			</div>
-		}
+		</div>
 		@components.Pagination(components.PaginationProps{
 			ID:           ids.RecordPager(kind.Procedure),
 			PreviousHref: props.PreviousHref,
@@ -89,7 +89,7 @@ templ ProcedureDetail(props ProcedureDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Procedure, props.Procedure.ID) }
 		aria-label="Procedure"
-		data-signals={ "{_confirming_delete: false, _etag: " + jsLiteral(props.Procedure.Version) + "}" }
+		data-signals={ "{_confirming_delete: false, _etag: " + jsLiteral(web.ETag(props.Procedure.Version)) + "}" }
 		data-status={ props.Procedure.StatusVal }
 		class="flex flex-col"
 	>
@@ -108,6 +108,7 @@ templ ProcedureDetail(props ProcedureDetailProps) {
 				}
 				<button
 					type="button"
+					id={ ids.RecordDelete(kind.Procedure, props.Procedure.ID) }
 					data-on:click="$_confirming_delete = true"
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
 				>Delete</button>
@@ -121,6 +122,7 @@ templ ProcedureDetail(props ProcedureDetailProps) {
 		</dl>
 		@components.Confirm(components.ConfirmProps{
 			ID:           ids.RecordConfirm(kind.Procedure, props.Procedure.ID),
+			ReturnTo: ids.RecordDelete(kind.Procedure, props.Procedure.ID),
 			Signal:       "_confirming_delete",
 			Title:        "Delete this procedure?",
 			Subject:      props.Procedure.Name,
@@ -142,7 +144,9 @@ templ ProcedureForm(props ProcedureFormProps) {
 		if props.Notice != "" {
 			<p role="alert" class="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{ props.Notice }</p>
 		}
-		<input type="hidden" name="patient" data-bind="patient" value={ props.Procedure.PatientID }/>
+		if props.New {
+			<input type="hidden" name="patient" data-bind="patient" value={ props.Procedure.PatientID }/>
+		}
 		@procedureTextControl(props, FieldName, "text", true)
 		@procedureSelectControl(props, FieldType, props.Procedure.TypeOptions())
 		@procedureTextControl(props, FieldCode, "text", false)

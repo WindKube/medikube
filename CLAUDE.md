@@ -89,4 +89,21 @@ the data-access layer rather than by convention:
 ## Before upgrading PocketBase
 
 Read [`docs/pocketbase-upgrade-checklist.md`](docs/pocketbase-upgrade-checklist.md). Four places
-reach past a public API, and three of the four fail *silently*.
+reach past a public API, and three of the four fail *silently*. Also re-run
+`internal/records/registry_completeness_test.go` and the per-collection lockdown scenarios in
+`internal/platform/pb/lockdown*_test.go` — neither reaches past an API, but both assert
+PocketBase-observable behaviour an upgrade can move without touching a line of MediKube's own
+code (risk R8).
+
+## Clinical records (phase 003)
+
+A relation field's `MaxSelect` treats `0` and `1` identically — both mean single-valued.
+"Any number" (a `tags` relation) is a named constant like `unlimitedTags`, never a literal `0`.
+
+The CSP ships `style-src 'self'` with no `'unsafe-inline'`, so a `style="..."` attribute is
+silently dropped by the browser rather than rendered — express layout in Tailwind classes, not
+inline styles.
+
+Every `datetime-local` control renders through `clinical.Instant.Input()`, never a hand-formatted
+string: it is the one place that knows the format `<input type="datetime-local">` requires and
+round-trips through it.

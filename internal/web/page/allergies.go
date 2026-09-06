@@ -87,6 +87,8 @@ func (v AllergyViews) Detail(record recordfamily.Record) recordfamily.Renderer {
 	return views.AllergyDetail(views.AllergyDetailProps{Allergy: v.view(record)})
 }
 
+func (v AllergyViews) Title(record recordfamily.Record) string { return v.view(record).Allergen }
+
 func (v AllergyViews) detailWithMedications(record recordfamily.Record, medications views.MedicationLinksEditorProps) recordfamily.Renderer {
 	return views.AllergyDetail(views.AllergyDetailProps{Allergy: v.view(record), Medications: medications})
 }

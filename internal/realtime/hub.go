@@ -18,15 +18,23 @@ import (
 // access.Authorizer.Patient for its own viewer and re-fetches, so a person who
 // lost access mid-stream simply stops receiving patches.
 //
-// It carries no action either, and that is deliberate rather than an omission:
-// the handler re-fetches every id it is told about, and a re-fetch that comes
-// back empty — deleted, or no longer visible to this subscriber — is exactly a
-// row removal. An action field would be a second source of truth for something
-// the fetch already answers, and the fetch is the one that cannot lie.
+// It carries no action beyond Created, and that is deliberate rather than an
+// omission: the handler re-fetches every id it is told about, and a re-fetch
+// that comes back empty — deleted, or no longer visible to this subscriber —
+// is exactly a row removal. A delete/update field would be a second source of
+// truth for something the fetch already answers, and the fetch is the one
+// that cannot lie. Create is different: a fetch that succeeds cannot tell the
+// handler whether the row already existed in the subscriber's view, so
+// Created is the one bit the fetch genuinely cannot answer on its own.
 type Event struct {
 	Kind      kind.Kind
 	RecordID  string
 	PatientID string
+
+	// Created marks an event published from the record's creation, not its
+	// update. A subscriber's handler uses it to insert a new row into a list
+	// rather than patch one that is not there yet.
+	Created bool
 }
 
 // SubscriberBuffer is how far behind a subscriber may fall before it is

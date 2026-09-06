@@ -117,7 +117,7 @@ func TestEachAccountPageIsTitledAsTheContractSpellsIt(t *testing.T) {
 
 			_, _, body := newBrowser(t).get(routes[opID].SmokeURL)
 
-			assert.Contains(t, body, "<title>"+html.EscapeString(shell.Title(title))+"</title>")
+			assert.Contains(t, body, shell.TitleElement(title))
 		})
 	}
 }

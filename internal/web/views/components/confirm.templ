@@ -18,7 +18,7 @@ templ Confirm(props ConfirmProps) {
 			>{ props.ConfirmLabel }</button>
 			<button
 				type="button"
-				data-on:click={ "$" + props.Signal + " = false" }
+				data-on:click={ props.cancelExpression() }
 				class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
 			>{ props.CancelLabel }</button>
 		</div>

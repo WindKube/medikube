@@ -138,8 +138,8 @@ func TestARevokedSessionReceivesNothingMoreAndItsOpenStreamCloses(t *testing.T) 
 
 	// The control. Without it a stream that was broken from the start would
 	// pass every assertion below.
-	before, _ := medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
-	require.Equal(t, "#"+ids.RecordRow(kind.Medication, before), watching.nextPatch(patchDeadline).selector(),
+	_, _ = medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
+	require.Equal(t, "#"+ids.RecordRows(kind.Medication), watching.nextPatch(patchDeadline).selector(),
 		"the stream was not working before the revocation, so what follows proves nothing")
 
 	revoke(t, medikube, testsupport.AccountAEmail)
@@ -191,9 +191,9 @@ func TestRevokingOneAccountsSessionLeavesAnotherAccountsStreamAlone(t *testing.T
 	assert.True(t, endedA, "the revoked account's stream stayed open")
 
 	// Boris's own write, after Amara's revocation, still reaches Boris.
-	created, _ := medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ciclosporin")
+	_, _ = medikube.create(t, boris, testsupport.AccountBPatientSelfID, "Ciclosporin")
 
-	assert.Equal(t, "#"+ids.RecordRow(kind.Medication, created), watchingB.nextPatch(patchDeadline).selector(),
+	assert.Equal(t, "#"+ids.RecordRows(kind.Medication), watchingB.nextPatch(patchDeadline).selector(),
 		"revoking one account's session closed another account's stream")
 }
 
@@ -212,9 +212,9 @@ func TestASessionOpenedAfterTheRevocationStreamsNormally(t *testing.T) {
 	watching := medikube.open(t, fresh, "?patient="+testsupport.AccountAPatientSelfID)
 	require.Equal(t, http.StatusOK, watching.Response.StatusCode)
 
-	created, _ := medikube.create(t, fresh, testsupport.AccountAPatientSelfID, "Dexamethasone")
+	_, _ = medikube.create(t, fresh, testsupport.AccountAPatientSelfID, "Dexamethasone")
 
-	assert.Equal(t, "#"+ids.RecordRow(kind.Medication, created), watching.nextPatch(patchDeadline).selector())
+	assert.Equal(t, "#"+ids.RecordRows(kind.Medication), watching.nextPatch(patchDeadline).selector())
 }
 
 // The beat is the other half of the re-check, and on its own it is the half

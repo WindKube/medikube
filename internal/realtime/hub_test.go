@@ -13,10 +13,11 @@ import (
 )
 
 // The hub is what stands between a committed write and somebody's open page,
-// and the one rule it exists to keep is that it carries identifiers and not
-// record content (research D-33, contracts/streams.md). A body on this type
-// would move the "may this person see it" decision from the per-subscriber
-// authorizer to the publisher, which does not know who is listening.
+// and the one rule it exists to keep is that it carries identifiers (plus the
+// one bit a re-fetch genuinely cannot answer, Created) and not record content
+// (research D-33, contracts/streams.md). A body on this type would move the
+// "may this person see it" decision from the per-subscriber authorizer to the
+// publisher, which does not know who is listening.
 //
 // This is a shape assertion rather than a value assertion on purpose: a value
 // assertion passes the day somebody adds a `Body any` field and leaves it
@@ -32,14 +33,20 @@ func TestTheEventCarriesIdentifiersAndNothingElse(t *testing.T) {
 		field := event.Field(i)
 		names = append(names, field.Name)
 
-		assert.Equalf(t, reflect.String, field.Type.Kind(),
-			"realtime.Event.%s is %s; every member of this type is an identifier, and anything else is a record body arriving by another name",
-			field.Name, field.Type.Kind())
+		if field.Name == "Created" {
+			assert.Equalf(t, reflect.Bool, field.Type.Kind(),
+				"realtime.Event.Created is the one bit that is not an identifier — a create/update flag — and must stay a bool")
+		} else {
+			assert.Equalf(t, reflect.String, field.Type.Kind(),
+				"realtime.Event.%s is %s; every member but Created is an identifier, and anything else is a record body arriving by another name",
+				field.Name, field.Type.Kind())
+		}
+
 		assert.Truef(t, field.IsExported(), "realtime.Event.%s is unexported, so a subscriber cannot read it", field.Name)
 	}
 
-	assert.ElementsMatch(t, []string{"Kind", "RecordID", "PatientID"}, names,
-		"the hub's event is Kind, RecordID and PatientID — contracts/streams.md declares exactly these three")
+	assert.ElementsMatch(t, []string{"Kind", "RecordID", "PatientID", "Created"}, names,
+		"the hub's event is Kind, RecordID, PatientID and Created — contracts/streams.md's three identifiers plus the create/update bit a re-fetch cannot answer")
 }
 
 func medicationEvent(recordID, patientID string) realtime.Event {

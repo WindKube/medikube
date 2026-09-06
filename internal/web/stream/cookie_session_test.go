@@ -38,9 +38,9 @@ func TestAStreamOpenedWithNothingButACookieRunsAndEndsWithItsSession(t *testing.
 	require.Equal(t, http.StatusOK, watching.Response.StatusCode,
 		"a stream authenticated the way every browser authenticates was refused")
 
-	created, _ := medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
+	_, _ = medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
 
-	require.Equal(t, "#"+ids.RecordRow(kind.Medication, created), watching.nextPatch(patchDeadline).selector(),
+	require.Equal(t, "#"+ids.RecordRows(kind.Medication), watching.nextPatch(patchDeadline).selector(),
 		"the cookie opened the stream but nothing was delivered on it")
 
 	// The same revocation the ordinary-request half asserts

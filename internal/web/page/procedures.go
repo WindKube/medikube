@@ -88,6 +88,8 @@ func (v ProcedureViews) Detail(record recordfamily.Record) recordfamily.Renderer
 	return views.ProcedureDetail(views.ProcedureDetailProps{Procedure: v.view(record)})
 }
 
+func (v ProcedureViews) Title(record recordfamily.Record) string { return v.view(record).Name }
+
 func (v ProcedureViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {
 	procedure := v.view(record)
 	fresh := procedure.ID == ""

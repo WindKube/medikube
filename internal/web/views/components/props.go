@@ -1,5 +1,7 @@
 package components
 
+import "strconv"
+
 // EmptyStateProps is what a list shows in place of its rows, and never in place
 // of its landmark (FR-029, contracts/pages.md). The caller supplies the words
 // because the component is shared: a kind's own vocabulary belongs to the kind.
@@ -20,6 +22,9 @@ type EmptyStateProps struct {
 // and the smoke run cannot dismiss (FR-028).
 type ConfirmProps struct {
 	ID string
+	// ReturnTo is the element that opened the confirmation; cancelling
+	// hands focus back to it instead of dropping it on <body>.
+	ReturnTo string
 
 	// Signal is the Datastar signal that reveals it. The element is rendered
 	// with the page and hidden, rather than created on demand, so that it
@@ -49,4 +54,13 @@ type PaginationProps struct {
 
 	PreviousHref string
 	NextHref     string
+}
+
+func (p ConfirmProps) cancelExpression() string {
+	expression := "$" + p.Signal + " = false"
+	if p.ReturnTo != "" {
+		expression += "; document.getElementById(" + strconv.Quote(p.ReturnTo) + ")?.focus()"
+	}
+
+	return expression
 }

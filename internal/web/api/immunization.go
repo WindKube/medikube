@@ -90,8 +90,8 @@ type Immunization struct {
 func (i *Immunization) GetTags() []string { return i.Tags }
 
 // ImmunizationCreate is the create body. FR-039: DoseNumber is a plain *int —
-// absent means "not recorded", and a supplied zero or negative is refused by
-// clinical.Immunization.Validate, not by this decoder.
+// absent or zero means "not recorded" (zeroIsAbsent: an empty number control
+// submits 0), and a negative is refused by clinical.Immunization.Validate.
 type ImmunizationCreate struct {
 	Patient        string   `json:"patient"`
 	VaccineName    string   `json:"vaccine_name"`
@@ -242,7 +242,7 @@ func (ImmunizationCodec) Draft(body any) (clinical.Immunization, error) {
 		VaccineName:    create.VaccineName,
 		TradeName:      create.TradeName,
 		AdministeredOn: administeredOn,
-		DoseNumber:     create.DoseNumber,
+		DoseNumber:     zeroIsAbsent(create.DoseNumber),
 		LotNumber:      create.LotNumber,
 		Manufacturer:   create.Manufacturer,
 		Site:           clinical.ImmunizationSite(create.Site),
@@ -267,7 +267,7 @@ func (ImmunizationCodec) Patch(body any) (immunization.Patch, error) {
 		VaccineName:    incoming.VaccineName,
 		TradeName:      incoming.TradeName,
 		AdministeredOn: readOptionalDate(&invalid, ImmunizationMemberAdministeredOn, incoming.AdministeredOn),
-		DoseNumber:     doubleIntPointer(incoming.DoseNumber),
+		DoseNumber:     zeroClears(doubleIntPointer(incoming.DoseNumber)),
 		LotNumber:      incoming.LotNumber,
 		Manufacturer:   incoming.Manufacturer,
 		Site:           convert[clinical.ImmunizationSite](incoming.Site),

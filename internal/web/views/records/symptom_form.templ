@@ -15,7 +15,9 @@ templ SymptomForm(props SymptomFormProps) {
 		if props.Notice != "" {
 			<p role="alert" class="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{ props.Notice }</p>
 		}
-		<input type="hidden" name="patient" data-bind="patient" value={ props.Symptom.PatientID }/>
+		if props.New {
+			<input type="hidden" name="patient" data-bind="patient" value={ props.Symptom.PatientID }/>
+		}
 		@symptomTextControl(props, SymptomFieldName, "text", true)
 		@symptomSelectControl(props, SymptomFieldCategory, props.Symptom.CategoryOptions(), true)
 		@symptomSelectControl(props, SymptomFieldSeverity, props.Symptom.SeverityOptions(), false)

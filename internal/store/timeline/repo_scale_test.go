@@ -66,6 +66,7 @@ func TestPagingAndCountingFiftyThousandRowsStaysUnderTwoSeconds(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Len(t, page.Items, 50)
+	t.Logf("paging %d rows: %s", rows, pageElapsed)
 	assert.Lessf(t, pageElapsed, 2*time.Second, "paging %d rows took %s", rows, pageElapsed)
 
 	start = time.Now()
@@ -73,6 +74,7 @@ func TestPagingAndCountingFiftyThousandRowsStaysUnderTwoSeconds(t *testing.T) {
 	countElapsed := time.Since(start)
 
 	require.NoError(t, err)
+	t.Logf("counting %d rows: %s", rows, countElapsed)
 	assert.Equal(t, rows, total)
 	assert.Lessf(t, countElapsed, 2*time.Second, "counting %d rows took %s", rows, countElapsed)
 }

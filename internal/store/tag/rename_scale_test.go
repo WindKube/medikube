@@ -91,6 +91,7 @@ func TestRenamingATagCarriedBy500RecordsTouchesOnlyTheTagRow(t *testing.T) {
 	assert.Equal(t, "after-rename", renamed.Name)
 
 	elapsed := time.Since(start)
+	t.Logf("renaming one tag across %d carriers: %s", carriers, elapsed)
 	assert.Lessf(t, elapsed, 2*time.Second, "renaming one tag took %s across %d carriers — it should be O(1)", elapsed, carriers)
 
 	var afterRename []*core.Record

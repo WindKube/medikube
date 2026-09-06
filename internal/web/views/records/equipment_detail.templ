@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
+	"medikube/internal/web"
 )
 
 const equipmentConfirmSignal = "_confirming_delete"
@@ -22,7 +23,7 @@ templ EquipmentDetail(props EquipmentDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Equipment, props.Equipment.ID) }
 		aria-label={ equipmentDetailArticle }
-		data-signals={ "{" + equipmentConfirmSignal + ": false, _etag: " + jsLiteral(props.Equipment.Version) + "}" }
+		data-signals={ "{" + equipmentConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Equipment.Version)) + "}" }
 		data-status={ props.Equipment.StatusValue }
 		class="flex flex-col"
 	>
@@ -41,6 +42,7 @@ templ EquipmentDetail(props EquipmentDetailProps) {
 				}
 				<button
 					type="button"
+					id={ ids.RecordDelete(kind.Equipment, props.Equipment.ID) }
 					data-on:click={ "$" + equipmentConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
 				>{ equipmentDeleteLabel }</button>
@@ -54,6 +56,7 @@ templ EquipmentDetail(props EquipmentDetailProps) {
 		</dl>
 		@components.Confirm(components.ConfirmProps{
 			ID:           ids.RecordConfirm(kind.Equipment, props.Equipment.ID),
+			ReturnTo: ids.RecordDelete(kind.Equipment, props.Equipment.ID),
 			Signal:       equipmentConfirmSignal,
 			Title:        equipmentConfirmTitle,
 			Subject:      props.Equipment.Name,

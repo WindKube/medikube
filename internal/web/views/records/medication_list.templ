@@ -39,8 +39,8 @@ templ MedicationList(props MedicationListProps) {
 				>{ createLabel }</a>
 			}
 		</div>
-		if len(props.Medications) == 0 {
-			<div class="mt-6">
+		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
+			<div data-empty class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:          ids.RecordEmpty(kind.Medication),
 					Title:       emptyTitle,
@@ -49,8 +49,7 @@ templ MedicationList(props MedicationListProps) {
 					ActionLabel: createLabel,
 				})
 			</div>
-		} else {
-			<div class="mt-4 overflow-x-auto">
+			<div data-rows class="mt-4 overflow-x-auto">
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
@@ -68,7 +67,7 @@ templ MedicationList(props MedicationListProps) {
 					</tbody>
 				</table>
 			</div>
-		}
+		</div>
 		@components.Pagination(components.PaginationProps{
 			ID:           ids.RecordPager(kind.Medication),
 			PreviousHref: props.PreviousHref,

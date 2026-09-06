@@ -87,6 +87,8 @@ func (v InsuranceViews) Detail(record recordfamily.Record) recordfamily.Renderer
 	return views.InsuranceDetail(views.InsuranceDetailProps{Insurance: v.view(record)})
 }
 
+func (v InsuranceViews) Title(record recordfamily.Record) string { return v.view(record).Company }
+
 func (v InsuranceViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {
 	policy := v.view(record)
 	fresh := policy.ID == ""

@@ -205,7 +205,7 @@ func TestTheDetailPageIsTitledWithTheRecordsOwnName(t *testing.T) {
 	status, _, body := newBrowser(t).get(detailURL(t, partial.ID))
 
 	require.Equal(t, http.StatusOK, status)
-	assert.Contains(t, body, "<title>"+html.EscapeString(shell.Title(partial.Name))+"</title>")
+	assert.Contains(t, body, shell.TitleElement(partial.Name))
 	assert.Contains(t, body, attribute("id", ids.RecordDetail(kind.Medication, partial.ID)))
 	assert.Contains(t, body, attribute("id", ids.RecordConfirm(kind.Medication, partial.ID)),
 		"the delete confirmation is not on the page, so FR-028 falls back to window.confirm")

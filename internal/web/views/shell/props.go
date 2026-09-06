@@ -6,10 +6,13 @@
 package shell
 
 import (
+	"html"
 	"strconv"
 	"time"
 
 	"github.com/a-h/templ"
+
+	"medikube/internal/web/views/ids"
 )
 
 // SuffixSeparator and ProductName compose contracts/pages.md's title column:
@@ -27,6 +30,13 @@ func Title(page string) string {
 	}
 
 	return page + SuffixSeparator + ProductName
+}
+
+// TitleElement is the whole <title> as the layout renders it and as a detail
+// patch re-renders it: the element carries ids.PageTitle so a Datastar patch
+// can find it. It is one function so the two never drift.
+func TitleElement(page string) string {
+	return `<title id="` + ids.PageTitle + `">` + html.EscapeString(Title(page)) + `</title>`
 }
 
 // NavLink is one entry of the primary navigation.
@@ -50,6 +60,10 @@ type DocumentProps struct {
 	// page is opened by somebody with no session who needs exactly the two
 	// links it holds.
 	SignedIn bool
+
+	// StreamHref opens the record stream for the patient in view; empty when
+	// there is no patient to follow.
+	StreamHref string
 
 	Nav []NavLink
 

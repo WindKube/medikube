@@ -37,6 +37,10 @@ var operatorSurface = map[string]bool{
 	"cmd/medikube":     true,
 	"internal/cli":     true,
 	"internal/logging": true,
+	// scripts holds standalone `go run` build-time tools (e.g. traceability.go)
+	// — never linked into the medikube binary, never touching a request,
+	// service or domain path — so their stderr is operator output too.
+	"scripts": true,
 }
 
 // bannedCalls are the writers that put a line somewhere other than the one

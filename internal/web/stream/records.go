@@ -319,7 +319,7 @@ func (s *streams) patch(
 	switch {
 	case err == nil:
 		// 4. render and patch by the deterministic id the row carries.
-		return s.patchRow(ctx, sse, entry, record)
+		return s.patchRow(ctx, sse, entry, record, event.Created)
 
 	case errors.Is(err, domain.ErrNotFound):
 		return s.removeRow(sse, entry, event)
@@ -338,15 +338,28 @@ func (s *streams) patch(
 	}
 }
 
+// patchRow renders the row and patches it in.
+//
+// An update patches the row element in place by its own id, which is the
+// default outer-patch behaviour. A create has no such element to patch: the
+// row does not exist in any open list yet, so it is prepended into the list's
+// tbody instead, keyed by the same row id it will carry from then on.
 func (s *streams) patchRow(
 	ctx context.Context,
 	sse *datastar.ServerSentEventGenerator,
 	entry records.Entry,
 	record records.Record,
+	created bool,
 ) error {
 	html, err := render(ctx, entry.Views.Row(record))
 	if err != nil {
 		return err
+	}
+
+	if created {
+		return sse.PatchElements(html,
+			datastar.WithSelectorID(ids.RecordRows(entry.Kind)),
+			datastar.WithModePrepend())
 	}
 
 	return sse.PatchElements(html, datastar.WithSelectorID(ids.RecordRow(entry.Kind, record.ID)))

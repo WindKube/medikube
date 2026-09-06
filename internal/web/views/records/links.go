@@ -1,6 +1,10 @@
 package records
 
-import "strings"
+import (
+	"strings"
+
+	"medikube/internal/web"
+)
 
 // LinkedRecordItem is one related record rendered by links.templ: enough to
 // name what it is, what to call it, and where to open it (FR-059). It is
@@ -178,7 +182,7 @@ func MedicationRemoveExpr(href, etag, field string, ids []string, remove string)
 		}
 	}
 
-	return "@patch(" + jsLiteral(href) + ", {headers: {'If-Match': " + jsLiteral(etag) +
+	return "@patch(" + jsLiteral(href) + ", {headers: {'If-Match': " + jsLiteral(web.ETag(etag)) +
 		"}, payload: " + jsObject(jsField{field, jsArray(remaining)}) + "}).then(() => window.location.reload())"
 }
 
@@ -202,7 +206,7 @@ func SymptomMedicationRemoveExpr(href, etag, treatedByField, causedByField strin
 		jsField{causedByField, jsArray(without(causedBy))},
 	)
 
-	return "@patch(" + jsLiteral(href) + ", {headers: {'If-Match': " + jsLiteral(etag) +
+	return "@patch(" + jsLiteral(href) + ", {headers: {'If-Match': " + jsLiteral(web.ETag(etag)) +
 		"}, payload: " + payload + "}).then(() => window.location.reload())"
 }
 
@@ -210,7 +214,7 @@ func SymptomMedicationRemoveExpr(href, etag, treatedByField, causedByField strin
 // payload-carrying join: DELETE and not PATCH, because the link itself is the
 // record being removed rather than a member of somebody else's set.
 func CourseMedicationRemoveExpr(href, etag string) string {
-	return "@delete(" + jsLiteral(href) + ", {headers: {'If-Match': " + jsLiteral(etag) +
+	return "@delete(" + jsLiteral(href) + ", {headers: {'If-Match': " + jsLiteral(web.ETag(etag)) +
 		"}}).then(() => window.location.reload())"
 }
 

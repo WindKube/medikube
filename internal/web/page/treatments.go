@@ -93,6 +93,8 @@ func (v TreatmentViews) Detail(record recordfamily.Record) recordfamily.Renderer
 	return views.TreatmentDetail(views.TreatmentDetailProps{Treatment: v.view(record)})
 }
 
+func (v TreatmentViews) Title(record recordfamily.Record) string { return v.view(record).Name }
+
 func (v TreatmentViews) detailWithReferenceCount(record recordfamily.Record, referenceCount int) recordfamily.Renderer {
 	return views.TreatmentDetail(views.TreatmentDetailProps{Treatment: v.view(record), ReferenceCount: referenceCount})
 }

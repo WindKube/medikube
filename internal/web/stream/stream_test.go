@@ -206,6 +206,33 @@ func TestAChangeIsPatchedByTheRowsOwnID(t *testing.T) {
 	assert.Empty(t, patch.mode(), "outer is the default and is omitted from the wire")
 }
 
+// A create has no row in any open list to patch by id yet — the element the
+// default outer-patch mode is looking for does not exist — so it is prepended
+// into the list's own tbody instead, keyed by the list's id rather than the
+// record's.
+func TestACreatedRecordIsPrependedIntoTheListNotPatchedByRowID(t *testing.T) {
+	t.Parallel()
+
+	rig := newRig(t)
+
+	created, err := rig.services[kind.Medication].Create(t.Context(), actorOf(recordstest.OwnerID),
+		&recordstest.Create{Name: "Amoxicillin"})
+	require.NoError(t, err)
+
+	rig.publish(realtime.Event{
+		Kind: kind.Medication, RecordID: created.ID, PatientID: recordstest.OwnerID,
+		Created: true,
+	})
+
+	require.Equal(t, "datastar-patch-signals", rig.next().Event)
+
+	patch := rig.next()
+	assert.Equal(t, "datastar-patch-elements", patch.Event)
+	assert.Equal(t, "#"+ids.RecordRows(kind.Medication), patch.selector())
+	assert.Equal(t, "prepend", patch.mode())
+	assert.Equal(t, recordstest.RenderedRow, patch.elements())
+}
+
 // A record the subscriber can no longer fetch is a row removal, and the
 // removal names the same id the patch would have.
 func TestARecordThatIsGoneIsRemovedFromTheRowItOccupied(t *testing.T) {

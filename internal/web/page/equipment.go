@@ -87,6 +87,8 @@ func (v EquipmentViews) Detail(record recordfamily.Record) recordfamily.Renderer
 	return views.EquipmentDetail(views.EquipmentDetailProps{Equipment: v.view(record)})
 }
 
+func (v EquipmentViews) Title(record recordfamily.Record) string { return v.view(record).Name }
+
 func (v EquipmentViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {
 	item := v.view(record)
 	fresh := item.ID == ""

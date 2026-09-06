@@ -87,6 +87,8 @@ func (v SymptomViews) Detail(record recordfamily.Record) recordfamily.Renderer {
 	return views.SymptomDetail(views.SymptomDetailProps{Symptom: v.view(record)})
 }
 
+func (v SymptomViews) Title(record recordfamily.Record) string { return v.view(record).Name }
+
 func (v SymptomViews) detailWithMedications(record recordfamily.Record, medications views.MedicationLinksEditorProps) recordfamily.Renderer {
 	return views.SymptomDetail(views.SymptomDetailProps{Symptom: v.view(record), Medications: medications})
 }

@@ -32,8 +32,8 @@ templ FamilyMemberList(props FamilyMemberListProps) {
 				>{ familyMemberCreateLabel }</a>
 			}
 		</div>
-		if len(props.FamilyMembers) == 0 {
-			<div class="mt-6">
+		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
+			<div data-empty class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:          ids.RecordEmpty(kind.FamilyMember),
 					Title:       familyMemberEmptyTitle,
@@ -42,8 +42,7 @@ templ FamilyMemberList(props FamilyMemberListProps) {
 					ActionLabel: familyMemberCreateLabel,
 				})
 			</div>
-		} else {
-			<div class="mt-4 overflow-x-auto">
+			<div data-rows class="mt-4 overflow-x-auto">
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
@@ -59,7 +58,7 @@ templ FamilyMemberList(props FamilyMemberListProps) {
 					</tbody>
 				</table>
 			</div>
-		}
+		</div>
 		@components.Pagination(components.PaginationProps{
 			ID:           ids.RecordPager(kind.FamilyMember),
 			PreviousHref: props.PreviousHref,

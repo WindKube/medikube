@@ -5,6 +5,7 @@ import (
 
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
+	"medikube/internal/web"
 )
 
 const patientChartRegion = "Patient chart"
@@ -122,7 +123,7 @@ templ PatientDetail(props PatientDetailProps) {
 // confirmation's own signal for everyone but the self-record, which carries
 // no delete confirmation to reveal.
 func patientDetailSignals(patient PatientView) string {
-	etag := "_etag: " + strconv.Quote(patient.Version)
+	etag := "_etag: " + strconv.Quote(web.ETag(patient.Version))
 
 	if patient.IsSelfRecord {
 		return "{" + etag + "}"

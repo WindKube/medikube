@@ -34,7 +34,9 @@ templ MedicationForm(props MedicationFormProps) {
 		// re-read from anywhere but this value once the page has rendered —
 		// a later switch of the person in view, in this tab or another,
 		// changes nothing about a form already open (US3-6).
-		<input type="hidden" name="patient" data-bind="patient" value={ props.Medication.PatientID }/>
+		if props.New {
+			<input type="hidden" name="patient" data-bind="patient" value={ props.Medication.PatientID }/>
+		}
 		@textControl(props, FieldName, "text", true)
 		@textControl(props, FieldAlternativeName, "text", false)
 		@selectControl(props, FieldType, props.Medication.TypeOptions(), true)

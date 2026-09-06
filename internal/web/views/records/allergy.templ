@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
+	"medikube/internal/web"
 )
 
 const allergyConfirmSignal = "_confirming_delete"
@@ -56,12 +57,11 @@ templ AllergyList(props AllergyListProps) {
 				>Record an allergy</a>
 			}
 		</div>
-		if len(props.Allergies) == 0 {
-			<div class="mt-6">
+		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
+			<div data-empty class="mt-6">
 				@shared.EmptyState(shared.NothingRecorded(ids.RecordEmpty(kind.Allergy), kind.Allergy.Segment()))
 			</div>
-		} else {
-			<div class="mt-4 overflow-x-auto">
+			<div data-rows class="mt-4 overflow-x-auto">
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
@@ -78,7 +78,7 @@ templ AllergyList(props AllergyListProps) {
 					</tbody>
 				</table>
 			</div>
-		}
+		</div>
 		@pager(ids.RecordPager(kind.Allergy), props.PreviousHref, props.NextHref)
 	</section>
 }
@@ -87,7 +87,7 @@ templ AllergyDetail(props AllergyDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Allergy, props.Allergy.ID) }
 		aria-label="Allergy"
-		data-signals={ "{" + allergyConfirmSignal + ": false, _etag: " + jsLiteral(props.Allergy.Version) + "}" }
+		data-signals={ "{" + allergyConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Allergy.Version)) + "}" }
 		data-status={ props.Allergy.StatusValue }
 		class="flex flex-col"
 	>
@@ -106,6 +106,7 @@ templ AllergyDetail(props AllergyDetailProps) {
 				}
 				<button
 					type="button"
+					id={ ids.RecordDelete(kind.Allergy, props.Allergy.ID) }
 					data-on:click={ "$" + allergyConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300"
 				>Delete</button>
@@ -127,6 +128,7 @@ templ AllergyDetail(props AllergyDetailProps) {
 		}
 		@shared.DeleteConfirm(shared.DeleteConfirmProps{
 			ID:             ids.RecordConfirm(kind.Allergy, props.Allergy.ID),
+			ReturnTo: ids.RecordDelete(kind.Allergy, props.Allergy.ID),
 			Signal:         allergyConfirmSignal,
 			Title:          "Delete this allergy?",
 			Subject:        props.Allergy.Allergen,
@@ -148,7 +150,9 @@ templ AllergyForm(props AllergyFormProps) {
 		if props.Notice != "" {
 			<p role="alert" class="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{ props.Notice }</p>
 		}
-		<input type="hidden" name="patient" data-bind="patient" value={ props.Allergy.PatientID }/>
+		if props.New {
+			<input type="hidden" name="patient" data-bind="patient" value={ props.Allergy.PatientID }/>
+		}
 		@TextControl(ControlProps{FormID: props.FormID, Field: FieldAllergen, Label: "Allergen", Value: props.Allergy.Value(FieldAllergen), Type: "text", Required: true, Errors: props.Errors})
 		@TextareaControl(ControlProps{FormID: props.FormID, Field: FieldReaction, Label: "Reaction", Value: props.Allergy.Value(FieldReaction), Errors: props.Errors})
 		@SelectControl(ControlProps{FormID: props.FormID, Field: FieldSeverity, Label: "Severity", Value: props.Allergy.Value(FieldSeverity), Required: true, Errors: props.Errors}, props.Allergy.SeverityOptions())

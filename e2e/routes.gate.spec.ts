@@ -9,9 +9,16 @@
 // e2e/httproute's own boot-time panic already refused to serve (FR-067), and
 // a page whose credential or title this file cannot work out fails loudly,
 // naming the op id, rather than being quietly skipped (T295 is what a page
-// with no case at all looks like: it never reaches this file, and
-// gate_test.go on the Go side is what keeps `routes --json` from silently
-// stopping to list it).
+// with no case at all looks like: it never reaches this file). The Go side of
+// that guarantee is internal/httproute/registry_test.go's
+// TestRegisteringAPageWithoutALandmarkOrASmokeURLPanics — a page route with
+// no smoke case cannot boot at all — and
+// internal/httproute/statusview_gate_test.go's
+// TestEveryStatusViewHasASmokeVariantOnARegisteredPage, which fails a
+// records.StatusViews catalogue entry that names no SmokeVariants entry on
+// any registered page. Neither can be reproduced here: there is no browser
+// yet to run one against when the binary has already refused to build the
+// inventory.
 //
 // smoke.spec.ts is unchanged and keeps the page-specific assertions — what
 // the record list contains, what the settings danger zone states, and so on.

@@ -141,6 +141,8 @@ func (v MedicationViews) Detail(record recordfamily.Record) recordfamily.Rendere
 	return views.MedicationDetail(views.MedicationDetailProps{Medication: v.view(record)})
 }
 
+func (v MedicationViews) Title(record recordfamily.Record) string { return v.view(record).Name }
+
 // Form is the create form and the edit form, re-rendered from the submitted
 // values plus the field errors and never cleared (FR-027).
 func (v MedicationViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {

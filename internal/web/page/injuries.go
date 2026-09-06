@@ -96,6 +96,8 @@ func (v InjuryViews) Detail(record recordfamily.Record) recordfamily.Renderer {
 	return views.InjuryDetail(views.InjuryDetailProps{Injury: v.view(record)})
 }
 
+func (v InjuryViews) Title(record recordfamily.Record) string { return v.view(record).Name }
+
 func (v InjuryViews) detailWithMedications(record recordfamily.Record, medications views.MedicationLinksEditorProps) recordfamily.Renderer {
 	return views.InjuryDetail(views.InjuryDetailProps{Injury: v.view(record), Medications: medications})
 }

@@ -4,6 +4,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
+	"medikube/internal/web"
 )
 
 const conditionConfirmSignal = "_confirming_delete"
@@ -45,12 +46,11 @@ templ ConditionList(props ConditionListProps) {
 				>Record a condition</a>
 			}
 		</div>
-		if len(props.Conditions) == 0 {
-			<div class="mt-6">
+		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
+			<div data-empty class="mt-6">
 				@shared.EmptyState(shared.NothingRecorded(ids.RecordEmpty(kind.Condition), kind.Condition.Segment()))
 			</div>
-		} else {
-			<div class="mt-4 overflow-x-auto">
+			<div data-rows class="mt-4 overflow-x-auto">
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
@@ -67,7 +67,7 @@ templ ConditionList(props ConditionListProps) {
 					</tbody>
 				</table>
 			</div>
-		}
+		</div>
 		@pager(ids.RecordPager(kind.Condition), props.PreviousHref, props.NextHref)
 	</section>
 }
@@ -76,7 +76,7 @@ templ ConditionDetail(props ConditionDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Condition, props.Condition.ID) }
 		aria-label="Condition"
-		data-signals={ "{" + conditionConfirmSignal + ": false, _etag: " + jsLiteral(props.Condition.Version) + "}" }
+		data-signals={ "{" + conditionConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Condition.Version)) + "}" }
 		data-status={ props.Condition.StatusValue }
 		class="flex flex-col"
 	>
@@ -95,6 +95,7 @@ templ ConditionDetail(props ConditionDetailProps) {
 				}
 				<button
 					type="button"
+					id={ ids.RecordDelete(kind.Condition, props.Condition.ID) }
 					data-on:click={ "$" + conditionConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300"
 				>Delete</button>
@@ -111,6 +112,7 @@ templ ConditionDetail(props ConditionDetailProps) {
 		}
 		@shared.DeleteConfirm(shared.DeleteConfirmProps{
 			ID:             ids.RecordConfirm(kind.Condition, props.Condition.ID),
+			ReturnTo: ids.RecordDelete(kind.Condition, props.Condition.ID),
 			Signal:         conditionConfirmSignal,
 			Title:          "Delete this condition?",
 			Subject:        props.Condition.Diagnosis,
@@ -132,7 +134,9 @@ templ ConditionForm(props ConditionFormProps) {
 		if props.Notice != "" {
 			<p role="alert" class="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{ props.Notice }</p>
 		}
-		<input type="hidden" name="patient" data-bind="patient" value={ props.Condition.PatientID }/>
+		if props.New {
+			<input type="hidden" name="patient" data-bind="patient" value={ props.Condition.PatientID }/>
+		}
 		@TextControl(ControlProps{FormID: props.FormID, Field: FieldDiagnosis, Label: "Diagnosis", Value: props.Condition.Value(FieldDiagnosis), Type: "text", Required: true, Errors: props.Errors})
 		@SelectControl(ControlProps{FormID: props.FormID, Field: FieldStatus, Label: "State", Value: props.Condition.Value(FieldStatus), Required: true, Errors: props.Errors}, props.Condition.StatusOptions())
 		@SelectControl(ControlProps{FormID: props.FormID, Field: FieldSeverity, Label: "Severity", Value: props.Condition.Value(FieldSeverity), Errors: props.Errors}, props.Condition.SeverityOptions())

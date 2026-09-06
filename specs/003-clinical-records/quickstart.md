@@ -235,11 +235,45 @@ Four gates fail the build independently:
 Occasional / nightly:
 
 ```bash
-go test -tags=scale ./internal/store/...       # 50,000 records; asserts SC-002 and SC-003
+task test:scale                                # 50,000 records; asserts SC-002 and SC-003
 go test ./internal/testsupport/phileak/...     # FR-094 / SC-012 — drives every operation,
                                                # then asserts no sentinel reaches logs,
                                                # metrics, spans or Sentry
 ```
+
+### T214 — measured numbers, `task test:scale` (2026-09-06, arm64 dev container)
+
+Every list page, status view and the timeline share the same keyset-paginated
+filter builder (`internal/store/filter.go`); `internal/store/timeline` times
+that builder directly at 50,000 rows on one patient, which is the number a
+list page or a status view pays too — narrowing to one kind or one status
+only ever removes rows from the same query:
+
+| Operation | Budget | Measured |
+|---|---|---|
+| Paging 50,000 timeline rows (`internal/store/timeline`, SC-011) | < 2s | 70.8ms |
+| Counting 50,000 timeline rows | < 2s | 3.1ms |
+| Grouped search first page, 50,000 indexed rows, `medication` (SC-003) | < 3s | 353µs |
+| ...`allergy` | < 3s | 231µs |
+| ...`condition` | < 3s | 221µs |
+| ...`encounter` | < 3s | 208µs |
+| Renaming one tag carried by 500 records (SC-007) | < 2s | 168µs, `O(1)` — the row itself is never rewritten |
+
+All comfortably inside budget; the dominant cost in every scale test is
+building the 50,000-row fixture, not the query under test.
+
+Correctness at scale, asserted by the same suite: `TestSearchKindAt50000Rows`
+requires every one of the four seeded kinds to come back non-empty (no kind
+starved by the others); `TestPagingAndCountingFiftyThousandRowsStaysUnderTwoSeconds`
+requires `Count` to equal exactly 50,000; `TestRenamingATagCarriedBy500RecordsTouchesOnlyTheTagRow`
+requires all 500 carriers to show the new name, 0 to lose it, and every
+carrier's row version to be untouched. Per-symptom episode counts and
+per-kind chart counts are proved correct by `internal/store/symptom`'s
+`TestAggregateCountsEpisodesAndTracksTheMostRecentOccurrence` and phase 002's
+`internal/store/patient`'s chart-summary tests; neither currently has a
+50,000-row variant, so their correctness is proven at integration scale, not
+at SC-002/SC-003's scale — the derivation is the same SQL aggregate either
+way, but a dedicated scale case for them is future work, not present here.
 
 ---
 

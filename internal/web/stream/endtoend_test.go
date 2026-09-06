@@ -54,12 +54,13 @@ func TestAWriteReachesASecondOpenViewWithinFiveSeconds(t *testing.T) {
 
 	started := time.Now()
 
-	created, _ := medikube.create(t, amara, testsupport.AccountAPatientSelfID, name)
+	_, _ = medikube.create(t, amara, testsupport.AccountAPatientSelfID, name)
 
 	seen := watching.nextPatch(sc007)
 	elapsed := time.Since(started)
 
-	assert.Equal(t, "#"+ids.RecordRow(kind.Medication, created), seen.selector())
+	assert.Equal(t, "#"+ids.RecordRows(kind.Medication), seen.selector())
+	assert.Equal(t, "prepend", seen.mode(), "a new row is prepended into the list, not patched in place")
 	assert.Containsf(t, seen.elements(), name,
 		"the frame reached the second view but carries no rendered row: %q", seen.elements())
 
@@ -67,7 +68,7 @@ func TestAWriteReachesASecondOpenViewWithinFiveSeconds(t *testing.T) {
 	// subscribers, so a test whose subscriber was never registered looks
 	// identical to a passing one.
 	acted := acting.nextPatch(sc007)
-	assert.Equal(t, "#"+ids.RecordRow(kind.Medication, created), acted.selector(),
+	assert.Equal(t, "#"+ids.RecordRows(kind.Medication), acted.selector(),
 		"the view that made the change was not told about it, so the assertion above may be measuring one lucky subscriber")
 
 	t.Logf("SC-007: the write reached the second open view in %s (the bound is %s)", elapsed, sc007)
@@ -125,8 +126,8 @@ func TestAChangeCommittedWhileTheStreamIsOpeningIsNotLost(t *testing.T) {
 	wanted := make([]string, 0, writes)
 
 	for range writes {
-		id, _ := medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
-		wanted = append(wanted, "#"+ids.RecordRow(kind.Medication, id))
+		_, _ = medikube.create(t, amara, testsupport.AccountAPatientSelfID, "Amoxicillin")
+		wanted = append(wanted, "#"+ids.RecordRows(kind.Medication))
 	}
 
 	arrived := make([]string, 0, len(wanted))
