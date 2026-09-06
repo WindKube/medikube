@@ -13,6 +13,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
 	"medikube/internal/testsupport"
+	"medikube/internal/web/views/ids"
 )
 
 // T030 (US1-2, US1-3, SC-001): every signed-in page route's smoke URL (and
@@ -141,7 +142,7 @@ func TestEverySignedInPageStillRendersInEnglish(t *testing.T) {
 			require.Equal(t, 200, status, "%s: %s", opID, body)
 
 			assert.Contains(t, body, `lang="en"`, "%s did not render in English", opID)
-			assert.Contains(t, body, "<title>", "%s rendered no <title>", opID)
+			assert.Contains(t, body, "<title id=\""+ids.PageTitle+"\">", "%s rendered no <title>", opID)
 		})
 	}
 }
