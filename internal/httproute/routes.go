@@ -627,7 +627,7 @@ func pageRoutes() []Route {
 			OpID: "insuranceDetailPage", Method: http.MethodGet, Path: insuranceDetail,
 			Kind: KindPage, Auth: AuthUser,
 			Summary:  "One policy, every value it holds and the time it last changed.",
-			Landmark: `article[name="Insurance"]`, SmokeURL: insuranceList + "/" + seed.InsurancePrimaryID,
+			Landmark: kind.Insurance.DetailLandmark(), SmokeURL: insuranceList + "/" + seed.InsurancePrimaryID,
 		},
 		{
 			OpID: "equipmentListPage", Method: http.MethodGet, Path: equipmentList,
