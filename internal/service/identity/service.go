@@ -87,6 +87,7 @@ type Service struct {
 	clock         Clock
 
 	registrationOpen bool
+	supportedLocale  func(string) bool
 }
 
 // Config is what the service is wired with. A struct rather than six positional
@@ -107,6 +108,19 @@ type Config struct {
 	// value and not a port because it is configuration read once at boot, and a
 	// port would be a second place an operator could change it from.
 	RegistrationOpen bool
+
+	// SupportedLocale reports whether a locale UpdateProfile is asked to store
+	// is one this instance ships a catalogue for (FR-001). It is wired with
+	// i18n.IsSupported rather than imported directly: internal/service never
+	// imports internal/i18n, so the membership question is asked through an
+	// interface this package declares itself, the same reasoning as every
+	// other port here.
+	//
+	// Nil accepts any locale identity.User.Validate's own format check
+	// already lets through — a caller wiring this service for something that
+	// never touches a locale should not have to know about a catalogue it
+	// never asked about.
+	SupportedLocale func(string) bool
 }
 
 // New refuses an incomplete service rather than returning one.
@@ -148,6 +162,7 @@ func New(cfg Config) (*Service, error) {
 		auditor:          cfg.Auditor,
 		clock:            cfg.Clock,
 		registrationOpen: cfg.RegistrationOpen,
+		supportedLocale:  cfg.SupportedLocale,
 	}, nil
 }
 
@@ -222,7 +237,19 @@ func (s *Service) UpdateProfile(ctx context.Context, actor access.Actor, profile
 	}
 
 	changed := profile.applyTo(current)
-	if invalid := changed.Validate(); invalid != nil {
+
+	formatErr := changed.Validate()
+
+	// A locale the format check already rejected ("english" is not a
+	// two-letter code) is not asked about membership too — one field, one
+	// refusal, or a malformed locale would be reported twice under the same
+	// field (T197's reasoning, applied here).
+	localeErr := s.validateLocale(changed.Locale)
+	if fieldInvalid(formatErr, "locale") {
+		localeErr = nil
+	}
+
+	if invalid := merge(formatErr, localeErr); invalid != nil {
 		return identity.User{}, invalid
 	}
 
@@ -314,6 +341,38 @@ func (s *Service) DeleteAccount(ctx context.Context, actor access.Actor, passwor
 	}
 
 	return s.repository.Delete(ctx, user.ID)
+}
+
+// validateLocale reports whether locale is one this instance ships a
+// catalogue for. It is a separate check from identity.User.Validate's own
+// format rule: "xx" is a well-formed two-letter code and passes that check,
+// but is not a language anything renders in.
+func (s *Service) validateLocale(locale string) error {
+	if s.supportedLocale == nil || s.supportedLocale(locale) {
+		return nil
+	}
+
+	var invalid domain.ValidationError
+	invalid.Add("locale", domain.CodeInvalidValue, "that is not a language this instance offers")
+
+	return invalid.OrNil()
+}
+
+// fieldInvalid reports whether err already carries a refusal for field, so a
+// second check on the same field does not report it twice.
+func fieldInvalid(err error, field string) bool {
+	var invalid *domain.ValidationError
+	if !errors.As(err, &invalid) {
+		return false
+	}
+
+	for _, f := range invalid.Fields {
+		if f.Field == field {
+			return true
+		}
+	}
+
+	return false
 }
 
 // account is the checkpoint every account operation passes, and the one place

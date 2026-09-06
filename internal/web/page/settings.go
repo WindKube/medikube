@@ -1,10 +1,13 @@
 package page
 
 import (
+	"strings"
+
 	"github.com/pocketbase/pocketbase/core"
 
 	"medikube/internal/domain/access"
 	domainidentity "medikube/internal/domain/identity"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/settings"
 )
@@ -42,24 +45,25 @@ func (p *accountPages) settings(e *core.RequestEvent, actor access.Actor) error 
 		SignOutOn: p.links.post(p.links.logout),
 		Profile: settings.ProfileProps{
 			FormID:         ids.ProfileForm,
-			OnSubmit:       p.links.patch(p.links.me),
+			OnSubmit:       p.links.patch(p.links.me, settings.FieldName, settings.FieldUnitSystem, settings.FieldLocale, settings.FieldDateFormat, settings.FieldTheme),
 			Email:          user.Email,
 			EmailConfirmed: user.EmailConfirmed,
 			ResendOn:       p.links.post(p.links.verify),
 			Name:           user.Name,
 			UnitSystems:    unitSystemOptions(user.UnitSystem),
 			Locale:         user.Locale,
+			Locales:        localeOptions(user.Locale),
 			DateFormats:    dateFormatOptions(user.DateFormat),
 			Themes:         themeOptions(user.Theme),
 		},
 		Password: settings.PasswordProps{
 			FormID:   ids.PasswordForm,
-			OnSubmit: p.links.put(p.links.password),
+			OnSubmit: p.links.put(p.links.password, settings.FieldCurrentPassword, settings.FieldNewPassword),
 			Rules:    domainidentity.PublishedPasswordRules(),
 		},
 		Danger: settings.DangerZoneProps{
 			FormID:   ids.DeleteAccountForm,
-			OnSubmit: p.links.remove(p.links.me),
+			OnSubmit: p.links.remove(p.links.me, settings.FieldPassword, settings.FieldConfirmation),
 			Phrase:   domainidentity.DeleteConfirmationPhrase,
 			Holdings: holdings(counts),
 		},
@@ -89,6 +93,32 @@ func dateFormatOptions(selected domainidentity.DateFormat) []settings.Option {
 	}
 
 	return optionsOf(domainidentity.DateFormats(), selected, labels)
+}
+
+// localeOptions is i18n.Supported() (D-07: derived from the embedded
+// catalogues, never a Go slice this layer edits), labelled by each language's
+// own name for itself.
+//
+// selected is matched by its base language, region stripped, the same
+// comparison Resolve and IsSupported make: a stored "en-GB" selects the "en"
+// option rather than matching nothing.
+func localeOptions(selected string) []settings.Option {
+	base, _, _ := strings.Cut(selected, "-")
+	base = strings.ToLower(base)
+
+	langs := i18n.Supported()
+	rendered := make([]settings.Option, 0, len(langs))
+
+	for _, lang := range langs {
+		tag := lang.Tag.String()
+		rendered = append(rendered, settings.Option{
+			Value:    tag,
+			Label:    lang.Name,
+			Selected: tag == base,
+		})
+	}
+
+	return rendered
 }
 
 func themeOptions(selected domainidentity.Theme) []settings.Option {

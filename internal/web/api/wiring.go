@@ -8,6 +8,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	"medikube/internal/platform/pb"
 	serviceaudit "medikube/internal/service/audit"
 	serviceidentity "medikube/internal/service/identity"
@@ -95,6 +96,7 @@ func NewAccounts(app core.App, cfg AccountsConfig) (*Accounts, error) {
 		Auditor:          auditor,
 		Clock:            serviceidentity.SystemClock{},
 		RegistrationOpen: cfg.RegistrationOpen,
+		SupportedLocale:  i18n.IsSupported,
 	})
 	if err != nil {
 		return nil, err

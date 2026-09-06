@@ -9,7 +9,9 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"medikube/internal/domain/access"
+	domainidentity "medikube/internal/domain/identity"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	"medikube/internal/records"
 	"medikube/internal/service/patient"
 	"medikube/internal/web"
@@ -27,6 +29,15 @@ const (
 // is an internal failure: the deletion confirmation states how many records
 // will be destroyed, and a confirmation that guessed would be worse than none.
 var ErrNoCount = errors.New("api: the record count was asked for and not answered")
+
+// SettingsForms is the settings page's Datastar half: a submit against
+// updateMe answers with the profile form re-rendered through the same
+// components the /settings page itself builds, so a locale change is shown
+// in the language it just chose on the same response (US1-1) — the same
+// reasoning TagForms and FacilityForms document.
+type SettingsForms interface {
+	Updated(ctx context.Context, actor access.Actor, user domainidentity.User) (web.Component, error)
+}
 
 type accountHandlers struct {
 	deps Deps
@@ -158,6 +169,21 @@ func (h *accountHandlers) update(e *core.RequestEvent, actor access.Actor) error
 	user, err := h.deps.Accounts.UpdateProfile(e.Request.Context(), actor, patch.Profile())
 	if err != nil {
 		return refused(err)
+	}
+
+	if wantsFormPatch(e) && h.deps.Forms != nil {
+		// The request's Localizer was resolved from the locale the account
+		// had when the request began. The form must answer in the one it just
+		// chose, so the context is re-resolved before it renders.
+		ctx := e.Request.Context()
+		e.Request = e.Request.WithContext(i18n.With(ctx, i18n.Resolve(user.Locale, e.Request.Header.Get("Accept-Language"))))
+
+		component, formErr := h.deps.Forms.Updated(e.Request.Context(), actor, user)
+		if formErr != nil {
+			return formErr
+		}
+
+		return web.Patch(e, component, web.ByElementID())
 	}
 
 	counts, err := h.deps.Counts(e.Request.Context(), actor)

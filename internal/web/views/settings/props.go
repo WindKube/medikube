@@ -119,6 +119,7 @@ type ProfileProps struct {
 
 	UnitSystems []Option
 	Locale      string
+	Locales     []Option
 	DateFormats []Option
 	Themes      []Option
 

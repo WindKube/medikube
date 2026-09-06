@@ -40,6 +40,7 @@ func props(confirmed bool, errs *domain.ValidationError) settings.SettingsProps 
 			Name:           "Amara Okonkwo",
 			UnitSystems:    options(domainidentity.UnitSystems(), domainidentity.DefaultUnitSystem),
 			Locale:         domainidentity.DefaultLocale,
+			Locales:        localeOptionsFixture(domainidentity.DefaultLocale),
 			DateFormats:    options(domainidentity.DateFormats(), domainidentity.DefaultDateFormat),
 			Themes:         options(domainidentity.Themes(), domainidentity.DefaultTheme),
 			Errors:         refusals,
@@ -57,6 +58,16 @@ func props(confirmed bool, errs *domain.ValidationError) settings.SettingsProps 
 			Holdings: []settings.Holding{{Label: holdingLabel, Count: 12}},
 			Errors:   refusals,
 		},
+	}
+}
+
+// localeOptionsFixture stands in for page.localeOptions, which this package
+// cannot import (views does not import page). Two shipped languages, English
+// and Polish, mirrors internal/i18n/locales' own set.
+func localeOptionsFixture(selected string) []settings.Option {
+	return []settings.Option{
+		{Value: "en", Label: "English", Selected: selected == "en"},
+		{Value: "pl", Label: "Polski", Selected: selected == "pl"},
 	}
 }
 
@@ -119,6 +130,27 @@ func TestTheProfileFormOffersTheFiveThingsFRelevenNamesAndNothingElse(t *testing
 		settings.FieldName, settings.FieldUnitSystem, settings.FieldLocale,
 		settings.FieldDateFormat, settings.FieldTheme,
 	}, named)
+}
+
+// T018: the language control is a <select> over the shipped languages, each
+// labelled by its own name, and it carries the catalogue's aria-label rather
+// than relying on the visible <label> alone.
+func TestTheLanguageControlIsASelectOverTheShippedLanguages(t *testing.T) {
+	t.Parallel()
+
+	p := props(true, nil)
+	tree := render(t, p)
+
+	control := tree.One(t, viewstest.WithID(ids.Field(p.Profile.FormID, settings.FieldLocale)))
+	assert.Equal(t, "select", control.Data)
+	assert.Equal(t, "Language", viewstest.Attr(control, "aria-label"))
+
+	labels := make([]string, 0, 2)
+	for _, option := range viewstest.Find(control, viewstest.Tag("option")) {
+		labels = append(labels, viewstest.Text(option))
+	}
+
+	assert.ElementsMatch(t, []string{"English", "Polski"}, labels)
 }
 
 // The address is shown and is not a control (contracts/account.md): FR-011 does

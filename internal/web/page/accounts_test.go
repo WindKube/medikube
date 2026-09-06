@@ -216,6 +216,19 @@ func TestTheSettingsPageRendersTheSignedInAccountAndWhatItHolds(t *testing.T) {
 	assert.NotContains(t, body, testsupport.AccountBEmail)
 }
 
+// Each of the three forms sends its own fields and nothing else: the default
+// body would be every signal on the page, and MePatch refuses a password.
+func TestEachSettingsFormSubmitsOnlyItsOwnFields(t *testing.T) {
+	t.Parallel()
+
+	path := accountRoutes(t)[page.OpSettingsPage].SmokeURL
+	_, _, body := newBrowser(t).get(path)
+
+	assert.Contains(t, body, html.EscapeString("{payload: {name: $name, unit_system: $unit_system, locale: $locale, date_format: $date_format, theme: $theme}}"))
+	assert.Contains(t, body, html.EscapeString("{payload: {current_password: $current_password, new_password: $new_password}}"))
+	assert.Contains(t, body, html.EscapeString("{payload: {password: $password, confirmation: $confirmation}}"))
+}
+
 // The same page for the account that holds nothing: the confirmation still
 // states the consequence, with a zero rather than an absent line, because a
 // danger zone that fell silent for an empty account would be silent for the one
