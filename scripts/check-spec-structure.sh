@@ -135,6 +135,20 @@ done < <(
 )
 [ "$link_failures" -eq 0 ] && ok "every relative markdown link resolves on disk"
 
+# --- 003's traceability.md is current ------------------------------------
+# scripts/traceability.go (T217a) regenerates the file in place; its own exit
+# code also reports whether every FR/SC is actually mapped, which is a
+# separate, harder-won property this script does not gate on — a staleness
+# check must stay green while a genuinely unmapped requirement is being
+# tracked down, or nobody could commit anything else in the meantime.
+trace_doc=specs/003-clinical-records/traceability.md
+go run ./scripts/traceability.go >/dev/null 2>&1 || true
+if git diff --quiet -- "$trace_doc"; then
+	ok "$trace_doc is current"
+else
+	fail "$trace_doc is stale: run \`task traceability\` and commit the result"
+fi
+
 if [ "$failures" -ne 0 ]; then
 	printf '\n%d structural assertion(s) failed\n' "$failures" >&2
 	exit 1

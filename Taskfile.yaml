@@ -365,6 +365,13 @@ tasks:
     cmds:
       - bash scripts/check-spec-structure.sh
 
+  traceability:
+    desc: >-
+      Regenerate specs/003-clinical-records/traceability.md (T217a) — fails if any FR has
+      no citing task or any SC is neither cited nor `[outcome metric]` (M7)
+    cmds:
+      - go run ./scripts/traceability.go
+
   test:naming:
     desc: The old project name has not come back
     cmds:
