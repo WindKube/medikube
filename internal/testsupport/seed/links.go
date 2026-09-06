@@ -22,6 +22,12 @@ const (
 	SymptomCausedByMedicationID  = AllergyLinkedMedicationID
 	CourseMedicationTreatmentID  = "mktrtamara00002"
 	CourseMedicationMedicationID = AllergyLinkedMedicationID
+	// CourseMedicationLinkID is the join row's own id: findOrNew needs one to
+	// address the same row on a second run, and treatment_medications has no
+	// other unique-by-convention key this package can build a store.Query with
+	// (internal/store's own filter DSL boundary keeps that query type-safe
+	// building confined to internal/store, research D-26).
+	CourseMedicationLinkID = "mktrtmedamara01"
 )
 
 // linksFieldMedications and the symptom role fields are built from the
@@ -70,8 +76,8 @@ func applyAllergyMedicationLink(app core.App) error {
 		return fmt.Errorf("finding %s: %w", name, err)
 	}
 
-	if err := requireColumns(collection, linksFieldMedications); err != nil {
-		return err
+	if columnsErr := requireColumns(collection, linksFieldMedications); columnsErr != nil {
+		return columnsErr
 	}
 
 	record, err := app.FindRecordById(collection, CriticalAllergyID)
@@ -81,8 +87,8 @@ func applyAllergyMedicationLink(app core.App) error {
 
 	record.Set(linksFieldMedications, []string{AllergyLinkedMedicationID})
 
-	if err := app.Save(record); err != nil {
-		return fmt.Errorf("linking %s.%s on %s: %w", name, linksFieldMedications, CriticalAllergyID, err)
+	if saveErr := app.Save(record); saveErr != nil {
+		return fmt.Errorf("linking %s.%s on %s: %w", name, linksFieldMedications, CriticalAllergyID, saveErr)
 	}
 
 	return nil
@@ -96,8 +102,8 @@ func applyConditionMedicationLink(app core.App) error {
 		return fmt.Errorf("finding %s: %w", name, err)
 	}
 
-	if err := requireColumns(collection, linksFieldMedications); err != nil {
-		return err
+	if columnsErr := requireColumns(collection, linksFieldMedications); columnsErr != nil {
+		return columnsErr
 	}
 
 	record, err := app.FindRecordById(collection, ResolvedConditionID)
@@ -107,8 +113,8 @@ func applyConditionMedicationLink(app core.App) error {
 
 	record.Set(linksFieldMedications, []string{ConditionLinkedMedicationID})
 
-	if err := app.Save(record); err != nil {
-		return fmt.Errorf("linking %s.%s on %s: %w", name, linksFieldMedications, ResolvedConditionID, err)
+	if saveErr := app.Save(record); saveErr != nil {
+		return fmt.Errorf("linking %s.%s on %s: %w", name, linksFieldMedications, ResolvedConditionID, saveErr)
 	}
 
 	return nil
@@ -122,8 +128,10 @@ func applySymptomMedicationLinks(app core.App) error {
 		return fmt.Errorf("finding %s: %w", name, err)
 	}
 
-	if err := requireColumns(collection, symptomFieldTreatedByMedications, symptomFieldCausedByMedications); err != nil {
-		return err
+	if columnsErr := requireColumns(collection,
+		symptomFieldTreatedByMedications, symptomFieldCausedByMedications,
+	); columnsErr != nil {
+		return columnsErr
 	}
 
 	treated, err := app.FindRecordById(collection, SymptomHeadacheOne)
@@ -133,8 +141,8 @@ func applySymptomMedicationLinks(app core.App) error {
 
 	treated.Set(symptomFieldTreatedByMedications, []string{SymptomTreatedByMedicationID})
 
-	if err := app.Save(treated); err != nil {
-		return fmt.Errorf("linking %s.%s on %s: %w", name, symptomFieldTreatedByMedications, SymptomHeadacheOne, err)
+	if saveErr := app.Save(treated); saveErr != nil {
+		return fmt.Errorf("linking %s.%s on %s: %w", name, symptomFieldTreatedByMedications, SymptomHeadacheOne, saveErr)
 	}
 
 	caused, err := app.FindRecordById(collection, SymptomHeadacheTwo)
@@ -144,8 +152,8 @@ func applySymptomMedicationLinks(app core.App) error {
 
 	caused.Set(symptomFieldCausedByMedications, []string{SymptomCausedByMedicationID})
 
-	if err := app.Save(caused); err != nil {
-		return fmt.Errorf("linking %s.%s on %s: %w", name, symptomFieldCausedByMedications, SymptomHeadacheTwo, err)
+	if saveErr := app.Save(caused); saveErr != nil {
+		return fmt.Errorf("linking %s.%s on %s: %w", name, symptomFieldCausedByMedications, SymptomHeadacheTwo, saveErr)
 	}
 
 	return nil
@@ -159,14 +167,15 @@ func applyCourseMedicationLink(app core.App) error {
 		return fmt.Errorf("finding %s: %w", name, err)
 	}
 
-	if err := requireColumns(collection,
+	if columnsErr := requireColumns(collection,
 		courseMedicationFieldTreatment, courseMedicationFieldMedication,
 		courseMedicationFieldDosage, courseMedicationFieldFrequency, courseMedicationFieldTiming,
-	); err != nil {
-		return err
+	); columnsErr != nil {
+		return columnsErr
 	}
 
 	link := clinical.CourseMedication{
+		ID:           CourseMedicationLinkID,
 		TreatmentID:  CourseMedicationTreatmentID,
 		MedicationID: CourseMedicationMedicationID,
 		Dosage:       "10 mg",
@@ -174,18 +183,13 @@ func applyCourseMedicationLink(app core.App) error {
 		Timing:       "morning",
 	}
 
-	if err := link.Validate(); err != nil {
-		return fmt.Errorf("seeding the treatment-medication link: %w", err)
+	if validateErr := link.Validate(); validateErr != nil {
+		return fmt.Errorf("seeding the treatment-medication link: %w", validateErr)
 	}
 
-	built, err := app.FindFirstRecordByFilter(collection,
-		courseMedicationFieldTreatment+" = {:treatment} && "+courseMedicationFieldMedication+" = {:medication}",
-		map[string]any{"treatment": link.TreatmentID, "medication": link.MedicationID},
-	)
-
-	record := built
+	record, err := findOrNew(app, collection, link.ID)
 	if err != nil {
-		record = core.NewRecord(collection)
+		return err
 	}
 
 	record.Set(courseMedicationFieldTreatment, link.TreatmentID)
@@ -194,8 +198,8 @@ func applyCourseMedicationLink(app core.App) error {
 	record.Set(courseMedicationFieldFrequency, link.Frequency)
 	record.Set(courseMedicationFieldTiming, link.Timing)
 
-	if err := app.Save(record); err != nil {
-		return fmt.Errorf("seeding the treatment-medication link: %w", err)
+	if saveErr := app.Save(record); saveErr != nil {
+		return fmt.Errorf("seeding the treatment-medication link: %w", saveErr)
 	}
 
 	return nil
