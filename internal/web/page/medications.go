@@ -17,6 +17,7 @@ import (
 	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
 	recordfamily "medikube/internal/records"
+	"medikube/internal/store/link"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
 	"medikube/internal/web/views/ids"
@@ -40,7 +41,7 @@ const medicationListTitle = "Medications"
 // A page that reached the router without a Landmark or a SmokeURL cannot be
 // registered at all — httproute.Handle panics on either — so wiring these two
 // is also what takes them off the 501 stub list.
-func Handlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handlers, error) {
+func Handlers(resolve api.Resolve, patients api.PatientResolve, references api.ReferencesResolve) (httproute.Handlers, error) {
 	links, err := newMedicationLinks()
 	if err != nil {
 		return nil, err
@@ -54,7 +55,7 @@ func Handlers(resolve api.Resolve, patients api.PatientResolve) (httproute.Handl
 		return nil, api.ErrNoPatients
 	}
 
-	pages := &medicationPages{resolve: resolve, patients: patients, links: links, views: MedicationViews{links: links}}
+	pages := &medicationPages{resolve: resolve, patients: patients, references: references, links: links, views: MedicationViews{links: links}}
 
 	table := httproute.Handlers{
 		OpMedicationListPage:   web.WithActor(pages.list),
@@ -217,10 +218,11 @@ func detailEntity(record recordfamily.Record, detail api.Medication) clinical.Me
 }
 
 type medicationPages struct {
-	resolve  api.Resolve
-	patients api.PatientResolve
-	links    medicationLinks
-	views    MedicationViews
+	resolve    api.Resolve
+	patients   api.PatientResolve
+	references api.ReferencesResolve
+	links      medicationLinks
+	views      MedicationViews
 }
 
 // list renders P4. The rows come through the same generic handler the API
@@ -370,11 +372,158 @@ func (p *medicationPages) detail(e *core.RequestEvent, actor access.Actor) error
 		return err
 	}
 
+	links, total, err := p.backrelatedLinks(e.Request.Context(), actor, handler, found.ID)
+	if err != nil {
+		return err
+	}
+
 	return p.render(e, actor, p.views.view(found).Name, sequence{
 		context,
-		entry.Views.Detail(found),
+		views.MedicationDetail(views.MedicationDetailProps{Medication: p.views.view(found), Links: links, ReferenceCount: total}),
 		entry.Views.Form(found, nil, ""),
 	})
+}
+
+// backrelatedLinks is FR-055's other end (medication's own page) plus FR-006's
+// reference count: every allergy, condition, injury and symptom naming this
+// medication, and every treatment it is attached to via treatment_medications,
+// each rendered as an openable, removable link. A reference this actor can no
+// longer reach (deleted, or not this actor's) is dropped rather than shown
+// broken — the same rule linkedCondition follows.
+func (p *medicationPages) backrelatedLinks(
+	ctx context.Context, actor access.Actor, handler *recordfamily.Handler, medicationID string,
+) (views.RemovableLinksProps, int, error) {
+	if p.references == nil {
+		return views.RemovableLinksProps{}, 0, nil
+	}
+
+	backrel, err := p.references()
+	if err != nil {
+		return views.RemovableLinksProps{}, 0, err
+	}
+
+	refs, err := backrel.Medications(ctx, medicationID)
+	if err != nil {
+		return views.RemovableLinksProps{}, 0, err
+	}
+
+	joins, err := backrel.TreatmentMedicationTreatments(ctx, medicationID)
+	if err != nil {
+		return views.RemovableLinksProps{}, 0, err
+	}
+
+	items := make([]views.RemovableLink, 0, len(refs)+len(joins))
+	seen := make(map[string]bool, len(refs))
+
+	for _, ref := range refs {
+		key := string(ref.Kind) + ":" + ref.ID
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+
+		item, ok, err := p.resolveBackrelation(ctx, actor, handler, ref, medicationID)
+		if err != nil {
+			return views.RemovableLinksProps{}, 0, err
+		}
+
+		if ok {
+			items = append(items, item)
+		}
+	}
+
+	for _, ref := range joins {
+		item, ok, err := p.resolveCourseMedicationBackrelation(ctx, actor, handler, ref.ID, medicationID)
+		if err != nil {
+			return views.RemovableLinksProps{}, 0, err
+		}
+
+		if ok {
+			items = append(items, item)
+		}
+	}
+
+	props := views.RemovableLinksProps{
+		ID:    ids.RecordDetail(kind.Medication, medicationID) + "-links",
+		Title: "Linked records",
+		Items: items,
+	}
+
+	return props, len(refs) + len(joins), nil
+}
+
+// resolveBackrelation hydrates one allergy/condition/injury/symptom ref into
+// a removable link, reading whichever field(s) it names this medication in
+// off the record's own current body so removal can PATCH the exact set minus
+// this one id.
+func (p *medicationPages) resolveBackrelation(
+	ctx context.Context, actor access.Actor, handler *recordfamily.Handler, ref link.Ref, medicationID string,
+) (views.RemovableLink, bool, error) {
+	found, err := handler.Get(ctx, actor, ref.Kind.Segment(), ref.ID)
+	if err != nil {
+		return views.RemovableLink{}, false, nil //nolint:nilerr // gone or not this actor's: render nothing, not a page error
+	}
+
+	switch body := found.Body.(type) {
+	case *api.Allergy:
+		return views.RemovableLink{
+			Kind: string(ref.Kind), Summary: body.Allergen, Href: p.links.allergyHref(ref.ID),
+			RemoveOn: views.MedicationRemoveExpr(p.links.allergyRecordHref(ref.ID), found.Version,
+				api.MemberMedications, body.Medications, medicationID),
+		}, true, nil
+
+	case *api.Condition:
+		return views.RemovableLink{
+			Kind: string(ref.Kind), Summary: body.Diagnosis, Href: p.links.conditionHref(ref.ID),
+			RemoveOn: views.MedicationRemoveExpr(p.links.conditionRecordHref(ref.ID), found.Version,
+				api.MemberMedications, body.Medications, medicationID),
+		}, true, nil
+
+	case *api.Injury:
+		return views.RemovableLink{
+			Kind: string(ref.Kind), Summary: body.Name, Href: p.links.injuryHref(ref.ID),
+			RemoveOn: views.MedicationRemoveExpr(p.links.injuryRecordHref(ref.ID), found.Version,
+				api.InjuryMemberMedications, body.Medications, medicationID),
+		}, true, nil
+
+	case *api.Symptom:
+		return views.RemovableLink{
+			Kind: string(ref.Kind), Summary: body.Name, Href: p.links.symptomHref(ref.ID),
+			RemoveOn: views.SymptomMedicationRemoveExpr(p.links.symptomRecordHref(ref.ID), found.Version,
+				api.MemberSymptomTreatedByMedications, api.MemberSymptomCausedByMedications,
+				body.TreatedByMedications, body.CausedByMedications, medicationID),
+		}, true, nil
+
+	default:
+		return views.RemovableLink{}, false, nil
+	}
+}
+
+// resolveCourseMedicationBackrelation hydrates one treatment_medications join
+// into a removable link: the join row is what removal deletes, not a field of
+// the treatment itself, so RemoveOn is CourseMedicationRemoveExpr's DELETE
+// rather than a PATCH of the treatment's own body.
+func (p *medicationPages) resolveCourseMedicationBackrelation(
+	ctx context.Context, actor access.Actor, handler *recordfamily.Handler, treatmentID, medicationID string,
+) (views.RemovableLink, bool, error) {
+	found, err := handler.Get(ctx, actor, kind.Treatment.Segment(), treatmentID)
+	if err != nil {
+		return views.RemovableLink{}, false, nil //nolint:nilerr // gone or not this actor's: render nothing, not a page error
+	}
+
+	detail, ok := found.Body.(*api.Treatment)
+	if !ok {
+		return views.RemovableLink{}, false, nil
+	}
+
+	itemHref := p.links.courseMedicationItemHref(treatmentID, medicationID)
+
+	return views.RemovableLink{
+		Kind:     string(kind.Treatment),
+		Summary:  detail.Name,
+		Href:     p.links.treatmentHref(treatmentID),
+		RemoveOn: views.CourseMedicationRemoveExpr(itemHref, found.Version),
+	}, true, nil
 }
 
 // session refuses a page that needs one to a caller who has none.
@@ -435,16 +584,34 @@ type medicationLinks struct {
 	patientsPage string
 	record       string
 	collection   string
+
+	// recordTemplate is api.OpGetRecord's own path, {kind} and {id}
+	// unsubstituted — FR-055's other end resolves a back-relation's own
+	// PATCH target by naming a different kind than this page's own.
+	recordTemplate string
+
+	allergyDetailPage   string
+	conditionDetailPage string
+	injuryDetailPage    string
+	symptomDetailPage   string
+	treatmentDetailPage string
+	courseMedications   string
 }
 
 func newMedicationLinks() (medicationLinks, error) {
 	paths, err := routePaths(map[string]string{
-		OpMedicationListPage:   "",
-		OpMedicationDetailPage: "",
-		OpSettingsPage:         "",
-		OpPatientListPage:      "",
-		api.OpGetRecord:        "",
-		api.OpCreateRecord:     "",
+		OpMedicationListPage:        "",
+		OpMedicationDetailPage:      "",
+		OpSettingsPage:              "",
+		OpPatientListPage:           "",
+		OpAllergyDetailPage:         "",
+		OpConditionDetailPage:       "",
+		OpInjuryDetailPage:          "",
+		OpSymptomDetailPage:         "",
+		OpTreatmentDetailPage:       "",
+		api.OpGetRecord:             "",
+		api.OpCreateRecord:          "",
+		api.OpListCourseMedications: "",
 	})
 	if err != nil {
 		return medicationLinks{}, err
@@ -453,13 +620,69 @@ func newMedicationLinks() (medicationLinks, error) {
 	segment := kind.Medication.Segment()
 
 	return medicationLinks{
-		listPage:     paths[OpMedicationListPage],
-		detailPage:   paths[OpMedicationDetailPage],
-		settingsPage: paths[OpSettingsPage],
-		patientsPage: paths[OpPatientListPage],
-		record:       strings.ReplaceAll(paths[api.OpGetRecord], "{"+api.PathKind+"}", segment),
-		collection:   strings.ReplaceAll(paths[api.OpCreateRecord], "{"+api.PathKind+"}", segment),
+		listPage:            paths[OpMedicationListPage],
+		detailPage:          paths[OpMedicationDetailPage],
+		settingsPage:        paths[OpSettingsPage],
+		patientsPage:        paths[OpPatientListPage],
+		record:              strings.ReplaceAll(paths[api.OpGetRecord], "{"+api.PathKind+"}", segment),
+		collection:          strings.ReplaceAll(paths[api.OpCreateRecord], "{"+api.PathKind+"}", segment),
+		recordTemplate:      paths[api.OpGetRecord],
+		allergyDetailPage:   paths[OpAllergyDetailPage],
+		conditionDetailPage: paths[OpConditionDetailPage],
+		injuryDetailPage:    paths[OpInjuryDetailPage],
+		symptomDetailPage:   paths[OpSymptomDetailPage],
+		treatmentDetailPage: paths[OpTreatmentDetailPage],
+		courseMedications:   paths[api.OpListCourseMedications],
 	}, nil
+}
+
+// recordHref is another kind's own generic PATCH/DELETE target — the same
+// address that kind's own page builds for itself, computed here because this
+// page is the one resolving a back-relation into it, not that kind's own page.
+func (l medicationLinks) recordHref(segment, id string) string {
+	href := strings.ReplaceAll(l.recordTemplate, "{"+api.PathKind+"}", segment)
+	return strings.ReplaceAll(href, "{"+api.PathID+"}", id)
+}
+
+func (l medicationLinks) allergyHref(id string) string {
+	return strings.ReplaceAll(l.allergyDetailPage, "{"+api.PathID+"}", id)
+}
+
+func (l medicationLinks) allergyRecordHref(id string) string {
+	return l.recordHref(kind.Allergy.Segment(), id)
+}
+
+func (l medicationLinks) conditionHref(id string) string {
+	return strings.ReplaceAll(l.conditionDetailPage, "{"+api.PathID+"}", id)
+}
+
+func (l medicationLinks) conditionRecordHref(id string) string {
+	return l.recordHref(kind.Condition.Segment(), id)
+}
+
+func (l medicationLinks) injuryHref(id string) string {
+	return strings.ReplaceAll(l.injuryDetailPage, "{"+api.PathID+"}", id)
+}
+
+func (l medicationLinks) injuryRecordHref(id string) string {
+	return l.recordHref(kind.Injury.Segment(), id)
+}
+
+func (l medicationLinks) symptomHref(id string) string {
+	return strings.ReplaceAll(l.symptomDetailPage, "{"+api.PathID+"}", id)
+}
+
+func (l medicationLinks) symptomRecordHref(id string) string {
+	return l.recordHref(kind.Symptom.Segment(), id)
+}
+
+func (l medicationLinks) treatmentHref(id string) string {
+	return strings.ReplaceAll(l.treatmentDetailPage, "{"+api.PathID+"}", id)
+}
+
+func (l medicationLinks) courseMedicationItemHref(treatmentID, medicationID string) string {
+	base := strings.ReplaceAll(l.courseMedications, "{"+api.PathID+"}", treatmentID)
+	return base + "/" + medicationID
 }
 
 // of is one record's three addresses. Edit is the detail page: this phase

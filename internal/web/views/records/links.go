@@ -178,6 +178,30 @@ func MedicationRemoveExpr(href, etag, field string, ids []string, remove string)
 		"}, payload: " + jsObject(jsField{field, jsArray(remaining)}) + "}).then(() => window.location.reload())"
 }
 
+// SymptomMedicationRemoveExpr is MedicationRemoveExpr's twin for a symptom
+// ref: a medication may be named in either role or both (FR-032), so removal
+// PATCHes both fields at once, each filtered independently — there is no need
+// to know which role actually matched.
+func SymptomMedicationRemoveExpr(href, etag, treatedByField, causedByField string, treatedBy, causedBy []string, remove string) string {
+	without := func(ids []string) []string {
+		remaining := make([]string, 0, len(ids))
+		for _, id := range ids {
+			if id != remove {
+				remaining = append(remaining, id)
+			}
+		}
+		return remaining
+	}
+
+	payload := jsObject(
+		jsField{treatedByField, jsArray(without(treatedBy))},
+		jsField{causedByField, jsArray(without(causedBy))},
+	)
+
+	return "@patch(" + jsLiteral(href) + ", {headers: {'If-Match': " + jsLiteral(etag) +
+		"}, payload: " + payload + "}).then(() => window.location.reload())"
+}
+
 // CourseMedicationRemoveExpr is MedicationRemoveExpr's twin for the one
 // payload-carrying join: DELETE and not PATCH, because the link itself is the
 // record being removed rather than a member of somebody else's set.

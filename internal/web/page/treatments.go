@@ -93,6 +93,10 @@ func (v TreatmentViews) Detail(record recordfamily.Record) recordfamily.Renderer
 	return views.TreatmentDetail(views.TreatmentDetailProps{Treatment: v.view(record)})
 }
 
+func (v TreatmentViews) detailWithReferenceCount(record recordfamily.Record, referenceCount int) recordfamily.Renderer {
+	return views.TreatmentDetail(views.TreatmentDetailProps{Treatment: v.view(record), ReferenceCount: referenceCount})
+}
+
 func (v TreatmentViews) Form(record recordfamily.Record, invalid *domain.ValidationError, notice string) recordfamily.Renderer {
 	treatment := v.view(record)
 	fresh := treatment.ID == ""
@@ -299,7 +303,7 @@ func (p *treatmentPages) detail(e *core.RequestEvent, actor access.Actor) error 
 
 	return p.render(e, actor, p.views.view(found).Name, sequence{
 		context,
-		entry.Views.Detail(found),
+		p.views.detailWithReferenceCount(found, len(courseMedications)),
 		views.LinkedRecords(ids.RecordDetail(kind.Treatment, treatmentID)+"-links", "Linked records", linked),
 		views.CourseMedications(sectionID, "Course medications", courseMedications, views.CourseMedicationFormProps{
 			ID:         sectionID + "-form",

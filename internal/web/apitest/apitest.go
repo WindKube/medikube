@@ -431,14 +431,16 @@ func handlerTable(
 		table[route.OpID] = notImplemented(route.OpID)
 	}
 
-	recordOps, err := api.Handlers(resolve, api.WithReferences(func() (*linkstore.Backrelations, error) {
+	references := func() (*linkstore.Backrelations, error) {
 		return linkstore.NewBackrelations(app)
-	}))
+	}
+
+	recordOps, err := api.Handlers(resolve, api.WithReferences(references))
 	if err != nil {
 		return nil, err
 	}
 
-	pageOps, err := page.Handlers(resolve, patientResolve)
+	pageOps, err := page.Handlers(resolve, patientResolve, references)
 	if err != nil {
 		return nil, err
 	}

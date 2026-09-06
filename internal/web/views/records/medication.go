@@ -396,7 +396,9 @@ type MedicationListProps struct {
 // MedicationDetailProps is one medication and the confirmation that guards its
 // deletion.
 type MedicationDetailProps struct {
-	Medication MedicationView
+	Medication     MedicationView
+	Links          RemovableLinksProps
+	ReferenceCount int
 }
 
 // MedicationFormProps is the create form and the edit form, which are the same
