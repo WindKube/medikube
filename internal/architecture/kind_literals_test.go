@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"io/fs"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -163,6 +164,10 @@ var kindLiteralExempt = map[string]string{
 		"the kind's display name as translated catalogue text",
 }
 
+// catalogueID is a phrase id (contracts/catalogue.md): dotted, lowercase, and
+// allowed to name the kind it is about. No route or collection is dotted.
+var catalogueID = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$`)
+
 func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {
 	t.Parallel()
 
@@ -233,7 +238,7 @@ func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {
 			}
 
 			value, unquoteErr := strconv.Unquote(literal.Value)
-			if unquoteErr != nil {
+			if unquoteErr != nil || catalogueID.MatchString(value) {
 				return true
 			}
 
