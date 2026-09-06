@@ -107,3 +107,30 @@ inline styles.
 Every `datetime-local` control renders through `clinical.Instant.Input()`, never a hand-formatted
 string: it is the one place that knows the format `<input type="datetime-local">` requires and
 round-trips through it.
+
+## Localisation (phase 007)
+
+No literal English application text in a `.templ` — `scripts/check-i18n-literals.sh`
+(`task lint:i18n`) greps text nodes, `placeholder=`/`aria-label=`/`title=`/`alt=` and `<option>`
+labels for one and fails the build; a genuine exception goes in
+`scripts/i18n-literals.allow`, one line per hit. Every phrase comes from
+`i18n.T(ctx, "id")` / `i18n.N(ctx, "id", count)` only — never a Go string literal rendered
+straight into markup.
+
+Ids are dotted, lowercase, stable (`nav.timeline`, `field.allergy.allergen`) and never contain
+their own English text — `TestCatalogueLintDetectsAnIDThatIsItsOwnText` in
+`internal/i18n/catalogue_test.go` is the lint. Every entry in `active.en.toml` carries a
+`description`; a translation file never does.
+
+`task test:i18n` runs the three build-time gates (FR-011): a shipped language missing an id
+`en` has, one with a surplus id, and a source under `internal/web/**` asking for an id no
+language defines — each names the id and file:line.
+
+Add a language: copy `internal/i18n/locales/active.en.toml` to `active.<lang>.toml`, translate
+every value, keep every id and plural form the language's own CLDR rule needs, run
+`task test:i18n` until it passes. Nothing else changes — see `quickstart.md` §5.
+
+Never translated: API codes, field names, vocabulary wire values, `basis`/`criteria`, logs,
+and anything a person typed (record fields, names, notes, tag names) — those render exactly as
+entered. Polish register is informal (*Twoja sesja*, *Twoje hasło* — *ty*, not *Pan/Pani*);
+match it in any new phrase.

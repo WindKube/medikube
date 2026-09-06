@@ -2325,6 +2325,13 @@ func driveAccountLifecycle(c *client) {
 
 	c.do(http.MethodGet, "/api/v1/me", "")
 	c.do(http.MethodPatch, "/api/v1/me", jsonBody(c.t, api.MePatch{Name: ptr(AccountName)}))
+
+	// The locale switch (FR-013): a page driven as a Polish account after it,
+	// so a rendered Polish response goes past every sink this exercise walks
+	// too, not only an English one.
+	c.do(http.MethodPatch, "/api/v1/me", jsonBody(c.t, api.MePatch{Locale: ptr("pl")}))
+	c.do(http.MethodGet, "/settings", "")
+
 	c.do(http.MethodPost, "/api/v1/auth/verify-email", "")
 	c.do(http.MethodPost, "/api/v1/auth/refresh", "")
 

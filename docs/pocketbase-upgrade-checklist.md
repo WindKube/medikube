@@ -10,6 +10,10 @@ Section 5 is a different kind of entry and is here for the same reason: three Po
 *behaviours* that MediKube's account layer depends on rather than reimplements. Nothing reaches
 past an API for them, and they would still break silently.
 
+Localisation (phase 007) adds nothing here: `e.Auth.GetString("locale")` and parsing
+`Accept-Language` (`internal/web/localize.go`) are both public API, same shape as the existing
+`themeField` read — nothing reaches past PocketBase for either.
+
 Pinned at **PocketBase v0.40.1** (`go.mod`). Risk R8, cross-artifact CT-1.
 
 Before touching the pinned version, also re-run
