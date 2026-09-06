@@ -97,8 +97,11 @@ func TestTheTableCarriesTheTwentyNineDocumentedOperations(t *testing.T) {
 		{"createTag", http.MethodPost, "/api/v1/tags", httproute.KindAPI, httproute.AuthUser},
 		{"updateTag", http.MethodPatch, "/api/v1/tags/{id}", httproute.KindAPI, httproute.AuthUser},
 		{"deleteTag", http.MethodDelete, "/api/v1/tags/{id}", httproute.KindAPI, httproute.AuthUser},
+		// contracts/search.md (phase 003, US8): one search across every
+		// registered kind.
+		{"search", http.MethodGet, "/api/v1/search", httproute.KindAPI, httproute.AuthUser},
 	}
-	require.Len(t, want, 46)
+	require.Len(t, want, 47)
 
 	byOpID := inventoryByOpID(t)
 
@@ -149,7 +152,7 @@ func TestExactlyEightOperationsArePublic(t *testing.T) {
 // contracts/pages.md, "The pages". The landmark strings are what a Playwright
 // getByRole selector contains, so changing one is a breaking change to the gate
 // and has to break this test first.
-func TestTheTableCarriesTheFortyTwoPages(t *testing.T) {
+func TestTheTableCarriesTheFortyThreePages(t *testing.T) {
 	t.Parallel()
 
 	segment := kind.Medication.Segment()
@@ -307,8 +310,12 @@ func TestTheTableCarriesTheFortyTwoPages(t *testing.T) {
 			`article[name="Relative"]`, "/" + kind.FamilyMember.Segment() + "/" + seed.FamilyMemberGrandmotherID,
 		},
 		{"tagsPage", "/tags", httproute.AuthUser, `region[name="Tags"]`, "/tags"},
+		{
+			"searchPage", "/search", httproute.AuthUser, `search`,
+			"/search?patient=" + seed.AccountAPatientSelfID,
+		},
 	}
-	require.Len(t, want, 42)
+	require.Len(t, want, 43)
 
 	byOpID := inventoryByOpID(t)
 

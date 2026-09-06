@@ -102,6 +102,9 @@ function idOf(smokeURL: string): string {
 //   - P9 (verifyEmailPage) is titled "Confirm your address" while its
 //     landmark is named "Email confirmation" — contracts/pages.md's own row
 //     gives the pair different words.
+//   - searchPage's landmark is the bare `search` role (research: the native
+//     <search> element carries the role with no accessible name), so there
+//     is no name to read the generic rule off; it is titled "Search" here.
 //
 // Any OTHER page that does not follow the generic rule and has no entry here
 // fails assertion 4 with its own op id in the mismatch, which is this file
@@ -221,8 +224,13 @@ async function titleFor(route: PageRoute, page: Page): Promise<string> {
       return fixtures.title(
         await nameOf(page, `/api/v1/facilities/${idOf(route.smokeURL)}`),
       );
+    case "searchPage":
+      // /search's landmark is the bare `search` role and carries no
+      // accessible name of its own (contracts/pages.md P), so the generic
+      // "title after the landmark's name" rule below has nothing to read.
+      return fixtures.title("Search");
     default:
-      return fixtures.title(route.landmark.name);
+      return fixtures.title(route.landmark.name ?? "");
   }
 }
 

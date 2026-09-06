@@ -1046,6 +1046,7 @@ func drive(t testing.TB, c *client) {
 	driveAllergies(c)
 	driveConditions(c)
 	driveEmergencyContacts(c)
+	driveSearch(c)
 }
 
 const onePixelPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
@@ -1854,6 +1855,38 @@ func driveFamilyMembers(c *client) {
 
 	current := updated.Header.Get("ETag")
 	c.doWith(http.MethodDelete, address, "", map[string]string{"If-Match": current})
+}
+
+// driveSearch: the one search operation and its page, with the typed-in-word
+// sentinel driven through the API's query string — the leg FR-075/research
+// D-12 govern, and where the JSON `criteria` object must answer with
+// `q_present` and never the term itself.
+//
+// The page leg below is driven with an ordinary term rather than the
+// sentinel: contracts/search.md §1's `q` legitimately travels in the page's
+// own chip, load-more and clear-narrowing hrefs so that clicking one
+// continues the same search (the same way it already travelled in the
+// address bar that produced the page) — it is FR-075's blanket rule on the
+// API response, never logged and never in an error, that governs the
+// sentinel's real leak-detection value, and the sentinel is exercised
+// against exactly that leg above.
+func driveSearch(c *client) {
+	c.token(testsupport.AccountAEmail)
+
+	patientID := testsupport.AccountAPatientSelfID
+
+	c.do(http.MethodGet, "/api/v1/search?patient="+patientID+"&q="+SearchTerm, "")
+	c.do(http.MethodGet, "/api/v1/search?patient="+patientID+"&q="+SearchTerm+"&kinds="+kind.Medication.Segment(), "")
+	c.do(http.MethodGet, "/api/v1/search?q="+SearchTerm, "")
+	c.do(http.MethodGet, "/api/v1/search?patient="+patientID+"&cursor="+SearchTerm, "")
+
+	c.bearer = ""
+	c.do(http.MethodGet, "/search?patient="+patientID+"&q=paracetamol", "")
+	c.token(testsupport.AccountAEmail)
+
+	c.token(testsupport.AccountBEmail)
+	c.do(http.MethodGet, "/api/v1/search?patient="+patientID+"&q="+SearchTerm, "")
+	c.token(testsupport.AccountAEmail)
 }
 
 // decodedID reads the id out of a created record's body without asserting on

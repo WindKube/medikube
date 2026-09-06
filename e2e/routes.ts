@@ -42,22 +42,27 @@ export type PageRoute = {
 };
 
 // parseLandmark turns internal/cli's wire form — `role[name="X"]`, verbatim
-// off the Route's Landmark field — into the shape gate.ts's open() takes. Any
+// off the Route's Landmark field, or a bare `role` for the one landmark that
+// carries no accessible name of its own (contracts/pages.md P, /search's
+// native <search> element) — into the shape gate.ts's open() takes. Any
 // other shape is a contract change nobody told this file about.
 function parseLandmark(opID: string, raw: string): Landmark {
-  const match = /^(\w+)\[name="(.*)"\]$/.exec(raw);
+  const named = /^(\w+)\[name="(.*)"\]$/.exec(raw);
+  const bare = /^(\w+)$/.exec(raw);
+  const match = named ?? bare;
+
   if (!match) {
     throw new Error(
-      `e2e: ${opID}'s landmark ${JSON.stringify(raw)} is not of the form role[name="X"], which is the only shape the gate can address`,
+      `e2e: ${opID}'s landmark ${JSON.stringify(raw)} is not of the form role[name="X"] or a bare role, which are the only shapes the gate can address`,
     );
   }
 
   const role = match[1];
-  if (role !== 'region' && role !== 'article' && role !== 'form' && role !== 'main') {
+  if (role !== 'region' && role !== 'article' && role !== 'form' && role !== 'main' && role !== 'search') {
     throw new Error(`e2e: ${opID}'s landmark role ${JSON.stringify(role)} is not one the gate can address`);
   }
 
-  return { role, name: match[2] };
+  return named ? { role, name: match[2] } : { role };
 }
 
 function loadRoutes(): RawRoute[] {
