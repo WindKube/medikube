@@ -95,7 +95,7 @@ to `search_index`, and every kind's tests run the shared contract suites.
 - [x] T033 [P] Write failing tests in `internal/store/filter_test.go` for the typed filter builder: date range, status set, `?tags=&match=any` (disjunction) and `match=all` (conjunction), `q` with `%`, `_` and the escape character correctly escaped, and an assertion that **no caller-supplied string is ever concatenated into a PocketBase filter expression**
 - [x] T034 Implement the typed-filter-to-PocketBase-expression builder in `internal/store/filter.go`
 - [x] T035 [P] Write failing tests for the same-patient link invariant in `internal/domain/clinical/link_test.go`: matching patients pass; a differing patient, a non-existent target and an unreachable target all produce an identical `ErrNotFound`
-- [ ] T036 Implement `internal/domain/clinical/link.go` (`SamePatient`, `LinkSet` replace-set semantics, idempotent re-add) and extend `internal/service/access/authorizer.go` so `Record()` resolves the thirteen new kinds, deciding from the ownership stored on the row and never from a caller-supplied value or the person currently in view (FR-081)
+- [x] T036 Implement `internal/domain/clinical/link.go` (`SamePatient`, `LinkSet` replace-set semantics, idempotent re-add) and extend `internal/service/access/authorizer.go` so `Record()` resolves the thirteen new kinds, deciding from the ownership stored on the row and never from a caller-supplied value or the person currently in view (FR-081)
 - [x] T037 [P] Implement the shared templ components in `internal/web/views/shared/`: `emptystate.templ` (both the "nothing recorded" and "nothing matches" variants, FR-008), `deleteconfirm.templ` (states what is destroyed and the reference count, FR-006), `basis.templ` (per-row basis pills), `criteria.templ` (removable narrowing chips), plus their deterministic ids in `internal/web/views/ids/ids.go` and render tests in `internal/web/views/shared/shared_templ_test.go`
 
 **Checkpoint**: `tags` and `search_index` exist, the contract suites exist, the registry accepts a
@@ -141,7 +141,7 @@ distinguished; and that a second account can reach none of them.
 - [x] T057 [US1] Register the three kinds in `internal/records/kinds/allergy.go`, `condition.go`, `emergencycontact.go` with their filters (`status`, `severity`, `critical`, `active`, `is_active`, `is_primary`), default sorts, `SearchFields`, `Basis` and seed fixture ids
 - [x] T058 [US1] Extend `internal/cli/seed.go` with deterministic allergy, condition and emergency-contact fixtures, including one critical allergy and one resolved condition, and wire the three kinds into `internal/di` providers in `cmd/medikube/main.go`
 - [x] T059 [P] [US1] Add Playwright smoke cases for `/allergies`, `/allergies/{id}`, `/conditions`, `/conditions/{id}`, `/emergency-contacts`, `/emergency-contacts/{id}` at 1440×900 and 390×844 in `e2e/specs/records.spec.ts`, asserting the shell landmarks, each page's own landmark, `body[data-signals]`, and zero console errors / page errors / failed requests
-- [ ] T060 [US1] Regenerate `api/openapi.json` (`task openapi`), confirm `git diff --exit-code api/openapi.json` is clean after committing, and confirm `task routes` lists the six new page routes
+- [x] T060 [US1] Regenerate `api/openapi.json` (`task openapi`), confirm `git diff --exit-code api/openapi.json` is clean after committing, and confirm `task routes` lists the six new page routes
 
 **Checkpoint**: US1 is independently demonstrable. This is the MVP.
 
