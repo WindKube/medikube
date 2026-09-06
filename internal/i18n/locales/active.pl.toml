@@ -1261,18 +1261,6 @@ other = "Zapisz pomiary"
 description = "The vitals edit form's aria-label"
 other = "Edytuj pomiary"
 
-[action.record_it]
-description = "A record form's submit button when creating a new record"
-other = "Zapisz"
-
-[action.save_changes]
-description = "A record form's submit button when editing an existing record"
-other = "Zapisz zmiany"
-
-[action.edit]
-description = "The button on a record's detail page that opens its edit form"
-other = "Edytuj"
-
 [action.delete_permanently]
 description = "The confirm dialog's own destructive button, after action.delete opened it"
 other = "Usuń na stałe"
@@ -1700,26 +1688,6 @@ other = "Ambulatoryjnie"
 description = "Treatment setting vocabulary value"
 other = "W domu"
 
-[enum.therapy_status.active]
-description = "Therapy status vocabulary value (treatment, medication, equipment)"
-other = "Aktywne"
-
-[enum.therapy_status.on_hold]
-description = "Therapy status vocabulary value"
-other = "Wstrzymane"
-
-[enum.therapy_status.completed]
-description = "Therapy status vocabulary value"
-other = "Zakończone"
-
-[enum.therapy_status.stopped]
-description = "Therapy status vocabulary value"
-other = "Przerwane"
-
-[enum.therapy_status.cancelled]
-description = "Therapy status vocabulary value"
-other = "Odwołane"
-
 [enum.symptom_category.pain]
 description = "Symptom category vocabulary value"
 other = "Ból"
@@ -1760,22 +1728,6 @@ other = "Ogólnoustrojowy"
 description = "Symptom category vocabulary value, the catch-all"
 other = "Inny"
 
-[enum.severity.mild]
-description = "Severity vocabulary value"
-other = "Łagodne"
-
-[enum.severity.moderate]
-description = "Severity vocabulary value"
-other = "Umiarkowane"
-
-[enum.severity.severe]
-description = "Severity vocabulary value"
-other = "Ciężkie"
-
-[enum.severity.life_threatening]
-description = "Severity vocabulary value"
-other = "Zagrażające życiu"
-
 [enum.symptom_impact.none]
 description = "Symptom impact vocabulary value"
 other = "Brak"
@@ -1791,26 +1743,6 @@ other = "Umiarkowany"
 [enum.symptom_impact.severe]
 description = "Symptom impact vocabulary value"
 other = "Ciężki"
-
-[enum.condition_status.active]
-description = "Condition status vocabulary value (condition, symptom)"
-other = "Aktywny"
-
-[enum.condition_status.healing]
-description = "Condition status vocabulary value"
-other = "W trakcie gojenia"
-
-[enum.condition_status.inactive]
-description = "Condition status vocabulary value"
-other = "Nieaktywny"
-
-[enum.condition_status.resolved]
-description = "Condition status vocabulary value"
-other = "Ustąpił"
-
-[enum.condition_status.chronic]
-description = "Condition status vocabulary value"
-other = "Przewlekły"
 
 [enum.glucose_context.fasting]
 description = "Glucose measurement context vocabulary value"
