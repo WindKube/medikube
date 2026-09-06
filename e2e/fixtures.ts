@@ -39,6 +39,21 @@ function goString(source: string, relative: string, name: string): string {
   return found[1];
 }
 
+const englishCatalogue = goSource("internal/i18n/locales/active.en.toml");
+
+function catalogueEnglish(id: string): string {
+  const escaped = id.replace(/\./g, "\\.");
+  const found = new RegExp(`\\[${escaped}\\][^[]*?\\nother = "([^"]*)"`).exec(
+    englishCatalogue,
+  );
+  if (!found) {
+    throw new Error(
+      `e2e: active.en.toml declares no ${id}, which is a page title the gate asserts`,
+    );
+  }
+  return found[1];
+}
+
 function goBool(source: string, relative: string, name: string): boolean {
   const found = new RegExp(`\\b${name}\\s*=\\s*(true|false)`).exec(source);
   if (!found) {
@@ -294,24 +309,20 @@ export const fixtures = {
     verifyEmail: goPageTarget("verifyEmailPage"),
   },
 
-  // The titles those pages set, read from the package that sets them rather
-  // than from contracts/pages.md's table: the table is the requirement and this
-  // is what the requirement is checked against.
+  // The titles those pages set, read from the English catalogue under the ids
+  // internal/web/page/accounts.go resolves at render time: the gate stays
+  // English, and a renamed id fails here with a reason instead of nine
+  // mismatched titles.
   titles: {
-    login: goString(accountPages, accountPageGo, "loginTitle"),
-    register: goString(accountPages, accountPageGo, "registerTitle"),
-    settings: goString(accountPages, accountPageGo, "settingsTitle"),
-    forgotPassword: goString(
-      accountPages,
-      accountPageGo,
-      "forgotPasswordTitle",
-    ),
-    resetPassword: goString(accountPages, accountPageGo, "resetPasswordTitle"),
+    login: catalogueEnglish("action.sign_in"),
+    register: catalogueEnglish("auth.create_account"),
+    settings: catalogueEnglish("nav.settings"),
+    forgotPassword: catalogueEnglish("auth.reset_password"),
+    resetPassword: catalogueEnglish("auth.choose_new_password"),
     // contracts/pages.md gives P9 a tab that does not repeat its landmark: the
     // region is named "Email confirmation" and the title says "Confirm your
-    // address", so reading both from the source is the only way this gate
-    // asserts the pair rather than one of them twice.
-    verifyEmail: goString(accountPages, accountPageGo, "verifyEmailTitle"),
+    // address".
+    verifyEmail: catalogueEnglish("auth.confirm_your_address"),
   },
 
   // FR-008's query. A person whose session ran out is told so; everybody else
