@@ -77,3 +77,47 @@ test.describe("the treatment detail page", () => {
     await expect(courseMedications.getByRole("link")).toHaveCount(0);
   });
 });
+
+// FR-055's editor is usable from either end, so the same seeded link
+// (internal/testsupport/seed/links.go's allergy<->medication attachment) must
+// be visible opening either record — not only the one whose own field stores
+// it.
+test.describe("a medication link is visible from both ends", () => {
+  const allergyName = "Penicillin";
+
+  test("the allergy's own page shows the linked medication", async ({
+    page,
+  }) => {
+    await open(page, {
+      path: fixtures.allergy.detailPath(fixtures.allergy.seededID),
+      title: fixtures.title(allergyName),
+      landmark: { role: "article", name: "Allergy" },
+    });
+
+    const medications = page.getByRole("region", { name: "Medications" });
+    await expect(medications).toBeVisible();
+
+    const medicationDetail = fixtures.detailPath(
+      fixtures.treatment.linkedMedicationID,
+    );
+    await expect(
+      medications.locator(`a[href="${medicationDetail}"]`),
+    ).toBeVisible();
+  });
+
+  test("the medication's own page shows the allergy back", async ({ page }) => {
+    await open(page, {
+      path: fixtures.detailPath(fixtures.treatment.linkedMedicationID),
+      title: fixtures.title("Lisinopril"),
+      landmark: { role: "article", name: "Medication" },
+    });
+
+    const linked = page.getByRole("region", { name: "Linked records" });
+    await expect(linked).toBeVisible();
+
+    const allergyDetail = fixtures.allergy.detailPath(
+      fixtures.allergy.seededID,
+    );
+    await expect(linked.locator(`a[href="${allergyDetail}"]`)).toBeVisible();
+  });
+});
