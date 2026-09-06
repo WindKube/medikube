@@ -132,7 +132,11 @@ async function typeDateTime(
   const [datePart, timePart] = iso.split("T");
   const [year, month, day] = datePart.split("-");
   const [hour, minute] = timePart.split(":");
-  await locator.page().keyboard.type(month + day + year + hour + minute + "AM");
+  // The year segment takes up to six digits and does not advance by itself,
+  // so the hour would otherwise land in the year.
+  await locator.page().keyboard.type(month + day + year);
+  await locator.page().keyboard.press("ArrowRight");
+  await locator.page().keyboard.type(hour + minute + "AM");
 }
 
 type FieldKind = "text" | "number" | "date" | "datetime" | "select";

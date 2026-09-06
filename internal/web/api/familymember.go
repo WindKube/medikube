@@ -178,8 +178,8 @@ func (FamilyMemberCodec) Draft(body any) (clinical.FamilyMember, error) {
 		Name:         create.Name,
 		Relationship: clinical.FamilyRelationship(create.Relationship),
 		Sex:          person.Sex(create.Sex),
-		BirthYear:    create.BirthYear,
-		DeathYear:    create.DeathYear,
+		BirthYear:    zeroIsAbsent(create.BirthYear),
+		DeathYear:    zeroIsAbsent(create.DeathYear),
 		IsDeceased:   create.IsDeceased,
 		Conditions:   domainFamilyConditions(create.Conditions),
 		Tags:         create.Tags,
@@ -196,8 +196,8 @@ func (FamilyMemberCodec) Patch(body any) (familymember.Patch, error) {
 		Name:         incoming.Name,
 		Relationship: convert[clinical.FamilyRelationship](incoming.Relationship),
 		Sex:          convert[person.Sex](incoming.Sex),
-		BirthYear:    readOptionalIntPtr(incoming.BirthYear),
-		DeathYear:    readOptionalIntPtr(incoming.DeathYear),
+		BirthYear:    zeroClears(readOptionalIntPtr(incoming.BirthYear)),
+		DeathYear:    zeroClears(readOptionalIntPtr(incoming.DeathYear)),
 		IsDeceased:   incoming.IsDeceased,
 		Tags:         incoming.Tags,
 	}
@@ -242,4 +242,26 @@ func domainFamilyConditions(conditions []FamilyCondition) []clinical.FamilyCondi
 	}
 
 	return converted
+}
+
+// zeroIsAbsent reads a zero year or count as "not recorded": a number control
+// cannot express absence and submits 0 for an empty field (Datastar binds
+// +value), and no zero is storable for the fields that use this.
+func zeroIsAbsent(value *int) *int {
+	if value != nil && *value == 0 {
+		return nil
+	}
+
+	return value
+}
+
+// zeroClears is zeroIsAbsent for a patch: a submitted zero clears the field.
+func zeroClears(value **int) **int {
+	if value != nil && *value != nil && **value == 0 {
+		var cleared *int
+
+		return &cleared
+	}
+
+	return value
 }

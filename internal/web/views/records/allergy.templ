@@ -147,7 +147,9 @@ templ AllergyForm(props AllergyFormProps) {
 		if props.Notice != "" {
 			<p role="alert" class="rounded-md bg-amber-100 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">{ props.Notice }</p>
 		}
-		<input type="hidden" name="patient" data-bind="patient" value={ props.Allergy.PatientID }/>
+		if props.New {
+			<input type="hidden" name="patient" data-bind="patient" value={ props.Allergy.PatientID }/>
+		}
 		@TextControl(ControlProps{FormID: props.FormID, Field: FieldAllergen, Label: "Allergen", Value: props.Allergy.Value(FieldAllergen), Type: "text", Required: true, Errors: props.Errors})
 		@TextareaControl(ControlProps{FormID: props.FormID, Field: FieldReaction, Label: "Reaction", Value: props.Allergy.Value(FieldReaction), Errors: props.Errors})
 		@SelectControl(ControlProps{FormID: props.FormID, Field: FieldSeverity, Label: "Severity", Value: props.Allergy.Value(FieldSeverity), Required: true, Errors: props.Errors}, props.Allergy.SeverityOptions())
