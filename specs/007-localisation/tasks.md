@@ -61,10 +61,10 @@ the extraction can run in parallel on disjoint files.
 
 ### The settings control
 
-- [ ] T016 [P] [US1] Failing HTTP tests `internal/web/api/me_locale_test.go`: `PATCH /api/v1/me {"locale":"pl"}` → 200 and the stored value; `{"locale":"xx"}` → 422 with field `locale`, code `invalid_value`; a Datastar settings submit answers the re-rendered settings form **in Polish** on the same response (FR-001, FR-002, US1-1, SC-002)
-- [ ] T017 [US1] [EDIT] `internal/service/identity/service.go`: `Config.SupportedLocale func(string) bool`; `Update` refuses a locale the predicate rejects with `domain.ValidationError{locale: invalid_value}`; `internal/web/api/wiring.go` passes `i18n.IsSupported` into `serviceidentity.Config`; unit test with a fake predicate (FR-001)
-- [ ] T018 [US1] [EDIT] `internal/web/page/settings.go`: `localeOptions(user.Locale)` via `optionsOf` over `i18n.Supported()`, labelled by each language's own `language.name`; `internal/web/views/settings/settings.templ`: the `<select name="locale">` beside theme with an `aria-label` from the catalogue (FR-002, US1-1)
-- [ ] T019 [US1] `e2e/settings-locale.spec.ts`: choose Polski, save, assert the settings page is Polish on the same load, reload → still Polish, sign out/in → Polish, switch back → English; both viewports (US1-1, US1-7, SC-002)
+- [x] T016 [P] [US1] Failing HTTP tests `internal/web/api/me_locale_test.go`: `PATCH /api/v1/me {"locale":"pl"}` → 200 and the stored value; `{"locale":"xx"}` → 422 with field `locale`, code `invalid_value`; a Datastar settings submit answers the re-rendered settings form **in Polish** on the same response (FR-001, FR-002, US1-1, SC-002)
+- [x] T017 [US1] [EDIT] `internal/service/identity/service.go`: `Config.SupportedLocale func(string) bool`; `Update` refuses a locale the predicate rejects with `domain.ValidationError{locale: invalid_value}`; `internal/web/api/wiring.go` passes `i18n.IsSupported` into `serviceidentity.Config`; unit test with a fake predicate (FR-001)
+- [x] T018 [US1] [EDIT] `internal/web/page/settings.go`: `localeOptions(user.Locale)` via `optionsOf` over `i18n.Supported()`, labelled by each language's own `language.name`; `internal/web/views/settings/settings.templ`: the `<select name="locale">` beside theme with an `aria-label` from the catalogue (FR-002, US1-1)
+- [x] T019 [US1] `e2e/settings-locale.spec.ts`: choose Polski, save, assert the settings page is Polish on the same load, reload → still Polish, sign out/in → Polish, switch back → English; both viewports (US1-1, US1-7, SC-002)
 
 ### Extraction — every family in parallel, disjoint files
 

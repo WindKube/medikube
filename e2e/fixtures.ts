@@ -274,6 +274,7 @@ export const fixtures = {
   // this cookie and nothing else (research D-15): there is no token in the
   // body, so a gate that could not read the cookie could not sign in at all.
   signInPath: goRoutePath("login"),
+  logoutPath: goRoutePath("logout"),
   sessionCookieName: goString(session, sessionGo, "SessionCookieName"),
 
   // The three operations the recovery flow drives (T223p). Read out of the
