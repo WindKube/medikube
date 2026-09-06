@@ -51,6 +51,10 @@ type DocumentProps struct {
 	// links it holds.
 	SignedIn bool
 
+	// StreamHref opens the record stream for the patient in view; empty when
+	// there is no patient to follow.
+	StreamHref string
+
 	Nav []NavLink
 
 	// Switcher is FR-014's shell control, nil on the signed-out surface. It

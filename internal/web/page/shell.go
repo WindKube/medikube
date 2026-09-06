@@ -1,6 +1,7 @@
 package page
 
 import (
+	"net/url"
 	"sync/atomic"
 
 	"github.com/a-h/templ"
@@ -8,6 +9,7 @@ import (
 
 	domainidentity "medikube/internal/domain/identity"
 	"medikube/internal/web"
+	"medikube/internal/web/api"
 	"medikube/internal/web/views/shell"
 )
 
@@ -71,10 +73,29 @@ func RenderPage(e *core.RequestEvent, status int, title string, nav NavState, ma
 	return web.Render(e, status, shell.Document(shell.DocumentProps{
 		Title:      title,
 		SignedIn:   nav.SignedIn,
+		StreamHref: streamHref(e, nav.SignedIn),
 		Nav:        nav.Nav,
 		Switcher:   switcher,
 		ThemeClass: shell.ThemeClass(resolveTheme(e)),
 		Version:    getBuildVersion(),
 		Main:       main,
 	}))
+}
+
+const opStreamRecords = "streamRecords"
+
+// streamHref is the record stream for the patient in view (contracts/streams.md):
+// the page opens it with data-init so created rows and heartbeats arrive live.
+func streamHref(e *core.RequestEvent, signedIn bool) string {
+	patientID := e.Request.URL.Query().Get(api.ParamPatient)
+	if !signedIn || patientID == "" {
+		return ""
+	}
+
+	paths, err := routePaths(map[string]string{opStreamRecords: ""})
+	if err != nil {
+		return ""
+	}
+
+	return paths[opStreamRecords] + "?" + api.ParamPatient + "=" + url.QueryEscape(patientID)
 }

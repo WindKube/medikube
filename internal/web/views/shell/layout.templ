@@ -20,6 +20,9 @@ templ Document(props DocumentProps) {
 			class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
 			data-signals={ StreamSignals(props.streamSeed()) }
 			data-on-interval__duration.10s={ StaleExpression() }
+			if props.StreamHref != "" {
+				data-init={ "@get(" + quotePS(props.StreamHref) + ")" }
+			}
 		>
 			<a href={ templ.SafeURL("#" + ids.Main) } class="sr-only focus:not-sr-only">Skip to content</a>
 			<header role="banner" class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-2 dark:border-slate-800">

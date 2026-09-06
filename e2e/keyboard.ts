@@ -29,7 +29,7 @@ export async function focusableControls(page: Page, within: string): Promise<str
       if (!root) return [];
 
       return Array.from(root.querySelectorAll<HTMLElement>(selector))
-        .filter((element) => element.offsetParent !== null || element.tagName === 'A')
+        .filter((element) => element.checkVisibility())
         .map((element) => {
           const label = (element.getAttribute('aria-label') ?? element.textContent ?? '').trim().slice(0, 40);
           return `${element.tagName.toLowerCase()}#${element.id}:${label}`;

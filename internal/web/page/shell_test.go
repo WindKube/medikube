@@ -2,6 +2,7 @@ package page_test
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"medikube/internal/httproute"
+	"medikube/internal/web/api"
 	"medikube/internal/web/views/ids"
 )
 
@@ -84,4 +86,43 @@ func TestTheShellIDsAreNotAccidentallyGeneric(t *testing.T) {
 	require.NotEmpty(t, ids.Toast)
 	require.False(t, strings.Contains(ids.ErrorBanner, " "))
 	require.False(t, strings.Contains(ids.Toast, " "))
+}
+
+// A page with a patient in view opens the record stream for that patient, so
+// a row created from the list arrives without a reload (contracts/streams.md).
+func TestEverySignedInPageWithAPatientOpensTheRecordStream(t *testing.T) {
+	t.Parallel()
+
+	rig := newBrowser(t)
+
+	for _, route := range httproute.Inventory().Routes() {
+		if route.Kind != httproute.KindPage {
+			continue
+		}
+
+		t.Run(route.OpID, func(t *testing.T) {
+			t.Parallel()
+
+			b := rig
+			if route.Auth == httproute.AuthPublic {
+				b = rig.anonymous()
+			}
+
+			_, _, body := b.get(route.SmokeURL)
+
+			patient := ""
+			if parsed, err := url.Parse(route.SmokeURL); err == nil {
+				patient = parsed.Query().Get(api.ParamPatient)
+			}
+
+			if route.Auth == httproute.AuthPublic || patient == "" {
+				assert.NotContains(t, body, "data-init=", "%s has no patient to follow", route.OpID)
+
+				return
+			}
+
+			assert.Containsf(t, body, `data-init="@get(&#39;/api/v1/streams/records?patient=`+patient+`&#39;)"`,
+				"%s does not open the record stream", route.OpID)
+		})
+	}
 }
