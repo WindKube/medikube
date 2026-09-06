@@ -53,12 +53,11 @@ templ EmergencyContactList(props EmergencyContactListProps) {
 				>Record a contact</a>
 			}
 		</div>
-		if len(props.Contacts) == 0 {
-			<div class="mt-6">
+		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
+			<div data-empty class="mt-6">
 				@shared.EmptyState(shared.NothingRecorded(ids.RecordEmpty(kind.EmergencyContact), "emergency contacts"))
 			</div>
-		} else {
-			<div class="mt-4 overflow-x-auto">
+			<div data-rows class="mt-4 overflow-x-auto">
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
@@ -76,7 +75,7 @@ templ EmergencyContactList(props EmergencyContactListProps) {
 					</tbody>
 				</table>
 			</div>
-		}
+		</div>
 		@pager(ids.RecordPager(kind.EmergencyContact), props.PreviousHref, props.NextHref)
 	</section>
 }

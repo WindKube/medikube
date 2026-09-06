@@ -99,6 +99,13 @@ func TestTheEmptyStateSitsInsideTheRegionAndOffersTheCreateAction(t *testing.T) 
 
 // The same action is reachable when the list is populated, because FR-029 asks
 // for the same page structure in both states.
+//
+// Both the empty state and the table are always in the markup — a Datastar
+// create patches a brand new row into the table's tbody, which does not exist
+// at all when the empty-state branch was the only one rendered. Which one is
+// visible is a CSS decision (has(tbody tr)), not a server-side branch, so this
+// test asserts the table carries the row rather than that the empty state is
+// absent from the tree.
 func TestTheCreateActionIsInTheRegionWhenThereAreRecords(t *testing.T) {
 	t.Parallel()
 
@@ -109,8 +116,38 @@ func TestTheCreateActionIsInTheRegionWhenThereAreRecords(t *testing.T) {
 
 	assert.NotEmpty(t, viewstest.Find(region, viewstest.And(
 		viewstest.Tag("a"), viewstest.WithAttr("href", props.CreateHref))))
-	assert.Empty(t, tree.All(viewstest.WithID(ids.RecordEmpty(kind.Medication))),
-		"the empty state renders over a populated list")
+	assert.NotEmpty(t, tree.All(viewstest.WithID(ids.RecordRows(kind.Medication))),
+		"the row container is missing from a populated list")
+}
+
+// A Datastar create is patched into the list's tbody, which does not exist at
+// all when the empty-state branch is the only thing rendered — so both the
+// empty state and the (possibly empty) table are always in the tree, whether
+// the list itself has anything in it or not. CSS, not this component, decides
+// which one is visible.
+func TestBothTheEmptyStateAndTheRowContainerAreAlwaysPresent(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		props records.MedicationListProps
+	}{
+		{name: "empty", props: listProps(t)},
+		{name: "populated", props: listProps(t, view(t, everyFieldFilledIn(t)))},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			tree := viewstest.Render(t, records.MedicationList(testCase.props), "div")
+
+			assert.NotEmpty(t, tree.All(viewstest.WithID(ids.RecordEmpty(kind.Medication))),
+				"the empty state is missing from the tree")
+			assert.NotEmpty(t, tree.All(viewstest.WithID(ids.RecordRows(kind.Medication))),
+				"the row container is missing from the tree")
+		})
+	}
 }
 
 // Every row is patchable by the id the stream will address, and they sit in the

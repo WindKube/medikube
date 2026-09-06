@@ -56,12 +56,11 @@ templ AllergyList(props AllergyListProps) {
 				>Record an allergy</a>
 			}
 		</div>
-		if len(props.Allergies) == 0 {
-			<div class="mt-6">
+		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
+			<div data-empty class="mt-6">
 				@shared.EmptyState(shared.NothingRecorded(ids.RecordEmpty(kind.Allergy), kind.Allergy.Segment()))
 			</div>
-		} else {
-			<div class="mt-4 overflow-x-auto">
+			<div data-rows class="mt-4 overflow-x-auto">
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
@@ -78,7 +77,7 @@ templ AllergyList(props AllergyListProps) {
 					</tbody>
 				</table>
 			</div>
-		}
+		</div>
 		@pager(ids.RecordPager(kind.Allergy), props.PreviousHref, props.NextHref)
 	</section>
 }
