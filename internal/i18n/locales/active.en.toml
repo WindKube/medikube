@@ -2000,3 +2000,241 @@ other = "If you need to report it, quote the reference below. It identifies this
 [error.view.reference]
 description = "The label before an error view's request-id reference code"
 other = "Reference"
+
+# --- auth (T021 additions) --------------------------------------------------
+
+[auth.create_account]
+description = "P2's landmark and page title: the sign-up page"
+other = "Create account"
+
+[auth.reset_password]
+description = "P7's page title: the forgot-password page"
+other = "Reset password"
+
+[auth.choose_new_password]
+description = "P8's page title: the set-a-new-password page"
+other = "Choose a new password"
+
+[auth.confirm_your_address]
+description = "P9's page title (not its landmark, which stays \"Email confirmation\")"
+other = "Confirm your address"
+
+[auth.session_expired]
+description = "Shown on the sign-in page when reached after a session ran out"
+other = "Your session has expired. Sign in again to carry on."
+
+[auth.forgot_password_link]
+description = "The sign-in form's link to the recovery page"
+other = "Forgotten your password?"
+
+[auth.no_account_yet]
+description = "The sign-in form's lead-in to the create-account link"
+other = "No account yet? "
+
+[auth.already_have_account]
+description = "The sign-up form's lead-in to the sign-in link"
+other = "Already have an account? "
+
+[auth.registration_closed_title]
+description = "Shown in place of the sign-up form when the operator has closed registration"
+other = "This MediKube instance is not open for sign-ups."
+
+[auth.registration_closed_body]
+description = "The registration-closed explanation's second line"
+other = "Accounts here are created by whoever runs it. If you should have one, ask them; if you already have one, sign in below."
+
+[auth.forgot_password_body]
+description = "The recovery form's explanation, above the address control"
+other = "Give the address on your account and we will send a link to set a new password. The answer is the same either way, so this page never tells anybody which addresses have accounts."
+
+[auth.send_reset_link]
+description = "The recovery form's submit button"
+other = "Send the link"
+
+[auth.set_new_password]
+description = "The new-password form's submit button"
+other = "Set the new password"
+
+[auth.new_password_ends_sessions]
+description = "Warns that setting a new password ends every other session"
+other = "Setting a new password here ends every session this account still has open, anywhere."
+
+[auth.verify_email_body]
+description = "The email-confirmation page's explanation"
+other = "Confirming tells this instance that messages sent to the address on your account reach you — which is what makes a recovery link worth sending."
+
+[auth.confirm_my_address]
+description = "The email-confirmation page's submit button"
+other = "Confirm my address"
+
+[auth.link_dead_body]
+description = "Shown in place of a recovery or confirmation form when the link no longer resolves"
+other = "This link cannot be used any more. A link like this one works once and only for a while, and one that has been altered on the way is refused too."
+
+[auth.mail_unconfigured_title]
+description = "Shown when this instance has no outgoing mail configured, in place of a recovery/confirmation control"
+other = "This MediKube instance cannot send mail, so it cannot send you a link."
+
+[auth.mail_unconfigured_body]
+description = "The mail-unconfigured explanation's second line"
+other = "Ask whoever runs it. An operator can set a new password for an account directly, and can turn outgoing mail on so that this page starts working."
+
+[auth.ask_for_new_link]
+description = "The dead-recovery-link offer's own link text"
+other = "Ask for a new link"
+
+[auth.ask_for_new_confirmation]
+description = "The dead-confirmation-link offer's own link text"
+other = "Sign in and ask for a new confirmation"
+
+[auth.password_rule_length]
+description = "The published password rule stating the length bounds"
+other = "At least {{.Min}} characters, and at most {{.Max}}."
+
+[auth.password_rule_not_email]
+description = "The published password rule: not the account's own email address"
+other = "Not your email address."
+
+[auth.password_rule_not_name]
+description = "The published password rule: not the account's own display name"
+other = "Not your display name."
+
+# --- field -------------------------------------------------------------
+
+[field.email]
+description = "The email-address control's label, shared by sign-in, sign-up, recovery and settings"
+other = "Email address"
+
+[field.display_name]
+description = "The display-name control's label, shared by sign-up and settings"
+other = "Display name"
+
+[field.password]
+description = "The sign-in form's password control"
+other = "Password"
+
+[field.new_password]
+description = "The new-password control's label, shared by recovery and settings"
+other = "New password"
+
+[field.new_password_confirm]
+description = "The sign-up/recovery form's second typing of a new password"
+other = "New password again"
+
+[field.settings.measurement_units]
+description = "The settings profile form's unit-system control"
+other = "Measurement units"
+
+[field.settings.language]
+description = "The settings profile form's locale control"
+other = "Language"
+
+[field.settings.language_hint]
+description = "The settings profile form's locale control hint"
+other = "A two-letter code, optionally with a region, such as en or en-GB."
+
+[field.settings.date_presentation]
+description = "The settings profile form's date-format control"
+other = "Date presentation"
+
+[field.settings.appearance]
+description = "The settings profile form's theme control"
+other = "Appearance"
+
+[field.settings.current_password]
+description = "The settings password-change form's proof control"
+other = "Current password"
+
+[field.settings.your_password]
+description = "The account-deletion form's password control"
+other = "Your password"
+
+[field.settings.type_phrase_to_confirm]
+description = "The account-deletion form's confirmation-phrase control, naming the phrase"
+other = "Type {{.Phrase}} to confirm"
+
+[field.settings.confirmation_hint]
+description = "The account-deletion confirmation-phrase control's hint"
+other = "Exactly as written, in capitals. Nothing else deletes the account."
+
+# --- enum ----------------------------------------------------------------
+
+[enum.unit_system.metric]
+description = "The metric measurement-units option"
+other = "Metric"
+
+[enum.unit_system.imperial]
+description = "The imperial measurement-units option"
+other = "Imperial"
+
+[enum.date_format.iso]
+description = "The year-month-day date-format option, with a worked example"
+other = "Year-month-day (2026-08-31)"
+
+[enum.date_format.dmy]
+description = "The day/month/year date-format option, with a worked example"
+other = "Day/month/year (31/08/2026)"
+
+[enum.date_format.mdy]
+description = "The month/day/year date-format option, with a worked example"
+other = "Month/day/year (08/31/2026)"
+
+[enum.theme.system]
+description = "The system-follows-device appearance option"
+other = "Follow the device"
+
+[enum.theme.light]
+description = "The light appearance option"
+other = "Light"
+
+[enum.theme.dark]
+description = "The dark appearance option"
+other = "Dark"
+
+# --- settings (T021 additions) --------------------------------------------
+
+[settings.sessions_title]
+description = "The settings page's sessions section heading"
+other = "Sessions"
+
+[settings.sessions_body]
+description = "The settings page's sign-out-everywhere explanation"
+other = "Signing out ends every session this account has open, here and anywhere else — another browser, another device. That is deliberate: it is what makes a sign-out on a lost phone worth doing."
+
+[settings.email_confirmed]
+description = "Shown next to the account's address once it is confirmed"
+other = "This address is confirmed."
+
+[settings.email_unconfirmed]
+description = "Shown next to the account's address until it is confirmed"
+other = "This address has not been confirmed yet. Until it is, we cannot be sure a recovery message would reach you."
+
+[settings.email_fixed]
+description = "States that the settings page cannot change the sign-in address"
+other = "The address cannot be changed in this version."
+
+[settings.password_body]
+description = "The settings password-change form's explanation"
+other = "You stay signed in here. Every other session — another browser, another device — is ended."
+
+[settings.delete_warning]
+description = "The account-deletion section's opening warning"
+other = "Deleting your account cannot be undone. There is no restore and no grace period."
+
+[settings.delete_holdings_intro]
+description = "Introduces the list of what account deletion destroys"
+other = "These are destroyed with it:"
+
+# --- action (T021 additions) -----------------------------------------------
+
+[action.resend_confirmation]
+description = "Resends the email-confirmation message from settings"
+other = "Send the confirmation again"
+
+[action.save_changes]
+description = "The settings profile form's submit button"
+other = "Save changes"
+
+[action.sign_out]
+description = "Ends every session this account has open, everywhere"
+other = "Sign out"

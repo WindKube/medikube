@@ -1,7 +1,7 @@
 package page
 
 import (
-	"strings"
+	"context"
 
 	"github.com/pocketbase/pocketbase/core"
 
@@ -25,7 +25,7 @@ func (p *accountPages) settings(e *core.RequestEvent, actor access.Actor) error 
 		return err
 	}
 
-	ctx := e.Request.Context()
+	ctx := localizeCtx(e)
 
 	user, err := p.deps.Accounts.Me(ctx, actor)
 	if err != nil {
@@ -41,7 +41,7 @@ func (p *accountPages) settings(e *core.RequestEvent, actor access.Actor) error 
 		return err
 	}
 
-	return p.render(e, settingsTitle, true, p.links.signedInNav(ctx, p.links.settingsPage), settings.Settings(settings.SettingsProps{
+	return p.render(e, i18n.T(ctx, "nav.settings"), true, p.links.signedInNav(ctx, p.links.settingsPage), settings.Settings(settings.SettingsProps{
 		SignOutOn: p.links.post(p.links.logout),
 		Profile: settings.ProfileProps{
 			FormID:         ids.ProfileForm,
@@ -50,11 +50,10 @@ func (p *accountPages) settings(e *core.RequestEvent, actor access.Actor) error 
 			EmailConfirmed: user.EmailConfirmed,
 			ResendOn:       p.links.post(p.links.verify),
 			Name:           user.Name,
-			UnitSystems:    unitSystemOptions(user.UnitSystem),
+			UnitSystems:    unitSystemOptions(ctx, user.UnitSystem),
 			Locale:         user.Locale,
-			Locales:        localeOptions(user.Locale),
-			DateFormats:    dateFormatOptions(user.DateFormat),
-			Themes:         themeOptions(user.Theme),
+			DateFormats:    dateFormatOptions(ctx, user.DateFormat),
+			Themes:         themeOptions(ctx, user.Theme),
 		},
 		Password: settings.PasswordProps{
 			FormID:   ids.PasswordForm,
@@ -76,56 +75,30 @@ func (p *accountPages) settings(e *core.RequestEvent, actor access.Actor) error 
 //
 // The labels are this layer's: a domain vocabulary is a set of stored values and
 // "Follow the device" is not one of them.
-func unitSystemOptions(selected domainidentity.UnitSystem) []settings.Option {
+func unitSystemOptions(ctx context.Context, selected domainidentity.UnitSystem) []settings.Option {
 	labels := map[domainidentity.UnitSystem]string{
-		domainidentity.UnitSystemMetric:   "Metric",
-		domainidentity.UnitSystemImperial: "Imperial",
+		domainidentity.UnitSystemMetric:   i18n.T(ctx, "enum.unit_system.metric"),
+		domainidentity.UnitSystemImperial: i18n.T(ctx, "enum.unit_system.imperial"),
 	}
 
 	return optionsOf(domainidentity.UnitSystems(), selected, labels)
 }
 
-func dateFormatOptions(selected domainidentity.DateFormat) []settings.Option {
+func dateFormatOptions(ctx context.Context, selected domainidentity.DateFormat) []settings.Option {
 	labels := map[domainidentity.DateFormat]string{
-		domainidentity.DateFormatISO: "Year-month-day (2026-08-31)",
-		domainidentity.DateFormatDMY: "Day/month/year (31/08/2026)",
-		domainidentity.DateFormatMDY: "Month/day/year (08/31/2026)",
+		domainidentity.DateFormatISO: i18n.T(ctx, "enum.date_format.iso"),
+		domainidentity.DateFormatDMY: i18n.T(ctx, "enum.date_format.dmy"),
+		domainidentity.DateFormatMDY: i18n.T(ctx, "enum.date_format.mdy"),
 	}
 
 	return optionsOf(domainidentity.DateFormats(), selected, labels)
 }
 
-// localeOptions is i18n.Supported() (D-07: derived from the embedded
-// catalogues, never a Go slice this layer edits), labelled by each language's
-// own name for itself.
-//
-// selected is matched by its base language, region stripped, the same
-// comparison Resolve and IsSupported make: a stored "en-GB" selects the "en"
-// option rather than matching nothing.
-func localeOptions(selected string) []settings.Option {
-	base, _, _ := strings.Cut(selected, "-")
-	base = strings.ToLower(base)
-
-	langs := i18n.Supported()
-	rendered := make([]settings.Option, 0, len(langs))
-
-	for _, lang := range langs {
-		tag := lang.Tag.String()
-		rendered = append(rendered, settings.Option{
-			Value:    tag,
-			Label:    lang.Name,
-			Selected: tag == base,
-		})
-	}
-
-	return rendered
-}
-
-func themeOptions(selected domainidentity.Theme) []settings.Option {
+func themeOptions(ctx context.Context, selected domainidentity.Theme) []settings.Option {
 	labels := map[domainidentity.Theme]string{
-		domainidentity.ThemeSystem: "Follow the device",
-		domainidentity.ThemeLight:  "Light",
-		domainidentity.ThemeDark:   "Dark",
+		domainidentity.ThemeSystem: i18n.T(ctx, "enum.theme.system"),
+		domainidentity.ThemeLight:  i18n.T(ctx, "enum.theme.light"),
+		domainidentity.ThemeDark:   i18n.T(ctx, "enum.theme.dark"),
 	}
 
 	return optionsOf(domainidentity.Themes(), selected, labels)

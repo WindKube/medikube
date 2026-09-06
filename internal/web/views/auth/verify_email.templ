@@ -1,5 +1,7 @@
 package auth
 
+import "medikube/internal/i18n"
+
 // VerifyEmail is contracts/pages.md's P9: region[name="Email confirmation"].
 //
 // A region with one control in it, and NOT a confirmation performed by the GET
@@ -15,8 +17,7 @@ templ VerifyEmail(props VerifyEmailProps) {
 		<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ EmailConfirmationLandmark }</h1>
 		if props.Usable {
 			<p class="max-w-prose text-sm text-slate-600 dark:text-slate-400">
-				Confirming tells this instance that messages sent to the address on your account reach you —
-				which is what makes a recovery link worth sending.
+				{ i18n.T(ctx, "auth.verify_email_body") }
 			</p>
 			<input
 				id={ props.FieldID(FieldToken) }
@@ -30,10 +31,10 @@ templ VerifyEmail(props VerifyEmailProps) {
 					type="button"
 					data-on:click={ props.OnConfirm }
 					class="inline-flex items-center justify-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-				>Confirm my address</button>
+				>{ i18n.T(ctx, "auth.confirm_my_address") }</button>
 			</div>
 		} else {
-			@linkDead(props.deadLink())
+			@linkDead(props.deadLink(ctx))
 		}
 	</section>
 }

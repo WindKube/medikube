@@ -4,6 +4,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"medikube/internal/domain/access"
+	"medikube/internal/i18n"
 	"medikube/internal/service/identity"
 	"medikube/internal/web/views/auth"
 	"medikube/internal/web/views/ids"
@@ -30,7 +31,10 @@ func (p *accountPages) verifyEmail(e *core.RequestEvent, _ access.Actor) error {
 		return err
 	}
 
-	return p.render(e, verifyEmailTitle, false, p.links.signedOutNav(e.Request.URL.Path),
+	ctx := localizeCtx(e)
+	title := i18n.T(ctx, "auth.confirm_your_address")
+
+	return p.render(e, title, false, p.links.signedOutNav(ctx, e.Request.URL.Path),
 		auth.VerifyEmail(auth.VerifyEmailProps{
 			FormID:    ids.ConfirmAddressForm,
 			OnConfirm: p.links.post(p.links.confirmEmail),

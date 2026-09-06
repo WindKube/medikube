@@ -1,5 +1,7 @@
 package auth
 
+import "medikube/internal/i18n"
+
 // linkDead is FR-074's refusal, rendered INSIDE the landmark of the page the
 // link opened.
 //
@@ -11,8 +13,7 @@ package auth
 templ linkDead(offer deadLinkOffer) {
 	<div id={ LinkDeadID } class="flex flex-col items-start gap-3 text-sm text-slate-700 dark:text-slate-300">
 		<p class="max-w-prose">
-			This link cannot be used any more. A link like this one works once and only for a while, and one
-			that has been altered on the way is refused too.
+			{ i18n.T(ctx, "auth.link_dead_body") }
 		</p>
 		if offer.Mailable {
 			<a
@@ -33,10 +34,9 @@ templ linkDead(offer deadLinkOffer) {
 // a request as though it had succeeded, which is the thing FR-076 forbids.
 templ mailUnconfigured() {
 	<div id={ MailUnconfiguredID } class="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
-		<p>This MediKube instance cannot send mail, so it cannot send you a link.</p>
+		<p>{ i18n.T(ctx, "auth.mail_unconfigured_title") }</p>
 		<p class="max-w-prose">
-			Ask whoever runs it. An operator can set a new password for an account directly, and can turn
-			outgoing mail on so that this page starts working.
+			{ i18n.T(ctx, "auth.mail_unconfigured_body") }
 		</p>
 	</div>
 }

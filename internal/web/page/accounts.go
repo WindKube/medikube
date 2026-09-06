@@ -14,6 +14,7 @@ import (
 	"medikube/internal/domain/access"
 	domainidentity "medikube/internal/domain/identity"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	"medikube/internal/service/identity"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -32,19 +33,12 @@ const (
 	OpVerifyEmailPage    = "verifyEmailPage"
 )
 
-// The titles of the same six rows, without the product suffix, which
-// shell.Title adds. P9's is not its landmark: the gate resolves
-// region[name="Email confirmation"] and the tab says "Confirm your address",
-// and contracts/pages.md fixes both.
-const (
-	loginTitle          = "Sign in"
-	registerTitle       = "Create account"
-	settingsTitle       = "Settings"
-	forgotPasswordTitle = "Reset password"
-	//nolint:gosec // the text in a browser tab, not a credential
-	resetPasswordTitle = "Choose a new password"
-	verifyEmailTitle   = "Confirm your address"
-)
+// The other five's titles are resolved at render time via i18n.T against the
+// same ids their signed-out nav labels and landmarks use (action.sign_in,
+// auth.create_account, auth.reset_password, auth.choose_new_password,
+// auth.confirm_your_address); P9's title is not its landmark: the gate
+// resolves region[name="Email confirmation"] and the tab says "Confirm your
+// address", and contracts/pages.md fixes both.
 
 // PathToken is the {token} segment of P8 and P9, spelled as the route table
 // declares it. A handler that read a differently spelled parameter would see an
@@ -274,10 +268,10 @@ func payload(fields []string) string {
 // session: the landmark is on every page in the application and what changes is
 // its CONTENTS, because phase 005's public invitation page is opened by
 // somebody who needs exactly these two links.
-func (l accountLinks) signedOutNav(current string) []shell.NavLink {
+func (l accountLinks) signedOutNav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: loginTitle, Href: l.loginPage, Current: current == l.loginPage},
-		{Label: registerTitle, Href: l.registerPage, Current: current == l.registerPage},
+		{Label: i18n.T(ctx, "action.sign_in"), Href: l.loginPage, Current: current == l.loginPage},
+		{Label: i18n.T(ctx, "auth.create_account"), Href: l.registerPage, Current: current == l.registerPage},
 	}
 }
 

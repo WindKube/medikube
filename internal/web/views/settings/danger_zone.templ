@@ -1,5 +1,7 @@
 package settings
 
+import "medikube/internal/i18n"
+
 // DangerZone is FR-013: the one irreversible operation in this phase, kept
 // apart from the preferences it would otherwise sit beside.
 //
@@ -16,9 +18,9 @@ templ DangerZone(props DangerZoneProps) {
 		<h2 class="text-lg font-semibold text-rose-900 dark:text-rose-100">{ DangerZoneLandmark }</h2>
 		<div id={ HoldingsID } class="flex flex-col gap-2">
 			<p class="max-w-prose text-sm font-medium text-rose-900 dark:text-rose-100">
-				Deleting your account cannot be undone. There is no restore and no grace period.
+				{ i18n.T(ctx, "settings.delete_warning") }
 			</p>
-			<p class="text-sm text-rose-800 dark:text-rose-200">These are destroyed with it:</p>
+			<p class="text-sm text-rose-800 dark:text-rose-200">{ i18n.T(ctx, "settings.delete_holdings_intro") }</p>
 			<ul class="list-disc pl-5 text-sm text-rose-800 dark:text-rose-200">
 				for _, holding := range props.Holdings {
 					<li>{ holding.Count } { holding.Label }</li>
@@ -31,7 +33,7 @@ templ DangerZone(props DangerZoneProps) {
 			data-on:submit__prevent={ props.OnSubmit }
 			class="flex flex-col gap-5"
 		>
-			for _, control := range props.Controls() {
+			for _, control := range props.Controls(ctx) {
 				@field(control)
 			}
 			<div>

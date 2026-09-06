@@ -5,6 +5,7 @@ import (
 
 	"medikube/internal/domain/access"
 	domainidentity "medikube/internal/domain/identity"
+	"medikube/internal/i18n"
 	"medikube/internal/service/identity"
 	"medikube/internal/web/views/auth"
 	"medikube/internal/web/views/ids"
@@ -31,7 +32,10 @@ func (p *accountPages) resetPassword(e *core.RequestEvent, _ access.Actor) error
 		return err
 	}
 
-	return p.render(e, resetPasswordTitle, false, p.links.signedOutNav(e.Request.URL.Path),
+	ctx := localizeCtx(e)
+	title := i18n.T(ctx, "auth.choose_new_password")
+
+	return p.render(e, title, false, p.links.signedOutNav(ctx, e.Request.URL.Path),
 		auth.ResetPassword(auth.ResetPasswordProps{
 			FormID:     ids.NewPasswordForm,
 			OnSubmit:   p.links.post(p.links.setPassword),
