@@ -5,6 +5,7 @@ import (
 
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/identity"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/auth"
 	"medikube/internal/web/views/ids"
 )
@@ -24,7 +25,10 @@ import (
 // The password rules come from the domain value the check itself reads, so the
 // rules this page publishes are the rules the API enforces (FR-004).
 func (p *accountPages) register(e *core.RequestEvent, _ access.Actor) error {
-	return p.render(e, registerTitle, false, p.links.signedOutNav(p.links.registerPage), auth.Register(auth.RegisterProps{
+	ctx := localizeCtx(e)
+	title := i18n.T(ctx, "auth.create_account")
+
+	return p.render(e, title, false, p.links.signedOutNav(ctx, p.links.registerPage), auth.Register(auth.RegisterProps{
 		FormID:    ids.CreateAccountForm,
 		OnSubmit:  p.links.post(p.links.register),
 		LoginHref: p.links.loginPage,

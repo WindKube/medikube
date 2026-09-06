@@ -1,15 +1,9 @@
 package directory
 
 import (
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
-)
-
-const (
-	practitionersLandmark  = "Practitioners"
-	practitionersEmptyTitle = "Nothing recorded yet"
-	practitionersEmptyBody  = "Add the first one and it will be listed here."
-	addPractitionerLabel    = "Add a practitioner"
 )
 
 // PractitionerList is contracts/pages.md P3's landmark. The empty state
@@ -17,7 +11,7 @@ const (
 templ PractitionerList(props PractitionerListProps) {
 	<section
 		id={ ids.DirectoryList(PractitionerSegment) }
-		aria-label={ practitionersLandmark }
+		aria-label={ i18n.T(ctx, "nav.practitioners") }
 		class="flex flex-col"
 	>
 		<div class="flex flex-wrap items-center justify-between gap-3">
@@ -25,22 +19,22 @@ templ PractitionerList(props PractitionerListProps) {
 				id={ ids.DirectoryListHeading(PractitionerSegment) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ practitionersLandmark }</h1>
+			>{ i18n.T(ctx, "nav.practitioners") }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }
 					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-				>{ addPractitionerLabel }</a>
+				>{ i18n.T(ctx, "directory.add_practitioner") }</a>
 			}
 		</div>
 		if len(props.Practitioners) == 0 {
 			<div class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:          ids.DirectoryEmpty(PractitionerSegment),
-					Title:       practitionersEmptyTitle,
-					Body:        practitionersEmptyBody,
+					Title:       i18n.T(ctx, "patient.nothing_recorded_title"),
+					Body:        i18n.T(ctx, "directory.empty_body"),
 					ActionHref:  props.CreateHref,
-					ActionLabel: addPractitionerLabel,
+					ActionLabel: i18n.T(ctx, "directory.add_practitioner"),
 				})
 			</div>
 		} else {
@@ -48,9 +42,9 @@ templ PractitionerList(props PractitionerListProps) {
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
-							<th scope="col" class="pb-2 pr-4 font-medium">{ PractitionerFieldLabel(FieldPractitionerName) }</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">{ PractitionerFieldLabel(FieldPractitionerSpecialty) }</th>
-							<th scope="col" class="pb-2 font-medium">{ PractitionerFieldLabel(FieldPractitionerFacility) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ PractitionerFieldLabel(ctx, FieldPractitionerName) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ PractitionerFieldLabel(ctx, FieldPractitionerSpecialty) }</th>
+							<th scope="col" class="pb-2 font-medium">{ PractitionerFieldLabel(ctx, FieldPractitionerFacility) }</th>
 						</tr>
 					</thead>
 					<tbody id={ ids.DirectoryRows(PractitionerSegment) }>

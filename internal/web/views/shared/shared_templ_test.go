@@ -43,8 +43,8 @@ func TestDeleteConfirmStatesWhatIsDestroyedAndHowManyRecordsReferToIt(t *testing
 		count int
 		want  string
 	}{
-		{name: "none", count: 0, want: "No other record refers to it"},
-		{name: "one", count: 1, want: "One other record refers to it"},
+		{name: "none", count: 0, want: "0 other records refer to it"},
+		{name: "one", count: 1, want: "1 other record refers to it"},
 		{name: "several", count: 3, want: "3 other records refer to it"},
 	}
 

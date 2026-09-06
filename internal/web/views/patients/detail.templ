@@ -3,12 +3,11 @@ package patients
 import (
 	"strconv"
 
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web"
 )
-
-const patientChartRegion = "Patient chart"
 
 // PatientDetail is contracts/pages.md P2's landmark: the person's own header,
 // with every absent detail simply not rendered as a row (FR-030, US1-6) — an
@@ -16,7 +15,7 @@ const patientChartRegion = "Patient chart"
 templ PatientDetail(props PatientDetailProps) {
 	<section
 		id={ ids.PatientDetail(props.Patient.ID) }
-		aria-label={ patientChartRegion }
+		aria-label={ i18n.T(ctx, "patient.chart_region") }
 		data-signals={ patientDetailSignals(props.Patient) }
 		class="flex flex-col gap-4"
 	>
@@ -31,7 +30,7 @@ templ PatientDetail(props PatientDetailProps) {
 					<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">
 						{ props.Patient.FullName() }
 						if props.Patient.IsSelfRecord {
-							<span class="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800 dark:bg-teal-900 dark:text-teal-200">{ selfMarker }</span>
+							<span class="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800 dark:bg-teal-900 dark:text-teal-200">{ i18n.T(ctx, "patient.self_marker") }</span>
 						}
 					</h1>
 					if props.Patient.Age != "" {
@@ -43,13 +42,13 @@ templ PatientDetail(props PatientDetailProps) {
 				<a
 					href={ "#" + ids.PatientForm(props.Patient.ID) }
 					class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-				>Edit</a>
+				>{ i18n.T(ctx, "action.edit") }</a>
 				if !props.Patient.IsSelfRecord {
 					<button
 						type="button"
 						data-on:click={ "$" + DeleteConfirmSignal + " = true" }
 						class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-					>Delete</button>
+					>{ i18n.T(ctx, "action.delete") }</button>
 				}
 			</div>
 		</div>
@@ -62,9 +61,9 @@ templ PatientDetail(props PatientDetailProps) {
 				DeleteHref:   props.Patient.Links.Record,
 			})
 		}
-		if len(props.Patient.Entries()) > 0 {
+		if len(props.Patient.Entries(ctx)) > 0 {
 			<dl class="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-				for _, entry := range props.Patient.Entries() {
+				for _, entry := range props.Patient.Entries(ctx) {
 					<div>
 						<dt class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
 						if entry.Datetime != "" {
@@ -79,8 +78,8 @@ templ PatientDetail(props PatientDetailProps) {
 		if props.Empty() {
 			@components.EmptyState(components.EmptyStateProps{
 				ID:    ids.PatientEmpty(),
-				Title: "Nothing recorded yet",
-				Body:  "Every kind of record for this person starts here, at zero.",
+				Title: i18n.T(ctx, "patient.nothing_recorded_title"),
+				Body:  i18n.T(ctx, "patient.nothing_recorded_body"),
 			})
 		} else {
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -91,7 +90,7 @@ templ PatientDetail(props PatientDetailProps) {
 					>
 						<p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{ tile.Label }</p>
 						if tile.Empty() {
-							<p class="mt-1 text-sm text-slate-600 dark:text-slate-400">None yet — add the first one</p>
+							<p class="mt-1 text-sm text-slate-600 dark:text-slate-400">{ i18n.T(ctx, "patient.tile_empty") }</p>
 						} else {
 							<p class="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">{ strconv.Itoa(tile.Count) }</p>
 						}
@@ -100,7 +99,7 @@ templ PatientDetail(props PatientDetailProps) {
 			</div>
 			if len(props.Activity) > 0 {
 				<div>
-					<h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Recent activity</h2>
+					<h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{ i18n.T(ctx, "patient.recent_activity") }</h2>
 					<ul class="mt-2 flex flex-col gap-1">
 						for _, item := range props.Activity {
 							<li class="text-sm text-slate-600 dark:text-slate-400">

@@ -1,22 +1,16 @@
 package directory
 
 import (
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
-)
-
-const (
-	facilitiesLandmark   = "Facilities"
-	facilitiesEmptyTitle = "Nothing recorded yet"
-	facilitiesEmptyBody  = "Add the first one and it will be listed here."
-	addFacilityLabel     = "Add a facility"
 )
 
 // FacilityList is contracts/pages.md P5's landmark.
 templ FacilityList(props FacilityListProps) {
 	<section
 		id={ ids.DirectoryList(FacilitySegment) }
-		aria-label={ facilitiesLandmark }
+		aria-label={ i18n.T(ctx, "directory.facility_region") }
 		class="flex flex-col"
 	>
 		<div class="flex flex-wrap items-center justify-between gap-3">
@@ -24,22 +18,22 @@ templ FacilityList(props FacilityListProps) {
 				id={ ids.DirectoryListHeading(FacilitySegment) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ facilitiesLandmark }</h1>
+			>{ i18n.T(ctx, "directory.facility_region") }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }
 					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-				>{ addFacilityLabel }</a>
+				>{ i18n.T(ctx, "directory.add_facility") }</a>
 			}
 		</div>
 		if len(props.Facilities) == 0 {
 			<div class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:          ids.DirectoryEmpty(FacilitySegment),
-					Title:       facilitiesEmptyTitle,
-					Body:        facilitiesEmptyBody,
+					Title:       i18n.T(ctx, "patient.nothing_recorded_title"),
+					Body:        i18n.T(ctx, "directory.empty_body"),
 					ActionHref:  props.CreateHref,
-					ActionLabel: addFacilityLabel,
+					ActionLabel: i18n.T(ctx, "directory.add_facility"),
 				})
 			</div>
 		} else {
@@ -47,9 +41,9 @@ templ FacilityList(props FacilityListProps) {
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
-							<th scope="col" class="pb-2 pr-4 font-medium">{ FacilityFieldLabel(FieldFacilityName) }</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">{ FacilityFieldLabel(FieldFacilityKind) }</th>
-							<th scope="col" class="pb-2 font-medium">{ FacilityFieldLabel(FieldFacilityCity) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FacilityFieldLabel(ctx, FieldFacilityName) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ FacilityFieldLabel(ctx, FieldFacilityKind) }</th>
+							<th scope="col" class="pb-2 font-medium">{ FacilityFieldLabel(ctx, FieldFacilityCity) }</th>
 						</tr>
 					</thead>
 					<tbody id={ ids.DirectoryRows(FacilitySegment) }>

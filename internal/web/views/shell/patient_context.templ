@@ -1,5 +1,7 @@
 package shell
 
+import "medikube/internal/i18n"
+
 // PatientContextProps is one line: whose records this screen shows.
 type PatientContextProps struct {
 	Name string
@@ -12,7 +14,7 @@ type PatientContextProps struct {
 templ PatientContextHeader(props PatientContextProps) {
 	if props.Name != "" {
 		<p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
-			Viewing
+			{ i18n.T(ctx, "shell.viewing") }
 			if props.Href != "" {
 				<a href={ templ.SafeURL(props.Href) } class="font-medium text-slate-900 underline underline-offset-2 dark:text-slate-100">{ props.Name }</a>
 			} else {

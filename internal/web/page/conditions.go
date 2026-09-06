@@ -342,7 +342,7 @@ func (p *conditionPages) render(e *core.RequestEvent, actor access.Actor, title 
 	}
 
 	return RenderPage(e, http.StatusOK, title,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path), Switcher: switcher}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path), Switcher: switcher}, main)
 }
 
 type conditionLinks struct {
@@ -430,9 +430,9 @@ func (v ConditionViews) cancelHref(condition views.ConditionView) string {
 // nav is FR-050's fixed pair, not a per-kind entry: every signed-in page
 // offers the route back to the medication list and to settings, the same
 // nav medications.go itself renders.
-func (l conditionLinks) nav(current string) []shell.NavLink {
+func (l conditionLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: medicationListTitle, Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
-		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
+		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
+		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

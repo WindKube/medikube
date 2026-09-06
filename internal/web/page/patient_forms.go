@@ -6,6 +6,7 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	domainperson "medikube/internal/domain/person"
+	"medikube/internal/i18n"
 	"medikube/internal/service/patient"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -14,8 +15,11 @@ import (
 )
 
 // staleFormNotice is research D-24's own explanation, rendered inside a form
-// re-populated from the server's current values after a stale If-Match.
-const staleFormNotice = "This record changed since you loaded it; the current values are shown."
+// re-populated from the server's current values after a stale If-Match —
+// shared by the patient, facility and practitioner forms.
+func staleFormNotice(ctx context.Context) string {
+	return i18n.T(ctx, "form.stale_notice")
+}
 
 // patientForms implements api.PatientForms by rendering the same components
 // the pages themselves build, so a Datastar form submit and a full page load
@@ -57,7 +61,7 @@ func (f patientForms) view(ctx context.Context, actor access.Actor, p domainpers
 		links = patients.PatientLinks{Detail: f.links.of(p.ID), Record: "/api/v1/patients/" + p.ID}
 	}
 
-	return patients.NewPatientView(p, photoURL, system, links), nil
+	return patients.NewPatientView(ctx, p, photoURL, system, links), nil
 }
 
 func (f patientForms) Invalid(
@@ -91,7 +95,7 @@ func (f patientForms) Stale(ctx context.Context, actor access.Actor, current dom
 		CancelHref: f.links.cancelHref(view),
 		Patient:    view,
 		Errors:     patients.NewFieldErrors(nil),
-		Notice:     staleFormNotice,
+		Notice:     staleFormNotice(ctx),
 	}), nil
 }
 
@@ -177,7 +181,7 @@ func (f patientForms) Updated(ctx context.Context, actor access.Actor, updated d
 		patients.PatientDetail(patients.PatientDetailProps{
 			Patient:      view,
 			Tiles:        patients.NewChartTiles(view.ID, tiles),
-			Activity:     patients.NewActivityItems(events, func(string, string) string { return "" }),
+			Activity:     patients.NewActivityItems(ctx, events, func(string, string) string { return "" }),
 			TotalRecords: chart.TotalRecords,
 		}),
 		patients.PatientForm(patients.PatientFormProps{

@@ -1,6 +1,9 @@
 package shell
 
-import "medikube/internal/web/views/ids"
+import (
+	"medikube/internal/i18n"
+	"medikube/internal/web/views/ids"
+)
 
 // PatientSwitcher is FR-014's `combobox[name="Active patient"]`: the person
 // in view, and every other patient the account holder may switch to. It
@@ -25,11 +28,11 @@ templ PatientSwitcher(props PatientSwitcherProps) {
 				<span class="text-sm font-medium text-slate-900 dark:text-slate-100">{ active.Name }</span>
 			</span>
 		}
-		<label for={ ids.ActivePatientSwitcher() + "-select" } class="sr-only">Active patient</label>
+		<label for={ ids.ActivePatientSwitcher() + "-select" } class="sr-only">{ i18n.T(ctx, "a11y.active_patient") }</label>
 		<select
 			id={ ids.ActivePatientSwitcher() + "-select" }
 			role="combobox"
-			aria-label="Active patient"
+			aria-label={ i18n.T(ctx, "a11y.active_patient") }
 			name="patient"
 			data-bind="_active_patient"
 			if props.Href != "" {
@@ -38,7 +41,7 @@ templ PatientSwitcher(props PatientSwitcherProps) {
 			class="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>
 			if len(props.Options) == 0 {
-				<option value="">No patient selected</option>
+				<option value="">{ i18n.T(ctx, "shell.no_patient_selected") }</option>
 			}
 			for _, opt := range props.Options {
 				<option value={ opt.ID } selected?={ opt.Active }>{ opt.Label() }</option>

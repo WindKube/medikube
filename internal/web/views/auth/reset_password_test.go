@@ -158,7 +158,7 @@ func TestTheRecoveryPasswordRulesAreStatedBeforeThePersonChoosesOne(t *testing.T
 	// The same sentences the sign-up form states, because they are the same
 	// rules and a person who met them once should not have to read them twice
 	// in two different sets of words.
-	assert.Equal(t, auth.RegisterProps{Rules: props.Rules}.RuleSentences(), props.RuleSentences())
+	assert.Equal(t, auth.RegisterProps{Rules: props.Rules}.RuleSentences(t.Context()), props.RuleSentences(t.Context()))
 }
 
 // FR-048, over both controls the confirmation can refuse at once.

@@ -4,6 +4,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"medikube/internal/domain/access"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/auth"
 	"medikube/internal/web/views/ids"
 )
@@ -25,7 +26,10 @@ import (
 // had cached the answer at boot would keep refusing on an instance that had
 // started working (FR-076).
 func (p *accountPages) forgotPassword(e *core.RequestEvent, _ access.Actor) error {
-	return p.render(e, forgotPasswordTitle, false, p.links.signedOutNav(e.Request.URL.Path),
+	ctx := localizeCtx(e)
+	title := i18n.T(ctx, "auth.reset_password")
+
+	return p.render(e, title, false, p.links.signedOutNav(ctx, e.Request.URL.Path),
 		auth.ForgotPassword(auth.ForgotPasswordProps{
 			FormID:    ids.ForgotPasswordForm,
 			OnSubmit:  p.links.post(p.links.recover),

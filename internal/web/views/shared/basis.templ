@@ -1,5 +1,7 @@
 package shared
 
+import "medikube/internal/i18n"
+
 // BasisProps is FR-026 and FR-078's own words: a status view is a narrowing of
 // an ordinary list, and every row it shows states why it was selected rather
 // than leaving the reader to guess. Labels is plural because a row can be
@@ -10,7 +12,7 @@ type BasisProps struct {
 }
 
 templ Basis(props BasisProps) {
-	<ul id={ props.ID } aria-label="Basis for inclusion" class="flex flex-wrap gap-1.5">
+	<ul id={ props.ID } aria-label={ i18n.T(ctx, "a11y.basis_for_inclusion") } class="flex flex-wrap gap-1.5">
 		for _, label := range props.Labels {
 			<li class="inline-flex items-center rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-900 dark:bg-teal-900 dark:text-teal-100">
 				{ label }

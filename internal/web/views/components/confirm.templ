@@ -1,9 +1,11 @@
 package components
 
+import "medikube/internal/i18n"
+
 templ Confirm(props ConfirmProps) {
 	<section
 		id={ props.ID }
-		aria-label="Confirm delete"
+		aria-label={ i18n.T(ctx, "a11y.confirm_delete") }
 		data-show={ "$" + props.Signal }
 		class="mt-6 rounded-lg border border-rose-300 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950"
 	>

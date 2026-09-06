@@ -1,9 +1,10 @@
 package auth
 
 import (
-	"strconv"
+	"context"
 	"strings"
 
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/ids"
 )
 
@@ -105,18 +106,20 @@ func (p RegisterProps) field(field, label, inputType, autocomplete, value string
 // reads, so a rule switched off in the domain stops being enforced and stops
 // being stated in one edit, and the number below the control is the number that
 // refuses the password.
-func (p RegisterProps) RuleSentences() []string {
+func (p RegisterProps) RuleSentences(ctx context.Context) []string {
 	sentences := []string{
-		"At least " + strconv.Itoa(p.Rules.MinLength) + " characters, and at most " +
-			strconv.Itoa(p.Rules.MaxLength) + ".",
+		i18n.T(ctx, "auth.password_rule_length", map[string]any{
+			"Min": p.Rules.MinLength,
+			"Max": p.Rules.MaxLength,
+		}),
 	}
 
 	if p.Rules.RejectsEmail {
-		sentences = append(sentences, "Not your email address.")
+		sentences = append(sentences, i18n.T(ctx, "auth.password_rule_not_email"))
 	}
 
 	if p.Rules.RejectsName {
-		sentences = append(sentences, "Not your display name.")
+		sentences = append(sentences, i18n.T(ctx, "auth.password_rule_not_name"))
 	}
 
 	return sentences
@@ -189,8 +192,8 @@ func (p ResetPasswordProps) field(field, label, inputType, autocomplete, value s
 // RuleSentences is FR-004's published rules in the words the recovery form
 // states them, which are the sign-up form's words from the sign-up form's
 // value: one rule set, stated wherever a password is chosen (FR-074).
-func (p ResetPasswordProps) RuleSentences() []string {
-	return RegisterProps{Rules: p.Rules}.RuleSentences()
+func (p ResetPasswordProps) RuleSentences(ctx context.Context) []string {
+	return RegisterProps{Rules: p.Rules}.RuleSentences(ctx)
 }
 
 // deadLinkOffer is what FR-074's explanation can offer the person holding a
@@ -207,14 +210,14 @@ type deadLinkOffer struct {
 	Label    string
 }
 
-func (p ResetPasswordProps) deadLink() deadLinkOffer {
-	return deadLinkOffer{Mailable: p.Mailable, Href: p.ForgotHref, Label: "Ask for a new link"}
+func (p ResetPasswordProps) deadLink(ctx context.Context) deadLinkOffer {
+	return deadLinkOffer{Mailable: p.Mailable, Href: p.ForgotHref, Label: i18n.T(ctx, "auth.ask_for_new_link")}
 }
 
-func (p VerifyEmailProps) deadLink() deadLinkOffer {
+func (p VerifyEmailProps) deadLink(ctx context.Context) deadLinkOffer {
 	return deadLinkOffer{
 		Mailable: p.Mailable,
 		Href:     p.LoginHref,
-		Label:    "Sign in and ask for a new confirmation",
+		Label:    i18n.T(ctx, "auth.ask_for_new_confirmation"),
 	}
 }

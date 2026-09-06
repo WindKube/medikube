@@ -1,10 +1,12 @@
 package shell
 
+import "medikube/internal/i18n"
+
 // noscript is FR-049: every page states plainly, inside main, that MediKube
 // needs scripting switched on to record or change anything — so a visitor
 // without it sees an explanation rather than a blank rectangle.
 templ noscript() {
 	<noscript>
-		<p>MediKube needs JavaScript switched on to record and change anything. Reading what is already here works without it.</p>
+		<p>{ i18n.T(ctx, "shell.noscript") }</p>
 	</noscript>
 }

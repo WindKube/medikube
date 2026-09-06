@@ -1,41 +1,46 @@
 package overview
 
-import "strconv"
+import (
+	"context"
+	"strconv"
+
+	"medikube/internal/i18n"
+)
 
 // Overview is contracts/pages.md P3's landmark: the application root, kept
 // plain on purpose — a count and two links, and nothing FR-050 did not ask
 // for.
 templ Overview(props Props) {
-	<section aria-label={ OverviewLandmark } class="flex flex-col gap-4">
-		<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ OverviewLandmark }</h1>
+	<section aria-label={ i18n.T(ctx, "nav.overview") } class="flex flex-col gap-4">
+		<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ i18n.T(ctx, "nav.overview") }</h1>
 		<p class="text-sm text-slate-700 dark:text-slate-300">
-			{ medicationSummary(props.MedicationCount, props.MedicationsLabel) }
+			{ medicationSummary(ctx, props.MedicationCount, props.MedicationsLabel) }
 		</p>
 		<ul class="flex flex-col gap-2">
 			<li>
 				<a
 					href={ templ.SafeURL(props.MedicationsHref) }
 					class="text-sm font-medium text-teal-700 underline underline-offset-2 hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-teal-400"
-				>{ "Go to your " + props.MedicationsLabel }</a>
+				>{ i18n.T(ctx, "overview.go_to_medications", map[string]any{"Label": props.MedicationsLabel}) }</a>
 			</li>
 			<li>
 				<a
 					href={ templ.SafeURL(props.SettingsHref) }
 					class="text-sm font-medium text-teal-700 underline underline-offset-2 hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-teal-400"
-				>Go to your settings</a>
+				>{ i18n.T(ctx, "overview.go_to_settings") }</a>
 			</li>
 		</ul>
 	</section>
 }
 
-func medicationSummary(count int, label string) string {
+func medicationSummary(ctx context.Context, count int, label string) string {
 	if count == 0 {
-		return "You have not recorded any " + label + " yet."
+		return i18n.T(ctx, "overview.medication_summary_zero", map[string]any{"Label": label})
 	}
 
 	if count == 1 {
-		return "You have 1 medication recorded."
+		return i18n.T(ctx, "overview.medication_summary_one")
 	}
 
-	return "You have " + strconv.Itoa(count) + " " + label + " recorded."
+	return i18n.T(ctx, "overview.medication_summary_other", map[string]any{"Count": strconv.Itoa(count), "Label": label})
 }

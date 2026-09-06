@@ -1,8 +1,10 @@
 package shared
 
 import (
-	"fmt"
+	"context"
 	"strconv"
+
+	"medikube/internal/i18n"
 )
 
 // DeleteConfirmProps is FR-006's confirmation: named, permanent, and honest
@@ -28,15 +30,8 @@ type DeleteConfirmProps struct {
 	CancelLabel  string
 }
 
-func (p DeleteConfirmProps) consequence() string {
-	switch p.ReferenceCount {
-	case 0:
-		return "This is permanent and cannot be undone. No other record refers to it."
-	case 1:
-		return "This is permanent and cannot be undone. One other record refers to it."
-	default:
-		return fmt.Sprintf("This is permanent and cannot be undone. %d other records refer to it.", p.ReferenceCount)
-	}
+func (p DeleteConfirmProps) consequence(ctx context.Context) string {
+	return i18n.N(ctx, "confirm.delete_consequence", p.ReferenceCount)
 }
 
 func (p DeleteConfirmProps) cancelExpression() string {
@@ -51,13 +46,13 @@ func (p DeleteConfirmProps) cancelExpression() string {
 templ DeleteConfirm(props DeleteConfirmProps) {
 	<section
 		id={ props.ID }
-		aria-label="Confirm delete"
+		aria-label={ i18n.T(ctx, "a11y.confirm_delete") }
 		data-show={ "$" + props.Signal }
 		class="mt-6 rounded-lg border border-rose-300 bg-rose-50 p-4 dark:border-rose-800 dark:bg-rose-950"
 	>
 		<h2 class="text-base font-semibold text-rose-900 dark:text-rose-100">{ props.Title }</h2>
 		<p class="mt-1 text-sm font-medium text-rose-900 dark:text-rose-100">{ props.Subject }</p>
-		<p class="mt-2 max-w-prose text-sm text-rose-800 dark:text-rose-200">{ props.consequence() }</p>
+		<p class="mt-2 max-w-prose text-sm text-rose-800 dark:text-rose-200">{ props.consequence(ctx) }</p>
 		<div class="mt-4 flex flex-wrap gap-3">
 			<button
 				type="button"

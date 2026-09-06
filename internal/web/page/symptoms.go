@@ -376,7 +376,7 @@ func (p *symptomPages) render(e *core.RequestEvent, actor access.Actor, title st
 	}
 
 	return RenderPage(e, http.StatusOK, title,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path), Switcher: switcher}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path), Switcher: switcher}, main)
 }
 
 type symptomLinks struct {
@@ -457,13 +457,10 @@ func (l symptomLinks) cancelHref(symptom views.SymptomView) string {
 	return l.listPage
 }
 
-func (l symptomLinks) nav(current string) []shell.NavLink {
+func (l symptomLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: medicationListTitle, Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
-		// Nav labels are not yet resolved through i18n.T by shell/nav.templ
-		// (T020); left in English here until that seam lands (US1 cross-slice
-		// note in this task's report).
-		{Label: "Symptoms", Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
-		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
+		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
+		{Label: i18n.T(ctx, symptomListTitleID), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

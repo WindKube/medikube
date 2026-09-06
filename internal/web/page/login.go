@@ -4,6 +4,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	"medikube/internal/domain/access"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/auth"
 	"medikube/internal/web/views/ids"
 )
@@ -28,7 +29,10 @@ const (
 // do, and a redirect away from here would make it impossible without first
 // finding the sign-out control on a page they cannot reach.
 func (p *accountPages) login(e *core.RequestEvent, _ access.Actor) error {
-	return p.render(e, loginTitle, false, p.links.signedOutNav(p.links.loginPage), auth.Login(auth.LoginProps{
+	ctx := localizeCtx(e)
+	title := i18n.T(ctx, "action.sign_in")
+
+	return p.render(e, title, false, p.links.signedOutNav(ctx, p.links.loginPage), auth.Login(auth.LoginProps{
 		FormID:       ids.SignInForm,
 		OnSubmit:     p.links.post(p.links.login),
 		RegisterHref: p.links.registerPage,

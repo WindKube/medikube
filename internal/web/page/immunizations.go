@@ -326,7 +326,7 @@ func (p *immunizationPages) render(e *core.RequestEvent, actor access.Actor, tit
 	}
 
 	return RenderPage(e, http.StatusOK, title,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path), Switcher: switcher}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path), Switcher: switcher}, main)
 }
 
 // immunizationLinks holds the five addresses the pages and the components
@@ -402,10 +402,10 @@ func (v ImmunizationViews) cancelHref(immunization views.ImmunizationView) strin
 	return v.links.cancelHref(immunization)
 }
 
-func (l immunizationLinks) nav(current string) []shell.NavLink {
+func (l immunizationLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: medicationListTitle, Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
+		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
 		{Label: immunizationListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
-		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
+		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

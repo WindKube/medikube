@@ -322,7 +322,7 @@ func (p *insurancePages) render(e *core.RequestEvent, actor access.Actor, title 
 	}
 
 	return RenderPage(e, http.StatusOK, title,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path), Switcher: switcher}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path), Switcher: switcher}, main)
 }
 
 type insuranceLinks struct {
@@ -399,10 +399,10 @@ func (v InsuranceViews) cancelHref(policy views.InsuranceView) string {
 // nav offers, beyond this kind's own entry, the medication list and settings
 // (FR-050): every signed-in page keeps both one link away, regardless of
 // which record kind it is on.
-func (l insuranceLinks) nav(current string) []shell.NavLink {
+func (l insuranceLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: medicationListTitle, Href: l.medicationPage, Current: strings.HasPrefix(current, l.medicationPage)},
+		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationPage, Current: strings.HasPrefix(current, l.medicationPage)},
 		{Label: insuranceListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
-		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
+		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

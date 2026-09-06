@@ -1,5 +1,7 @@
 package shared
 
+import "medikube/internal/i18n"
+
 // CriteriaChip is one narrowing in force (a kind, a tag, a date range, a
 // status) named and individually removable, per FR-071 and FR-073.
 type CriteriaChip struct {
@@ -18,7 +20,7 @@ type CriteriaProps struct {
 }
 
 templ Criteria(props CriteriaProps) {
-	<ul id={ props.ID } aria-label="Narrowing in force" class="flex flex-wrap gap-2">
+	<ul id={ props.ID } aria-label={ i18n.T(ctx, "a11y.narrowing_in_force") } class="flex flex-wrap gap-2">
 		for _, chip := range props.Chips {
 			<li
 				id={ chip.ID }
@@ -28,7 +30,7 @@ templ Criteria(props CriteriaProps) {
 				<button
 					type="button"
 					data-on:click={ chip.ClearOn }
-					aria-label={ "Remove " + chip.Label }
+					aria-label={ i18n.T(ctx, "a11y.remove_criterion", map[string]any{"Criterion": chip.Label}) }
 					class="rounded-full px-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-700 dark:hover:text-slate-100"
 				>
 					&times;

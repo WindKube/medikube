@@ -1,8 +1,11 @@
 package directory
 
 import (
+	"context"
+
 	"medikube/internal/domain"
 	"medikube/internal/domain/directory"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/records"
 )
@@ -22,56 +25,132 @@ const (
 	FieldPractitionerNotes     = "notes"
 )
 
-var practitionerFieldLabels = map[string]string{
-	FieldPractitionerName:      "Name",
-	FieldPractitionerSpecialty: "Specialty",
-	FieldPractitionerFacility:  "Facility",
-	FieldPractitionerPhone:     "Phone",
-	FieldPractitionerEmail:     "Email",
-	FieldPractitionerWebsite:   "Website",
-	FieldPractitionerNotes:     "Notes",
+var practitionerFieldLabelIDs = map[string]string{
+	FieldPractitionerName:      "field.practitioner.name",
+	FieldPractitionerSpecialty: "field.practitioner.specialty",
+	FieldPractitionerFacility:  "field.practitioner.facility",
+	FieldPractitionerPhone:     "field.practitioner.phone",
+	FieldPractitionerEmail:     "field.practitioner.email",
+	FieldPractitionerWebsite:   "field.practitioner.website",
+	FieldPractitionerNotes:     "field.practitioner.notes",
 }
 
-func PractitionerFieldLabel(field string) string {
-	if label, known := practitionerFieldLabels[field]; known {
-		return label
+func PractitionerFieldLabel(ctx context.Context, field string) string {
+	if id, known := practitionerFieldLabelIDs[field]; known {
+		return i18n.T(ctx, id)
 	}
 
 	return field
 }
 
-// SpecialtyLabel renders the enum's snake_case spelling as prose. Unknown to
-// this map (there is none — the vocabulary is closed) falls back to the raw
-// value, the same convention records.MedicationTypeLabel uses.
-func SpecialtyLabel(value directory.Specialty) string {
-	if value == "" {
+// SpecialtyLabel renders the closed specialty vocabulary's own catalogue
+// entry (enum.specialty.<value>), one literal i18n.T call site per value so
+// reference_test.go's D-08 scan can see each one.
+func SpecialtyLabel(ctx context.Context, value directory.Specialty) string {
+	switch value {
+	case "":
 		return ""
+	case directory.SpecialtyAllergyImmunology:
+		return i18n.T(ctx, "enum.specialty.allergy_immunology")
+	case directory.SpecialtyAnesthesiology:
+		return i18n.T(ctx, "enum.specialty.anesthesiology")
+	case directory.SpecialtyCardiology:
+		return i18n.T(ctx, "enum.specialty.cardiology")
+	case directory.SpecialtyDentistry:
+		return i18n.T(ctx, "enum.specialty.dentistry")
+	case directory.SpecialtyDermatology:
+		return i18n.T(ctx, "enum.specialty.dermatology")
+	case directory.SpecialtyEmergencyMedicine:
+		return i18n.T(ctx, "enum.specialty.emergency_medicine")
+	case directory.SpecialtyEndocrinology:
+		return i18n.T(ctx, "enum.specialty.endocrinology")
+	case directory.SpecialtyFamilyMedicine:
+		return i18n.T(ctx, "enum.specialty.family_medicine")
+	case directory.SpecialtyGastroenterology:
+		return i18n.T(ctx, "enum.specialty.gastroenterology")
+	case directory.SpecialtyGeneralSurgery:
+		return i18n.T(ctx, "enum.specialty.general_surgery")
+	case directory.SpecialtyGenetics:
+		return i18n.T(ctx, "enum.specialty.genetics")
+	case directory.SpecialtyGeriatrics:
+		return i18n.T(ctx, "enum.specialty.geriatrics")
+	case directory.SpecialtyGynecology:
+		return i18n.T(ctx, "enum.specialty.gynecology")
+	case directory.SpecialtyHematology:
+		return i18n.T(ctx, "enum.specialty.hematology")
+	case directory.SpecialtyHepatology:
+		return i18n.T(ctx, "enum.specialty.hepatology")
+	case directory.SpecialtyInfectiousDisease:
+		return i18n.T(ctx, "enum.specialty.infectious_disease")
+	case directory.SpecialtyInternalMedicine:
+		return i18n.T(ctx, "enum.specialty.internal_medicine")
+	case directory.SpecialtyNephrology:
+		return i18n.T(ctx, "enum.specialty.nephrology")
+	case directory.SpecialtyNeurology:
+		return i18n.T(ctx, "enum.specialty.neurology")
+	case directory.SpecialtyNeurosurgery:
+		return i18n.T(ctx, "enum.specialty.neurosurgery")
+	case directory.SpecialtyNutrition:
+		return i18n.T(ctx, "enum.specialty.nutrition")
+	case directory.SpecialtyObstetrics:
+		return i18n.T(ctx, "enum.specialty.obstetrics")
+	case directory.SpecialtyOccupationalTherapy:
+		return i18n.T(ctx, "enum.specialty.occupational_therapy")
+	case directory.SpecialtyOncology:
+		return i18n.T(ctx, "enum.specialty.oncology")
+	case directory.SpecialtyOphthalmology:
+		return i18n.T(ctx, "enum.specialty.ophthalmology")
+	case directory.SpecialtyOptometry:
+		return i18n.T(ctx, "enum.specialty.optometry")
+	case directory.SpecialtyOralSurgery:
+		return i18n.T(ctx, "enum.specialty.oral_surgery")
+	case directory.SpecialtyOrthopedics:
+		return i18n.T(ctx, "enum.specialty.orthopedics")
+	case directory.SpecialtyOtolaryngology:
+		return i18n.T(ctx, "enum.specialty.otolaryngology")
+	case directory.SpecialtyPainMedicine:
+		return i18n.T(ctx, "enum.specialty.pain_medicine")
+	case directory.SpecialtyPalliativeCare:
+		return i18n.T(ctx, "enum.specialty.palliative_care")
+	case directory.SpecialtyPathology:
+		return i18n.T(ctx, "enum.specialty.pathology")
+	case directory.SpecialtyPediatrics:
+		return i18n.T(ctx, "enum.specialty.pediatrics")
+	case directory.SpecialtyPhysicalTherapy:
+		return i18n.T(ctx, "enum.specialty.physical_therapy")
+	case directory.SpecialtyPlasticSurgery:
+		return i18n.T(ctx, "enum.specialty.plastic_surgery")
+	case directory.SpecialtyPodiatry:
+		return i18n.T(ctx, "enum.specialty.podiatry")
+	case directory.SpecialtyPsychiatry:
+		return i18n.T(ctx, "enum.specialty.psychiatry")
+	case directory.SpecialtyPsychology:
+		return i18n.T(ctx, "enum.specialty.psychology")
+	case directory.SpecialtyPulmonology:
+		return i18n.T(ctx, "enum.specialty.pulmonology")
+	case directory.SpecialtyRadiology:
+		return i18n.T(ctx, "enum.specialty.radiology")
+	case directory.SpecialtyRheumatology:
+		return i18n.T(ctx, "enum.specialty.rheumatology")
+	case directory.SpecialtyUrology:
+		return i18n.T(ctx, "enum.specialty.urology")
+	case directory.SpecialtyOther:
+		return i18n.T(ctx, "enum.specialty.other")
+	default:
+		return string(value)
 	}
-
-	return specialtyLabels[value]
-}
-
-var specialtyLabels = buildSpecialtyLabels()
-
-func buildSpecialtyLabels() map[directory.Specialty]string {
-	labels := make(map[directory.Specialty]string, len(directory.Specialties()))
-	for _, value := range directory.Specialties() {
-		labels[value] = humanizeEnum(string(value))
-	}
-
-	return labels
 }
 
 // SpecialtyOptions offers the vocabulary in the order it is published, with an
 // unset "not recorded" entry the caller adds.
-func SpecialtyOptions(selected directory.Specialty) []records.Option {
+func SpecialtyOptions(ctx context.Context, selected directory.Specialty) []records.Option {
 	published := directory.Specialties()
 	options := make([]records.Option, 0, len(published))
 
 	for _, value := range published {
 		options = append(options, records.Option{
 			Value:    string(value),
-			Label:    SpecialtyLabel(value),
+			Label:    SpecialtyLabel(ctx, value),
 			Selected: value == selected,
 		})
 	}
@@ -106,11 +185,11 @@ type PractitionerView struct {
 	Links   PractitionerLinks
 }
 
-func NewPractitionerView(p directory.Practitioner, facilityName string, links PractitionerLinks) PractitionerView {
+func NewPractitionerView(ctx context.Context, p directory.Practitioner, facilityName string, links PractitionerLinks) PractitionerView {
 	return PractitionerView{
 		ID:             p.ID,
 		Name:           p.Name,
-		Specialty:      SpecialtyLabel(p.Specialty),
+		Specialty:      SpecialtyLabel(ctx, p.Specialty),
 		SpecialtyValue: string(p.Specialty),
 		FacilityID:     p.FacilityID,
 		FacilityName:   facilityName,
@@ -144,8 +223,8 @@ func (p PractitionerView) Value(field string) string {
 	}
 }
 
-func (p PractitionerView) SpecialtyOptions() []records.Option {
-	return SpecialtyOptions(directory.Specialty(p.SpecialtyValue))
+func (p PractitionerView) SpecialtyOptions(ctx context.Context) []records.Option {
+	return SpecialtyOptions(ctx, directory.Specialty(p.SpecialtyValue))
 }
 
 // DetailEntry reuses records.DetailEntry so the two directories and the
@@ -153,7 +232,7 @@ func (p PractitionerView) SpecialtyOptions() []records.Option {
 // (FR-024).
 type DetailEntry = records.DetailEntry
 
-func (p PractitionerView) Entries() []DetailEntry {
+func (p PractitionerView) Entries(ctx context.Context) []DetailEntry {
 	candidates := []DetailEntry{
 		{Field: FieldPractitionerSpecialty, Value: p.Specialty},
 		{Field: FieldPractitionerFacility, Value: p.FacilityName},
@@ -170,7 +249,7 @@ func (p PractitionerView) Entries() []DetailEntry {
 			continue
 		}
 
-		entry.Label = PractitionerFieldLabel(entry.Field)
+		entry.Label = PractitionerFieldLabel(ctx, entry.Field)
 		entries = append(entries, entry)
 	}
 
@@ -200,20 +279,20 @@ type PractitionerFormProps struct {
 	Notice string
 }
 
-func (p PractitionerFormProps) Label() string {
+func (p PractitionerFormProps) Label(ctx context.Context) string {
 	if p.New {
-		return "Add a practitioner"
+		return i18n.T(ctx, "directory.add_practitioner")
 	}
 
-	return "Edit practitioner"
+	return i18n.T(ctx, "directory.edit_practitioner")
 }
 
-func (p PractitionerFormProps) SubmitLabel() string {
+func (p PractitionerFormProps) SubmitLabel(ctx context.Context) string {
 	if p.New {
-		return "Add practitioner"
+		return i18n.T(ctx, "directory.add_practitioner_submit")
 	}
 
-	return "Save changes"
+	return i18n.T(ctx, "action.save_changes")
 }
 
 // FieldErrors is components' own type, aliased here as records.go aliases it,
@@ -223,22 +302,4 @@ type FieldErrors = components.FieldErrors
 
 func NewFieldErrors(invalid *domain.ValidationError) FieldErrors {
 	return components.NewFieldErrors(invalid)
-}
-
-// humanizeEnum turns "allergy_immunology" into "Allergy immunology" — good
-// enough prose for a closed, compiled-in vocabulary with no punctuation to
-// preserve.
-func humanizeEnum(value string) string {
-	out := []byte(value)
-	for i, b := range out {
-		if b == '_' {
-			out[i] = ' '
-		}
-	}
-
-	if len(out) > 0 && out[0] >= 'a' && out[0] <= 'z' {
-		out[0] -= 'a' - 'A'
-	}
-
-	return string(out)
 }

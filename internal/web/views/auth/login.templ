@@ -1,5 +1,7 @@
 package auth
 
+import "medikube/internal/i18n"
+
 // Login is contracts/pages.md's P1: form[name="Sign in"], which is the landmark
 // the browser gate resolves with getByRole and therefore a literal that cannot
 // be edited here alone.
@@ -23,10 +25,10 @@ templ Login(props LoginProps) {
 				id={ SessionExpiredID }
 				role="status"
 				class="rounded-md border border-amber-500 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
-			>Your session has expired. Sign in again to carry on.</p>
+			>{ i18n.T(ctx, "auth.session_expired") }</p>
 		}
-		@field(props.field(FieldEmail, "Email address", "email", "username", props.Email))
-		@field(props.field(FieldPassword, "Password", "password", "current-password", ""))
+		@field(props.field(FieldEmail, i18n.T(ctx, "field.email"), "email", "username", props.Email))
+		@field(props.field(FieldPassword, i18n.T(ctx, "field.password"), "password", "current-password", ""))
 		<button
 			type="submit"
 			class="inline-flex items-center justify-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
@@ -35,10 +37,10 @@ templ Login(props LoginProps) {
 			<a
 				href={ props.ForgotHref }
 				class="font-medium underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:hover:text-slate-100"
-			>Forgotten your password?</a>
+			>{ i18n.T(ctx, "auth.forgot_password_link") }</a>
 		</p>
 		<p class="text-sm text-slate-600 dark:text-slate-400">
-			{ "No account yet? " }
+			{ i18n.T(ctx, "auth.no_account_yet") }
 			<a
 				href={ props.RegisterHref }
 				class="font-medium underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:hover:text-slate-100"

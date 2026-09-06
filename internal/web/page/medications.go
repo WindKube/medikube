@@ -33,11 +33,6 @@ const (
 	OpMedicationDetailPage = "medicationDetailPage"
 )
 
-// The two page titles of contracts/pages.md, without the product suffix, which
-// shell.Title adds. P5's is the record's own name.
-const medicationListTitle = "Medications"
-
-// medicationListTitle stays English for shell.NavLink.Label until T020 resolves nav labels.
 const medicationListTitleID = "page.medications.title"
 
 // Handlers is the record pages' contribution to the route table.
@@ -575,7 +570,7 @@ func (p *medicationPages) render(e *core.RequestEvent, actor access.Actor, title
 	}
 
 	return RenderPage(e, http.StatusOK, title,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path), Switcher: switcher}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path), Switcher: switcher}, main)
 }
 
 // pageCacheControl keeps a rendered medication list out of every shared cache
@@ -760,10 +755,10 @@ func (v MedicationViews) cancelHref(medication views.MedicationView) string {
 // (accountLinks.signedInNav): FR-050 requires every signed-in page to offer a
 // route to the medication list AND to settings, and a person reading a
 // medication's detail is one of them.
-func (l medicationLinks) nav(current string) []shell.NavLink {
+func (l medicationLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: medicationListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
-		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
+		{Label: i18n.T(ctx, "nav.medications"), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }
 

@@ -1,12 +1,13 @@
 package patients
 
 import (
-	"strconv"
+	"context"
 	"time"
 
 	"medikube/internal/domain"
 	"medikube/internal/domain/identity"
 	"medikube/internal/domain/person"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 )
 
@@ -25,11 +26,6 @@ const (
 	FieldRelationship = "relationship_to_owner"
 )
 
-const (
-	FormLabelCreate = "Add a person"
-	FormLabelEdit   = "Edit person"
-)
-
 var patientFields = []string{
 	FieldFirstName, FieldLastName, FieldBirthDate, FieldSex, FieldBloodType,
 	FieldHeightCM, FieldWeightKG, FieldAddress, FieldRelationship,
@@ -39,89 +35,89 @@ var patientFields = []string{
 // every form by sorting the result of one.
 func PatientFields() []string { return append([]string(nil), patientFields...) }
 
-var fieldLabels = map[string]string{
-	FieldFirstName:    "First name",
-	FieldLastName:     "Last name",
-	FieldBirthDate:    "Date of birth",
-	FieldSex:          "Sex",
-	FieldBloodType:    "Blood type",
-	FieldHeightCM:     "Height",
-	FieldWeightKG:     "Weight",
-	FieldAddress:      "Address",
-	FieldRelationship: "Relationship",
+var fieldLabelIDs = map[string]string{
+	FieldFirstName:    "field.patient.first_name",
+	FieldLastName:     "field.patient.last_name",
+	FieldBirthDate:    "field.patient.birth_date",
+	FieldSex:          "field.patient.sex",
+	FieldBloodType:    "field.patient.blood_type",
+	FieldHeightCM:     "field.patient.height_cm",
+	FieldWeightKG:     "field.patient.weight_kg",
+	FieldAddress:      "field.patient.address",
+	FieldRelationship: "field.patient.relationship_to_owner",
 }
 
-func FieldLabel(field string) string {
-	if label, known := fieldLabels[field]; known {
-		return label
+func FieldLabel(ctx context.Context, field string) string {
+	if id, known := fieldLabelIDs[field]; known {
+		return i18n.T(ctx, id)
 	}
 
 	return field
 }
 
-var relationshipLabels = map[person.RelationshipToOwner]string{
-	person.RelationshipSelf:    "You",
-	person.RelationshipSpouse:  "Spouse",
-	person.RelationshipPartner: "Partner",
-	person.RelationshipParent:  "Parent",
-	person.RelationshipChild:   "Child",
-	person.RelationshipSibling: "Sibling",
-	person.RelationshipWard:    "Ward",
-	person.RelationshipOther:   "Other",
+var relationshipLabelIDs = map[person.RelationshipToOwner]string{
+	person.RelationshipSelf:    "patient.self_marker",
+	person.RelationshipSpouse:  "enum.relationship.spouse",
+	person.RelationshipPartner: "enum.relationship.partner",
+	person.RelationshipParent:  "enum.relationship.parent",
+	person.RelationshipChild:   "enum.relationship.child",
+	person.RelationshipSibling: "enum.relationship.sibling",
+	person.RelationshipWard:    "enum.relationship.ward",
+	person.RelationshipOther:   "enum.relationship.other",
 }
 
 // RelationshipLabel renders the plain-language relationship FR-001 asks for,
 // answering the empty string for an unrecorded relationship rather than the
 // machine spelling.
-func RelationshipLabel(value person.RelationshipToOwner) string {
+func RelationshipLabel(ctx context.Context, value person.RelationshipToOwner) string {
 	if value == "" {
 		return ""
 	}
 
-	if label, known := relationshipLabels[value]; known {
-		return label
+	if id, known := relationshipLabelIDs[value]; known {
+		return i18n.T(ctx, id)
 	}
 
 	return string(value)
 }
 
-var sexLabels = map[person.Sex]string{
-	person.SexFemale:      "Female",
-	person.SexMale:        "Male",
-	person.SexIntersex:    "Intersex",
-	person.SexUnspecified: "Unspecified",
+var sexLabelIDs = map[person.Sex]string{
+	person.SexFemale:      "enum.sex.female",
+	person.SexMale:        "enum.sex.male",
+	person.SexIntersex:    "enum.sex.intersex",
+	person.SexUnspecified: "enum.sex.unspecified",
 }
 
-func SexLabel(value person.Sex) string {
+func SexLabel(ctx context.Context, value person.Sex) string {
 	if value == "" {
 		return ""
 	}
 
-	if label, known := sexLabels[value]; known {
-		return label
+	if id, known := sexLabelIDs[value]; known {
+		return i18n.T(ctx, id)
 	}
 
 	return string(value)
 }
 
-var bloodTypeLabels = map[person.BloodType]string{
-	person.BloodTypeAPos:  "A+",
-	person.BloodTypeANeg:  "A-",
-	person.BloodTypeBPos:  "B+",
-	person.BloodTypeBNeg:  "B-",
-	person.BloodTypeABPos: "AB+",
-	person.BloodTypeABNeg: "AB-",
-	person.BloodTypeOPos:  "O+",
-	person.BloodTypeONeg:  "O-",
+var bloodTypeLabelIDs = map[person.BloodType]string{
+	person.BloodTypeAPos:  "enum.blood_type.a_pos",
+	person.BloodTypeANeg:  "enum.blood_type.a_neg",
+	person.BloodTypeBPos:  "enum.blood_type.b_pos",
+	person.BloodTypeBNeg:  "enum.blood_type.b_neg",
+	person.BloodTypeABPos: "enum.blood_type.ab_pos",
+	person.BloodTypeABNeg: "enum.blood_type.ab_neg",
+	person.BloodTypeOPos:  "enum.blood_type.o_pos",
+	person.BloodTypeONeg:  "enum.blood_type.o_neg",
 }
 
-func BloodTypeLabel(value person.BloodType) string {
+func BloodTypeLabel(ctx context.Context, value person.BloodType) string {
 	if value == "" {
 		return ""
 	}
 
-	if label, known := bloodTypeLabels[value]; known {
-		return label
+	if id, known := bloodTypeLabelIDs[value]; known {
+		return i18n.T(ctx, id)
 	}
 
 	return string(value)
@@ -134,34 +130,34 @@ type Option struct {
 	Selected bool
 }
 
-func SexOptions(selected person.Sex) []Option {
+func SexOptions(ctx context.Context, selected person.Sex) []Option {
 	published := person.Sexes()
 	options := make([]Option, 0, len(published))
 
 	for _, value := range published {
-		options = append(options, Option{Value: string(value), Label: SexLabel(value), Selected: value == selected})
+		options = append(options, Option{Value: string(value), Label: SexLabel(ctx, value), Selected: value == selected})
 	}
 
 	return options
 }
 
-func BloodTypeOptions(selected person.BloodType) []Option {
+func BloodTypeOptions(ctx context.Context, selected person.BloodType) []Option {
 	published := person.BloodTypes()
 	options := make([]Option, 0, len(published))
 
 	for _, value := range published {
-		options = append(options, Option{Value: string(value), Label: BloodTypeLabel(value), Selected: value == selected})
+		options = append(options, Option{Value: string(value), Label: BloodTypeLabel(ctx, value), Selected: value == selected})
 	}
 
 	return options
 }
 
-func RelationshipOptions(selected person.RelationshipToOwner) []Option {
+func RelationshipOptions(ctx context.Context, selected person.RelationshipToOwner) []Option {
 	published := person.RelationshipsToOwner()
 	options := make([]Option, 0, len(published))
 
 	for _, value := range published {
-		options = append(options, Option{Value: string(value), Label: RelationshipLabel(value), Selected: value == selected})
+		options = append(options, Option{Value: string(value), Label: RelationshipLabel(ctx, value), Selected: value == selected})
 	}
 
 	return options
@@ -206,7 +202,7 @@ type PatientLinks struct {
 
 // NewPatientView is the whole of the entity-to-page mapping, so a template
 // never formats a domain.Date or a person.Sex itself.
-func NewPatientView(p person.Patient, photoURL string, unitSystem identity.UnitSystem, links PatientLinks) PatientView {
+func NewPatientView(ctx context.Context, p person.Patient, photoURL string, unitSystem identity.UnitSystem, links PatientLinks) PatientView {
 	age := person.AgeAt(p.BirthDate, time.Now().UTC())
 
 	ageText := ""
@@ -220,14 +216,14 @@ func NewPatientView(p person.Patient, photoURL string, unitSystem identity.UnitS
 		LastName:     p.LastName,
 		BirthDate:    p.BirthDate.String(),
 		Age:          ageText,
-		Sex:          SexLabel(p.Sex),
+		Sex:          SexLabel(ctx, p.Sex),
 		SexValue:     string(p.Sex),
-		BloodType:    BloodTypeLabel(p.BloodType),
+		BloodType:    BloodTypeLabel(ctx, p.BloodType),
 		BloodTypeVal: string(p.BloodType),
 		HeightCM:     person.FormatHeight(p.HeightCM, unitSystem),
 		WeightKG:     person.FormatWeight(p.WeightKG, unitSystem),
 		Address:      p.Address,
-		Relationship: RelationshipLabel(p.RelationshipToOwner),
+		Relationship: RelationshipLabel(ctx, p.RelationshipToOwner),
 		RelationVal:  string(p.RelationshipToOwner),
 		IsSelfRecord: p.IsSelfRecord,
 		PhotoURL:     photoURL,
@@ -265,7 +261,7 @@ type DetailEntry struct {
 
 // Entries is FR-030's "absent renders as absent" made a property of the
 // mapping: a value never recorded produces no entry at all.
-func (v PatientView) Entries() []DetailEntry {
+func (v PatientView) Entries(ctx context.Context) []DetailEntry {
 	candidates := []DetailEntry{
 		{Field: FieldBirthDate, Value: v.BirthDate, Datetime: v.BirthDate},
 		{Field: FieldSex, Value: v.Sex},
@@ -283,7 +279,7 @@ func (v PatientView) Entries() []DetailEntry {
 			continue
 		}
 
-		entry.Label = FieldLabel(entry.Field)
+		entry.Label = FieldLabel(ctx, entry.Field)
 		entries = append(entries, entry)
 	}
 
@@ -369,40 +365,40 @@ type PatientDetailProps struct {
 	TotalRecords int
 }
 
-// activityKindWords is every target_kind the chart can show this phase
+// activityKindWordIDs is every target_kind the chart can show this phase
 // (data-model §5's own trigger table): a patient-scoped event names only
 // "patient" or one of internal/records' registered kinds.
-var activityKindWords = map[string]string{
-	"patient":    "This person's record",
-	"medication": "A medication",
+var activityKindWordIDs = map[string]string{
+	"patient":    "patient.activity_record",
+	"medication": "patient.activity_medication",
 }
 
-func activityKindWord(targetKind string) string {
-	if word, known := activityKindWords[targetKind]; known {
-		return word
+func activityKindWord(ctx context.Context, targetKind string) string {
+	if id, known := activityKindWordIDs[targetKind]; known {
+		return i18n.T(ctx, id)
 	}
 
-	return "A record"
+	return i18n.T(ctx, "patient.activity_default_record")
 }
 
 // ActivityText renders one audit action to the words FR-029 asks for: what
 // kind of record changed and what happened, never a name, a value or a note.
-func ActivityText(action, targetKind string) string {
-	subject := activityKindWord(targetKind)
+func ActivityText(ctx context.Context, action, targetKind string) string {
+	subject := activityKindWord(ctx, targetKind)
 
 	switch action {
 	case "create":
-		return subject + " was added"
+		return i18n.T(ctx, "patient.activity_created", map[string]any{"Subject": subject})
 	case "update":
-		return subject + " was updated"
+		return i18n.T(ctx, "patient.activity_updated", map[string]any{"Subject": subject})
 	case "delete":
-		return subject + " was deleted"
+		return i18n.T(ctx, "patient.activity_deleted", map[string]any{"Subject": subject})
 	case "switch_patient":
-		return "This person became the one in view"
+		return i18n.T(ctx, "patient.activity_switched")
 	case "read_sensitive":
-		return "A photograph was viewed"
+		return i18n.T(ctx, "patient.activity_photo_viewed")
 	case "access_denied":
-		return "An attempt to reach this person was refused"
+		return i18n.T(ctx, "patient.activity_access_denied")
 	default:
 		return subject + ": " + action
 	}
@@ -412,7 +408,7 @@ func ActivityText(action, targetKind string) string {
 // exactly the order it arrived in. targetHref answers the empty string for
 // an entry whose target no longer exists, so the item renders as plain text
 // and links nowhere (FR-029, US4-5).
-func NewActivityItems(events []ActivityEventView, targetHref func(kind, id string) string) []ActivityItem {
+func NewActivityItems(ctx context.Context, events []ActivityEventView, targetHref func(kind, id string) string) []ActivityItem {
 	items := make([]ActivityItem, 0, len(events))
 
 	for _, event := range events {
@@ -422,7 +418,7 @@ func NewActivityItems(events []ActivityEventView, targetHref func(kind, id strin
 		}
 
 		items = append(items, ActivityItem{
-			Text: ActivityText(event.Action, event.TargetKind),
+			Text: ActivityText(ctx, event.Action, event.TargetKind),
 			When: event.OccurredAt.Format("2 January"),
 			Href: href,
 		})
@@ -454,16 +450,12 @@ type DeleteConfirmProps struct {
 }
 
 // Consequence is FR-048's own sentence: how many records go with the person.
-func (p DeleteConfirmProps) Consequence() string {
-	switch p.TotalRecords {
-	case 0:
-		return "This is permanent. There is no recycle bin and no undo."
-	case 1:
-		return "This is permanent and destroys the one record kept for them. There is no recycle bin and no undo."
-	default:
-		return "This is permanent and destroys all " + strconv.Itoa(p.TotalRecords) +
-			" records kept for them. There is no recycle bin and no undo."
+func (p DeleteConfirmProps) Consequence(ctx context.Context) string {
+	if p.TotalRecords == 0 {
+		return i18n.T(ctx, "patient.delete_consequence_zero")
 	}
+
+	return i18n.N(ctx, "patient.delete_consequence", p.TotalRecords)
 }
 
 // Empty is FR-030/US4-2's page-level empty state: nothing recorded and
@@ -492,20 +484,20 @@ type PatientFormProps struct {
 	Notice string
 }
 
-func (p PatientFormProps) Label() string {
+func (p PatientFormProps) Label(ctx context.Context) string {
 	if p.New {
-		return FormLabelCreate
+		return i18n.T(ctx, "patient.add_person")
 	}
 
-	return FormLabelEdit
+	return i18n.T(ctx, "patient.edit_person")
 }
 
-func (p PatientFormProps) SubmitLabel() string {
+func (p PatientFormProps) SubmitLabel(ctx context.Context) string {
 	if p.New {
-		return "Add them"
+		return i18n.T(ctx, "patient.add_them")
 	}
 
-	return "Save changes"
+	return i18n.T(ctx, "action.save_changes")
 }
 
 // Value is what a form control holds for one field.

@@ -22,7 +22,7 @@ func selfRecord(t *testing.T) patients.PatientView {
 	birth, err := domain.ParseDate("1988-04-12")
 	require.NoError(t, err)
 
-	return patients.NewPatientView(person.Patient{
+	return patients.NewPatientView(t.Context(), person.Patient{
 		ID: "pat0000000001", FirstName: "Amara", LastName: "Okonkwo",
 		BirthDate: birth, IsSelfRecord: true,
 	}, "", identity.UnitSystemMetric, patients.PatientLinks{Detail: "/patients/pat0000000001"})
@@ -34,7 +34,7 @@ func childRecord(t *testing.T) patients.PatientView {
 	birth, err := domain.ParseDate("2015-09-03")
 	require.NoError(t, err)
 
-	return patients.NewPatientView(person.Patient{
+	return patients.NewPatientView(t.Context(), person.Patient{
 		ID: "pat0000000002", FirstName: "Chiamaka", LastName: "Okonkwo",
 		BirthDate: birth,
 	}, "", identity.UnitSystemMetric, patients.PatientLinks{Detail: "/patients/pat0000000002"})

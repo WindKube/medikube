@@ -2,13 +2,9 @@ package patients
 
 import (
 	"medikube/internal/domain/person"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
-)
-
-const (
-	cancelLabel = "Cancel"
-	notRecorded = "Not recorded"
 )
 
 // PatientForm is both the create form and the edit form (FR-001, FR-012):
@@ -18,7 +14,7 @@ const (
 templ PatientForm(props PatientFormProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ props.Label() }
+		aria-label={ props.Label(ctx) }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
@@ -28,20 +24,20 @@ templ PatientForm(props PatientFormProps) {
 		@textControl(props, FieldFirstName, "text", true)
 		@textControl(props, FieldLastName, "text", true)
 		@textControl(props, FieldBirthDate, "date", true)
-		@selectControl(props, FieldSex, SexOptions(person.Sex(props.Patient.SexValue)), true)
-		@selectControl(props, FieldBloodType, BloodTypeOptions(person.BloodType(props.Patient.BloodTypeVal)), true)
+		@selectControl(props, FieldSex, SexOptions(ctx, person.Sex(props.Patient.SexValue)), true)
+		@selectControl(props, FieldBloodType, BloodTypeOptions(ctx, person.BloodType(props.Patient.BloodTypeVal)), true)
 		@textControl(props, FieldAddress, "text", false)
-		@selectControl(props, FieldRelationship, RelationshipOptions(person.RelationshipToOwner(props.Patient.RelationVal)), true)
+		@selectControl(props, FieldRelationship, RelationshipOptions(ctx, person.RelationshipToOwner(props.Patient.RelationVal)), true)
 		<div class="flex flex-wrap items-center gap-3">
 			<button
 				type="submit"
 				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ props.SubmitLabel() }</button>
+			>{ props.SubmitLabel(ctx) }</button>
 			if props.CancelHref != "" {
 				<a
 					href={ props.CancelHref }
 					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
-				>{ cancelLabel }</a>
+				>{ i18n.T(ctx, "action.cancel") }</a>
 			}
 		</div>
 	</form>
@@ -52,7 +48,7 @@ templ textControl(props PatientFormProps, field, inputType string, required bool
 		<label
 			for={ ids.Field(props.FormID, field) }
 			class="text-sm font-medium text-slate-900 dark:text-slate-100"
-		>{ FieldLabel(field) }</label>
+		>{ FieldLabel(ctx, field) }</label>
 		<input
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -75,7 +71,7 @@ templ selectControl(props PatientFormProps, field string, options []Option, opti
 		<label
 			for={ ids.Field(props.FormID, field) }
 			class="text-sm font-medium text-slate-900 dark:text-slate-100"
-		>{ FieldLabel(field) }</label>
+		>{ FieldLabel(ctx, field) }</label>
 		<select
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -87,7 +83,7 @@ templ selectControl(props PatientFormProps, field string, options []Option, opti
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>
 			if optional {
-				<option value="" selected?={ props.Patient.Value(field) == "" }>{ notRecorded }</option>
+				<option value="" selected?={ props.Patient.Value(field) == "" }>{ i18n.T(ctx, "field.not_recorded") }</option>
 			}
 			for _, option := range options {
 				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>

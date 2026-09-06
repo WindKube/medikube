@@ -32,7 +32,7 @@ func NewSettingsForms() (api.SettingsForms, error) {
 // Updated re-renders the profile form alone, patched into place by its own
 // id (ids.ProfileForm): the password and deletion forms are unaffected by a
 // preference change, so only the one form the submit came from moves.
-func (f settingsForms) Updated(_ context.Context, _ access.Actor, user domainidentity.User) (web.Component, error) {
+func (f settingsForms) Updated(ctx context.Context, _ access.Actor, user domainidentity.User) (web.Component, error) {
 	return settings.Profile(settings.ProfileProps{
 		FormID:         ids.ProfileForm,
 		OnSubmit:       f.links.patch(f.links.me, settings.FieldName, settings.FieldUnitSystem, settings.FieldLocale, settings.FieldDateFormat, settings.FieldTheme),
@@ -40,10 +40,10 @@ func (f settingsForms) Updated(_ context.Context, _ access.Actor, user domainide
 		EmailConfirmed: user.EmailConfirmed,
 		ResendOn:       f.links.post(f.links.verify),
 		Name:           user.Name,
-		UnitSystems:    unitSystemOptions(user.UnitSystem),
+		UnitSystems:    unitSystemOptions(ctx, user.UnitSystem),
 		Locale:         user.Locale,
 		Locales:        localeOptions(user.Locale),
-		DateFormats:    dateFormatOptions(user.DateFormat),
-		Themes:         themeOptions(user.Theme),
+		DateFormats:    dateFormatOptions(ctx, user.DateFormat),
+		Themes:         themeOptions(ctx, user.Theme),
 	}), nil
 }

@@ -3,6 +3,7 @@ package directory
 import (
 	"strconv"
 
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web"
@@ -10,21 +11,11 @@ import (
 
 const practitionerConfirmSignal = "_confirming_delete"
 
-const (
-	practitionerDetailArticle = "Practitioner"
-	practitionerConfirmTitle  = "Delete this practitioner?"
-	practitionerConfirmBody   = "This is permanent. Any patient or medication naming them keeps its own record, with this reference cleared."
-	practitionerConfirmLabel  = "Delete permanently"
-	practitionerConfirmCancel = "Keep it"
-	practitionerEditLabel     = "Edit"
-	practitionerDeleteLabel   = "Delete"
-)
-
 // PractitionerDetail is contracts/pages.md P4's landmark.
 templ PractitionerDetail(props PractitionerDetailProps) {
 	<article
 		id={ ids.DirectoryDetail(PractitionerSegment, props.Practitioner.ID) }
-		aria-label={ practitionerDetailArticle }
+		aria-label={ i18n.T(ctx, "directory.practitioner_article") }
 		data-signals={ "{" + practitionerConfirmSignal + ": false, _etag: " + jsQuote(web.ETag(props.Practitioner.Version)) + "}" }
 		class="flex flex-col"
 	>
@@ -38,34 +29,37 @@ templ PractitionerDetail(props PractitionerDetailProps) {
 				<a
 					href={ "#" + ids.DirectoryForm(PractitionerSegment, props.Practitioner.ID) }
 					class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-				>{ practitionerEditLabel }</a>
+				>{ i18n.T(ctx, "action.edit") }</a>
 				<button
 					type="button"
 					data-on:click={ "$" + practitionerConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-				>{ practitionerDeleteLabel }</button>
+				>{ i18n.T(ctx, "action.delete") }</button>
 			</div>
 		</header>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
-			for _, entry := range props.Practitioner.Entries() {
+			for _, entry := range props.Practitioner.Entries(ctx) {
 				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
 				@directoryValue(entry)
 			}
 		</dl>
 		if props.Practitioner.UsagePatients > 0 || props.Practitioner.UsageRecords > 0 {
 			<p class="mt-4 text-sm text-slate-500 dark:text-slate-400">
-				{ "Named by " + strconv.Itoa(props.Practitioner.UsagePatients) + " patient(s) and " + strconv.Itoa(props.Practitioner.UsageRecords) + " record(s)." }
+				{ i18n.T(ctx, "directory.named_by", map[string]any{
+					"First":  i18n.N(ctx, "directory.usage_patients", props.Practitioner.UsagePatients),
+					"Second": i18n.N(ctx, "directory.usage_records", props.Practitioner.UsageRecords),
+				}) }
 			</p>
 		}
 		@components.Confirm(components.ConfirmProps{
 			ID:           ids.DirectoryConfirm(PractitionerSegment, props.Practitioner.ID),
 			Signal:       practitionerConfirmSignal,
-			Title:        practitionerConfirmTitle,
+			Title:        i18n.T(ctx, "confirm.delete_this_practitioner"),
 			Subject:      props.Practitioner.Name,
-			Consequence:  practitionerConfirmBody,
-			ConfirmLabel: practitionerConfirmLabel,
+			Consequence:  i18n.T(ctx, "confirm.practitioner_delete_consequence"),
+			ConfirmLabel: i18n.T(ctx, "confirm.delete_permanently_button"),
 			ConfirmOn:    "@delete(" + jsQuote(props.Practitioner.Links.Record) + ", {headers: {'If-Match': $_etag}})",
-			CancelLabel:  practitionerConfirmCancel,
+			CancelLabel:  i18n.T(ctx, "confirm.keep_it"),
 		})
 	</article>
 }

@@ -1,5 +1,7 @@
 package settings
 
+import "medikube/internal/i18n"
+
 // Settings is contracts/pages.md's P6: region[name="Settings"], which is the
 // landmark the browser gate resolves, with everything the account surface
 // offers INSIDE it rather than beside it.
@@ -13,16 +15,15 @@ templ Settings(props SettingsProps) {
 		@Profile(props.Profile)
 		@Password(props.Password)
 		<div class="flex max-w-xl flex-col items-start gap-2">
-			<h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Sessions</h2>
+			<h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{ i18n.T(ctx, "settings.sessions_title") }</h2>
 			<p class="max-w-prose text-sm text-slate-600 dark:text-slate-400">
-				Signing out ends every session this account has open, here and anywhere else — another browser,
-				another device. That is deliberate: it is what makes a sign-out on a lost phone worth doing.
+				{ i18n.T(ctx, "settings.sessions_body") }
 			</p>
 			<button
 				type="button"
 				data-on:click={ props.SignOutOn }
 				class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-			>Sign out</button>
+			>{ i18n.T(ctx, "action.sign_out") }</button>
 		</div>
 		@DangerZone(props.Danger)
 	</section>

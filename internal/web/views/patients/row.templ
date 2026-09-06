@@ -1,6 +1,9 @@
 package patients
 
-import "medikube/internal/web/views/ids"
+import (
+	"medikube/internal/i18n"
+	"medikube/internal/web/views/ids"
+)
 
 // PatientRow is one row of the list: the name and the date of birth together
 // (Edge case: two people sharing a name), and a marker for the account
@@ -24,7 +27,7 @@ templ PatientRow(patient PatientView) {
 			>
 				{ patient.FullName() }
 				if patient.IsSelfRecord {
-					<span class="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800 dark:bg-teal-900 dark:text-teal-200">{ selfMarker }</span>
+					<span class="ml-2 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800 dark:bg-teal-900 dark:text-teal-200">{ i18n.T(ctx, "patient.self_marker") }</span>
 				}
 			</a>
 			if patient.BirthDate != "" {

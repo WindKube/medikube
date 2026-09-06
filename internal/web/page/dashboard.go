@@ -9,6 +9,7 @@ import (
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
 	"medikube/internal/web/views/overview"
@@ -16,8 +17,6 @@ import (
 
 // OpOverviewPage is contracts/pages.md P3's operation id.
 const OpOverviewPage = "overviewPage"
-
-const overviewTitle = "Overview"
 
 var ErrNoOverviewPage = errors.New("page: the overview page was wired without a record counter")
 
@@ -68,10 +67,12 @@ func (p *overviewPage) serve(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
+	ctx := localizeCtx(e)
+
 	// "" as the current path matches none of the nav's own hrefs (all of
 	// which are absolute paths), so nothing is marked aria-current: the
 	// overview page has no entry of its own in the primary navigation.
-	nav := p.account.signedInNav("")
+	nav := p.account.signedInNav(ctx, "")
 
 	main := overview.Overview(overview.Props{
 		MedicationCount:  counts[kind.Medication.Segment()],
@@ -80,5 +81,5 @@ func (p *overviewPage) serve(e *core.RequestEvent, actor access.Actor) error {
 		SettingsHref:     p.account.settingsPage,
 	})
 
-	return RenderPage(e, http.StatusOK, overviewTitle, NavState{SignedIn: true, Nav: nav}, main)
+	return RenderPage(e, http.StatusOK, i18n.T(ctx, "nav.overview"), NavState{SignedIn: true, Nav: nav}, main)
 }

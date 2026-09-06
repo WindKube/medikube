@@ -1,6 +1,7 @@
 package page
 
 import (
+	"context"
 	"net/url"
 	"sync/atomic"
 
@@ -55,6 +56,18 @@ func resolveTheme(e *core.RequestEvent) domainidentity.Theme {
 // page; this fixes it on the request's context as a side effect.
 func resolveLocale(e *core.RequestEvent) *i18n.Localizer {
 	return web.Localize(e)
+}
+
+// localizeCtx resolves the request's Localizer and returns the context that
+// now carries it, for a handler that builds a translated nav label or title
+// itself before calling RenderPage — which otherwise would not resolve one
+// until after that string was already built. web.Localize is idempotent
+// (i18n.Present short-circuits it), so RenderPage's own resolveLocale call
+// afterwards agrees with whatever this returned rather than resolving twice.
+func localizeCtx(e *core.RequestEvent) context.Context {
+	resolveLocale(e)
+
+	return e.Request.Context()
 }
 
 // NavState is the primary navigation's contents plus whether this page

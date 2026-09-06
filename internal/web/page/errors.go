@@ -1,6 +1,7 @@
 package page
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -58,9 +59,9 @@ func (p *ErrorPages) Render(e *core.RequestEvent, status int, failure web.Failur
 
 	view, name := p.view(status, failure.RequestID)
 
-	nav := p.links.signedOutNav("")
+	nav := p.links.signedOutNav(localizeCtx(e), "")
 	if signedIn {
-		nav = p.links.signedInNav("")
+		nav = p.links.signedInNav(localizeCtx(e), "")
 	}
 
 	// No nav entry is current: an error view belongs to no page in the table,
@@ -88,9 +89,9 @@ func (p *ErrorPages) RendersPage(path string) bool {
 func (p *ErrorPages) Document(status int, failure web.Failure, signedIn bool) web.Component {
 	view, name := p.view(status, failure.RequestID)
 
-	nav := p.links.signedOutNav("")
+	nav := p.links.signedOutNav(context.Background(), "")
 	if signedIn {
-		nav = p.links.signedInNav("")
+		nav = p.links.signedInNav(context.Background(), "")
 	}
 
 	// No nav entry is current: an error view belongs to no page in the table,

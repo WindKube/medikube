@@ -2,7 +2,6 @@ package settings
 
 import (
 	"context"
-	"strconv"
 	"strings"
 
 	"medikube/internal/i18n"
@@ -71,20 +70,14 @@ func control(formID string, errs components.FieldErrors, field fieldProps, extra
 }
 
 // Controls is the profile form's five, in the order FR-011 names them.
-//
-// The language control is the one translated here: its own label, hint and
-// aria-label come from the catalogue (settings.language.*, T018), because a
-// language picker offered only in English is the one control on this page a
-// Polish account could not use to fix that. The other four keep their English
-// literals for now — extracting them is T021's, in parallel.
 func (p ProfileProps) Controls(ctx context.Context) []fieldProps {
 	return []fieldProps{
 		control(p.FormID, p.Errors, fieldProps{
-			Name: FieldName, Label: "Display name", Type: "text",
+			Name: FieldName, Label: i18n.T(ctx, "field.display_name"), Type: "text",
 			Value: p.Name, Autocomplete: "name", Required: true,
 		}),
 		control(p.FormID, p.Errors, fieldProps{
-			Name: FieldUnitSystem, Label: "Measurement units", Options: p.UnitSystems,
+			Name: FieldUnitSystem, Label: i18n.T(ctx, "field.settings.measurement_units"), Options: p.UnitSystems,
 		}),
 		control(p.FormID, p.Errors, fieldProps{
 			Name: FieldLocale, Options: p.Locales, Required: true,
@@ -93,10 +86,10 @@ func (p ProfileProps) Controls(ctx context.Context) []fieldProps {
 			AriaLabel: i18n.T(ctx, "settings.language.label"),
 		}),
 		control(p.FormID, p.Errors, fieldProps{
-			Name: FieldDateFormat, Label: "Date presentation", Options: p.DateFormats,
+			Name: FieldDateFormat, Label: i18n.T(ctx, "field.settings.date_presentation"), Options: p.DateFormats,
 		}),
 		control(p.FormID, p.Errors, fieldProps{
-			Name: FieldTheme, Label: "Appearance", Options: p.Themes,
+			Name: FieldTheme, Label: i18n.T(ctx, "field.settings.appearance"), Options: p.Themes,
 		}),
 	}
 }
@@ -104,14 +97,14 @@ func (p ProfileProps) Controls(ctx context.Context) []fieldProps {
 // Controls is the password form's two. The new password points at the published
 // rules as well as at its own refusal, so the rules are announced with the
 // control rather than sitting beside it unread.
-func (p PasswordProps) Controls() []fieldProps {
+func (p PasswordProps) Controls(ctx context.Context) []fieldProps {
 	return []fieldProps{
 		control(p.FormID, p.Errors, fieldProps{
-			Name: FieldCurrentPassword, Label: "Current password", Type: "password",
+			Name: FieldCurrentPassword, Label: i18n.T(ctx, "field.settings.current_password"), Type: "password",
 			Autocomplete: "current-password", Required: true,
 		}),
 		control(p.FormID, p.Errors, fieldProps{
-			Name: FieldNewPassword, Label: "New password", Type: "password",
+			Name: FieldNewPassword, Label: i18n.T(ctx, "field.new_password"), Type: "password",
 			Autocomplete: "new-password", Required: true,
 		}, PasswordRulesID),
 	}
@@ -119,34 +112,36 @@ func (p PasswordProps) Controls() []fieldProps {
 
 // RuleSentences is FR-004's published rules, in the same words the sign-up form
 // states them and derived from the same value the check reads.
-func (p PasswordProps) RuleSentences() []string {
+func (p PasswordProps) RuleSentences(ctx context.Context) []string {
 	sentences := []string{
-		"At least " + strconv.Itoa(p.Rules.MinLength) + " characters, and at most " +
-			strconv.Itoa(p.Rules.MaxLength) + ".",
+		i18n.T(ctx, "auth.password_rule_length", map[string]any{
+			"Min": p.Rules.MinLength,
+			"Max": p.Rules.MaxLength,
+		}),
 	}
 
 	if p.Rules.RejectsEmail {
-		sentences = append(sentences, "Not your email address.")
+		sentences = append(sentences, i18n.T(ctx, "auth.password_rule_not_email"))
 	}
 
 	if p.Rules.RejectsName {
-		sentences = append(sentences, "Not your display name.")
+		sentences = append(sentences, i18n.T(ctx, "auth.password_rule_not_name"))
 	}
 
 	return sentences
 }
 
 // Controls is the deletion form's two proofs (FR-013).
-func (p DangerZoneProps) Controls() []fieldProps {
+func (p DangerZoneProps) Controls(ctx context.Context) []fieldProps {
 	return []fieldProps{
 		control(p.FormID, p.Errors, fieldProps{
-			Name: FieldPassword, Label: "Your password", Type: "password",
+			Name: FieldPassword, Label: i18n.T(ctx, "field.settings.your_password"), Type: "password",
 			Autocomplete: "current-password", Required: true,
 		}),
 		control(p.FormID, p.Errors, fieldProps{
-			Name: FieldConfirmation, Label: "Type " + p.Phrase + " to confirm", Type: "text",
+			Name: FieldConfirmation, Label: i18n.T(ctx, "field.settings.type_phrase_to_confirm", map[string]any{"Phrase": p.Phrase}), Type: "text",
 			Autocomplete: "off", Required: true,
-			Hint: "Exactly as written, in capitals. Nothing else deletes the account.",
+			Hint: i18n.T(ctx, "field.settings.confirmation_hint"),
 		}),
 	}
 }
