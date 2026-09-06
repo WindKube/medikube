@@ -1,6 +1,7 @@
 package page
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	svctimeline "medikube/internal/service/timeline"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -139,7 +141,7 @@ func (p *timelinePages) render(e *core.RequestEvent, actor access.Actor, props v
 	}
 
 	return RenderPage(e, http.StatusOK, timelineTitle,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path), Switcher: switcher},
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path), Switcher: switcher},
 		viewtimeline.Timeline(props))
 }
 
@@ -327,10 +329,13 @@ func newTimelineLinks() (timelineLinks, error) {
 	}, nil
 }
 
-func (l timelineLinks) nav(current string) []shell.NavLink {
+// nav's timeline label is the one phrase this foundation phase routes
+// through the catalogue (i18n.T(ctx, "nav.timeline")); the other two labels
+// are unchanged consts until US1's extraction (T020) reaches them.
+func (l timelineLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: medicationListTitle, Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
-		{Label: timelineTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, "nav.timeline"), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

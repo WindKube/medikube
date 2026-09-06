@@ -2,6 +2,8 @@ package page_test
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -10,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"medikube/internal/httproute"
+	"medikube/internal/testsupport"
 	"medikube/internal/web/api"
 	"medikube/internal/web/views/ids"
 )
@@ -125,4 +128,68 @@ func TestEverySignedInPageWithAPatientOpensTheRecordStream(t *testing.T) {
 				"%s does not open the record stream", route.OpID)
 		})
 	}
+}
+
+// T015. <html lang> follows the same D-04 order RenderPage resolves a
+// Localizer with: the account's stored locale, else Accept-Language, else
+// English.
+func TestHTMLLangFollowsTheResolvedLocalizer(t *testing.T) {
+	t.Parallel()
+
+	const settingsPath = "/settings"
+
+	t.Run("a Polish account's page carries lang=pl", func(t *testing.T) {
+		t.Parallel()
+
+		rig := newBrowser(t)
+		setAccountLocale(t, rig, testsupport.AccountAEmail, "pl")
+
+		_, _, body := rig.get(settingsPath)
+		assert.Contains(t, body, `lang="pl"`)
+	})
+
+	t.Run("an anonymous Accept-Language: pl page carries lang=pl", func(t *testing.T) {
+		t.Parallel()
+
+		rig := newBrowser(t).anonymous()
+
+		_, _, body := rig.getWithHeader("/login", "Accept-Language", "pl")
+		assert.Contains(t, body, `lang="pl"`)
+	})
+
+	t.Run("an English account's page carries lang=en", func(t *testing.T) {
+		t.Parallel()
+
+		rig := newBrowser(t)
+
+		_, _, body := rig.get(settingsPath)
+		assert.Contains(t, body, `lang="en"`)
+	})
+}
+
+func setAccountLocale(t *testing.T, b *browser, email, locale string) {
+	t.Helper()
+
+	record, err := b.app.FindAuthRecordByEmail("users", email)
+	require.NoError(t, err)
+
+	record.Set("locale", locale)
+	require.NoError(t, b.app.Save(record))
+}
+
+func (b *browser) getWithHeader(url, header, value string) (int, http.Header, string) {
+	b.t.Helper()
+
+	request := httptest.NewRequestWithContext(b.t.Context(), http.MethodGet, url, nil)
+	request.Header.Set("Accept", "text/html")
+	request.Header.Set(header, value)
+
+	if b.token != "" {
+		request.Header.Set("Authorization", b.token)
+	}
+
+	recorder := httptest.NewRecorder()
+	b.handler.ServeHTTP(recorder, request)
+
+	return recorder.Code, recorder.Header(), recorder.Body.String()
 }

@@ -185,7 +185,7 @@ func (h *tagHandlers) invalid(
 	switch {
 	case errors.Is(err, tagsvc.ErrDuplicateName):
 		invalid = &domain.ValidationError{}
-		invalid.Add(tagsvc.FieldName, domain.CodeInvalidValue, web.Message(web.CodeDuplicateName))
+		invalid.Add(tagsvc.FieldName, domain.CodeInvalidValue, web.Message(e.Request.Context(), web.CodeDuplicateName))
 	case errors.As(err, &invalid):
 	default:
 		return web.OwnerScoped(err)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	json "encoding/json/v2"
 	"fmt"
 	"io"
@@ -530,7 +531,7 @@ func assertEnvelope(t *testing.T, body []byte, code string) {
 
 	require.NoError(t, json.Unmarshal(body, &envelope), "body is not MediKube's error envelope: %s", body)
 	assert.Equal(t, code, envelope.Error.Code)
-	assert.Equal(t, web.Message(code), envelope.Error.Message)
+	assert.Equal(t, web.Message(context.Background(), code), envelope.Error.Message)
 	assert.NotEmpty(t, envelope.Error.RequestID, "an error a person cannot quote a reference for")
 }
 

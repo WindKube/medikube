@@ -612,6 +612,10 @@ var filterDSLExempt = map[string]string{
 	"internal/store/coursemedication/repo.go": "List's published ordering reaches across the relation into the " +
 		"related row's own name column via PocketBase's dot-notation resolver — a join store.Schema has no shape " +
 		"for that; Upsert and Delete's own lookups are a bound store.Query (findLink), and this is the one call left",
+	"internal/i18n/i18n.go": "names golang.org/x/text/language.Parse, resolving a BCP 47 tag (an account's " +
+		"stored locale or an Accept-Language value). It is not search.Provider.Parse and reads no filter DSL",
+	"internal/web/page/shell_test.go": "the assertions read the rendered document's own <html lang=\"pl\"> " +
+		"attribute (T015), which the literal heuristic cannot tell from a filter comparison. No filter is built here",
 }
 
 // PocketBase's own entry points into its filter DSL. A call to one of these is

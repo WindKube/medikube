@@ -13,6 +13,7 @@ import (
 	"github.com/pocketbase/pocketbase/tools/router"
 
 	"medikube/internal/domain"
+	"medikube/internal/i18n"
 	"medikube/internal/obs"
 	"medikube/internal/store"
 )
@@ -257,60 +258,29 @@ func codeForStatus(status int) string {
 	return CodeBadRequest
 }
 
-// Message is what a client is shown for a code. It is a constant per code and
-// never assembled from the request, because a message built from a submission
-// is a disclosure waiting for a log line — and because two occurrences of one
+// Message is what a client is shown for a code, in the caller's own language
+// (i18n.T, "error."+code — contracts/catalogue.md). It never assembles a
+// message from the request, because a message built from a submission is a
+// disclosure waiting for a log line — and because two occurrences of one
 // code must be indistinguishable (FR-033).
-func Message(code string) string {
+func Message(ctx context.Context, code string) string {
 	switch code {
-	case CodeUnauthenticated:
-		return "sign in to continue"
-	case CodeForbidden:
-		return "that is not something this account may do"
-	case CodeNotFound:
-		return "not found"
-	case CodeVersionMismatch:
-		return "this changed since you last read it"
-	case domain.CodeValidationFailed:
-		return domain.ValidationMessage
-	case CodeConflict:
-		return "that conflicts with something already recorded"
-	case CodeRegistrationClosed:
-		return "this instance is not open for registration"
-	case CodeInvalidToken:
-		return "that link is no longer usable; request another"
-	case CodeMailUnconfigured:
-		return "this instance cannot send mail; ask an operator"
-	case CodeInvalidCursor:
-		return "that page reference is not one this instance issued"
-	case CodeRateLimited:
-		return "too many requests; try again shortly"
-	case CodeClientClosed:
-		return "the request was cancelled"
-	case CodeTimeout:
-		return "the request took too long"
-	case CodeUnsupportedMediaType:
-		return "that file type is not accepted"
-	case CodePayloadTooLarge:
-		return "that file is too large"
-	case CodeBadRequest:
-		return "the request could not be processed"
-	case CodePatientRequired:
-		return "name the patient this request is for"
-	case CodeSelfRecordProtected:
-		return "closing the account is what removes a self-record; there is no separate delete for it"
-	case CodeDuplicateName:
-		return "a tag under that name already exists"
+	case CodeUnauthenticated, CodeForbidden, CodeNotFound, CodeVersionMismatch,
+		domain.CodeValidationFailed, CodeConflict, CodeRegistrationClosed, CodeInvalidToken,
+		CodeMailUnconfigured, CodeInvalidCursor, CodeRateLimited, CodeClientClosed, CodeTimeout,
+		CodeUnsupportedMediaType, CodePayloadTooLarge, CodeBadRequest, CodePatientRequired,
+		CodeSelfRecordProtected, CodeDuplicateName:
+		return i18n.T(ctx, "error."+code)
 	}
 
-	return InternalMessage
+	return i18n.T(ctx, "error.internal_error")
 }
 
 // NewFailure builds the inside of the envelope for err.
-func NewFailure(err error, requestID string) Failure {
+func NewFailure(ctx context.Context, err error, requestID string) Failure {
 	_, code := Classify(err)
 
-	failure := Failure{Code: code, Message: Message(code), RequestID: requestID}
+	failure := Failure{Code: code, Message: Message(ctx, code), RequestID: requestID}
 
 	var invalid *domain.ValidationError
 	if errors.As(err, &invalid) {
@@ -355,8 +325,8 @@ func MapFileValidationError(err error) error {
 }
 
 // NewEnvelope builds the whole body.
-func NewEnvelope(err error, requestID string) Envelope {
-	return Envelope{Error: NewFailure(err, requestID)}
+func NewEnvelope(ctx context.Context, err error, requestID string) Envelope {
+	return Envelope{Error: NewFailure(ctx, err, requestID)}
 }
 
 // OwnerScoped answers a refusal on owner-scoped data the way FR-033 requires:
@@ -416,8 +386,10 @@ func Errors(view ErrorView) *hook.Handler[*core.RequestEvent] {
 				return nil
 			}
 
+			Localize(e)
+
 			status, _ := Classify(err)
-			failure := NewFailure(err, obs.CorrelationID(e.Request.Context()))
+			failure := NewFailure(e.Request.Context(), err, obs.CorrelationID(e.Request.Context()))
 
 			if view != nil {
 				rendered, viewErr := view(e, status, failure)

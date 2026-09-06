@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"context"
 	"encoding/json/jsontext"
 	json "encoding/json/v2"
 	"errors"
@@ -427,7 +428,7 @@ func TestBothTheRefusalAndTheGenuineMissAreBuiltByTheOneConstructor(t *testing.T
 func constructed(t *testing.T, err error, requestID string) string {
 	t.Helper()
 
-	raw, marshalErr := json.Marshal(web.NewEnvelope(err, requestID),
+	raw, marshalErr := json.Marshal(web.NewEnvelope(context.Background(), err, requestID),
 		json.Deterministic(true), jsontext.AllowInvalidUTF8(true))
 	require.NoError(t, marshalErr)
 

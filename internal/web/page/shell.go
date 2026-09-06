@@ -8,6 +8,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 
 	domainidentity "medikube/internal/domain/identity"
+	"medikube/internal/i18n"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
 	"medikube/internal/web/views/shell"
@@ -47,6 +48,15 @@ func resolveTheme(e *core.RequestEvent) domainidentity.Theme {
 	return theme
 }
 
+// resolveLocale is D-04's resolution order: the account's stored locale,
+// else the browser's Accept-Language, else English. web.Localize is the one
+// place that actually resolves it (T013), because internal/web's own
+// Render/Patch need the same rule for the responses that are not a whole
+// page; this fixes it on the request's context as a side effect.
+func resolveLocale(e *core.RequestEvent) *i18n.Localizer {
+	return web.Localize(e)
+}
+
 // NavState is the primary navigation's contents plus whether this page
 // renders the signed-in shell.
 type NavState struct {
@@ -65,6 +75,8 @@ type NavState struct {
 func RenderPage(e *core.RequestEvent, status int, title string, nav NavState, main web.Component) error {
 	e.Response.Header().Set("Cache-Control", pageCacheControl)
 
+	locale := resolveLocale(e)
+
 	var switcher templ.Component
 	if nav.SignedIn {
 		switcher = shell.PatientSwitcher(nav.Switcher)
@@ -72,6 +84,7 @@ func RenderPage(e *core.RequestEvent, status int, title string, nav NavState, ma
 
 	return web.Render(e, status, shell.Document(shell.DocumentProps{
 		Title:      title,
+		Lang:       locale.Tag.String(),
 		SignedIn:   nav.SignedIn,
 		StreamHref: streamHref(e, nav.SignedIn),
 		Nav:        nav.Nav,
