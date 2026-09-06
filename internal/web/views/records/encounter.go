@@ -7,9 +7,10 @@ import (
 	viewtags "medikube/internal/web/views/tags"
 )
 
+// EncounterFormLabelCreate and EncounterFormLabelEdit are message ids (D-06).
 const (
-	EncounterFormLabelCreate = "Record an encounter"
-	EncounterFormLabelEdit   = "Edit encounter"
+	EncounterFormLabelCreate = "page.encounter.record"
+	EncounterFormLabelEdit   = "page.encounter.edit"
 )
 
 var encounterFields = []string{
@@ -177,9 +178,9 @@ func (p EncounterFormProps) Label() string {
 
 func (p EncounterFormProps) SubmitLabel() string {
 	if p.New {
-		return "Record it"
+		return "action.record_it"
 	}
-	return "Save changes"
+	return "action.save_changes"
 }
 
 func encounterDeleteExpression(e EncounterView) string {

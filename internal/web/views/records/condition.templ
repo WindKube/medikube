@@ -3,6 +3,7 @@ package records
 import (
 	viewtags "medikube/internal/web/views/tags"
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
 	"medikube/internal/web"
@@ -22,8 +23,8 @@ templ ConditionRow(condition ConditionView) {
 				class="text-teal-800 underline underline-offset-2 hover:text-teal-900 dark:text-teal-300"
 			>{ condition.Diagnosis }</a>
 		</th>
-		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">{ condition.Status }</td>
-		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">{ condition.Severity }</td>
+		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">{ i18n.T(ctx, condition.Status) }</td>
+		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">{ i18n.T(ctx, condition.Severity) }</td>
 		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
 			if condition.OnsetOn != "" {
 				<time datetime={ condition.OnsetOn }>{ condition.OnsetOn }</time>
@@ -33,18 +34,18 @@ templ ConditionRow(condition ConditionView) {
 }
 
 templ ConditionList(props ConditionListProps) {
-	<section id={ ids.RecordList(kind.Condition) } aria-label="Conditions" class="flex flex-col">
+	<section id={ ids.RecordList(kind.Condition) } aria-label={ i18n.T(ctx, "page.conditions.title") } class="flex flex-col">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<h1
 				id={ ids.RecordListHeading(kind.Condition) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100"
-			>Conditions</h1>
+			>{ i18n.T(ctx, "page.conditions.title") }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }
 					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800"
-				>Record a condition</a>
+				>{ i18n.T(ctx, ConditionFormLabelCreate) }</a>
 			}
 		</div>
 		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
@@ -55,10 +56,10 @@ templ ConditionList(props ConditionListProps) {
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
-							<th scope="col" class="pb-2 pr-4 font-medium">Diagnosis</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">State</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">Severity</th>
-							<th scope="col" class="pb-2 font-medium">Onset</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, "field.condition.diagnosis") }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, "field.status") }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, "field.severity") }</th>
+							<th scope="col" class="pb-2 font-medium">{ i18n.T(ctx, "field.condition.onset_on") }</th>
 						</tr>
 					</thead>
 					<tbody id={ ids.RecordRows(kind.Condition) }>
@@ -76,7 +77,7 @@ templ ConditionList(props ConditionListProps) {
 templ ConditionDetail(props ConditionDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Condition, props.Condition.ID) }
-		aria-label="Condition"
+		aria-label={ i18n.T(ctx, "a11y.condition_detail") }
 		data-signals={ "{" + conditionConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Condition.Version)) + "}" }
 		data-status={ props.Condition.StatusValue }
 		class="flex flex-col"
@@ -92,19 +93,19 @@ templ ConditionDetail(props ConditionDetailProps) {
 					<a
 						href={ props.Condition.Links.Edit }
 						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-100"
-					>Edit</a>
+					>{ i18n.T(ctx, "action.edit") }</a>
 				}
 				<button
 					type="button"
 					id={ ids.RecordDelete(kind.Condition, props.Condition.ID) }
 					data-on:click={ "$" + conditionConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300"
-				>Delete</button>
+				>{ i18n.T(ctx, "action.delete") }</button>
 			</div>
 		</header>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
 			for _, entry := range props.Condition.Entries() {
-				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ i18n.T(ctx, entry.Label) }</dt>
 				@detailValue(entry)
 			}
 		</dl>
@@ -115,12 +116,12 @@ templ ConditionDetail(props ConditionDetailProps) {
 			ID:             ids.RecordConfirm(kind.Condition, props.Condition.ID),
 			ReturnTo: ids.RecordDelete(kind.Condition, props.Condition.ID),
 			Signal:         conditionConfirmSignal,
-			Title:          "Delete this condition?",
+			Title:          i18n.T(ctx, "confirm.delete_permanently"),
 			Subject:        props.Condition.Diagnosis,
 			ReferenceCount: 0,
-			ConfirmLabel:   "Delete permanently",
+			ConfirmLabel:   i18n.T(ctx, "action.delete"),
 			ConfirmOn:      conditionDeleteExpression(props.Condition),
-			CancelLabel:    "Keep it",
+			CancelLabel:    i18n.T(ctx, "confirm.keep_it"),
 		})
 	</article>
 }
@@ -128,7 +129,7 @@ templ ConditionDetail(props ConditionDetailProps) {
 templ ConditionForm(props ConditionFormProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ props.Label() }
+		aria-label={ i18n.T(ctx, props.Label()) }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
@@ -138,25 +139,25 @@ templ ConditionForm(props ConditionFormProps) {
 		if props.New {
 			<input type="hidden" name="patient" data-bind="patient" value={ props.Condition.PatientID }/>
 		}
-		@TextControl(ControlProps{FormID: props.FormID, Field: FieldDiagnosis, Label: "Diagnosis", Value: props.Condition.Value(FieldDiagnosis), Type: "text", Required: true, Errors: props.Errors})
-		@SelectControl(ControlProps{FormID: props.FormID, Field: FieldStatus, Label: "State", Value: props.Condition.Value(FieldStatus), Required: true, Errors: props.Errors}, props.Condition.StatusOptions())
-		@SelectControl(ControlProps{FormID: props.FormID, Field: FieldSeverity, Label: "Severity", Value: props.Condition.Value(FieldSeverity), Errors: props.Errors}, props.Condition.SeverityOptions())
-		@TextControl(ControlProps{FormID: props.FormID, Field: FieldOnsetOn, Label: "Onset", Value: props.Condition.Value(FieldOnsetOn), Type: "date", Errors: props.Errors})
-		@TextControl(ControlProps{FormID: props.FormID, Field: FieldResolvedOn, Label: "Resolved", Value: props.Condition.Value(FieldResolvedOn), Type: "date", Errors: props.Errors})
-		@TextControl(ControlProps{FormID: props.FormID, Field: FieldICD10Code, Label: "ICD-10 code", Value: props.Condition.Value(FieldICD10Code), Type: "text", Errors: props.Errors})
-		@TextControl(ControlProps{FormID: props.FormID, Field: FieldSNOMEDCode, Label: "SNOMED code", Value: props.Condition.Value(FieldSNOMEDCode), Type: "text", Errors: props.Errors})
-		@TextareaControl(ControlProps{FormID: props.FormID, Field: FieldNotes, Label: "Notes", Value: props.Condition.Value(FieldNotes), Errors: props.Errors})
+		@TextControl(ControlProps{FormID: props.FormID, Field: FieldDiagnosis, Label: i18n.T(ctx, "field.condition.diagnosis"), Value: props.Condition.Value(FieldDiagnosis), Type: "text", Required: true, Errors: props.Errors})
+		@SelectControl(ControlProps{FormID: props.FormID, Field: FieldStatus, Label: i18n.T(ctx, "field.status"), Value: props.Condition.Value(FieldStatus), Required: true, Errors: props.Errors}, translateOptions(ctx, props.Condition.StatusOptions()))
+		@SelectControl(ControlProps{FormID: props.FormID, Field: FieldSeverity, Label: i18n.T(ctx, "field.severity"), Value: props.Condition.Value(FieldSeverity), Errors: props.Errors}, translateOptions(ctx, props.Condition.SeverityOptions()))
+		@TextControl(ControlProps{FormID: props.FormID, Field: FieldOnsetOn, Label: i18n.T(ctx, "field.condition.onset_on"), Value: props.Condition.Value(FieldOnsetOn), Type: "date", Errors: props.Errors})
+		@TextControl(ControlProps{FormID: props.FormID, Field: FieldResolvedOn, Label: i18n.T(ctx, "field.condition.resolved_on"), Value: props.Condition.Value(FieldResolvedOn), Type: "date", Errors: props.Errors})
+		@TextControl(ControlProps{FormID: props.FormID, Field: FieldICD10Code, Label: i18n.T(ctx, "field.condition.icd10_code"), Value: props.Condition.Value(FieldICD10Code), Type: "text", Errors: props.Errors})
+		@TextControl(ControlProps{FormID: props.FormID, Field: FieldSNOMEDCode, Label: i18n.T(ctx, "field.condition.snomed_code"), Value: props.Condition.Value(FieldSNOMEDCode), Type: "text", Errors: props.Errors})
+		@TextareaControl(ControlProps{FormID: props.FormID, Field: FieldNotes, Label: i18n.T(ctx, "field.notes"), Value: props.Condition.Value(FieldNotes), Errors: props.Errors})
 		@viewtags.Field(props.Tags)
 		<div class="flex flex-wrap items-center gap-3">
 			<button
 				type="submit"
 				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800"
-			>{ props.SubmitLabel() }</button>
+			>{ i18n.T(ctx, props.SubmitLabel()) }</button>
 			if props.CancelHref != "" {
 				<a
 					href={ props.CancelHref }
 					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 dark:text-slate-300"
-				>Cancel</a>
+				>{ i18n.T(ctx, "action.cancel") }</a>
 			}
 		</div>
 	</form>

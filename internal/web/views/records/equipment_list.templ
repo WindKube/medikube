@@ -2,21 +2,23 @@ package records
 
 import (
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 )
 
+// The constants below are message ids (D-06), resolved at render time.
 const (
-	equipmentEmptyTitle  = "Nothing recorded yet"
-	equipmentEmptyBody   = "Record the first item and it will be listed here, with everything you noted about it."
-	equipmentCreateLabel = "Record equipment"
-	equipmentListTitle   = "Equipment"
+	equipmentEmptyTitle  = "empty.nothing_recorded"
+	equipmentEmptyBody   = "empty.equipment_body"
+	equipmentCreateLabel = "page.equipment.record"
+	equipmentListTitle   = "page.equipment.title"
 )
 
 templ EquipmentList(props EquipmentListProps) {
 	<section
 		id={ ids.RecordList(kind.Equipment) }
-		aria-label={ equipmentListTitle }
+		aria-label={ i18n.T(ctx, equipmentListTitle) }
 		class="flex flex-col"
 	>
 		<div class="flex flex-wrap items-center justify-between gap-3">
@@ -24,32 +26,32 @@ templ EquipmentList(props EquipmentListProps) {
 				id={ ids.RecordListHeading(kind.Equipment) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ equipmentListTitle }</h1>
+			>{ i18n.T(ctx, equipmentListTitle) }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }
 					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-				>{ equipmentCreateLabel }</a>
+				>{ i18n.T(ctx, equipmentCreateLabel) }</a>
 			}
 		</div>
 		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
 			<div data-empty class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:          ids.RecordEmpty(kind.Equipment),
-					Title:       equipmentEmptyTitle,
-					Body:        equipmentEmptyBody,
+					Title:       i18n.T(ctx, equipmentEmptyTitle),
+					Body:        i18n.T(ctx, equipmentEmptyBody),
 					ActionHref:  props.CreateHref,
-					ActionLabel: equipmentCreateLabel,
+					ActionLabel: i18n.T(ctx, equipmentCreateLabel),
 				})
 			</div>
 			<div data-rows class="mt-4 overflow-x-auto">
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
-							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldName) }</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldType) }</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldStatus) }</th>
-							<th scope="col" class="pb-2 font-medium">{ FieldLabel(FieldServiceDueOn) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, FieldLabel(FieldName)) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, FieldLabel(FieldType)) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, FieldLabel(FieldStatus)) }</th>
+							<th scope="col" class="pb-2 font-medium">{ i18n.T(ctx, FieldLabel(FieldServiceDueOn)) }</th>
 						</tr>
 					</thead>
 					<tbody id={ ids.RecordRows(kind.Equipment) }>

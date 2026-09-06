@@ -18,21 +18,23 @@ const (
 	FieldIsActive     = "is_active"
 )
 
+// ContactFormLabelCreate and ContactFormLabelEdit are message ids (D-06).
 const (
-	ContactFormLabelCreate = "Record an emergency contact"
-	ContactFormLabelEdit   = "Edit emergency contact"
+	ContactFormLabelCreate = "page.emergency_contact.record"
+	ContactFormLabelEdit   = "page.emergency_contact.edit"
 )
 
+// Values are message ids (D-06), resolved at render time.
 var contactRelationshipLabels = map[clinical.ContactRelationship]string{
-	clinical.ContactRelationshipSpouse:    "Spouse",
-	clinical.ContactRelationshipPartner:   "Partner",
-	clinical.ContactRelationshipParent:    "Parent",
-	clinical.ContactRelationshipChild:     "Child",
-	clinical.ContactRelationshipSibling:   "Sibling",
-	clinical.ContactRelationshipFriend:    "Friend",
-	clinical.ContactRelationshipGuardian:  "Guardian",
-	clinical.ContactRelationshipCaregiver: "Caregiver",
-	clinical.ContactRelationshipOther:     "Other",
+	clinical.ContactRelationshipSpouse:    "enum.contact_relationship.spouse",
+	clinical.ContactRelationshipPartner:   "enum.contact_relationship.partner",
+	clinical.ContactRelationshipParent:    "enum.contact_relationship.parent",
+	clinical.ContactRelationshipChild:     "enum.contact_relationship.child",
+	clinical.ContactRelationshipSibling:   "enum.contact_relationship.sibling",
+	clinical.ContactRelationshipFriend:    "enum.contact_relationship.friend",
+	clinical.ContactRelationshipGuardian:  "enum.contact_relationship.guardian",
+	clinical.ContactRelationshipCaregiver: "enum.contact_relationship.caregiver",
+	clinical.ContactRelationshipOther:     "enum.contact_relationship.other",
 }
 
 func ContactRelationshipLabel(value clinical.ContactRelationship) string {
@@ -103,18 +105,19 @@ func (c EmergencyContactView) RelationshipOptions() []Option {
 	return ContactRelationshipOptions(clinical.ContactRelationship(c.RelationshipValue))
 }
 
+// Values are message ids (D-06), resolved at render time.
 var contactFieldLabels = map[string]string{
-	FieldContactName:  "Name",
-	FieldRelationship: "Relationship",
-	FieldPhone:        "Phone",
-	FieldPhoneAlt:     "Second phone",
-	FieldEmail:        "Email",
-	FieldAddress:      "Address",
-	FieldIsPrimary:    "Primary contact",
-	FieldIsActive:     "Active",
-	FieldNotes:        "Notes",
-	FieldCreated:      "Recorded",
-	FieldLastChanged:  "Last changed",
+	FieldContactName:  "field.name",
+	FieldRelationship: "field.relationship",
+	FieldPhone:        "field.emergency_contact.phone",
+	FieldPhoneAlt:     "field.emergency_contact.phone_alt",
+	FieldEmail:        "field.emergency_contact.email",
+	FieldAddress:      "field.emergency_contact.address",
+	FieldIsPrimary:    "field.emergency_contact.is_primary",
+	FieldIsActive:     "field.emergency_contact.is_active",
+	FieldNotes:        "field.notes",
+	FieldCreated:      "field.recorded",
+	FieldLastChanged:  "field.last_changed",
 }
 
 func contactFieldLabel(field string) string {
@@ -127,7 +130,7 @@ func contactFieldLabel(field string) string {
 
 func (c EmergencyContactView) Entries() []DetailEntry {
 	candidates := []DetailEntry{
-		{Field: FieldRelationship, Value: c.Relationship},
+		{Field: FieldRelationship, Value: c.Relationship, Translate: true},
 		{Field: FieldPhone, Value: c.Phone},
 		{Field: FieldPhoneAlt, Value: c.PhoneAlt},
 		{Field: FieldEmail, Value: c.Email},
@@ -211,8 +214,8 @@ func (p EmergencyContactFormProps) Label() string {
 
 func (p EmergencyContactFormProps) SubmitLabel() string {
 	if p.New {
-		return "Record it"
+		return "action.record_it"
 	}
 
-	return "Save changes"
+	return "action.save_changes"
 }

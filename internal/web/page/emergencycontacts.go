@@ -13,6 +13,7 @@ import (
 	"medikube/internal/domain/clinical"
 	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	recordfamily "medikube/internal/records"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -26,7 +27,8 @@ const (
 	OpEmergencyContactDetailPage = "emergencyContactDetailPage"
 )
 
-const emergencyContactListTitle = "Emergency contacts"
+// emergencyContactListTitleID is a message id (D-06), resolved at render time.
+const emergencyContactListTitleID = "page.emergency_contacts.title"
 
 // EmergencyContactHandlers is the emergency-contact pages' contribution to
 // the route table.
@@ -209,7 +211,9 @@ func (p *emergencyContactPages) list(e *core.RequestEvent, actor access.Actor) e
 		return err
 	}
 
-	return p.render(e, actor, emergencyContactListTitle, sequence{
+	web.Localize(e)
+
+	return p.render(e, actor, i18n.T(e.Request.Context(), emergencyContactListTitleID), sequence{
 		context,
 		p.views.ListOfPage(listing, nextPageHref(e, listing)),
 		entry.Views.Form(blank, nil, ""),

@@ -3,50 +3,52 @@ package records
 import (
 	viewtags "medikube/internal/web/views/tags"
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/components"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web"
 )
 
+// The constants below are message ids (D-06), resolved at render time.
 const (
-	encountersTitle  = "Encounters"
-	encounterCreate  = "Record an encounter"
-	encounterEmptyTitle = "Nothing recorded yet"
-	encounterEmptyBody  = "Record the first one and it will be listed here, with everything you noted about it."
+	encountersTitle     = "page.encounters.title"
+	encounterCreate     = "page.encounter.record"
+	encounterEmptyTitle = "empty.nothing_recorded"
+	encounterEmptyBody  = "empty.record_first_one_body"
 )
 
 templ EncounterList(props EncounterListProps) {
-	<section id={ ids.RecordList(kind.Encounter) } aria-label={ encountersTitle } class="flex flex-col">
+	<section id={ ids.RecordList(kind.Encounter) } aria-label={ i18n.T(ctx, encountersTitle) } class="flex flex-col">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<h1
 				id={ ids.RecordListHeading(kind.Encounter) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ encountersTitle }</h1>
+			>{ i18n.T(ctx, encountersTitle) }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }
 					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-				>{ encounterCreate }</a>
+				>{ i18n.T(ctx, encounterCreate) }</a>
 			}
 		</div>
 		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
 			<div data-empty class="mt-6">
 				@components.EmptyState(components.EmptyStateProps{
 					ID:          ids.RecordEmpty(kind.Encounter),
-					Title:       encounterEmptyTitle,
-					Body:        encounterEmptyBody,
+					Title:       i18n.T(ctx, encounterEmptyTitle),
+					Body:        i18n.T(ctx, encounterEmptyBody),
 					ActionHref:  props.CreateHref,
-					ActionLabel: encounterCreate,
+					ActionLabel: i18n.T(ctx, encounterCreate),
 				})
 			</div>
 			<div data-rows class="mt-4 overflow-x-auto">
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
-							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldReason) }</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">{ FieldLabel(FieldVisitType) }</th>
-							<th scope="col" class="pb-2 font-medium">{ FieldLabel(FieldOccurredOn) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, FieldLabel(FieldReason)) }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, FieldLabel(FieldVisitType)) }</th>
+							<th scope="col" class="pb-2 font-medium">{ i18n.T(ctx, FieldLabel(FieldOccurredOn)) }</th>
 						</tr>
 					</thead>
 					<tbody id={ ids.RecordRows(kind.Encounter) }>
@@ -75,13 +77,13 @@ templ EncounterRow(e EncounterView) {
 		</th>
 		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">
 			if e.VisitType != "" {
-				<span class="sr-only">{ FieldLabel(FieldVisitType) }</span>
+				<span class="sr-only">{ i18n.T(ctx, FieldLabel(FieldVisitType)) }</span>
 				{ e.VisitType }
 			}
 		</td>
 		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
 			if e.OccurredOn != "" {
-				<span class="sr-only">{ FieldLabel(FieldOccurredOn) }</span>
+				<span class="sr-only">{ i18n.T(ctx, FieldLabel(FieldOccurredOn)) }</span>
 				<time datetime={ e.OccurredOn }>{ e.OccurredOn }</time>
 			}
 		</td>
@@ -91,7 +93,7 @@ templ EncounterRow(e EncounterView) {
 templ EncounterDetail(props EncounterDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Encounter, props.Encounter.ID) }
-		aria-label="Encounter"
+		aria-label={ i18n.T(ctx, "a11y.encounter_detail") }
 		data-signals={ "{_confirming_delete: false, _etag: " + jsLiteral(web.ETag(props.Encounter.Version)) + "}" }
 		class="flex flex-col"
 	>
@@ -106,19 +108,19 @@ templ EncounterDetail(props EncounterDetailProps) {
 					<a
 						href={ props.Encounter.Links.Edit }
 						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
-					>Edit</a>
+					>{ i18n.T(ctx, "action.edit") }</a>
 				}
 				<button
 					type="button"
 					id={ ids.RecordDelete(kind.Encounter, props.Encounter.ID) }
 					data-on:click="$_confirming_delete = true"
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-700 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950"
-				>Delete</button>
+				>{ i18n.T(ctx, "action.delete") }</button>
 			</div>
 		</header>
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
 			for _, entry := range props.Encounter.Entries() {
-				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ i18n.T(ctx, entry.Label) }</dt>
 				@detailValue(entry)
 			}
 		</dl>
@@ -126,12 +128,12 @@ templ EncounterDetail(props EncounterDetailProps) {
 			ID:           ids.RecordConfirm(kind.Encounter, props.Encounter.ID),
 			ReturnTo: ids.RecordDelete(kind.Encounter, props.Encounter.ID),
 			Signal:       "_confirming_delete",
-			Title:        "Delete this encounter?",
+			Title:        i18n.T(ctx, "confirm.delete_permanently"),
 			Subject:      props.Encounter.Reason,
-			Consequence:  "This is permanent. There is no recycle bin and no undo.",
-			ConfirmLabel: "Delete permanently",
+			Consequence:  i18n.T(ctx, "confirm.delete_encounter_consequence"),
+			ConfirmLabel: i18n.T(ctx, "action.delete"),
 			ConfirmOn:    encounterDeleteExpression(props.Encounter),
-			CancelLabel:  "Keep it",
+			CancelLabel:  i18n.T(ctx, "confirm.keep_it"),
 		})
 	</article>
 }
@@ -139,7 +141,7 @@ templ EncounterDetail(props EncounterDetailProps) {
 templ EncounterForm(props EncounterFormProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ props.Label() }
+		aria-label={ i18n.T(ctx, props.Label()) }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
@@ -163,12 +165,12 @@ templ EncounterForm(props EncounterFormProps) {
 			<button
 				type="submit"
 				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ props.SubmitLabel() }</button>
+			>{ i18n.T(ctx, props.SubmitLabel()) }</button>
 			if props.CancelHref != "" {
 				<a
 					href={ props.CancelHref }
 					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:text-slate-300 dark:hover:text-slate-100"
-				>Cancel</a>
+				>{ i18n.T(ctx, "action.cancel") }</a>
 			}
 		</div>
 	</form>
@@ -176,7 +178,7 @@ templ EncounterForm(props EncounterFormProps) {
 
 templ encounterTextControl(props EncounterFormProps, field, inputType string, required bool) {
 	<div class="flex flex-col">
-		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ i18n.T(ctx, FieldLabel(field)) }</label>
 		<input
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -196,7 +198,7 @@ templ encounterTextControl(props EncounterFormProps, field, inputType string, re
 
 templ encounterSelectControl(props EncounterFormProps, field string, options []Option) {
 	<div class="flex flex-col">
-		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ i18n.T(ctx, FieldLabel(field)) }</label>
 		<select
 			id={ ids.Field(props.FormID, field) }
 			name={ field }
@@ -207,7 +209,7 @@ templ encounterSelectControl(props EncounterFormProps, field string, options []O
 			}
 			class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
 		>
-			<option value="" selected?={ props.Encounter.Value(field) == "" }>Not recorded</option>
+			<option value="" selected?={ props.Encounter.Value(field) == "" }>{ i18n.T(ctx, "action.not_recorded") }</option>
 			for _, option := range options {
 				<option value={ option.Value } selected?={ option.Selected }>{ option.Label }</option>
 			}
@@ -218,7 +220,7 @@ templ encounterSelectControl(props EncounterFormProps, field string, options []O
 
 templ encounterTextareaControl(props EncounterFormProps, field string) {
 	<div class="flex flex-col">
-		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ FieldLabel(field) }</label>
+		<label for={ ids.Field(props.FormID, field) } class="text-sm font-medium text-slate-900 dark:text-slate-100">{ i18n.T(ctx, FieldLabel(field)) }</label>
 		<textarea
 			id={ ids.Field(props.FormID, field) }
 			name={ field }

@@ -2,6 +2,7 @@ package records
 
 import (
 	"medikube/internal/domain/kind"
+	"medikube/internal/i18n"
 	"medikube/internal/web/views/ids"
 	"medikube/internal/web/views/shared"
 	viewtags "medikube/internal/web/views/tags"
@@ -27,14 +28,14 @@ templ AllergyRow(allergy AllergyView) {
 				<span
 					data-testid="allergy-critical"
 					class="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-900 dark:bg-rose-900 dark:text-rose-100"
-				>Critical</span>
+				>{ i18n.T(ctx, "a11y.allergy_critical") }</span>
 			} else {
 				<span class="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200">
-					{ allergy.Severity }
+					{ i18n.T(ctx, allergy.Severity) }
 				</span>
 			}
 		</td>
-		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">{ allergy.Status }</td>
+		<td class="py-3 pr-4 align-top text-slate-700 dark:text-slate-300">{ i18n.T(ctx, allergy.Status) }</td>
 		<td class="py-3 align-top tabular-nums text-slate-700 dark:text-slate-300">
 			if allergy.OnsetOn != "" {
 				<time datetime={ allergy.OnsetOn }>{ allergy.OnsetOn }</time>
@@ -44,18 +45,18 @@ templ AllergyRow(allergy AllergyView) {
 }
 
 templ AllergyList(props AllergyListProps) {
-	<section id={ ids.RecordList(kind.Allergy) } aria-label="Allergies" class="flex flex-col">
+	<section id={ ids.RecordList(kind.Allergy) } aria-label={ i18n.T(ctx, "page.allergies.title") } class="flex flex-col">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<h1
 				id={ ids.RecordListHeading(kind.Allergy) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100"
-			>Allergies</h1>
+			>{ i18n.T(ctx, "page.allergies.title") }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }
 					class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800"
-				>Record an allergy</a>
+				>{ i18n.T(ctx, AllergyFormLabelCreate) }</a>
 			}
 		</div>
 		<div class="[&:has(tbody_tr)_[data-empty]]:hidden [&:not(:has(tbody_tr))_[data-rows]]:hidden">
@@ -66,10 +67,10 @@ templ AllergyList(props AllergyListProps) {
 				<table class="w-full border-collapse text-left text-sm">
 					<thead>
 						<tr class="border-b border-slate-300 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
-							<th scope="col" class="pb-2 pr-4 font-medium">Allergen</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">Severity</th>
-							<th scope="col" class="pb-2 pr-4 font-medium">State</th>
-							<th scope="col" class="pb-2 font-medium">First noticed</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, "field.allergy.allergen") }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, "field.severity") }</th>
+							<th scope="col" class="pb-2 pr-4 font-medium">{ i18n.T(ctx, "field.status") }</th>
+							<th scope="col" class="pb-2 font-medium">{ i18n.T(ctx, "field.allergy.onset_on") }</th>
 						</tr>
 					</thead>
 					<tbody id={ ids.RecordRows(kind.Allergy) }>
@@ -87,7 +88,7 @@ templ AllergyList(props AllergyListProps) {
 templ AllergyDetail(props AllergyDetailProps) {
 	<article
 		id={ ids.RecordDetail(kind.Allergy, props.Allergy.ID) }
-		aria-label="Allergy"
+		aria-label={ i18n.T(ctx, "a11y.allergy_detail") }
 		data-signals={ "{" + allergyConfirmSignal + ": false, _etag: " + jsLiteral(web.ETag(props.Allergy.Version)) + "}" }
 		data-status={ props.Allergy.StatusValue }
 		class="flex flex-col"
@@ -103,24 +104,24 @@ templ AllergyDetail(props AllergyDetailProps) {
 					<a
 						href={ props.Allergy.Links.Edit }
 						class="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-100"
-					>Edit</a>
+					>{ i18n.T(ctx, "action.edit") }</a>
 				}
 				<button
 					type="button"
 					id={ ids.RecordDelete(kind.Allergy, props.Allergy.ID) }
 					data-on:click={ "$" + allergyConfirmSignal + " = true" }
 					class="inline-flex items-center rounded-md border border-rose-300 px-3 py-2 text-sm font-medium text-rose-800 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300"
-				>Delete</button>
+				>{ i18n.T(ctx, "action.delete") }</button>
 			</div>
 		</header>
 		if props.Allergy.Critical {
 			<p class="mt-2 inline-flex w-fit items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-900 dark:bg-rose-900 dark:text-rose-100">
-				Critical
+				{ i18n.T(ctx, "a11y.allergy_critical") }
 			</p>
 		}
 		<dl class="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
 			for _, entry := range props.Allergy.Entries() {
-				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ entry.Label }</dt>
+				<dt class="text-sm font-medium text-slate-500 dark:text-slate-400">{ i18n.T(ctx, entry.Label) }</dt>
 				@detailValue(entry)
 			}
 		</dl>
@@ -131,12 +132,12 @@ templ AllergyDetail(props AllergyDetailProps) {
 			ID:             ids.RecordConfirm(kind.Allergy, props.Allergy.ID),
 			ReturnTo: ids.RecordDelete(kind.Allergy, props.Allergy.ID),
 			Signal:         allergyConfirmSignal,
-			Title:          "Delete this allergy?",
+			Title:          i18n.T(ctx, "confirm.delete_permanently"),
 			Subject:        props.Allergy.Allergen,
 			ReferenceCount: 0,
-			ConfirmLabel:   "Delete permanently",
+			ConfirmLabel:   i18n.T(ctx, "action.delete"),
 			ConfirmOn:      allergyDeleteExpression(props.Allergy),
-			CancelLabel:    "Keep it",
+			CancelLabel:    i18n.T(ctx, "confirm.keep_it"),
 		})
 	</article>
 }
@@ -144,7 +145,7 @@ templ AllergyDetail(props AllergyDetailProps) {
 templ AllergyForm(props AllergyFormProps) {
 	<form
 		id={ props.FormID }
-		aria-label={ props.Label() }
+		aria-label={ i18n.T(ctx, props.Label()) }
 		data-on:submit__prevent={ props.OnSubmit }
 		class="flex max-w-2xl flex-col gap-5"
 	>
@@ -154,23 +155,23 @@ templ AllergyForm(props AllergyFormProps) {
 		if props.New {
 			<input type="hidden" name="patient" data-bind="patient" value={ props.Allergy.PatientID }/>
 		}
-		@TextControl(ControlProps{FormID: props.FormID, Field: FieldAllergen, Label: "Allergen", Value: props.Allergy.Value(FieldAllergen), Type: "text", Required: true, Errors: props.Errors})
-		@TextareaControl(ControlProps{FormID: props.FormID, Field: FieldReaction, Label: "Reaction", Value: props.Allergy.Value(FieldReaction), Errors: props.Errors})
-		@SelectControl(ControlProps{FormID: props.FormID, Field: FieldSeverity, Label: "Severity", Value: props.Allergy.Value(FieldSeverity), Required: true, Errors: props.Errors}, props.Allergy.SeverityOptions())
-		@SelectControl(ControlProps{FormID: props.FormID, Field: FieldStatus, Label: "State", Value: props.Allergy.Value(FieldStatus), Errors: props.Errors}, props.Allergy.StatusOptions())
-		@TextControl(ControlProps{FormID: props.FormID, Field: FieldOnsetOn, Label: "First noticed", Value: props.Allergy.Value(FieldOnsetOn), Type: "date", Errors: props.Errors})
-		@TextareaControl(ControlProps{FormID: props.FormID, Field: FieldNotes, Label: "Notes", Value: props.Allergy.Value(FieldNotes), Errors: props.Errors})
+		@TextControl(ControlProps{FormID: props.FormID, Field: FieldAllergen, Label: i18n.T(ctx, "field.allergy.allergen"), Value: props.Allergy.Value(FieldAllergen), Type: "text", Required: true, Errors: props.Errors})
+		@TextareaControl(ControlProps{FormID: props.FormID, Field: FieldReaction, Label: i18n.T(ctx, "field.allergy.reaction"), Value: props.Allergy.Value(FieldReaction), Errors: props.Errors})
+		@SelectControl(ControlProps{FormID: props.FormID, Field: FieldSeverity, Label: i18n.T(ctx, "field.severity"), Value: props.Allergy.Value(FieldSeverity), Required: true, Errors: props.Errors}, translateOptions(ctx, props.Allergy.SeverityOptions()))
+		@SelectControl(ControlProps{FormID: props.FormID, Field: FieldStatus, Label: i18n.T(ctx, "field.status"), Value: props.Allergy.Value(FieldStatus), Errors: props.Errors}, translateOptions(ctx, props.Allergy.StatusOptions()))
+		@TextControl(ControlProps{FormID: props.FormID, Field: FieldOnsetOn, Label: i18n.T(ctx, "field.allergy.onset_on"), Value: props.Allergy.Value(FieldOnsetOn), Type: "date", Errors: props.Errors})
+		@TextareaControl(ControlProps{FormID: props.FormID, Field: FieldNotes, Label: i18n.T(ctx, "field.notes"), Value: props.Allergy.Value(FieldNotes), Errors: props.Errors})
 		@viewtags.Field(props.Tags)
 		<div class="flex flex-wrap items-center gap-3">
 			<button
 				type="submit"
 				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800"
-			>{ props.SubmitLabel() }</button>
+			>{ i18n.T(ctx, props.SubmitLabel()) }</button>
 			if props.CancelHref != "" {
 				<a
 					href={ props.CancelHref }
 					class="text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900 dark:text-slate-300"
-				>Cancel</a>
+				>{ i18n.T(ctx, "action.cancel") }</a>
 			}
 		</div>
 	</form>

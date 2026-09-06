@@ -245,3 +245,965 @@ one = "{{.PluralCount}} członek rodziny"
 few = "{{.PluralCount}} członkowie rodziny"
 many = "{{.PluralCount}} członków rodziny"
 other = "{{.PluralCount}} członków rodziny"
+
+# --- field.<generic> --------------------------------------------------------
+
+[field.name]
+description = "Generic 'Name' field label, shared across kinds"
+other = "Nazwa"
+
+[field.type]
+description = "Generic 'Kind' field label (a record's own sub-type), shared across kinds"
+other = "Rodzaj"
+
+[field.status]
+description = "Generic 'State' field label, shared across kinds"
+other = "Stan"
+
+[field.severity]
+description = "Generic 'Severity' field label, shared across kinds"
+other = "Nasilenie"
+
+[field.notes]
+description = "Generic 'Notes' field label, shared across kinds"
+other = "Uwagi"
+
+[field.recorded]
+description = "Generic 'Recorded' (created-at) field label, shared across kinds"
+other = "Zapisano"
+
+[field.last_changed]
+description = "Generic 'Last changed' field label, shared across kinds"
+other = "Ostatnia zmiana"
+
+[field.relationship]
+description = "Generic 'Relationship' field label, shared across kinds"
+other = "Pokrewieństwo"
+
+[field.manufacturer]
+description = "Generic 'Manufacturer' field label, shared across kinds"
+other = "Producent"
+
+[field.indication]
+description = "Medication's 'Reason for taking it' field label"
+other = "Powód zażywania"
+
+[field.side_effects]
+description = "Medication's 'Side effects' field label"
+other = "Działania niepożądane"
+
+[field.alternative_name]
+description = "Medication's 'Also known as' field label"
+other = "Znany również jako"
+
+# --- action.<generic> --------------------------------------------------------
+
+[action.record_it]
+description = "The submit button on a create form when creating"
+other = "Zapisz"
+
+[action.save_changes]
+description = "The submit button on a create form when editing"
+other = "Zapisz zmiany"
+
+[action.edit]
+description = "The link that opens a record's edit form"
+other = "Edytuj"
+
+[action.not_recorded]
+description = "The empty option of an optional select control"
+other = "Nie odnotowano"
+
+# --- enum.bool ---------------------------------------------------------------
+
+[enum.bool.yes]
+description = "A boolean field's true value, rendered as text"
+other = "Tak"
+
+[enum.bool.primary]
+description = "A boolean 'is primary' field, rendered as a badge"
+other = "Podstawowy"
+
+# --- enum.severity / enum.condition_status -----------------------------------
+
+[enum.severity.mild]
+description = "Severity vocabulary value: mild"
+other = "Łagodne"
+
+[enum.severity.moderate]
+description = "Severity vocabulary value: moderate"
+other = "Umiarkowane"
+
+[enum.severity.severe]
+description = "Severity vocabulary value: severe"
+other = "Ciężkie"
+
+[enum.severity.life_threatening]
+description = "Severity vocabulary value: life-threatening"
+other = "Zagrażające życiu"
+
+[enum.condition_status.active]
+description = "Condition status vocabulary value: active"
+other = "Aktywne"
+
+[enum.condition_status.healing]
+description = "Condition status vocabulary value: healing"
+other = "W trakcie gojenia"
+
+[enum.condition_status.inactive]
+description = "Condition status vocabulary value: inactive"
+other = "Nieaktywne"
+
+[enum.condition_status.resolved]
+description = "Condition status vocabulary value: resolved"
+other = "Ustąpiło"
+
+[enum.condition_status.chronic]
+description = "Condition status vocabulary value: chronic"
+other = "Przewlekłe"
+
+# --- confirm.<per-kind delete consequence> -----------------------------------
+
+[confirm.delete_consequence_generic]
+description = "The delete confirmation's consequence text, shared by equipment, immunization and insurance"
+other = "To działanie jest nieodwracalne. Nie ma kosza ani cofania, więc wszystko, co tu zapisano, zniknie razem z tym."
+
+[confirm.delete_family_member_consequence]
+description = "The delete confirmation's consequence text for a family member"
+other = "To działanie jest nieodwracalne. Nie ma kosza ani cofania, więc wszystko, co o nich zapisano, łącznie z każdym schorzeniem, zniknie razem z tym."
+
+[confirm.delete_encounter_consequence]
+description = "The delete confirmation's consequence text for an encounter"
+other = "To działanie jest nieodwracalne. Nie ma kosza ani cofania."
+
+# --- empty.<generic body> ----------------------------------------------------
+
+[empty.record_first_one_body]
+description = "Generic empty-state body inviting the first record, shared by encounter, immunization, injury and medication"
+other = "Zapisz pierwszy wpis, a pojawi się on tutaj wraz ze wszystkim, co odnotowano."
+
+# --- allergy (T023) -----------------------------------------------------------
+
+[page.allergies.title]
+description = "Allergies list page: heading, section aria-label and <title>"
+other = "Alergie"
+
+[page.allergy.record]
+description = "The allergy create form's aria-label and the list's create button"
+other = "Zapisz alergię"
+
+[page.allergy.edit]
+description = "The allergy edit form's aria-label"
+other = "Edytuj alergię"
+
+[a11y.allergy_detail]
+description = "The allergy detail article's aria-label"
+other = "Alergia"
+
+[a11y.allergy_critical]
+description = "The allergy row/detail's critical badge"
+other = "Krytyczne"
+
+[field.allergy.allergen]
+description = "Allergy's 'Allergen' field label"
+other = "Alergen"
+
+[field.allergy.reaction]
+description = "Allergy's 'Reaction' field label"
+other = "Reakcja"
+
+[field.allergy.onset_on]
+description = "Allergy's 'First noticed' field label"
+other = "Pierwsze wystąpienie"
+
+# --- condition (T023) ---------------------------------------------------------
+
+[page.conditions.title]
+description = "Conditions list page: heading, section aria-label and <title>"
+other = "Schorzenia"
+
+[page.condition.record]
+description = "The condition create form's aria-label and the list's create button"
+other = "Zapisz schorzenie"
+
+[page.condition.edit]
+description = "The condition edit form's aria-label"
+other = "Edytuj schorzenie"
+
+[a11y.condition_detail]
+description = "The condition detail article's aria-label"
+other = "Schorzenie"
+
+[field.condition.diagnosis]
+description = "Condition's 'Diagnosis' field label"
+other = "Rozpoznanie"
+
+[field.condition.onset_on]
+description = "Condition's 'Onset' field label"
+other = "Początek"
+
+[field.condition.resolved_on]
+description = "Condition's 'Resolved' field label"
+other = "Ustąpiło"
+
+[field.condition.icd10_code]
+description = "Condition's 'ICD-10 code' field label"
+other = "Kod ICD-10"
+
+[field.condition.snomed_code]
+description = "Condition's 'SNOMED code' field label"
+other = "Kod SNOMED"
+
+# --- emergency contact (T023) --------------------------------------------------
+
+[page.emergency_contacts.title]
+description = "Emergency contacts list page: heading, section aria-label and <title>"
+other = "Kontakty alarmowe"
+
+[page.emergency_contact.record]
+description = "The emergency contact create form's aria-label and the list's create button"
+other = "Zapisz kontakt alarmowy"
+
+[page.emergency_contact.edit]
+description = "The emergency contact edit form's aria-label"
+other = "Edytuj kontakt alarmowy"
+
+[a11y.emergency_contact_detail]
+description = "The emergency contact detail article's aria-label"
+other = "Kontakt alarmowy"
+
+[field.emergency_contact.phone]
+description = "Emergency contact's 'Phone' field label"
+other = "Telefon"
+
+[field.emergency_contact.phone_alt]
+description = "Emergency contact's 'Second phone' field label"
+other = "Drugi telefon"
+
+[field.emergency_contact.email]
+description = "Emergency contact's 'Email' field label"
+other = "E-mail"
+
+[field.emergency_contact.address]
+description = "Emergency contact's 'Address' field label"
+other = "Adres"
+
+[field.emergency_contact.is_primary]
+description = "Emergency contact's 'Primary contact' checkbox label"
+other = "Kontakt podstawowy"
+
+[field.emergency_contact.is_active]
+description = "Emergency contact's 'Active' checkbox label"
+other = "Aktywny"
+
+# --- encounter (T023) -----------------------------------------------------------
+
+[page.encounters.title]
+description = "Encounters list page: heading, section aria-label and <title>"
+other = "Wizyty"
+
+[page.encounter.record]
+description = "The encounter create form's aria-label and the list's create button"
+other = "Zapisz wizytę"
+
+[page.encounter.edit]
+description = "The encounter edit form's aria-label"
+other = "Edytuj wizytę"
+
+[a11y.encounter_detail]
+description = "The encounter detail article's aria-label"
+other = "Wizyta"
+
+# --- equipment (T023) -----------------------------------------------------------
+
+[page.equipment.title]
+description = "Equipment list heading, section aria-label, detail article aria-label and <title>"
+other = "Sprzęt medyczny"
+
+[page.equipment.record]
+description = "The equipment create form's aria-label and the list's create button"
+other = "Zapisz sprzęt"
+
+[page.equipment.edit]
+description = "The equipment edit form's aria-label"
+other = "Edytuj sprzęt"
+
+[empty.equipment_body]
+description = "Equipment's empty-state body"
+other = "Zapisz pierwszy element, a pojawi się on tutaj wraz ze wszystkim, co odnotowano."
+
+[field.equipment.model]
+description = "Equipment's 'Model' field label"
+other = "Model"
+
+[field.equipment.serial]
+description = "Equipment's 'Serial number' field label"
+other = "Numer seryjny"
+
+[field.equipment.prescribed_on]
+description = "Equipment's 'Prescribed' field label"
+other = "Przepisano"
+
+[field.equipment.serviced_on]
+description = "Equipment's 'Last serviced' field label"
+other = "Ostatni przegląd"
+
+[field.equipment.service_due_on]
+description = "Equipment's 'Service due' field label"
+other = "Termin przeglądu"
+
+[field.equipment.instructions]
+description = "Equipment's 'Instructions' field label"
+other = "Instrukcje"
+
+[field.equipment.supplier]
+description = "Equipment's 'Supplier' field label"
+other = "Dostawca"
+
+# --- family member (T024) --------------------------------------------------------
+
+[page.family_history.title]
+description = "Family history list page: heading, section aria-label and <title>"
+other = "Historia rodzinna"
+
+[page.family_member.record]
+description = "The family member create form's aria-label and the list's create button"
+other = "Zapisz krewnego"
+
+[page.family_member.edit]
+description = "The family member edit form's aria-label"
+other = "Edytuj krewnego"
+
+[a11y.family_member_detail]
+description = "The family member detail article's aria-label"
+other = "Krewny"
+
+[empty.family_member_body]
+description = "Family member's empty-state body"
+other = "Zapisz pierwszego krewnego, a pojawi się on tutaj wraz ze wszystkim, co o nim odnotowano."
+
+[field.family_member.sex]
+description = "Family member's 'Sex' field label"
+other = "Płeć"
+
+[field.family_member.birth_year]
+description = "Family member's 'Year of birth' field label"
+other = "Rok urodzenia"
+
+[field.family_member.death_year]
+description = "Family member's 'Year of death' field label"
+other = "Rok śmierci"
+
+[field.family_member.is_deceased]
+description = "Family member's 'Deceased' checkbox label"
+other = "Zmarły"
+
+[field.family_member.conditions]
+description = "Family member's conditions section heading and field label"
+other = "Schorzenia"
+
+[field.family_condition.diagnosed_at_age]
+description = "A family member's condition, annotated with the age it was diagnosed"
+other = "zdiagnozowano w wieku {{.Age}} lat"
+
+# --- immunization (T024) -----------------------------------------------------------
+
+[page.vaccinations.title]
+description = "Vaccinations list page: heading, section aria-label and <title>"
+other = "Szczepienia"
+
+[page.immunization.record]
+description = "The vaccination create form's aria-label and the list's create button"
+other = "Zapisz szczepienie"
+
+[page.immunization.edit]
+description = "The vaccination edit form's aria-label"
+other = "Edytuj szczepienie"
+
+[a11y.immunization_detail]
+description = "The vaccination detail article's aria-label"
+other = "Szczepienie"
+
+[field.immunization.vaccine_name]
+description = "Immunization's 'Vaccine' field label"
+other = "Szczepionka"
+
+[field.immunization.trade_name]
+description = "Immunization's 'Brand name' field label"
+other = "Nazwa handlowa"
+
+[field.immunization.administered_on]
+description = "Immunization's 'Given on' field label"
+other = "Podano dnia"
+
+[field.immunization.dose_number]
+description = "Immunization's 'Dose number' field label"
+other = "Numer dawki"
+
+[field.immunization.lot_number]
+description = "Immunization's 'Batch number' field label"
+other = "Numer partii"
+
+[field.immunization.site]
+description = "Immunization's 'Site' field label"
+other = "Miejsce podania"
+
+[field.immunization.route]
+description = "Immunization's 'How it was given' field label"
+other = "Sposób podania"
+
+[field.immunization.expires_on]
+description = "Immunization's 'Expires' field label"
+other = "Ważne do"
+
+# --- injury (T024) -------------------------------------------------------------------
+
+[page.injuries.title]
+description = "Injuries list page: heading, section aria-label and <title>"
+other = "Urazy"
+
+[page.injury.record]
+description = "The injury create form's aria-label and the list's create button"
+other = "Zapisz uraz"
+
+[page.injury.edit]
+description = "The injury edit form's aria-label"
+other = "Edytuj uraz"
+
+[a11y.injury_detail]
+description = "The injury detail article's aria-label"
+other = "Uraz"
+
+[field.injury.type]
+description = "Injury's 'Kind of injury' field label"
+other = "Rodzaj urazu"
+
+[field.injury.body_part]
+description = "Injury's 'Part of the body' field label"
+other = "Część ciała"
+
+[field.injury.laterality]
+description = "Injury's 'Side' field label"
+other = "Strona"
+
+[field.injury.occurred_on]
+description = "Injury's 'Happened on' field label"
+other = "Wydarzyło się dnia"
+
+[field.injury.mechanism]
+description = "Injury's 'How it happened' field label"
+other = "Jak doszło do urazu"
+
+[field.injury.recovery_notes]
+description = "Injury's 'Recovery notes' field label"
+other = "Uwagi dotyczące rekonwalescencji"
+
+# --- insurance (T024) ----------------------------------------------------------------
+
+[page.insurance.title]
+description = "Insurance list page: heading, section aria-label and <title>"
+other = "Ubezpieczenie"
+
+[page.insurance.record]
+description = "The insurance create form's aria-label and the list's create button"
+other = "Zapisz polisę"
+
+[page.insurance.edit]
+description = "The insurance edit form's aria-label"
+other = "Edytuj polisę ubezpieczeniową"
+
+[a11y.insurance_detail]
+description = "The insurance detail article's aria-label"
+other = "Polisa ubezpieczeniowa"
+
+[empty.insurance_body]
+description = "Insurance's empty-state body"
+other = "Zapisz pierwszą polisę, a pojawi się ona tutaj wraz ze wszystkim, co odnotowano."
+
+[field.insurance.company]
+description = "Insurance's 'Insurer' field label"
+other = "Ubezpieczyciel"
+
+[field.insurance.plan_name]
+description = "Insurance's 'Plan name' field label"
+other = "Nazwa planu"
+
+[field.insurance.employer_group]
+description = "Insurance's 'Employer group' field label"
+other = "Grupa pracodawcy"
+
+[field.insurance.member_name]
+description = "Insurance's 'Member name' field label"
+other = "Imię i nazwisko ubezpieczonego"
+
+[field.insurance.member_id]
+description = "Insurance's 'Member ID' field label"
+other = "Numer ubezpieczonego"
+
+[field.insurance.group_number]
+description = "Insurance's 'Group number' field label"
+other = "Numer grupy"
+
+[field.insurance.holder_name]
+description = "Insurance's 'Policy holder' field label"
+other = "Posiadacz polisy"
+
+[field.insurance.relationship_to_holder]
+description = "Insurance's 'Relationship to holder' field label"
+other = "Pokrewieństwo z posiadaczem"
+
+[field.insurance.effective_on]
+description = "Insurance's 'Cover starts' field label"
+other = "Początek ochrony"
+
+[field.insurance.expires_on]
+description = "Insurance's 'Cover ends' field label"
+other = "Koniec ochrony"
+
+[field.insurance.is_primary]
+description = "Insurance's 'Primary policy' checkbox label"
+other = "Polisa podstawowa"
+
+# --- medication (T024) ---------------------------------------------------------------
+
+[page.medication.record]
+description = "The medication create form's aria-label and the list's create button"
+other = "Zapisz lek"
+
+[page.medication.edit]
+description = "The medication edit form's aria-label"
+other = "Edytuj lek"
+
+[a11y.medication_detail]
+description = "The medication detail article's aria-label"
+other = "Lek"
+
+[field.medication.dosage]
+description = "Medication's 'Dose' field label"
+other = "Dawka"
+
+[field.medication.frequency]
+description = "Medication's 'How often' field label"
+other = "Jak często"
+
+[field.medication.route]
+description = "Medication's 'How it is taken' field label"
+other = "Sposób przyjmowania"
+
+[field.medication.started_on]
+description = "Medication's 'Started' field label"
+other = "Rozpoczęto"
+
+[field.medication.ended_on]
+description = "Medication's 'Ended' field label"
+other = "Zakończono"
+
+# --- enum vocabularies (T023/T024 kinds) ----------------------------------------------
+
+[enum.injury_type.sprain]
+description = "Injury type vocabulary value: sprain"
+other = "Skręcenie"
+
+[enum.injury_type.strain]
+description = "Injury type vocabulary value: strain"
+other = "Naderwanie"
+
+[enum.injury_type.fracture]
+description = "Injury type vocabulary value: fracture"
+other = "Złamanie"
+
+[enum.injury_type.dislocation]
+description = "Injury type vocabulary value: dislocation"
+other = "Zwichnięcie"
+
+[enum.injury_type.laceration]
+description = "Injury type vocabulary value: laceration"
+other = "Rozcięcie"
+
+[enum.injury_type.contusion]
+description = "Injury type vocabulary value: contusion (bruise)"
+other = "Stłuczenie (siniak)"
+
+[enum.injury_type.burn]
+description = "Injury type vocabulary value: burn"
+other = "Oparzenie"
+
+[enum.injury_type.concussion]
+description = "Injury type vocabulary value: concussion"
+other = "Wstrząśnienie mózgu"
+
+[enum.injury_type.puncture]
+description = "Injury type vocabulary value: puncture"
+other = "Przebicie"
+
+[enum.injury_type.abrasion]
+description = "Injury type vocabulary value: abrasion (scrape)"
+other = "Otarcie"
+
+[enum.injury_type.other]
+description = "Injury type vocabulary value: other"
+other = "Inne"
+
+[enum.laterality.left]
+description = "Laterality vocabulary value: left"
+other = "Lewa"
+
+[enum.laterality.right]
+description = "Laterality vocabulary value: right"
+other = "Prawa"
+
+[enum.laterality.bilateral]
+description = "Laterality vocabulary value: both sides"
+other = "Obie strony"
+
+[enum.laterality.not_applicable]
+description = "Laterality vocabulary value: not applicable"
+other = "Nie dotyczy"
+
+[enum.family_relationship.mother]
+description = "Family relationship vocabulary value: mother"
+other = "Matka"
+
+[enum.family_relationship.father]
+description = "Family relationship vocabulary value: father"
+other = "Ojciec"
+
+[enum.family_relationship.sister]
+description = "Family relationship vocabulary value: sister"
+other = "Siostra"
+
+[enum.family_relationship.brother]
+description = "Family relationship vocabulary value: brother"
+other = "Brat"
+
+[enum.family_relationship.daughter]
+description = "Family relationship vocabulary value: daughter"
+other = "Córka"
+
+[enum.family_relationship.son]
+description = "Family relationship vocabulary value: son"
+other = "Syn"
+
+[enum.family_relationship.grandmother]
+description = "Family relationship vocabulary value: grandmother"
+other = "Babcia"
+
+[enum.family_relationship.grandfather]
+description = "Family relationship vocabulary value: grandfather"
+other = "Dziadek"
+
+[enum.family_relationship.aunt]
+description = "Family relationship vocabulary value: aunt"
+other = "Ciotka"
+
+[enum.family_relationship.uncle]
+description = "Family relationship vocabulary value: uncle"
+other = "Wujek"
+
+[enum.family_relationship.cousin]
+description = "Family relationship vocabulary value: cousin"
+other = "Kuzyn/kuzynka"
+
+[enum.family_relationship.niece]
+description = "Family relationship vocabulary value: niece"
+other = "Siostrzenica/bratanica"
+
+[enum.family_relationship.nephew]
+description = "Family relationship vocabulary value: nephew"
+other = "Siostrzeniec/bratanek"
+
+[enum.family_relationship.half_sibling]
+description = "Family relationship vocabulary value: half-sibling"
+other = "Przyrodnie rodzeństwo"
+
+[enum.family_relationship.other]
+description = "Family relationship vocabulary value: other"
+other = "Inne"
+
+[enum.sex.female]
+description = "Sex vocabulary value: female"
+other = "Kobieta"
+
+[enum.sex.male]
+description = "Sex vocabulary value: male"
+other = "Mężczyzna"
+
+[enum.sex.intersex]
+description = "Sex vocabulary value: intersex"
+other = "Interpłciowość"
+
+[enum.sex.unspecified]
+description = "Sex vocabulary value: unspecified"
+other = "Nieokreślona"
+
+[enum.contact_relationship.spouse]
+description = "Contact relationship vocabulary value: spouse"
+other = "Małżonek/małżonka"
+
+[enum.contact_relationship.partner]
+description = "Contact relationship vocabulary value: partner"
+other = "Partner"
+
+[enum.contact_relationship.parent]
+description = "Contact relationship vocabulary value: parent"
+other = "Rodzic"
+
+[enum.contact_relationship.child]
+description = "Contact relationship vocabulary value: child"
+other = "Dziecko"
+
+[enum.contact_relationship.sibling]
+description = "Contact relationship vocabulary value: sibling"
+other = "Rodzeństwo"
+
+[enum.contact_relationship.friend]
+description = "Contact relationship vocabulary value: friend"
+other = "Przyjaciel"
+
+[enum.contact_relationship.guardian]
+description = "Contact relationship vocabulary value: guardian"
+other = "Opiekun prawny"
+
+[enum.contact_relationship.caregiver]
+description = "Contact relationship vocabulary value: caregiver"
+other = "Opiekun"
+
+[enum.contact_relationship.other]
+description = "Contact relationship vocabulary value: other"
+other = "Inne"
+
+[enum.immunization_site.left_arm]
+description = "Immunization site vocabulary value: left arm"
+other = "Lewe ramię"
+
+[enum.immunization_site.right_arm]
+description = "Immunization site vocabulary value: right arm"
+other = "Prawe ramię"
+
+[enum.immunization_site.left_thigh]
+description = "Immunization site vocabulary value: left thigh"
+other = "Lewe udo"
+
+[enum.immunization_site.right_thigh]
+description = "Immunization site vocabulary value: right thigh"
+other = "Prawe udo"
+
+[enum.immunization_site.oral]
+description = "Immunization site vocabulary value: oral"
+other = "Doustnie"
+
+[enum.immunization_site.nasal]
+description = "Immunization site vocabulary value: nasal"
+other = "Donosowo"
+
+[enum.immunization_site.other]
+description = "Immunization site vocabulary value: other"
+other = "Inne"
+
+[enum.immunization_route.intramuscular]
+description = "Immunization route vocabulary value: intramuscular"
+other = "Domięśniowo"
+
+[enum.immunization_route.subcutaneous]
+description = "Immunization route vocabulary value: subcutaneous"
+other = "Podskórnie"
+
+[enum.immunization_route.intradermal]
+description = "Immunization route vocabulary value: intradermal"
+other = "Śródskórnie"
+
+[enum.immunization_route.oral]
+description = "Immunization route vocabulary value: oral"
+other = "Doustnie"
+
+[enum.immunization_route.intranasal]
+description = "Immunization route vocabulary value: intranasal"
+other = "Donosowo"
+
+[enum.equipment_type.cpap]
+description = "Equipment type vocabulary value: CPAP machine"
+other = "Aparat CPAP"
+
+[enum.equipment_type.nebulizer]
+description = "Equipment type vocabulary value: nebulizer"
+other = "Nebulizator"
+
+[enum.equipment_type.wheelchair]
+description = "Equipment type vocabulary value: wheelchair"
+other = "Wózek inwalidzki"
+
+[enum.equipment_type.walker]
+description = "Equipment type vocabulary value: walker"
+other = "Balkonik"
+
+[enum.equipment_type.glucose_meter]
+description = "Equipment type vocabulary value: glucose meter"
+other = "Glukometr"
+
+[enum.equipment_type.bp_monitor]
+description = "Equipment type vocabulary value: blood pressure monitor"
+other = "Ciśnieniomierz"
+
+[enum.equipment_type.oximeter]
+description = "Equipment type vocabulary value: pulse oximeter"
+other = "Pulsoksymetr"
+
+[enum.equipment_type.oxygen]
+description = "Equipment type vocabulary value: oxygen equipment"
+other = "Sprzęt tlenowy"
+
+[enum.equipment_type.hearing_aid]
+description = "Equipment type vocabulary value: hearing aid"
+other = "Aparat słuchowy"
+
+[enum.equipment_type.prosthetic]
+description = "Equipment type vocabulary value: prosthetic"
+other = "Proteza"
+
+[enum.equipment_type.orthotic]
+description = "Equipment type vocabulary value: orthotic"
+other = "Orteza"
+
+[enum.equipment_type.other]
+description = "Equipment type vocabulary value: other"
+other = "Inne"
+
+[enum.insurance_type.medical]
+description = "Insurance type vocabulary value: medical"
+other = "Medyczne"
+
+[enum.insurance_type.dental]
+description = "Insurance type vocabulary value: dental"
+other = "Stomatologiczne"
+
+[enum.insurance_type.vision]
+description = "Insurance type vocabulary value: vision"
+other = "Okulistyczne"
+
+[enum.insurance_type.prescription]
+description = "Insurance type vocabulary value: prescription"
+other = "Lekowe"
+
+[enum.insurance_type.other]
+description = "Insurance type vocabulary value: other"
+other = "Inne"
+
+[enum.insurance_status.expired]
+description = "Insurance status vocabulary value: expired"
+other = "Wygasłe"
+
+[enum.insurance_status.pending]
+description = "Insurance status vocabulary value: pending"
+other = "Oczekujące"
+
+[enum.holder_relationship.self]
+description = "Holder relationship vocabulary value: self"
+other = "Ja"
+
+[enum.holder_relationship.spouse]
+description = "Holder relationship vocabulary value: spouse"
+other = "Małżonek/małżonka"
+
+[enum.holder_relationship.child]
+description = "Holder relationship vocabulary value: child"
+other = "Dziecko"
+
+[enum.holder_relationship.dependent]
+description = "Holder relationship vocabulary value: dependent"
+other = "Osoba zależna"
+
+[enum.holder_relationship.other]
+description = "Holder relationship vocabulary value: other"
+other = "Inne"
+
+[enum.medication_type.prescription]
+description = "Medication type vocabulary value: prescription"
+other = "Na receptę"
+
+[enum.medication_type.otc]
+description = "Medication type vocabulary value: over-the-counter"
+other = "Bez recepty"
+
+[enum.medication_type.supplement]
+description = "Medication type vocabulary value: supplement"
+other = "Suplement"
+
+[enum.medication_type.herbal]
+description = "Medication type vocabulary value: herbal"
+other = "Ziołowy"
+
+[enum.medication_route.oral]
+description = "Medication route vocabulary value: by mouth"
+other = "Doustnie"
+
+[enum.medication_route.sublingual]
+description = "Medication route vocabulary value: sublingual"
+other = "Podjęzykowo"
+
+[enum.medication_route.topical]
+description = "Medication route vocabulary value: topical"
+other = "Na skórę"
+
+[enum.medication_route.transdermal]
+description = "Medication route vocabulary value: transdermal"
+other = "Przez plaster na skórę"
+
+[enum.medication_route.inhalation]
+description = "Medication route vocabulary value: inhalation"
+other = "Wziewnie"
+
+[enum.medication_route.nasal]
+description = "Medication route vocabulary value: nasal"
+other = "Donosowo"
+
+[enum.medication_route.ophthalmic]
+description = "Medication route vocabulary value: ophthalmic"
+other = "Do oka"
+
+[enum.medication_route.otic]
+description = "Medication route vocabulary value: otic"
+other = "Do ucha"
+
+[enum.medication_route.rectal]
+description = "Medication route vocabulary value: rectal"
+other = "Doodbytniczo"
+
+[enum.medication_route.vaginal]
+description = "Medication route vocabulary value: vaginal"
+other = "Dopochwowo"
+
+[enum.medication_route.intramuscular]
+description = "Medication route vocabulary value: intramuscular"
+other = "Domięśniowo"
+
+[enum.medication_route.subcutaneous]
+description = "Medication route vocabulary value: subcutaneous"
+other = "Podskórnie"
+
+[enum.medication_route.intravenous]
+description = "Medication route vocabulary value: intravenous"
+other = "Dożylnie"
+
+[enum.medication_route.other]
+description = "Medication route vocabulary value: other route"
+other = "W inny sposób"
+
+[enum.therapy_status.active]
+description = "Therapy status vocabulary value: active"
+other = "Aktualnie przyjmowany"
+
+[enum.therapy_status.on_hold]
+description = "Therapy status vocabulary value: on hold"
+other = "Wstrzymany"
+
+[enum.therapy_status.completed]
+description = "Therapy status vocabulary value: completed"
+other = "Zakończony"
+
+[enum.therapy_status.stopped]
+description = "Therapy status vocabulary value: stopped"
+other = "Odstawiony"
+
+[enum.therapy_status.cancelled]
+description = "Therapy status vocabulary value: cancelled/never started"
+other = "Nigdy nie rozpoczęty"

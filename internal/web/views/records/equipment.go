@@ -36,30 +36,31 @@ var equipmentFields = []string{
 // the published one.
 func EquipmentFields() []string { return append([]string(nil), equipmentFields...) }
 
+// Values are message ids (D-06), resolved at render time.
 func init() {
-	fieldLabels[FieldManufacturer] = "Manufacturer"
-	fieldLabels[FieldModel] = "Model"
-	fieldLabels[FieldSerial] = "Serial number"
-	fieldLabels[FieldPrescribedOn] = "Prescribed"
-	fieldLabels[FieldServicedOn] = "Last serviced"
-	fieldLabels[FieldServiceDueOn] = "Service due"
-	fieldLabels[FieldInstructions] = "Instructions"
-	fieldLabels[FieldSupplier] = "Supplier"
+	fieldLabels[FieldManufacturer] = "field.manufacturer"
+	fieldLabels[FieldModel] = "field.equipment.model"
+	fieldLabels[FieldSerial] = "field.equipment.serial"
+	fieldLabels[FieldPrescribedOn] = "field.equipment.prescribed_on"
+	fieldLabels[FieldServicedOn] = "field.equipment.serviced_on"
+	fieldLabels[FieldServiceDueOn] = "field.equipment.service_due_on"
+	fieldLabels[FieldInstructions] = "field.equipment.instructions"
+	fieldLabels[FieldSupplier] = "field.equipment.supplier"
 }
 
 var equipmentTypeLabels = map[clinical.EquipmentType]string{
-	clinical.EquipmentTypeCPAP:         "CPAP machine",
-	clinical.EquipmentTypeNebulizer:    "Nebulizer",
-	clinical.EquipmentTypeWheelchair:   "Wheelchair",
-	clinical.EquipmentTypeWalker:       "Walker",
-	clinical.EquipmentTypeGlucoseMeter: "Glucose meter",
-	clinical.EquipmentTypeBPMonitor:    "Blood pressure monitor",
-	clinical.EquipmentTypeOximeter:     "Pulse oximeter",
-	clinical.EquipmentTypeOxygen:       "Oxygen equipment",
-	clinical.EquipmentTypeHearingAid:   "Hearing aid",
-	clinical.EquipmentTypeProsthetic:   "Prosthetic",
-	clinical.EquipmentTypeOrthotic:     "Orthotic",
-	clinical.EquipmentTypeOther:        "Other",
+	clinical.EquipmentTypeCPAP:         "enum.equipment_type.cpap",
+	clinical.EquipmentTypeNebulizer:    "enum.equipment_type.nebulizer",
+	clinical.EquipmentTypeWheelchair:   "enum.equipment_type.wheelchair",
+	clinical.EquipmentTypeWalker:       "enum.equipment_type.walker",
+	clinical.EquipmentTypeGlucoseMeter: "enum.equipment_type.glucose_meter",
+	clinical.EquipmentTypeBPMonitor:    "enum.equipment_type.bp_monitor",
+	clinical.EquipmentTypeOximeter:     "enum.equipment_type.oximeter",
+	clinical.EquipmentTypeOxygen:       "enum.equipment_type.oxygen",
+	clinical.EquipmentTypeHearingAid:   "enum.equipment_type.hearing_aid",
+	clinical.EquipmentTypeProsthetic:   "enum.equipment_type.prosthetic",
+	clinical.EquipmentTypeOrthotic:     "enum.equipment_type.orthotic",
+	clinical.EquipmentTypeOther:        "enum.equipment_type.other",
 }
 
 func EquipmentTypeLabel(value clinical.EquipmentType) string {
@@ -143,7 +144,7 @@ func NewEquipmentView(entity clinical.Equipment, basis []string, links Equipment
 
 func (v EquipmentView) Entries() []DetailEntry {
 	candidates := []DetailEntry{
-		{Field: FieldType, Value: v.Type},
+		{Field: FieldType, Value: v.Type, Translate: true},
 		{Field: FieldManufacturer, Value: v.Manufacturer},
 		{Field: FieldModel, Value: v.Model},
 		{Field: FieldSerial, Value: v.Serial},
@@ -151,7 +152,7 @@ func (v EquipmentView) Entries() []DetailEntry {
 		{Field: FieldServicedOn, Value: v.ServicedOn, Datetime: v.ServicedOn},
 		{Field: FieldServiceDueOn, Value: v.ServiceDueOn, Datetime: v.ServiceDueOn},
 		{Field: FieldInstructions, Value: v.Instructions, Multiline: true},
-		{Field: FieldStatus, Value: v.Status},
+		{Field: FieldStatus, Value: v.Status, Translate: true},
 		{Field: FieldNotes, Value: v.Notes, Multiline: true},
 		{Field: FieldCreated, Value: v.Created.Human, Datetime: v.Created.Machine},
 		{Field: FieldLastChanged, Value: v.LastChanged.Human, Datetime: v.LastChanged.Machine},
@@ -203,18 +204,18 @@ type EquipmentFormProps struct {
 
 func (p EquipmentFormProps) Label() string {
 	if p.New {
-		return "Record equipment"
+		return "page.equipment.record"
 	}
 
-	return "Edit equipment"
+	return "page.equipment.edit"
 }
 
 func (p EquipmentFormProps) SubmitLabel() string {
 	if p.New {
-		return "Record it"
+		return "action.record_it"
 	}
 
-	return "Save changes"
+	return "action.save_changes"
 }
 
 func (v EquipmentView) TypeOptions() []Option {

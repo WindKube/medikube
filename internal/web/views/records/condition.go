@@ -13,9 +13,10 @@ const (
 	FieldSNOMEDCode = "snomed_code"
 )
 
+// ConditionFormLabelCreate and ConditionFormLabelEdit are message ids (D-06).
 const (
-	ConditionFormLabelCreate = "Record a condition"
-	ConditionFormLabelEdit   = "Edit condition"
+	ConditionFormLabelCreate = "page.condition.record"
+	ConditionFormLabelEdit   = "page.condition.edit"
 )
 
 type ConditionLinks struct {
@@ -75,17 +76,18 @@ func (c ConditionView) StatusOptions() []Option {
 	return ConditionStatusOptions(clinical.ConditionStatus(c.StatusValue))
 }
 
+// Values are message ids (D-06), resolved at render time.
 var conditionFieldLabels = map[string]string{
-	FieldDiagnosis:   "Diagnosis",
-	FieldStatus:      "State",
-	FieldSeverity:    "Severity",
-	FieldOnsetOn:     "Onset",
-	FieldResolvedOn:  "Resolved",
-	FieldICD10Code:   "ICD-10 code",
-	FieldSNOMEDCode:  "SNOMED code",
-	FieldNotes:       "Notes",
-	FieldCreated:     "Recorded",
-	FieldLastChanged: "Last changed",
+	FieldDiagnosis:   "field.condition.diagnosis",
+	FieldStatus:      "field.status",
+	FieldSeverity:    "field.severity",
+	FieldOnsetOn:     "field.condition.onset_on",
+	FieldResolvedOn:  "field.condition.resolved_on",
+	FieldICD10Code:   "field.condition.icd10_code",
+	FieldSNOMEDCode:  "field.condition.snomed_code",
+	FieldNotes:       "field.notes",
+	FieldCreated:     "field.recorded",
+	FieldLastChanged: "field.last_changed",
 }
 
 func conditionFieldLabel(field string) string {
@@ -98,8 +100,8 @@ func conditionFieldLabel(field string) string {
 
 func (c ConditionView) Entries() []DetailEntry {
 	candidates := []DetailEntry{
-		{Field: FieldStatus, Value: c.Status},
-		{Field: FieldSeverity, Value: c.Severity},
+		{Field: FieldStatus, Value: c.Status, Translate: true},
+		{Field: FieldSeverity, Value: c.Severity, Translate: true},
 		{Field: FieldOnsetOn, Value: c.OnsetOn, Datetime: c.OnsetOn},
 		{Field: FieldResolvedOn, Value: c.ResolvedOn, Datetime: c.ResolvedOn},
 		{Field: FieldICD10Code, Value: c.ICD10Code},
@@ -182,8 +184,8 @@ func (p ConditionFormProps) Label() string {
 
 func (p ConditionFormProps) SubmitLabel() string {
 	if p.New {
-		return "Record it"
+		return "action.record_it"
 	}
 
-	return "Save changes"
+	return "action.save_changes"
 }
