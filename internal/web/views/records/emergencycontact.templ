@@ -135,7 +135,7 @@ templ EmergencyContactDetail(props EmergencyContactDetailProps) {
 			Title:          i18n.T(ctx, "confirm.delete_permanently"),
 			Subject:        props.Contact.Name,
 			ReferenceCount: 0,
-			ConfirmLabel:   i18n.T(ctx, "action.delete"),
+			ConfirmLabel:   i18n.T(ctx, "action.delete_permanently"),
 			ConfirmOn:      contactDeleteExpression(props.Contact),
 			CancelLabel:    i18n.T(ctx, "confirm.keep_it"),
 		})

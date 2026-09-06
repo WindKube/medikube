@@ -131,7 +131,7 @@ templ EncounterDetail(props EncounterDetailProps) {
 			Title:        i18n.T(ctx, "confirm.delete_permanently"),
 			Subject:      props.Encounter.Reason,
 			Consequence:  i18n.T(ctx, "confirm.delete_encounter_consequence"),
-			ConfirmLabel: i18n.T(ctx, "action.delete"),
+			ConfirmLabel: i18n.T(ctx, "action.delete_permanently"),
 			ConfirmOn:    encounterDeleteExpression(props.Encounter),
 			CancelLabel:  i18n.T(ctx, "confirm.keep_it"),
 		})

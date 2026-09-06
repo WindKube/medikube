@@ -136,6 +136,10 @@ other = "Anuluj"
 description = "The button that opens a delete confirmation"
 other = "Usuń"
 
+[action.delete_permanently]
+description = "The confirm dialog's own destructive button, after action.delete opened it"
+other = "Usuń na stałe"
+
 # --- confirm ---------------------------------------------------------------
 
 [confirm.delete_permanently]

@@ -119,7 +119,7 @@ templ ConditionDetail(props ConditionDetailProps) {
 			Title:          i18n.T(ctx, "confirm.delete_permanently"),
 			Subject:        props.Condition.Diagnosis,
 			ReferenceCount: 0,
-			ConfirmLabel:   i18n.T(ctx, "action.delete"),
+			ConfirmLabel:   i18n.T(ctx, "action.delete_permanently"),
 			ConfirmOn:      conditionDeleteExpression(props.Condition),
 			CancelLabel:    i18n.T(ctx, "confirm.keep_it"),
 		})

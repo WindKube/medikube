@@ -281,7 +281,7 @@ const kinds: KindConfig[] = [
     segment: "insurance",
     listTitle: "Insurance",
     createLabel: "Record a policy",
-    formLabelCreate: "Record an insurance policy",
+    formLabelCreate: "Record a policy",
     formLabelEdit: "Edit insurance policy",
     detailLandmark: "Insurance",
     fields: (name) => [
