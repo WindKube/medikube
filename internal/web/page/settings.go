@@ -45,7 +45,7 @@ func (p *accountPages) settings(e *core.RequestEvent, actor access.Actor) error 
 		SignOutOn: p.links.post(p.links.logout),
 		Profile: settings.ProfileProps{
 			FormID:         ids.ProfileForm,
-			OnSubmit:       p.links.patch(p.links.me),
+			OnSubmit:       p.links.patch(p.links.me, settings.FieldName, settings.FieldUnitSystem, settings.FieldLocale, settings.FieldDateFormat, settings.FieldTheme),
 			Email:          user.Email,
 			EmailConfirmed: user.EmailConfirmed,
 			ResendOn:       p.links.post(p.links.verify),
@@ -58,12 +58,12 @@ func (p *accountPages) settings(e *core.RequestEvent, actor access.Actor) error 
 		},
 		Password: settings.PasswordProps{
 			FormID:   ids.PasswordForm,
-			OnSubmit: p.links.put(p.links.password),
+			OnSubmit: p.links.put(p.links.password, settings.FieldCurrentPassword, settings.FieldNewPassword),
 			Rules:    domainidentity.PublishedPasswordRules(),
 		},
 		Danger: settings.DangerZoneProps{
 			FormID:   ids.DeleteAccountForm,
-			OnSubmit: p.links.remove(p.links.me),
+			OnSubmit: p.links.remove(p.links.me, settings.FieldPassword, settings.FieldConfirmation),
 			Phrase:   domainidentity.DeleteConfirmationPhrase,
 			Holdings: holdings(counts),
 		},

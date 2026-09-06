@@ -35,7 +35,7 @@ func NewSettingsForms() (api.SettingsForms, error) {
 func (f settingsForms) Updated(_ context.Context, _ access.Actor, user domainidentity.User) (web.Component, error) {
 	return settings.Profile(settings.ProfileProps{
 		FormID:         ids.ProfileForm,
-		OnSubmit:       f.links.patch(f.links.me),
+		OnSubmit:       f.links.patch(f.links.me, settings.FieldName, settings.FieldUnitSystem, settings.FieldLocale, settings.FieldDateFormat, settings.FieldTheme),
 		Email:          user.Email,
 		EmailConfirmed: user.EmailConfirmed,
 		ResendOn:       f.links.post(f.links.verify),

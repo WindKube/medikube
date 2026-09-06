@@ -239,10 +239,36 @@ func newAccountLinks() (accountLinks, error) {
 // The Datastar actions the controls run. They are composed here and never in a
 // template, for the same reason the record pages compose theirs: a view that
 // built a path would be a second place a route is spelled.
-func (l accountLinks) post(path string) string   { return "@post(" + quote(path) + ")" }
-func (l accountLinks) patch(path string) string  { return "@patch(" + quote(path) + ")" }
-func (l accountLinks) put(path string) string    { return "@put(" + quote(path) + ")" }
-func (l accountLinks) remove(path string) string { return "@delete(" + quote(path) + ")" }
+//
+// A submit names the fields it sends. Datastar's default body is every signal
+// on the page, and the settings page carries three forms whose fields the
+// other two forms' strict DTOs refuse as unknown members.
+func (l accountLinks) post(path string) string { return "@post(" + quote(path) + ")" }
+
+func (l accountLinks) patch(path string, fields ...string) string {
+	return "@patch(" + quote(path) + payload(fields) + ")"
+}
+
+func (l accountLinks) put(path string, fields ...string) string {
+	return "@put(" + quote(path) + payload(fields) + ")"
+}
+
+func (l accountLinks) remove(path string, fields ...string) string {
+	return "@delete(" + quote(path) + payload(fields) + ")"
+}
+
+func payload(fields []string) string {
+	if len(fields) == 0 {
+		return ""
+	}
+
+	pairs := make([]string, len(fields))
+	for i, field := range fields {
+		pairs[i] = field + ": $" + field
+	}
+
+	return ", {payload: {" + strings.Join(pairs, ", ") + "}}"
+}
 
 // signedOutNav is contracts/pages.md's navigation for a page reached with no
 // session: the landmark is on every page in the application and what changes is
