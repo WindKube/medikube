@@ -37,6 +37,7 @@ const (
 type harness struct {
 	app     *tests.TestApp
 	repo    *searchstore.Repo
+	owner   string
 	patient string
 }
 
@@ -58,7 +59,7 @@ func newHarness(t *testing.T) harness {
 
 	owner := seedAccount(t, app, "owner@example.test")
 
-	return harness{app: app, repo: repo, patient: seedPatient(t, app, owner)}
+	return harness{app: app, repo: repo, owner: owner, patient: seedPatient(t, app, owner)}
 }
 
 func seedAccount(t *testing.T, app core.App, email string) string {
@@ -92,6 +93,24 @@ func seedPatient(t *testing.T, app core.App, ownerID string) string {
 	record.Set("owner", ownerID)
 	record.Set("first_name", "Test")
 	record.Set("last_name", "Patient")
+
+	require.NoError(t, app.Save(record))
+
+	return record.Id
+}
+
+// seedTag writes a real tags row: search_index.tags is a relation, so an id
+// that names no such row is a validation error rather than a foreign key
+// this test could otherwise get away with faking.
+func seedTag(t *testing.T, app core.App, ownerID, name string) string {
+	t.Helper()
+
+	collection, err := app.FindCollectionByNameOrId("tags")
+	require.NoError(t, err)
+
+	record := core.NewRecord(collection)
+	record.Set("owner", ownerID)
+	record.Set("name", name)
 
 	require.NoError(t, app.Save(record))
 

@@ -63,9 +63,13 @@ type Hit struct {
 // Searcher is US8's read side: one kind, one term, one page of it, ordered
 // occurred_on DESC, id DESC, nulls last (FR-073). Every group in a grouped
 // search result is one call.
+//
+// tagIDs and match are `?tags=`/`?match=` (T164-T177 follow-up): an empty
+// tagIDs narrows nothing, and match — MatchAny or MatchAll — decides whether
+// a row must carry at least one of tagIDs or every one of them.
 type Searcher interface {
 	SearchKind(
-		ctx context.Context, patientID string, k kind.Kind, term string, limit int, cursor string,
+		ctx context.Context, patientID string, k kind.Kind, term string, tagIDs []string, match string, limit int, cursor string,
 	) (domain.Page[Hit], error)
 }
 

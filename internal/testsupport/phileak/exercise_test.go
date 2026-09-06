@@ -1880,6 +1880,11 @@ func driveSearch(c *client) {
 	c.do(http.MethodGet, "/api/v1/search?q="+SearchTerm, "")
 	c.do(http.MethodGet, "/api/v1/search?patient="+patientID+"&cursor="+SearchTerm, "")
 
+	// T164-T177 follow-up: `?tags=`/`?match=`, and the refusal leg for a
+	// tag id naming nothing this account owns — never echoed either.
+	c.do(http.MethodGet, "/api/v1/search?patient="+patientID+"&q="+SearchTerm+"&tags="+testsupport.TagChronicID+"&match=all", "")
+	c.do(http.MethodGet, "/api/v1/search?patient="+patientID+"&q="+SearchTerm+"&tags="+SearchTerm, "")
+
 	c.bearer = ""
 	c.do(http.MethodGet, "/search?patient="+patientID+"&q=paracetamol", "")
 	c.token(testsupport.AccountAEmail)

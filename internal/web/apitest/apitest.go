@@ -294,7 +294,7 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 	patientResolve := api.PatientResolve(func() (*patient.Service, error) { return patientService, nil })
 	photoResolve := api.PatientPhotoResolve(func() (*patient.Service, api.PhotoServer, error) { return patientService, photos, nil })
 
-	searchService, searchKinds, err := buildSearchService(app, searchRepo, registry)
+	searchService, searchKinds, err := buildSearchService(app, searchRepo, registry, tagService)
 	if err != nil {
 		return nil, err
 	}
@@ -1096,7 +1096,10 @@ func registerKinds(
 
 // buildSearchService wires US8's read side around the write-side repository
 // registerKinds already built, mirroring cmd/medikube's own buildSearchService.
-func buildSearchService(app core.App, searchRepo *searchstore.Repo, registry *records.Registry) (*searchsvc.Service, []kind.Kind, error) {
+// tags is the same tag service registerKinds already built.
+func buildSearchService(
+	app core.App, searchRepo *searchstore.Repo, registry *records.Registry, tags *tagsvc.Service,
+) (*searchsvc.Service, []kind.Kind, error) {
 	owners, err := store.NewOwners(app)
 	if err != nil {
 		return nil, nil, err
@@ -1132,7 +1135,7 @@ func buildSearchService(app core.App, searchRepo *searchstore.Repo, registry *re
 		return nil, nil, err
 	}
 
-	service, err := searchsvc.NewService(searchRepo, searchRepo, authorizer)
+	service, err := searchsvc.NewService(searchRepo, searchRepo, authorizer, tags)
 	if err != nil {
 		return nil, nil, err
 	}

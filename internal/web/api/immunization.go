@@ -82,6 +82,10 @@ type Immunization struct {
 	CreatedAt    string   `json:"created_at"`
 }
 
+// GetTags implements records.Tagged so the search index stays in step with
+// this record's tags on write (T164-T177 follow-up).
+func (i *Immunization) GetTags() []string { return i.Tags }
+
 // ImmunizationCreate is the create body. FR-039: DoseNumber is a plain *int —
 // absent means "not recorded", and a supplied zero or negative is refused by
 // clinical.Immunization.Validate, not by this decoder.

@@ -58,6 +58,11 @@ var indexSchema = store.NewSchema(Collection,
 	// Column.FilterOnly).
 	store.Column{Name: fieldTitle, FilterOnly: true, Searchable: true},
 	store.Column{Name: fieldBody, FilterOnly: true, Searchable: true},
+	// FilterOnly: `?tags=` narrows (T164-T177 follow-up), but a MaxSelect:0
+	// relation's JSON column is never an ordering (research D-05's
+	// cursor-disclosure rule) — the same reason every kind's own tags column
+	// is FilterOnly.
+	store.Column{Name: fieldTags, FilterOnly: true},
 )
 
 // Repo is search.Repository — and search.Reader — against a real instance.
@@ -140,6 +145,7 @@ func (r *Repo) Find(ctx context.Context, k kind.Kind, recordID string) (search.R
 		RecordID:  record.GetString(fieldRecordID),
 		Title:     record.GetString(fieldTitle),
 		Body:      record.GetString(fieldBody),
+		TagIDs:    record.GetStringSlice(fieldTags),
 	}, true, nil
 }
 
@@ -261,7 +267,7 @@ func (r *Repo) Page(
 // concatenated filter string (contracts/search.md §5) — which is what
 // escapes `%`, `_` and the escape character before it ever reaches SQLite.
 func (r *Repo) SearchKind(
-	ctx context.Context, patientID string, k kind.Kind, term string, limit int, cursor string,
+	ctx context.Context, patientID string, k kind.Kind, term string, tagIDs []string, match string, limit int, cursor string,
 ) (domain.Page[search.Hit], error) {
 	var empty domain.Page[search.Hit]
 
@@ -271,6 +277,16 @@ func (r *Repo) SearchKind(
 		store.Equal(fieldPatient, patientID),
 		store.Equal(fieldKind, k.Enum()),
 		store.ContainsAny(term, fieldTitle, fieldBody),
+	}
+
+	// `?tags=`/`?match=` (T164-T177 follow-up), the same AnyOf/AllOf every
+	// kind's own list already narrows by (e.g. internal/store/condition).
+	if len(tagIDs) > 0 {
+		if match == search.MatchAll {
+			conditions = append(conditions, store.AllOf(fieldTags, tagIDs...))
+		} else {
+			conditions = append(conditions, store.AnyOf(fieldTags, tagIDs...))
+		}
 	}
 
 	listing := store.Query{Conditions: conditions, Sort: sortKeys, Limit: limit}

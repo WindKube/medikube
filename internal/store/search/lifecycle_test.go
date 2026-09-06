@@ -34,6 +34,21 @@ type lifecycleRow struct {
 	patient string
 	version int
 	name    string
+	tags    []string
+}
+
+// lifecycleCreate and lifecyclePatch stand in for recordstest.Create/Patch,
+// with a Tags member neither of those carries: this file's own service reads
+// them directly rather than through recordstest.Schema, so nothing but this
+// test needs recordstest itself to grow a tags field it has no other use for.
+type lifecycleCreate struct {
+	Name string
+	Tags []string
+}
+
+type lifecyclePatch struct {
+	Name *string
+	Tags *[]string
 }
 
 func newLifecycleService() *lifecycleService {
@@ -54,11 +69,11 @@ func (s *lifecycleService) Get(_ context.Context, _ access.Actor, id string) (re
 }
 
 func (s *lifecycleService) Create(_ context.Context, actor access.Actor, body any) (records.Record, error) {
-	create := body.(*recordstest.Create) //nolint:forcetypeassert // this fake mints exactly what recordstest.Schema declares
+	create := body.(*lifecycleCreate) //nolint:forcetypeassert // this fake mints exactly what it declares
 
 	s.n++
 	id := recordID(s.n)
-	row := lifecycleRow{patient: actor.UserID, version: 1, name: create.Name}
+	row := lifecycleRow{patient: actor.UserID, version: 1, name: create.Name, tags: create.Tags}
 	s.rows[id] = row
 
 	return s.record(id, row), nil
@@ -74,10 +89,14 @@ func (s *lifecycleService) Update(_ context.Context, actor access.Actor, id, ver
 		return records.Record{}, domain.ErrVersionMismatch
 	}
 
-	patch := body.(*recordstest.Patch) //nolint:forcetypeassert // as above
+	patch := body.(*lifecyclePatch) //nolint:forcetypeassert // as above
 
 	if patch.Name != nil {
 		row.name = *patch.Name
+	}
+
+	if patch.Tags != nil {
+		row.tags = *patch.Tags
 	}
 
 	row.version++
@@ -102,7 +121,10 @@ func (s *lifecycleService) Delete(_ context.Context, actor access.Actor, id, ver
 }
 
 func (s *lifecycleService) record(id string, row lifecycleRow) records.Record {
-	detail := recordstest.Detail{Summary: recordstest.Summary{ID: id, Kind: string(kind.Medication), Name: row.name}}
+	detail := recordstest.Detail{
+		Summary: recordstest.Summary{ID: id, Kind: string(kind.Medication), Name: row.name},
+		Tags:    row.tags,
+	}
 
 	return records.Record{
 		ID: id, Kind: kind.Medication, PatientID: row.patient, Version: fmt.Sprint(row.version), Body: &detail,
@@ -135,21 +157,28 @@ func TestIndexLifecycle(t *testing.T) {
 
 	actor := access.Actor{UserID: h.patient}
 
-	created, createErr := entry.Service.Create(ctx, actor, &recordstest.Create{Name: "Warfarin"})
+	chronic := seedTag(t, h.app, h.owner, "chronic")
+	reviewed := seedTag(t, h.app, h.owner, "reviewed")
+
+	created, createErr := entry.Service.Create(ctx, actor, &lifecycleCreate{Name: "Warfarin", Tags: []string{chronic}})
 	require.NoError(t, createErr)
 
 	row, found, findErr := h.repo.Find(ctx, kind.Medication, created.ID)
 	require.NoError(t, findErr)
 	require.True(t, found, "creating a record must write exactly one index row")
 	assert.Equal(t, "Warfarin", row.Title)
+	assert.Equal(t, []string{chronic}, row.TagIDs, "a create must seed search_index.tags from the record's own tags")
 
-	updatedRecord, updateErr := entry.Service.Update(ctx, actor, created.ID, created.Version, &recordstest.Patch{Name: strPtr("Warfarin XR")})
+	updatedTags := []string{chronic, reviewed}
+	updatedRecord, updateErr := entry.Service.Update(ctx, actor, created.ID, created.Version,
+		&lifecyclePatch{Name: strPtr("Warfarin XR"), Tags: &updatedTags})
 	require.NoError(t, updateErr)
 
 	updatedRow, foundAfter, findAfterErr := h.repo.Find(ctx, kind.Medication, created.ID)
 	require.NoError(t, findAfterErr)
 	require.True(t, foundAfter)
 	assert.Equal(t, "Warfarin XR", updatedRow.Title, "an update must replace the row's title")
+	assert.ElementsMatch(t, updatedTags, updatedRow.TagIDs, "an update must keep search_index.tags in step with the record's own tags")
 
 	page, pageErr := h.repo.Page(ctx, h.patient, []kind.Kind{kind.Medication}, 10, "")
 	require.NoError(t, pageErr)

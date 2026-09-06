@@ -44,7 +44,7 @@ func TestSearchKindAt50000Rows(t *testing.T) {
 		t.Run(string(k), func(t *testing.T) {
 			started := time.Now()
 
-			page, err := h.repo.SearchKind(ctx, h.patient, k, "scale-term", 25, "")
+			page, err := h.repo.SearchKind(ctx, h.patient, k, "scale-term", nil, "", 25, "")
 			require.NoError(t, err)
 
 			assert.Less(t, time.Since(started), 3*time.Second,

@@ -560,9 +560,22 @@ func (s *indexingService) index(ctx context.Context, record Record) error {
 		RecordID:  record.ID,
 		Title:     title,
 		Body:      body,
+		TagIDs:    tagsOf(record.Body),
 	}); err != nil {
 		return fmt.Errorf("records: indexing the %s search row: %w", s.kind, err)
 	}
 
 	return nil
+}
+
+// tagsOf reads the tags off whatever Record.Body carries, or nil for a DTO
+// that does not implement Tagged: no registered kind is untagged in this
+// build, but a fake in a unit test may not bother.
+func tagsOf(body any) []string {
+	tagged, ok := body.(Tagged)
+	if !ok {
+		return nil
+	}
+
+	return tagged.GetTags()
 }

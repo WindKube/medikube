@@ -68,6 +68,10 @@ type Encounter struct {
 	CreatedAt string   `json:"created_at"`
 }
 
+// GetTags implements records.Tagged so the search index stays in step with
+// this record's tags on write (T164-T177 follow-up).
+func (e *Encounter) GetTags() []string { return e.Tags }
+
 type EncounterCreate struct {
 	Patient     string  `json:"patient"`
 	Reason      string  `json:"reason"`

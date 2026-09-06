@@ -3,6 +3,7 @@ package seed
 import (
 	"fmt"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 
 	"medikube/internal/domain/kind"
@@ -40,30 +41,59 @@ func applyTags(app core.App) error {
 	}
 
 	targets := []struct {
-		collection string
-		recordID   string
-		tags       []string
+		k        kind.Kind
+		recordID string
+		tags     []string
 	}{
-		{kind.Medication.Collection(), NameOnlyID, []string{TagChronicID, TagFollowUpID}},
-		{kind.Immunization.Collection(), ImmunizationSampleID, []string{TagFlaggedID}},
-		{kind.Injury.Collection(), InjuryAnkleID, []string{TagFollowUpID}},
-		{kind.Insurance.Collection(), InsurancePrimaryID, []string{TagChronicID}},
-		{kind.Equipment.Collection(), EquipmentOverdueID, []string{TagFlaggedID, TagChronicID}},
-		{kind.Symptom.Collection(), SymptomHeadacheOne, []string{TagFollowUpID}},
-		{kind.Vitals.Collection(), VitalsOne, []string{TagChronicID}},
-		{kind.Allergy.Collection(), CriticalAllergyID, []string{TagFlaggedID}},
-		{kind.Condition.Collection(), ResolvedConditionID, []string{TagChronicID}},
-		{kind.EmergencyContact.Collection(), PrimaryContactID, []string{TagFollowUpID}},
-		{kind.Encounter.Collection(), EncounterNameOnlyID, []string{TagChronicID}},
-		{kind.Procedure.Collection(), ProcedureNameOnlyID, []string{TagFlaggedID}},
-		{kind.Treatment.Collection(), TreatmentNameOnlyID, []string{TagFollowUpID}},
-		{kind.FamilyMember.Collection(), FamilyMemberGrandmotherID, []string{TagChronicID}},
+		{kind.Medication, NameOnlyID, []string{TagChronicID, TagFollowUpID}},
+		{kind.Immunization, ImmunizationSampleID, []string{TagFlaggedID}},
+		{kind.Injury, InjuryAnkleID, []string{TagFollowUpID}},
+		{kind.Insurance, InsurancePrimaryID, []string{TagChronicID}},
+		{kind.Equipment, EquipmentOverdueID, []string{TagFlaggedID, TagChronicID}},
+		{kind.Symptom, SymptomHeadacheOne, []string{TagFollowUpID}},
+		{kind.Vitals, VitalsOne, []string{TagChronicID}},
+		{kind.Allergy, CriticalAllergyID, []string{TagFlaggedID}},
+		{kind.Condition, ResolvedConditionID, []string{TagChronicID}},
+		{kind.EmergencyContact, PrimaryContactID, []string{TagFollowUpID}},
+		{kind.Encounter, EncounterNameOnlyID, []string{TagChronicID}},
+		{kind.Procedure, ProcedureNameOnlyID, []string{TagFlaggedID}},
+		{kind.Treatment, TreatmentNameOnlyID, []string{TagFollowUpID}},
+		{kind.FamilyMember, FamilyMemberGrandmotherID, []string{TagChronicID}},
 	}
 
 	for _, target := range targets {
-		if err := applyTagsTo(app, target.collection, target.recordID, target.tags); err != nil {
+		if err := applyTagsTo(app, target.k.Collection(), target.recordID, target.tags); err != nil {
 			return err
 		}
+
+		// search_index.tags is written by the same fourteen kinds' own
+		// indexingService in production (T164-T177 follow-up); the seed
+		// writes each record directly rather than through the service, so
+		// nothing else keeps this row in step with what applyTagsTo just set.
+		if err := indexTags(app, target.k, target.recordID, target.tags); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func indexTags(app core.App, k kind.Kind, recordID string, tags []string) error {
+	collection, err := app.FindCollectionByNameOrId(searchIndexCollection)
+	if err != nil {
+		return fmt.Errorf("finding %s: %w", searchIndexCollection, err)
+	}
+
+	record := core.NewRecord(collection)
+	if err := app.RecordQuery(collection).
+		AndWhere(dbx.HashExp{"kind": string(k), "record_id": recordID}).One(record); err != nil {
+		return fmt.Errorf("finding %s %s's index row to tag it: %w", k, recordID, err)
+	}
+
+	record.Set(fieldTags, tags)
+
+	if err := app.Save(record); err != nil {
+		return fmt.Errorf("indexing %s %s's tags: %w", k, recordID, err)
 	}
 
 	return nil

@@ -17,6 +17,15 @@ const (
 	EmptyReasonNoRecords = "no_records"
 )
 
+// MatchAny and MatchAll re-export domainsearch's own spelling for a caller on
+// the store side of the [PB] boundary that already imports this package for
+// Searcher and would otherwise need a second import just for two string
+// constants (T164-T177 follow-up).
+const (
+	MatchAny = domainsearch.MatchAny
+	MatchAll = domainsearch.MatchAll
+)
+
 var (
 	// ErrNoSearcher and ErrNoCounter guard against a zero-value Service.
 	ErrNoSearcher = errors.New("search: no searcher")
@@ -24,6 +33,9 @@ var (
 
 	// ErrNoAuthorizer guards the same way.
 	ErrNoAuthorizer = errors.New("search: no authorizer")
+
+	// ErrNoTagChecker guards the same way.
+	ErrNoTagChecker = errors.New("search: no tag checker")
 )
 
 // Authorizer is the checkpoint a search is reached through — the same shape
@@ -32,6 +44,15 @@ var (
 // (records already imports this one).
 type Authorizer interface {
 	Patient(ctx context.Context, actor access.Actor, patientID string, need access.Permission) (access.Grant, error)
+}
+
+// TagChecker is the account's tag ownership check (contracts/tags.md §5),
+// the same shape records.TagChecker takes and declared again here for the
+// same reason Authorizer is: an unknown or foreign tag id named by `?tags=`
+// must be refused before any group is read, identical to a tag that does not
+// exist at all (T164-T177 follow-up).
+type TagChecker interface {
+	Owned(ctx context.Context, actor access.Actor, ids []string) error
 }
 
 // Group is one kind's page of a grouped search result.
@@ -59,9 +80,10 @@ type Service struct {
 	searcher   Searcher
 	counter    Counter
 	authorizer Authorizer
+	tagChecker TagChecker
 }
 
-func NewService(searcher Searcher, counter Counter, authorizer Authorizer) (*Service, error) {
+func NewService(searcher Searcher, counter Counter, authorizer Authorizer, tagChecker TagChecker) (*Service, error) {
 	if searcher == nil {
 		return nil, ErrNoSearcher
 	}
@@ -74,7 +96,11 @@ func NewService(searcher Searcher, counter Counter, authorizer Authorizer) (*Ser
 		return nil, ErrNoAuthorizer
 	}
 
-	return &Service{searcher: searcher, counter: counter, authorizer: authorizer}, nil
+	if tagChecker == nil {
+		return nil, ErrNoTagChecker
+	}
+
+	return &Service{searcher: searcher, counter: counter, authorizer: authorizer, tagChecker: tagChecker}, nil
 }
 
 // Cursors is one incoming request's per-group continuation tokens, keyed by
@@ -94,10 +120,20 @@ func (s *Service) Search(
 		return Result{}, err
 	}
 
+	// The tag ownership check runs once, before any group is read, the same
+	// way patient authorization does: an id naming a foreign tag must be
+	// refused before it can narrow anything, or its rejection would itself
+	// disclose that the id exists (contracts/tags.md §5).
+	if len(query.TagIDs) > 0 {
+		if err := s.tagChecker.Owned(ctx, actor, query.TagIDs); err != nil {
+			return Result{}, err
+		}
+	}
+
 	groups := make([]Group, 0, len(query.Kinds))
 
 	for _, k := range query.Kinds {
-		page, err := s.searcher.SearchKind(ctx, query.PatientID, k, query.Term, limit, cursors[k])
+		page, err := s.searcher.SearchKind(ctx, query.PatientID, k, query.Term, query.TagIDs, query.Match, limit, cursors[k])
 		if err != nil {
 			return Result{}, fmt.Errorf("search: %s: %w", k, err)
 		}

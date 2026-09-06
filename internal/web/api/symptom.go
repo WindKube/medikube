@@ -67,6 +67,10 @@ type Symptom struct {
 	Tags            []string `json:"tags,omitempty"`
 }
 
+// GetTags implements records.Tagged so the search index stays in step with
+// this record's tags on write (T164-T177 follow-up).
+func (s *Symptom) GetTags() []string { return s.Tags }
+
 type SymptomCreate struct {
 	Patient         string   `json:"patient"`
 	Name            string   `json:"name"`

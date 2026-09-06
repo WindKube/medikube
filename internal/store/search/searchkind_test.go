@@ -56,7 +56,7 @@ func TestSearchKindMatchesTitleAndBodyCaseInsensitively(t *testing.T) {
 	h.seedTerm(t, kind.Medication, recordID(2), "Ibuprofen", "taken for WARFARIN interaction", &on)
 	h.seedTerm(t, kind.Medication, recordID(3), "Paracetamol", "", &on)
 
-	page, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "warfarin", 10, "")
+	page, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "warfarin", nil, "", 10, "")
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{recordID(1), recordID(2)}, hitIDs(page.Items))
 }
@@ -71,7 +71,7 @@ func TestSearchKindNarrowsByPatientAndKind(t *testing.T) {
 	h.seedTerm(t, kind.Medication, recordID(1), "Warfarin", "", &on)
 	h.seedTerm(t, kind.Allergy, recordID(2), "Warfarin allergy", "", &on)
 
-	page, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "warfarin", 10, "")
+	page, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "warfarin", nil, "", 10, "")
 	require.NoError(t, err)
 	assert.Equal(t, []string{recordID(1)}, hitIDs(page.Items))
 }
@@ -92,15 +92,15 @@ func TestSearchKindEscapesLikeWildcardsAndTheEscapeCharacter(t *testing.T) {
 	h.seedTerm(t, kind.Medication, recordID(4), "aXb marker", "", &on)
 	h.seedTerm(t, kind.Medication, recordID(5), `a\b path`, "", &on)
 
-	percent, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "50%", 10, "")
+	percent, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "50%", nil, "", 10, "")
 	require.NoError(t, err)
 	assert.Equal(t, []string{recordID(1)}, hitIDs(percent.Items), "a literal %% must not act as a wildcard")
 
-	underscore, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "a_b", 10, "")
+	underscore, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "a_b", nil, "", 10, "")
 	require.NoError(t, err)
 	assert.Equal(t, []string{recordID(3)}, hitIDs(underscore.Items), "a literal _ must not act as a single-char wildcard")
 
-	backslash, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, `a\b`, 10, "")
+	backslash, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, `a\b`, nil, "", 10, "")
 	require.NoError(t, err)
 	assert.Equal(t, []string{recordID(5)}, hitIDs(backslash.Items), "a literal backslash must not break the escape sequence")
 }
@@ -120,7 +120,7 @@ func TestSearchKindTreatsFilterAndSQLLookingTermsAsLiteralText(t *testing.T) {
 	h.seedTerm(t, kind.Medication, recordID(1), poison, "", &on)
 	h.seedTerm(t, kind.Medication, recordID(2), "an unrelated title", "", &on)
 
-	page, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, poison, 10, "")
+	page, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, poison, nil, "", 10, "")
 	require.NoError(t, err)
 	assert.Equal(t, []string{recordID(1)}, hitIDs(page.Items))
 }
@@ -138,12 +138,12 @@ func TestSearchKindOrdersAndPagesTheSameWayPageDoes(t *testing.T) {
 	h.seedTerm(t, kind.Medication, recordID(2), "warfarin two", "", &late)
 	h.seedTerm(t, kind.Medication, recordID(3), "warfarin three", "", nil)
 
-	first, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "warfarin", 2, "")
+	first, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "warfarin", nil, "", 2, "")
 	require.NoError(t, err)
 	require.NotNil(t, first.NextCursor)
 	assert.Equal(t, []string{recordID(2), recordID(1)}, hitIDs(first.Items))
 
-	second, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "warfarin", 2, *first.NextCursor)
+	second, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "warfarin", nil, "", 2, *first.NextCursor)
 	require.NoError(t, err)
 	assert.Nil(t, second.NextCursor)
 	assert.Equal(t, []string{recordID(3)}, hitIDs(second.Items))
@@ -162,11 +162,11 @@ func TestSearchKindCursorsAreScopedPerKind(t *testing.T) {
 	h.seedTerm(t, kind.Medication, recordID(1), "shared term", "", &on)
 	h.seedTerm(t, kind.Allergy, recordID(2), "shared term", "", &on)
 
-	medPage, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "shared", 10, "")
+	medPage, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "shared", nil, "", 10, "")
 	require.NoError(t, err)
 	assert.Nil(t, medPage.NextCursor)
 
-	allergyPage, err := h.repo.SearchKind(ctx, h.patient, kind.Allergy, "shared", 10, "")
+	allergyPage, err := h.repo.SearchKind(ctx, h.patient, kind.Allergy, "shared", nil, "", 10, "")
 	require.NoError(t, err)
 	assert.Nil(t, allergyPage.NextCursor)
 
@@ -183,7 +183,7 @@ func TestSearchKindReadsTitleAndTagsForTheMatchedHit(t *testing.T) {
 
 	h.seedTerm(t, kind.Medication, recordID(1), "Warfarin", "", &on)
 
-	page, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "warfarin", 10, "")
+	page, err := h.repo.SearchKind(ctx, h.patient, kind.Medication, "warfarin", nil, "", 10, "")
 	require.NoError(t, err)
 	require.Len(t, page.Items, 1)
 	assert.Equal(t, "Warfarin", page.Items[0].Title)

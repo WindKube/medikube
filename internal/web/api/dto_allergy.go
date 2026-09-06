@@ -53,6 +53,10 @@ type Allergy struct {
 	CreatedAt string   `json:"created_at"`
 }
 
+// GetTags implements records.Tagged so the search index stays in step with
+// this record's tags on write (T164-T177 follow-up).
+func (a *Allergy) GetTags() []string { return a.Tags }
+
 type AllergyCreate struct {
 	Patient  string   `json:"patient"`
 	Allergen string   `json:"allergen"`

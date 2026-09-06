@@ -28,8 +28,8 @@ const OpSearch = "search"
 const (
 	ParamQ     = "q"
 	ParamKinds = "kinds"
+	ParamTags  = "tags"
 	ParamMatch = "match"
-	MatchAny   = "any"
 )
 
 // ErrNoSearch is a build whose search read side was never resolved.
@@ -70,7 +70,8 @@ func (h *searchHandlers) search(e *core.RequestEvent, actor access.Actor) error 
 
 	values := e.Request.URL.Query()
 
-	query, err := domainsearch.NewQuery(values.Get(ParamQ), patientID, commaList(values.Get(ParamKinds)), registered)
+	query, err := domainsearch.NewQuery(values.Get(ParamQ), patientID,
+		commaList(values.Get(ParamKinds)), commaList(values.Get(ParamTags)), values.Get(ParamMatch), registered)
 	if err != nil {
 		return err
 	}
@@ -170,8 +171,8 @@ func searchResponse(query domainsearch.Query, result searchsvc.Result) SearchRes
 		Criteria: SearchCriteria{
 			QPresent: query.Term != "",
 			Kinds:    kinds,
-			Tags:     []string{},
-			Match:    MatchAny,
+			Tags:     nonNil(query.TagIDs),
+			Match:    query.Match,
 		},
 		EmptyReason: emptyReasonPtr(result.EmptyReason),
 	}

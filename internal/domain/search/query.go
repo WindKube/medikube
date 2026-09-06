@@ -17,6 +17,16 @@ const (
 	MaxTermLen = 200
 )
 
+// MatchAny and MatchAll are `?match=` (contracts/search.md §1): whether
+// `?tags=` narrows to a record carrying at least one of the named tags or
+// every one of them. MatchAny is the default. Declared here rather than
+// imported from internal/records — that package is on the PocketBase side of
+// the [PB] boundary and this one is not.
+const (
+	MatchAny = "any"
+	MatchAll = "all"
+)
+
 // Query is one validated /search request. Term is never logged, never
 // echoed and never carried in an error message: FR-075 and research D-12
 // treat it as a first-class secret, and the only safe place for it is this
@@ -28,6 +38,12 @@ type Query struct {
 	// resolves to every kind `registered` named, in that order, so a caller
 	// never has to special-case "every kind" downstream.
 	Kinds []kind.Kind
+	// TagIDs is `?tags=`, unvalidated against the actor's own tags: that
+	// check needs the tag service, which this package does not import, so it
+	// is the service layer's job (contracts/search.md §5, T164-T177 follow-up).
+	TagIDs []string
+	// Match is `?match=`, MatchAny or MatchAll, defaulting to MatchAny.
+	Match string
 }
 
 // NewQuery validates q, patient and kinds.
@@ -41,7 +57,12 @@ type Query struct {
 // §3, FR-070): this is the defence a caller that skipped the edge still
 // gets, and it is why the check exists here rather than being trusted to
 // have already happened.
-func NewQuery(term, patientID string, kindValues []string, registered []kind.Kind) (Query, error) {
+//
+// tagIDs is `?tags=`, structurally only: whether each id actually belongs to
+// the actor is the service layer's job, not this package's, because that
+// check needs the tag service. match is `?match=`, defaulting to MatchAny
+// when empty; anything else is 400 bad_request.
+func NewQuery(term, patientID string, kindValues, tagIDs []string, match string, registered []kind.Kind) (Query, error) {
 	var invalid domain.ValidationError
 
 	switch {
@@ -60,11 +81,29 @@ func NewQuery(term, patientID string, kindValues []string, registered []kind.Kin
 		return Query{}, err
 	}
 
+	resolvedMatch, err := resolveMatch(match)
+	if err != nil {
+		return Query{}, err
+	}
+
 	if err := invalid.OrNil(); err != nil {
 		return Query{}, err
 	}
 
-	return Query{Term: term, PatientID: patientID, Kinds: kinds}, nil
+	return Query{Term: term, PatientID: patientID, Kinds: kinds, TagIDs: tagIDs, Match: resolvedMatch}, nil
+}
+
+// resolveMatch defaults an absent `?match=` to MatchAny and refuses anything
+// that is neither spelling.
+func resolveMatch(match string) (string, error) {
+	switch match {
+	case "":
+		return MatchAny, nil
+	case MatchAny, MatchAll:
+		return match, nil
+	default:
+		return "", fmt.Errorf("%w: match must be %q or %q", domain.ErrBadRequest, MatchAny, MatchAll)
+	}
 }
 
 // resolveKinds turns `?kinds=` — a csv of path segments (contracts/search.md

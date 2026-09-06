@@ -80,6 +80,10 @@ type Equipment struct {
 	CreatedAt string   `json:"created_at"`
 }
 
+// GetTags implements records.Tagged so the search index stays in step with
+// this record's tags on write (T164-T177 follow-up).
+func (e *Equipment) GetTags() []string { return e.Tags }
+
 // EquipmentCreate is the create body (FR-048): patient, name and type are
 // required; everything else is optional at creation.
 type EquipmentCreate struct {

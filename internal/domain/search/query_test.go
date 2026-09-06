@@ -21,7 +21,7 @@ func TestNewQuery(t *testing.T) {
 	t.Run("a valid query resolves with no kind narrowing meaning every registered kind", func(t *testing.T) {
 		t.Parallel()
 
-		q, err := search.NewQuery("warfarin", "patient1", nil, registered)
+		q, err := search.NewQuery("warfarin", "patient1", nil, nil, "", registered)
 		require.NoError(t, err)
 		assert.Equal(t, "warfarin", q.Term)
 		assert.Equal(t, "patient1", q.PatientID)
@@ -31,35 +31,35 @@ func TestNewQuery(t *testing.T) {
 	t.Run("an empty term is refused", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := search.NewQuery("", "patient1", nil, registered)
+		_, err := search.NewQuery("", "patient1", nil, nil, "", registered)
 		requireField(t, err, "q", domain.CodeRequired)
 	})
 
 	t.Run("a term over 200 characters is refused", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := search.NewQuery(strings.Repeat("a", 201), "patient1", nil, registered)
+		_, err := search.NewQuery(strings.Repeat("a", 201), "patient1", nil, nil, "", registered)
 		requireField(t, err, "q", domain.CodeTooLong)
 	})
 
 	t.Run("a term of exactly 200 characters is accepted", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := search.NewQuery(strings.Repeat("a", 200), "patient1", nil, registered)
+		_, err := search.NewQuery(strings.Repeat("a", 200), "patient1", nil, nil, "", registered)
 		require.NoError(t, err)
 	})
 
 	t.Run("an absent patient is refused", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := search.NewQuery("warfarin", "", nil, registered)
+		_, err := search.NewQuery("warfarin", "", nil, nil, "", registered)
 		requireField(t, err, "patient", domain.CodeRequired)
 	})
 
 	t.Run("a registered kind narrows to exactly what was named, in the order named", func(t *testing.T) {
 		t.Parallel()
 
-		q, err := search.NewQuery("warfarin", "patient1", []string{kind.Condition.Segment(), kind.Medication.Segment()}, registered)
+		q, err := search.NewQuery("warfarin", "patient1", []string{kind.Condition.Segment(), kind.Medication.Segment()}, nil, "", registered)
 		require.NoError(t, err)
 		assert.Equal(t, []kind.Kind{kind.Condition, kind.Medication}, q.Kinds)
 	})
@@ -69,7 +69,7 @@ func TestNewQuery(t *testing.T) {
 
 		const poison = "a-kind-nobody-serves-sentinel"
 
-		_, err := search.NewQuery("warfarin", "patient1", []string{poison}, registered)
+		_, err := search.NewQuery("warfarin", "patient1", []string{poison}, nil, "", registered)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, domain.ErrBadRequest))
 		assert.NotContains(t, err.Error(), poison)
@@ -78,7 +78,32 @@ func TestNewQuery(t *testing.T) {
 	t.Run("a kind declared in the kind table but not registered on this build is refused the same way", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := search.NewQuery("warfarin", "patient1", []string{string(kind.Vitals)}, registered)
+		_, err := search.NewQuery("warfarin", "patient1", []string{string(kind.Vitals)}, nil, "", registered)
+		require.Error(t, err)
+		assert.True(t, errors.Is(err, domain.ErrBadRequest))
+	})
+
+	t.Run("an absent match defaults to any", func(t *testing.T) {
+		t.Parallel()
+
+		q, err := search.NewQuery("warfarin", "patient1", nil, []string{"tag1"}, "", registered)
+		require.NoError(t, err)
+		assert.Equal(t, search.MatchAny, q.Match)
+		assert.Equal(t, []string{"tag1"}, q.TagIDs)
+	})
+
+	t.Run("match all is accepted", func(t *testing.T) {
+		t.Parallel()
+
+		q, err := search.NewQuery("warfarin", "patient1", nil, []string{"tag1", "tag2"}, search.MatchAll, registered)
+		require.NoError(t, err)
+		assert.Equal(t, search.MatchAll, q.Match)
+	})
+
+	t.Run("an unrecognised match is 400 bad_request", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := search.NewQuery("warfarin", "patient1", nil, nil, "some", registered)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, domain.ErrBadRequest))
 	})

@@ -85,7 +85,8 @@ func (p *searchPages) show(e *core.RequestEvent, actor access.Actor) error {
 		return err
 	}
 
-	query, err := domainsearch.NewQuery(term, patientID, splitCSV(values.Get(api.ParamKinds)), registered)
+	query, err := domainsearch.NewQuery(term, patientID,
+		splitCSV(values.Get(api.ParamKinds)), splitCSV(values.Get(api.ParamTags)), values.Get(api.ParamMatch), registered)
 	if err != nil {
 		return err
 	}
@@ -113,9 +114,16 @@ func (p *searchPages) show(e *core.RequestEvent, actor access.Actor) error {
 	return p.render(e, actor, props)
 }
 
-// chips is one removable chip per kind the caller explicitly narrowed to —
-// an unnarrowed search (every registered kind) offers nothing to remove.
+// chips is one removable chip per kind and per tag the caller explicitly
+// narrowed to — an unnarrowed search (every registered kind, no tags) offers
+// nothing to remove.
 func (p *searchPages) chips(e *core.RequestEvent, values url.Values) []views.Chip {
+	chips := p.kindChips(e, values)
+
+	return append(chips, p.tagChips(e, values)...)
+}
+
+func (p *searchPages) kindChips(e *core.RequestEvent, values url.Values) []views.Chip {
 	segments := splitCSV(values.Get(api.ParamKinds))
 	if len(segments) == 0 {
 		return nil
@@ -147,11 +155,45 @@ func (p *searchPages) chips(e *core.RequestEvent, values url.Values) []views.Chi
 	return chips
 }
 
-// clearHref removes every narrowing this page offers (kinds, cursor) while
-// keeping the person and the term (US8 scenario 2).
+// tagChips is kindChips's twin for `?tags=` (T164-T177 follow-up): one
+// removable chip per narrowing tag id. It has no tag name to render — this
+// page resolves no tag service of its own — so the chip names the id, the
+// same way a search result's own item tags do (views.Item.Tags).
+func (p *searchPages) tagChips(e *core.RequestEvent, values url.Values) []views.Chip {
+	ids := splitCSV(values.Get(api.ParamTags))
+	if len(ids) == 0 {
+		return nil
+	}
+
+	chips := make([]views.Chip, 0, len(ids))
+
+	for i, id := range ids {
+		remaining := make([]string, 0, len(ids)-1)
+		remaining = append(remaining, ids[:i]...)
+		remaining = append(remaining, ids[i+1:]...)
+
+		chips = append(chips, views.Chip{Label: id, Href: withQuery(e, func(q url.Values) {
+			if len(remaining) == 0 {
+				q.Del(api.ParamTags)
+				q.Del(api.ParamMatch)
+			} else {
+				q.Set(api.ParamTags, strings.Join(remaining, ","))
+			}
+
+			q.Del(web.ParamCursor)
+		})})
+	}
+
+	return chips
+}
+
+// clearHref removes every narrowing this page offers (kinds, tags, match,
+// cursor) while keeping the person and the term (US8 scenario 2).
 func (p *searchPages) clearHref(e *core.RequestEvent) string {
 	return withQuery(e, func(q url.Values) {
 		q.Del(api.ParamKinds)
+		q.Del(api.ParamTags)
+		q.Del(api.ParamMatch)
 		q.Del(web.ParamCursor)
 	})
 }

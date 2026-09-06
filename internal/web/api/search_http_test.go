@@ -32,7 +32,9 @@ type searchDTO struct {
 		} `json:"items"`
 	} `json:"groups"`
 	Criteria struct {
-		QPresent bool `json:"q_present"`
+		QPresent bool     `json:"q_present"`
+		Tags     []string `json:"tags"`
+		Match    string   `json:"match"`
 	} `json:"criteria"`
 	EmptyReason *string `json:"empty_reason"`
 }
@@ -129,4 +131,78 @@ func TestSearchRefusesAnUnknownKind(t *testing.T) {
 	resp := c.get(searchURL("patient=" + testsupport.AccountAPatientSelfID + "&q=paracetamol&kinds=not-a-real-kind"))
 	require.Equal(t, http.StatusBadRequest, resp.Status, resp.Body)
 	assert.NotContains(t, resp.Body, "not-a-real-kind")
+}
+
+// T164-T177 follow-up. `?tags=` narrows to the account's own record carrying
+// that tag, and criteria echoes the narrowing back.
+func TestSearchNarrowsByTag(t *testing.T) {
+	t.Parallel()
+
+	c := newCaller(t)
+
+	resp := c.get(searchURL("patient=" + testsupport.AccountAPatientSelfID + "&q=paracetamol&tags=" + testsupport.TagChronicID))
+	require.Equal(t, http.StatusOK, resp.Status, resp.Body)
+
+	decoded := decodedSearch(t, resp)
+	assert.Equal(t, []string{testsupport.TagChronicID}, decoded.Criteria.Tags)
+	assert.Equal(t, "any", decoded.Criteria.Match)
+
+	var found bool
+	for _, group := range decoded.Groups {
+		for _, item := range group.Items {
+			if item.ID == testsupport.NameOnlyMedicationID {
+				found = true
+			}
+		}
+	}
+	assert.True(t, found, "the medication carrying the chronic tag was not in the result: %s", resp.Body)
+}
+
+// A tag naming nothing this account owns — unknown or belonging to another
+// account — is refused before any group is read, identical to a nonexistent
+// tag (contracts/tags.md §5), and never echoed.
+func TestSearchRefusesAForeignOrUnknownTag(t *testing.T) {
+	t.Parallel()
+
+	c := newCaller(t)
+
+	const poison = "mktagnobody0001"
+
+	resp := c.get(searchURL("patient=" + testsupport.AccountAPatientSelfID + "&q=paracetamol&tags=" + poison))
+	require.Equal(t, http.StatusNotFound, resp.Status, resp.Body)
+	assert.NotContains(t, resp.Body, poison)
+}
+
+// `?match=all` requires every named tag; a record carrying only one of two
+// named tags is excluded, unlike the default `?match=any`.
+func TestSearchMatchAllRequiresEveryTag(t *testing.T) {
+	t.Parallel()
+
+	c := newCaller(t)
+
+	any := c.get(searchURL("patient=" + testsupport.AccountAPatientSelfID + "&q=paracetamol&tags=" +
+		testsupport.TagChronicID + "," + testsupport.TagFlaggedID))
+	require.Equal(t, http.StatusOK, any.Status, any.Body)
+
+	all := c.get(searchURL("patient=" + testsupport.AccountAPatientSelfID + "&q=paracetamol&tags=" +
+		testsupport.TagChronicID + "," + testsupport.TagFlaggedID + "&match=all"))
+	require.Equal(t, http.StatusOK, all.Status, all.Body)
+
+	anyDecoded := decodedSearch(t, any)
+	allDecoded := decodedSearch(t, all)
+
+	assert.NotEmpty(t, anyDecoded.Groups, "any of chronic or flagged must still find the record carrying only chronic")
+	assert.Empty(t, allDecoded.Groups, "all of chronic and flagged excludes a record carrying only chronic")
+	assert.Equal(t, "no_matches", *allDecoded.EmptyReason)
+}
+
+// An unrecognised `?match=` is 400 bad_request.
+func TestSearchRefusesAnUnrecognisedMatch(t *testing.T) {
+	t.Parallel()
+
+	c := newCaller(t)
+
+	resp := c.get(searchURL("patient=" + testsupport.AccountAPatientSelfID + "&q=paracetamol&tags=" +
+		testsupport.TagChronicID + "&match=some"))
+	require.Equal(t, http.StatusBadRequest, resp.Status, resp.Body)
 }

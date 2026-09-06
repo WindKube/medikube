@@ -596,7 +596,7 @@ func recordFamily(app core.App, registry *records.Registry, hub *realtime.Hub) (
 			return recordFamilyResult{}, err
 		}
 
-		search, kinds, err := buildSearchService(app, registry)
+		search, kinds, err := buildSearchService(app, registry, tags)
 		if err != nil {
 			return recordFamilyResult{}, err
 		}
@@ -627,8 +627,11 @@ func recordFamily(app core.App, registry *records.Registry, hub *realtime.Hub) (
 
 // buildSearchService wires US8's read side, once registerKinds has finished:
 // registry.Kinds() is only complete afterwards, and it is what a grouped
-// search's default kind selection and group order both read.
-func buildSearchService(app core.App, registry *records.Registry) (*searchsvc.Service, []kind.Kind, error) {
+// search's default kind selection and group order both read. tags is the
+// same tag service registerKinds already built — search's own `?tags=`
+// ownership check (T164-T177 follow-up) reuses it rather than building a
+// second one.
+func buildSearchService(app core.App, registry *records.Registry, tags *tagsvc.Service) (*searchsvc.Service, []kind.Kind, error) {
 	secret, err := store.CursorSecret(app, "")
 	if err != nil {
 		return nil, nil, err
@@ -669,7 +672,7 @@ func buildSearchService(app core.App, registry *records.Registry) (*searchsvc.Se
 		return nil, nil, err
 	}
 
-	service, err := searchsvc.NewService(searchRepo, searchRepo, authorizer)
+	service, err := searchsvc.NewService(searchRepo, searchRepo, authorizer, tags)
 	if err != nil {
 		return nil, nil, err
 	}

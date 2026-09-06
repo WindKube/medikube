@@ -109,6 +109,10 @@ type Medication struct {
 	CreatedAt       string   `json:"created_at"`
 }
 
+// GetTags implements records.Tagged so the search index stays in step with
+// this record's tags on write (T164-T177 follow-up).
+func (m *Medication) GetTags() []string { return m.Tags }
+
 // MedicationCreate is the create body. It has no `owner`, no `id` and no
 // timestamps, and that absence is the enforcement of FR-032 rather than a
 // runtime check: unknown members are rejected by the decoder, so a body that

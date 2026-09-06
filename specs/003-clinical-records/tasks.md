@@ -414,7 +414,7 @@ and confirm each narrowing is reflected.
 - [x] T176 [US8] Implement `internal/web/views/search/results.templ` and the `/search` page handler in `internal/web/page/search.go` with landmark `search`
 - [x] T177 [US8] Add `e2e/search.spec.ts` covering `/search` at both viewports, including the no-term state, the `no_matches` state and the `no_records` state; regenerate and commit `api/openapi.json`
 
-  `?tags=`/`?match=`/`?from=`/`?to=`/`?status=` narrowing (contracts/search.md's full query shape) is **deferred**: `?tags=` depends on US7, which was still in flight when this story landed, so no `?tags=` parameter is read at all rather than half-wired against a shape that could still change — `criteria.tags` always echoes `[]` and `criteria.match` always echoes `"any"`, which is contract-correct for "no narrowing of that kind is active" and needs no wire change when US7 merges. `?from=`/`?to=`/`?status=` were out of scope for this story's brief and are likewise not implemented. Revisit both when US7 merges.
+  `?tags=`/`?match=` narrowing landed once US7 merged (T164-T177 follow-up): `criteria.tags` and `criteria.match` echo the caller's own narrowing, an unknown or foreign tag id is refused before any group is read (contracts/tags.md §5), and the results page renders a removable chip per tag. `?from=`/`?to=`/`?status=` remain out of scope for this story's brief and are not implemented.
 
 **Checkpoint**: US1–US8 demonstrable.
 
