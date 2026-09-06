@@ -21,16 +21,15 @@ import (
 // What that generic sweep does not pin down is a count: that this phase's own
 // timestamp range carries exactly the number of migrations data-model.md §8
 // declares, no more silently dropped and no more silently added with no
-// reversibility case of its own. The count deliberately excludes migrations 17
-// and 18 -- the two that add the cross-kind link fields and the join
-// collection carrying a payload -- because US6 is still in flight and lands
-// them.
+// reversibility case of its own. The count is data-model.md §8's nineteen
+// plus the two migrations 17 and 18 that add the cross-kind link fields and
+// the join collection carrying a payload, now that US6 has landed them.
 //
 // This does not spell any migration's filename: internal/architecture's own
 // kind-literal gate refuses a collection or path segment spelled anywhere
 // outside internal/domain/kind, and most of this phase's migration files are
 // named after the collection they create.
-const expectedPhase003MigrationCount = 20
+const expectedPhase003MigrationCount = 22
 
 // isPhase003File recognises this phase's own timestamp range
 // (1756300000-1756499999), assigned after phase 002's own
