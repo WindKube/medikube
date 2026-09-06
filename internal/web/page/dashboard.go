@@ -71,7 +71,7 @@ func (p *overviewPage) serve(e *core.RequestEvent, actor access.Actor) error {
 	// "" as the current path matches none of the nav's own hrefs (all of
 	// which are absolute paths), so nothing is marked aria-current: the
 	// overview page has no entry of its own in the primary navigation.
-	nav := p.account.signedInNav("")
+	nav := p.account.signedInNav(e.Request.Context(), "")
 
 	main := overview.Overview(overview.Props{
 		MedicationCount:  counts[kind.Medication.Segment()],

@@ -41,7 +41,7 @@ func (p *accountPages) settings(e *core.RequestEvent, actor access.Actor) error 
 		return err
 	}
 
-	return p.render(e, settingsTitle, true, p.links.signedInNav(p.links.settingsPage), settings.Settings(settings.SettingsProps{
+	return p.render(e, settingsTitle, true, p.links.signedInNav(ctx, p.links.settingsPage), settings.Settings(settings.SettingsProps{
 		SignOutOn: p.links.post(p.links.logout),
 		Profile: settings.ProfileProps{
 			FormID:         ids.ProfileForm,

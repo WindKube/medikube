@@ -317,7 +317,7 @@ func (p *encounterPages) render(e *core.RequestEvent, actor access.Actor, title 
 	}
 
 	return RenderPage(e, http.StatusOK, title,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path), Switcher: switcher}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path), Switcher: switcher}, main)
 }
 
 type encounterLinks struct {
@@ -387,10 +387,10 @@ func (l encounterLinks) cancelHref(encounter views.EncounterView) string {
 	return l.listPage
 }
 
-func (l encounterLinks) nav(current string) []shell.NavLink {
+func (l encounterLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: medicationListTitle, Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
+		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
 		{Label: encounterListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
-		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
+		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

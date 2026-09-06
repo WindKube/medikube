@@ -1,6 +1,9 @@
 package shared
 
-import "medikube/internal/web/views/ids"
+import (
+	"medikube/internal/i18n"
+	"medikube/internal/web/views/ids"
+)
 
 // PickerOption is one row a picker offers: enough to render and to submit.
 type PickerOption struct {
@@ -73,9 +76,9 @@ templ DirectoryPicker(props PickerProps) {
 			type="button"
 			data-on:click={ "$" + props.drawerSignal() + " = true" }
 			class="self-start text-sm font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900 dark:text-teal-300"
-		>Add a new one</button>
+		>{ i18n.T(ctx, "action.add_new_one") }</button>
 		<div data-show={ "$" + props.drawerSignal() } class="rounded-md border border-slate-300 p-3 dark:border-slate-600">
-			<label class="text-sm font-medium text-slate-900 dark:text-slate-100">Name</label>
+			<label class="text-sm font-medium text-slate-900 dark:text-slate-100">{ i18n.T(ctx, "field.directory.name") }</label>
 			<input
 				type="text"
 				data-bind={ "$" + props.draftSignal() }
@@ -86,12 +89,12 @@ templ DirectoryPicker(props PickerProps) {
 					type="button"
 					data-on:click={ pickerCreateExpr(props) }
 					class="rounded-md bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"
-				>Add</button>
+				>{ i18n.T(ctx, "action.add") }</button>
 				<button
 					type="button"
 					data-on:click={ "$" + props.drawerSignal() + " = false" }
 					class="text-sm font-medium text-slate-700 dark:text-slate-300"
-				>Cancel</button>
+				>{ i18n.T(ctx, "action.cancel") }</button>
 			</div>
 		</div>
 	</div>

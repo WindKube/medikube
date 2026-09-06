@@ -284,8 +284,8 @@ func (l accountLinks) signedOutNav(current string) []shell.NavLink {
 // signedInNav is the record kinds plus the account's own page. Settings is
 // already one of medications.nav's entries — FR-050 requires it on every
 // signed-in page, not only this one — so this is that list and nothing more.
-func (l accountLinks) signedInNav(current string) []shell.NavLink {
-	return l.medications.nav(current)
+func (l accountLinks) signedInNav(ctx context.Context, current string) []shell.NavLink {
+	return l.medications.nav(ctx, current)
 }
 
 // render is the one place an account page becomes a response.

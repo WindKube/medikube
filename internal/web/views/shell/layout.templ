@@ -1,6 +1,9 @@
 package shell
 
-import "medikube/internal/web/views/ids"
+import (
+	"medikube/internal/i18n"
+	"medikube/internal/web/views/ids"
+)
 
 // Document is the shell of contracts/pages.md: four landmarks, always
 // present, always in this order, plus the two empty patch containers, the
@@ -24,7 +27,7 @@ templ Document(props DocumentProps) {
 				data-init={ "@get(" + quotePS(props.StreamHref) + ")" }
 			}
 		>
-			<a href={ templ.SafeURL("#" + ids.Main) } class="sr-only focus:not-sr-only">Skip to content</a>
+			<a href={ templ.SafeURL("#" + ids.Main) } class="sr-only focus:not-sr-only">{ i18n.T(ctx, "a11y.skip_to_content") }</a>
 			<header role="banner" class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-2 dark:border-slate-800">
 				<span class="font-semibold">{ ProductName }</span>
 			</header>
@@ -60,8 +63,8 @@ templ Document(props DocumentProps) {
 				data-attr={ "{hidden: !$" + SignalStreamStale + "}" }
 				class="border border-amber-500 bg-amber-50 p-2 text-sm text-amber-900"
 			>
-				<p>This view has stopped updating on its own. Reload to see the latest.</p>
-				<button type="button" data-on:click="window.location.reload()" class="underline">Reload</button>
+				<p>{ i18n.T(ctx, "shell.stream_stale") }</p>
+				<button type="button" data-on:click="window.location.reload()" class="underline">{ i18n.T(ctx, "action.reload") }</button>
 			</div>
 			<div id={ ids.Toast } role="status" aria-live="polite"></div>
 		</body>

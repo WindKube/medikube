@@ -116,11 +116,19 @@ other = "internal error"
 
 [empty.nothing_recorded]
 description = "Shown under a kind's list when the patient has none of that kind yet"
-other = "Nothing recorded yet"
+other = "No {{.Kind}} recorded yet"
+
+[empty.nothing_recorded_body]
+description = "The nothing-recorded empty state's second line"
+other = "Nothing has been recorded here yet."
 
 [empty.nothing_matches]
 description = "Shown when a search or filter narrows a list to zero results"
 other = "Nothing matches"
+
+[empty.nothing_matches_body]
+description = "The nothing-matches empty state's second line, naming what was searched for"
+other = "No {{.Kind}} match the current narrowing."
 
 # --- action ---------------------------------------------------------------
 
@@ -1880,3 +1888,115 @@ other = "From {{.Date}}"
 [timeline.criteria_to]
 description = "The timeline's own removable narrowing chip naming the active to-date"
 other = "To {{.Date}}"
+# --- action (T020 additions) ---------------------------------------------
+
+[action.reload]
+description = "Reloads the page from the stream-stale banner"
+other = "Reload"
+
+[action.add]
+description = "Confirms adding a new directory entry from a picker's inline drawer"
+other = "Add"
+
+[action.add_new_one]
+description = "Opens a directory picker's inline drawer to create a new entry"
+other = "Add a new one"
+
+[action.clear_narrowing]
+description = "Resets every criterion narrowing a list at once"
+other = "Clear narrowing"
+
+[action.previous]
+description = "Pagination: the link to the previous page of a list"
+other = "Previous"
+
+[action.next]
+description = "Pagination: the link to the next page of a list"
+other = "Next"
+
+[action.sign_in]
+description = "The sign-in-required error view's link to the login page"
+other = "Sign in"
+
+# --- confirm (T020 additions) ---------------------------------------------
+
+[confirm.delete_consequence]
+description = "The delete confirmation's statement of how many other records refer to the subject, including zero"
+one = "This is permanent and cannot be undone. {{.PluralCount}} other record refers to it."
+other = "This is permanent and cannot be undone. {{.PluralCount}} other records refer to it."
+
+# --- a11y ------------------------------------------------------------------
+
+[a11y.skip_to_content]
+description = "The skip link at the very top of every page"
+other = "Skip to content"
+
+[a11y.active_patient]
+description = "The patient switcher's accessible name (FR-014's combobox[name=\"Active patient\"])"
+other = "Active patient"
+
+[a11y.basis_for_inclusion]
+description = "The list naming why each row of a status view was selected"
+other = "Basis for inclusion"
+
+[a11y.narrowing_in_force]
+description = "The list of removable criteria currently narrowing a list"
+other = "Narrowing in force"
+
+[a11y.remove_criterion]
+description = "Removes one narrowing criterion, naming it"
+other = "Remove {{.Criterion}}"
+
+[a11y.confirm_delete]
+description = "The delete-confirmation section's accessible name"
+other = "Confirm delete"
+
+[a11y.pagination]
+description = "The pagination controls' accessible name"
+other = "Pagination"
+
+# --- field ------------------------------------------------------------------
+
+[field.directory.name]
+description = "The directory picker's inline drawer: the new entry's name"
+other = "Name"
+
+# --- shell ------------------------------------------------------------------
+
+[shell.noscript]
+description = "Shown when JavaScript is switched off"
+other = "MediKube needs JavaScript switched on to record and change anything. Reading what is already here works without it."
+
+[shell.viewing]
+description = "The patient-context header's lead-in before the patient's name"
+other = "Viewing"
+
+[shell.no_patient_selected]
+description = "The active-patient switcher when the account has no patient to offer"
+other = "No patient selected"
+
+[shell.stream_stale]
+description = "Shown when the live view has stopped updating on its own"
+other = "This view has stopped updating on its own. Reload to see the latest."
+
+# --- error.view.* (the three error pages' body copy) -----------------------
+
+[error.view.not_found_body]
+description = "The 404/privacy view's body: never names what was asked for"
+other = "There is nothing here to show. A link may be out of date, or what it pointed at may have been removed since it was written down."
+
+[error.view.sign_in_required_body]
+description = "The sign-in-required view's body"
+other = "This page belongs to an account. Sign in and it will be here."
+
+[error.view.server_error_body]
+description = "The 500 view's first line"
+other = "This instance failed while answering. Nothing you sent caused it and nothing you change will fix it, so trying again in a moment is worth doing."
+
+[error.view.server_error_hint]
+description = "The 500 view's second line, about the reference below it"
+other = "If you need to report it, quote the reference below. It identifies this one request in the operator's log and says nothing about you."
+
+[error.view.reference]
+description = "The label before an error view's request-id reference code"
+other = "Reference"

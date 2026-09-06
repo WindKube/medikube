@@ -116,11 +116,19 @@ other = "błąd wewnętrzny"
 
 [empty.nothing_recorded]
 description = "Shown under a kind's list when the patient has none of that kind yet"
-other = "Nic jeszcze nie zapisano"
+other = "Nie zapisano jeszcze: {{.Kind}}"
+
+[empty.nothing_recorded_body]
+description = "The nothing-recorded empty state's second line"
+other = "Nic tu jeszcze nie zapisano."
 
 [empty.nothing_matches]
 description = "Shown when a search or filter narrows a list to zero results"
 other = "Nic nie pasuje"
+
+[empty.nothing_matches_body]
+description = "The nothing-matches empty state's second line, naming what was searched for"
+other = "Żadne z: {{.Kind}} nie pasują do bieżącego zawężenia."
 
 # --- action ---------------------------------------------------------------
 
@@ -1910,3 +1918,117 @@ other = "Od {{.Date}}"
 [timeline.criteria_to]
 description = "The timeline's own removable narrowing chip naming the active to-date"
 other = "Do {{.Date}}"
+# --- action (T020 additions) ---------------------------------------------
+
+[action.reload]
+description = "Reloads the page from the stream-stale banner"
+other = "Odśwież"
+
+[action.add]
+description = "Confirms adding a new directory entry from a picker's inline drawer"
+other = "Dodaj"
+
+[action.add_new_one]
+description = "Opens a directory picker's inline drawer to create a new entry"
+other = "Dodaj nowy"
+
+[action.clear_narrowing]
+description = "Resets every criterion narrowing a list at once"
+other = "Wyczyść zawężenie"
+
+[action.previous]
+description = "Pagination: the link to the previous page of a list"
+other = "Poprzednia"
+
+[action.next]
+description = "Pagination: the link to the next page of a list"
+other = "Następna"
+
+[action.sign_in]
+description = "The sign-in-required error view's link to the login page"
+other = "Zaloguj się"
+
+# --- confirm (T020 additions) ---------------------------------------------
+
+[confirm.delete_consequence]
+description = "The delete confirmation's statement of how many other records refer to the subject, including zero"
+one = "Tego nie można cofnąć. Odnosi się do niego {{.PluralCount}} inny rekord."
+few = "Tego nie można cofnąć. Odnoszą się do niego {{.PluralCount}} inne rekordy."
+many = "Tego nie można cofnąć. Odnosi się do niego {{.PluralCount}} innych rekordów."
+other = "Tego nie można cofnąć. Odnosi się do niego {{.PluralCount}} innego rekordu."
+
+# --- a11y ------------------------------------------------------------------
+
+[a11y.skip_to_content]
+description = "The skip link at the very top of every page"
+other = "Przejdź do treści"
+
+[a11y.active_patient]
+description = "The patient switcher's accessible name (FR-014's combobox[name=\"Active patient\"])"
+other = "Aktywny pacjent"
+
+[a11y.basis_for_inclusion]
+description = "The list naming why each row of a status view was selected"
+other = "Podstawa uwzględnienia"
+
+[a11y.narrowing_in_force]
+description = "The list of removable criteria currently narrowing a list"
+other = "Aktywne zawężenie"
+
+[a11y.remove_criterion]
+description = "Removes one narrowing criterion, naming it"
+other = "Usuń: {{.Criterion}}"
+
+[a11y.confirm_delete]
+description = "The delete-confirmation section's accessible name"
+other = "Potwierdź usunięcie"
+
+[a11y.pagination]
+description = "The pagination controls' accessible name"
+other = "Paginacja"
+
+# --- field ------------------------------------------------------------------
+
+[field.directory.name]
+description = "The directory picker's inline drawer: the new entry's name"
+other = "Nazwa"
+
+# --- shell ------------------------------------------------------------------
+
+[shell.noscript]
+description = "Shown when JavaScript is switched off"
+other = "MediKube wymaga włączonego JavaScriptu, aby zapisywać i zmieniać dane. Przeglądanie tego, co już tu jest, działa bez niego."
+
+[shell.viewing]
+description = "The patient-context header's lead-in before the patient's name"
+other = "Wyświetlanie"
+
+[shell.no_patient_selected]
+description = "The active-patient switcher when the account has no patient to offer"
+other = "Nie wybrano pacjenta"
+
+[shell.stream_stale]
+description = "Shown when the live view has stopped updating on its own"
+other = "Ten widok przestał się aktualizować automatycznie. Odśwież, aby zobaczyć najnowsze dane."
+
+# --- error.view.* (the three error pages' body copy) -----------------------
+
+[error.view.not_found_body]
+description = "The 404/privacy view's body: never names what was asked for"
+other = "Nie ma tu nic do pokazania. Odnośnik mógł być nieaktualny albo to, na co wskazywał, zostało usunięte od czasu jego zapisania."
+
+[error.view.sign_in_required_body]
+description = "The sign-in-required view's body"
+other = "Ta strona należy do konta. Zaloguj się, a będzie tutaj."
+
+[error.view.server_error_body]
+description = "The 500 view's first line"
+other = "Ta instancja nie odpowiedziała poprawnie. Nic, co wysłano, tego nie spowodowało, i żadna zmiana tego nie naprawi, więc warto spróbować ponownie za chwilę."
+
+[error.view.server_error_hint]
+description = "The 500 view's second line, about the reference below it"
+other = "Jeśli chcesz to zgłosić, podaj poniższy numer referencyjny. Identyfikuje on to jedno żądanie w dzienniku operatora i nic o tobie nie mówi."
+
+[error.view.reference]
+description = "The label before an error view's request-id reference code"
+other = "Numer referencyjny"

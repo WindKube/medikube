@@ -1,6 +1,7 @@
 package page
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -69,7 +70,7 @@ func (p *tagPages) list(e *core.RequestEvent, actor access.Actor) error {
 	web.Localize(e)
 
 	return RenderPage(e, http.StatusOK, i18n.T(e.Request.Context(), tagsListTitleID),
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path)}, main)
 }
 
 func (p *tagPages) views(e *core.RequestEvent, actor access.Actor, service *tagsvc.Service) ([]viewtags.TagView, error) {
@@ -133,13 +134,10 @@ func (l tagLinks) of(id string) viewtags.Links {
 	return viewtags.Links{Record: strings.ReplaceAll(l.recordTmpl, "{"+api.PathID+"}", id)}
 }
 
-func (l tagLinks) nav(current string) []shell.NavLink {
+func (l tagLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: medicationListTitle, Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
-		// Nav labels are not yet resolved through i18n.T by shell/nav.templ
-		// (T020); left in English here until that seam lands (US1 cross-slice
-		// note in this task's report).
-		{Label: "Tags", Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
-		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
+		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
+		{Label: tagsListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
+		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

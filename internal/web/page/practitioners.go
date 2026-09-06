@@ -1,6 +1,7 @@
 package page
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	practitionersvc "medikube/internal/service/practitioner"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -93,7 +95,7 @@ func (p *practitionerPages) list(e *core.RequestEvent, actor access.Actor) error
 	}
 
 	return RenderPage(e, http.StatusOK, practitionerListTitle,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path)}, main)
 }
 
 func (p *practitionerPages) detail(e *core.RequestEvent, actor access.Actor) error {
@@ -135,7 +137,7 @@ func (p *practitionerPages) detail(e *core.RequestEvent, actor access.Actor) err
 	}
 
 	return RenderPage(e, http.StatusOK, view.Name,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path)}, main)
 }
 
 func (p *practitionerPages) facilityName(e *core.RequestEvent, actor access.Actor, facilityID string) string {
@@ -222,11 +224,11 @@ func (l practitionerLinks) cancelHref(view directory.PractitionerView) string {
 	return l.listPage
 }
 
-func (l practitionerLinks) nav(current string) []shell.NavLink {
+func (l practitionerLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: medicationListTitle, Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
+		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
 		{Label: practitionerListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: facilityListTitle, Href: l.facilitiesURL, Current: strings.HasPrefix(current, l.facilitiesURL)},
-		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
+		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

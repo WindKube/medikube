@@ -345,13 +345,10 @@ func newTimelineLinks() (timelineLinks, error) {
 	}, nil
 }
 
-// nav's timeline label is the one phrase this foundation phase routes
-// through the catalogue (i18n.T(ctx, "nav.timeline")); the other two labels
-// are unchanged consts until US1's extraction (T020) reaches them.
 func (l timelineLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: medicationListTitle, Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
+		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
 		{Label: i18n.T(ctx, "nav.timeline"), Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
-		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
+		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

@@ -1,6 +1,7 @@
 package page
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"medikube/internal/domain"
 	"medikube/internal/domain/access"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	facilitysvc "medikube/internal/service/facility"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -91,7 +93,7 @@ func (p *facilityPages) list(e *core.RequestEvent, actor access.Actor) error {
 	}
 
 	return RenderPage(e, http.StatusOK, facilityListTitle,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path)}, main)
 }
 
 func (p *facilityPages) detail(e *core.RequestEvent, actor access.Actor) error {
@@ -133,7 +135,7 @@ func (p *facilityPages) detail(e *core.RequestEvent, actor access.Actor) error {
 	}
 
 	return RenderPage(e, http.StatusOK, view.Name,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path)}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path)}, main)
 }
 
 type facilityLinks struct {
@@ -202,11 +204,11 @@ func (l facilityLinks) cancelHref(view directory.FacilityView) string {
 	return l.listPage
 }
 
-func (l facilityLinks) nav(current string) []shell.NavLink {
+func (l facilityLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: medicationListTitle, Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
+		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
 		{Label: facilityListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
 		{Label: practitionerListTitle, Href: l.practitionersURL, Current: strings.HasPrefix(current, l.practitionersURL)},
-		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
+		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

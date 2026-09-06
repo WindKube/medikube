@@ -1,6 +1,7 @@
 package page
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -13,6 +14,7 @@ import (
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/kind"
 	domainsearch "medikube/internal/domain/search"
+	"medikube/internal/i18n"
 	"medikube/internal/httproute"
 	"medikube/internal/i18n"
 	searchsvc "medikube/internal/service/search"
@@ -296,7 +298,7 @@ func (p *searchPages) render(e *core.RequestEvent, actor access.Actor, props vie
 	web.Localize(e)
 
 	return RenderPage(e, http.StatusOK, i18n.T(e.Request.Context(), searchPageTitleID),
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path), Switcher: switcher}, views.Results(props))
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path), Switcher: switcher}, views.Results(props))
 }
 
 type searchLinks struct {
@@ -322,9 +324,9 @@ func newSearchLinks() (searchLinks, error) {
 	}, nil
 }
 
-func (l searchLinks) nav(current string) []shell.NavLink {
+func (l searchLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: medicationListTitle, Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
-		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
+		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
+		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

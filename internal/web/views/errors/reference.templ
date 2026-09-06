@@ -1,5 +1,7 @@
 package errors
 
+import "medikube/internal/i18n"
+
 // reference is the one correlation handle an error page carries, shared by all
 // three views so that a person quoting a reference quotes the same thing
 // whichever failure they met.
@@ -9,7 +11,7 @@ package errors
 templ reference(requestID string) {
 	if requestID != "" {
 		<p id={ ReferenceID } class="text-xs text-slate-500 dark:text-slate-400">
-			Reference
+			{ i18n.T(ctx, "error.view.reference") }
 			<code class="font-mono">{ requestID }</code>
 		</p>
 	}

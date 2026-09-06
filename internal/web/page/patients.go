@@ -1,6 +1,7 @@
 package page
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"medikube/internal/domain/identity"
 	domainperson "medikube/internal/domain/person"
 	"medikube/internal/httproute"
+	"medikube/internal/i18n"
 	"medikube/internal/service/patient"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -215,7 +217,7 @@ func (p *patientPages) nav(e *core.RequestEvent, actor access.Actor) NavState {
 		switcher = shell.PatientSwitcherProps{}
 	}
 
-	return NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path), Switcher: switcher}
+	return NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path), Switcher: switcher}
 }
 
 func (p *patientPages) view(found domainperson.Patient, system identity.UnitSystem) patients.PatientView {
@@ -285,10 +287,10 @@ func (l patientLinks) cancelHref(view patients.PatientView) string {
 // nav mirrors medicationLinks.nav's own reasoning: FR-050 requires every
 // signed-in page, this surface included, to offer a route back to the
 // medication list and to settings.
-func (l patientLinks) nav(current string) []shell.NavLink {
+func (l patientLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
 		{Label: patientListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
-		{Label: medicationListTitle, Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
-		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
+		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsPage, Current: strings.HasPrefix(current, l.medicationsPage)},
+		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }

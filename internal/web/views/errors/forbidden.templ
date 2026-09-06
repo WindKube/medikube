@@ -1,5 +1,7 @@
 package errors
 
+import "medikube/internal/i18n"
+
 // SignInRequired is contracts/pages.md's E2: what a page that needs a session
 // answers when it is opened without one.
 //
@@ -11,12 +13,12 @@ templ SignInRequired(props SignInRequiredProps) {
 	<section aria-label={ SignInRequiredLandmark } class="mx-auto flex w-full max-w-prose flex-col items-start gap-4">
 		<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ SignInRequiredLandmark }</h1>
 		<p class="text-sm text-slate-600 dark:text-slate-400">
-			This page belongs to an account. Sign in and it will be here.
+			{ i18n.T(ctx, "error.view.sign_in_required_body") }
 		</p>
 		<a
 			href={ templ.SafeURL(props.SignInHref) }
 			class="font-medium underline underline-offset-2 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:hover:text-slate-100"
-		>Sign in</a>
+		>{ i18n.T(ctx, "action.sign_in") }</a>
 		@reference(props.RequestID)
 	</section>
 }

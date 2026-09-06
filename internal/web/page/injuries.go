@@ -358,7 +358,7 @@ func (p *injuryPages) render(e *core.RequestEvent, actor access.Actor, title str
 	}
 
 	return RenderPage(e, http.StatusOK, title,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.URL.Path), Switcher: switcher}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path), Switcher: switcher}, main)
 }
 
 // injuryLinks holds the addresses the pages and the components need,
@@ -451,10 +451,10 @@ func (v InjuryViews) cancelHref(injury views.InjuryView) string {
 // practitionerLinks.nav and facilityLinks.nav's precedent for a non-medication
 // kind rather than medicationLinks.nav, which is the medication list's own
 // entry and has nothing else to link back to.
-func (l injuryLinks) nav(current string) []shell.NavLink {
+func (l injuryLinks) nav(ctx context.Context, current string) []shell.NavLink {
 	return []shell.NavLink{
-		{Label: medicationListTitle, Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
+		{Label: i18n.T(ctx, "nav.medications"), Href: l.medicationsURL, Current: strings.HasPrefix(current, l.medicationsURL)},
 		{Label: injuryListTitle, Href: l.listPage, Current: strings.HasPrefix(current, l.listPage)},
-		{Label: settingsTitle, Href: l.settingsPage, Current: current == l.settingsPage},
+		{Label: i18n.T(ctx, "nav.settings"), Href: l.settingsPage, Current: current == l.settingsPage},
 	}
 }
