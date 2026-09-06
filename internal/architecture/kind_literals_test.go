@@ -156,6 +156,11 @@ var kindLiteralExempt = map[string]string{
 	"internal/web/views/records/links_templ.go": "a false positive: templ embeds its own source filename as a " +
 		"literal for its error reporting, and the medication-links editor's empty-state prose says \"medications\" " +
 		"because that is what the feature is called, the same shape as coursemedications_templ.go above",
+	"internal/i18n/catalogue_test.go": "false positive: the fixture TOML fixtures and test assertions spell " +
+		"kind display names (e.g. \"allergy\"/\"allergies\") as catalogue phrase content, phase 007's own subject " +
+		"matter, never a route or a collection",
+	"internal/i18n/i18n_test.go": "false positive, the same reason: N()'s Polish plural-form assertions spell " +
+		"the kind's display name as translated catalogue text",
 }
 
 func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {
