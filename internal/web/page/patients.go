@@ -217,7 +217,7 @@ func (p *patientPages) nav(e *core.RequestEvent, actor access.Actor) NavState {
 		switcher = shell.PatientSwitcherProps{}
 	}
 
-	return NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path), Switcher: switcher}
+	return NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path), Switcher: switcher}
 }
 
 func (p *patientPages) view(found domainperson.Patient, system identity.UnitSystem) patients.PatientView {

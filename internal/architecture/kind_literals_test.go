@@ -162,6 +162,30 @@ var kindLiteralExempt = map[string]string{
 		"matter, never a route or a collection",
 	"internal/i18n/i18n_test.go": "false positive, the same reason: N()'s Polish plural-form assertions spell " +
 		"the kind's display name as translated catalogue text",
+
+	// Phase 007 (T020) routes every signed-in page's nav() through the
+	// catalogue id "nav.medications" for FR-050's fixed medications/settings
+	// pair, and that id necessarily contains medication's own segment/
+	// collection spelling as a substring — the same shape as the equipment/
+	// insurance own-name collisions above, but for a catalogue id rather than
+	// prose.
+	"internal/web/page/allergies.go":         "false positive: the nav() fixed pair uses catalogue id \"nav.medications\"",
+	"internal/web/page/conditions.go":        "false positive, the same nav() shape",
+	"internal/web/page/emergencycontacts.go": "false positive, the same nav() shape",
+	"internal/web/page/encounters.go":        "false positive, the same nav() shape",
+	"internal/web/page/facilities.go":        "false positive, the same nav() shape",
+	"internal/web/page/familymember.go":      "false positive, the same nav() shape",
+	"internal/web/page/immunizations.go":     "false positive, the same nav() shape",
+	"internal/web/page/injuries.go":          "false positive, the same nav() shape",
+	"internal/web/page/medications.go":       "false positive, the same nav() shape",
+	"internal/web/page/patients.go":          "false positive, the same nav() shape",
+	"internal/web/page/practitioners.go":     "false positive, the same nav() shape",
+	"internal/web/page/procedures.go":        "false positive, the same nav() shape",
+	"internal/web/page/search.go":            "false positive, the same nav() shape",
+	"internal/web/page/symptoms.go":          "false positive, the same nav() shape",
+	"internal/web/page/tags.go":              "false positive, the same nav() shape",
+	"internal/web/page/timeline.go":          "false positive, the same nav() shape",
+	"internal/web/page/vitals.go":            "false positive, the same nav() shape",
 }
 
 // catalogueID is a phrase id (contracts/catalogue.md): dotted, lowercase, and

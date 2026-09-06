@@ -93,7 +93,7 @@ func (p *facilityPages) list(e *core.RequestEvent, actor access.Actor) error {
 	}
 
 	return RenderPage(e, http.StatusOK, facilityListTitle,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path)}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path)}, main)
 }
 
 func (p *facilityPages) detail(e *core.RequestEvent, actor access.Actor) error {
@@ -135,7 +135,7 @@ func (p *facilityPages) detail(e *core.RequestEvent, actor access.Actor) error {
 	}
 
 	return RenderPage(e, http.StatusOK, view.Name,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path)}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path)}, main)
 }
 
 type facilityLinks struct {

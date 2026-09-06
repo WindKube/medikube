@@ -330,7 +330,7 @@ func (p *familyMemberPages) render(e *core.RequestEvent, actor access.Actor, tit
 	}
 
 	return RenderPage(e, http.StatusOK, title,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path), Switcher: switcher}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path), Switcher: switcher}, main)
 }
 
 type familyMemberLinks struct {

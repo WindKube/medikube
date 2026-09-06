@@ -14,7 +14,6 @@ import (
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/kind"
 	domainsearch "medikube/internal/domain/search"
-	"medikube/internal/i18n"
 	"medikube/internal/httproute"
 	"medikube/internal/i18n"
 	searchsvc "medikube/internal/service/search"

@@ -326,7 +326,7 @@ func (p *immunizationPages) render(e *core.RequestEvent, actor access.Actor, tit
 	}
 
 	return RenderPage(e, http.StatusOK, title,
-		NavState{SignedIn: true, Nav: p.links.nav(e.Request.Context(), e.Request.URL.Path), Switcher: switcher}, main)
+		NavState{SignedIn: true, Nav: p.links.nav(localizeCtx(e), e.Request.URL.Path), Switcher: switcher}, main)
 }
 
 // immunizationLinks holds the five addresses the pages and the components
