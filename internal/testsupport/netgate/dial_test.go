@@ -15,6 +15,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"medikube/internal/domain/kind"
+	auditservice "medikube/internal/service/audit"
+	auditstore "medikube/internal/store/audit"
 	"medikube/internal/testsupport"
 	"medikube/internal/web/api"
 	"medikube/internal/web/apitest"
@@ -60,6 +63,9 @@ func TestNoOutboundConnectionEscapesWithNoDestinationConfigured(t *testing.T) {
 
 	drivePatients(t, c)
 	driveDirectory(t, c)
+	driveClinicalKinds(t, c)
+	driveTagsAndSearch(t, c)
+	driveAuditRetentionPurge(t, instance)
 
 	assert.Empty(t, trap.Dials(), "the exercise dialed out with no destination configured: %v", trap.Dials())
 }
@@ -222,3 +228,150 @@ func driveDirectory(t *testing.T, c *caller) {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+// clinicalKindFixtures is every registered kind's minimal create body, the
+// same shape internal/store/patient_cascade_test.go's cascadeFixtures builds
+// from — gathered here too because this phase's whole endpoint exercise (not
+// only phase 001/002's patient and directory surface) has to run under the
+// trap (T210a, FR-088).
+func clinicalKindFixtures(patientID string) map[string]any {
+	occurredOn := "2026-01-10"
+	weightKg := 70.0
+
+	return map[string]any{
+		kind.Medication.Segment():   api.MedicationCreate{Patient: patientID, Name: "Netgate Medication"},
+		kind.Allergy.Segment():      api.AllergyCreate{Patient: patientID, Allergen: "Netgate Allergen", Severity: "mild"},
+		kind.Condition.Segment():    api.ConditionCreate{Patient: patientID, Diagnosis: "Netgate Condition", Status: "active"},
+		kind.Encounter.Segment():    api.EncounterCreate{Patient: patientID, Reason: "Netgate Encounter", OccurredOn: &occurredOn},
+		kind.Procedure.Segment():    api.ProcedureCreate{Patient: patientID, Name: "Netgate Procedure", OccurredOn: &occurredOn, Status: "completed"},
+		kind.Treatment.Segment():    api.TreatmentCreate{Patient: patientID, Name: "Netgate Treatment", StartedOn: &occurredOn},
+		kind.Symptom.Segment():      api.SymptomCreate{Patient: patientID, Name: "Netgate Symptom", Severity: "moderate", OccurredAt: "2026-01-01T09:00:00Z"},
+		kind.Vitals.Segment():       api.VitalsCreate{Patient: patientID, RecordedAt: "2026-01-01T09:00:00Z", WeightKg: &weightKg},
+		kind.Immunization.Segment(): api.ImmunizationCreate{Patient: patientID, VaccineName: "Netgate Vaccine", AdministeredOn: &occurredOn},
+		kind.Injury.Segment():       api.InjuryCreate{Patient: patientID, Name: "Netgate Injury", BodyPart: "ankle"},
+		kind.Insurance.Segment(): api.InsuranceCreate{
+			Patient: patientID, Type: "medical", Company: "Netgate Health",
+			MemberName: "Netgate Member", MemberID: "MEM-001", EffectiveOn: "2024-01-01",
+		},
+		kind.Equipment.Segment(): api.EquipmentCreate{Patient: patientID, Name: "Netgate Equipment", Type: "cpap"},
+		kind.EmergencyContact.Segment(): api.EmergencyContactCreate{
+			Patient: patientID, Name: "Netgate Contact", Relationship: "spouse", Phone: "+1-555-0100",
+		},
+		kind.FamilyMember.Segment(): api.FamilyMemberCreate{Patient: patientID, Name: "Netgate Relative", Relationship: "aunt"},
+	}
+}
+
+// driveClinicalKinds walks the six generic operations for every one of the
+// fourteen registered kinds, plus US6's own course-medication join, all
+// against one freshly created patient — the endpoint surface phase 003 adds
+// on top of phase 001/002's patients and directory (T210a, FR-088).
+func driveClinicalKinds(t *testing.T, c *caller) {
+	t.Helper()
+
+	patient := c.do(http.MethodPost, "/api/v1/patients", jsonBody(t, api.PatientCreate{
+		FirstName: "Netgate", LastName: "Clinical", BirthDate: "2000-01-01",
+	}), "application/json", nil)
+	require.Equal(t, http.StatusCreated, patient.Code, patient.Body.String())
+	patientID := idOf(t, patient.Body.Bytes())
+
+	fixtures := clinicalKindFixtures(patientID)
+	require.Len(t, fixtures, len(kind.Kinds()), "every registered kind must have a fixture here")
+
+	ids := make(map[string]string, len(fixtures))
+
+	for _, k := range kind.Kinds() {
+		segment := k.Segment()
+		url := "/api/v1/records/" + segment
+
+		created := c.do(http.MethodPost, url, jsonBody(t, fixtures[segment]), "application/json", nil)
+		require.Equalf(t, http.StatusCreated, created.Code, "%s: %s", segment, created.Body.String())
+
+		ids[segment] = idOf(t, created.Body.Bytes())
+		address := url + "/" + ids[segment]
+
+		got := c.do(http.MethodGet, address, nil, "", nil)
+		require.Equalf(t, http.StatusOK, got.Code, "%s: %s", segment, got.Body.String())
+
+		assert.Equalf(t, http.StatusOK, c.do(http.MethodGet, url+"?patient="+patientID, nil, "", nil).Code, segment)
+	}
+
+	driveCourseMedication(t, c, ids[kind.Treatment.Segment()], ids[kind.Medication.Segment()])
+
+	for segment, id := range ids {
+		address := "/api/v1/records/" + segment + "/" + id
+
+		current := c.do(http.MethodGet, address, nil, "", nil)
+		require.Equalf(t, http.StatusOK, current.Code, "%s: %s", segment, current.Body.String())
+
+		deleted := c.do(http.MethodDelete, address, nil, "", map[string]string{"If-Match": current.Header().Get("ETag")})
+		assert.Equalf(t, http.StatusNoContent, deleted.Code, "%s: %s", segment, deleted.Body.String())
+	}
+}
+
+// driveCourseMedication walks contracts/treatment-medications.md's own three
+// routes: attach, read from both ends, detach.
+func driveCourseMedication(t *testing.T, c *caller, treatmentID, medicationID string) {
+	t.Helper()
+
+	treatmentURL := "/api/v1/records/" + kind.Treatment.Segment() + "/" + treatmentID
+	current := c.do(http.MethodGet, treatmentURL, nil, "", nil)
+	require.Equal(t, http.StatusOK, current.Code, current.Body.String())
+
+	joinURL := treatmentURL + "/" + kind.Medication.Segment() + "/" + medicationID
+
+	attached := c.do(http.MethodPut, joinURL, jsonBody(t, api.CourseMedicationPut{Dosage: ptr("1 tablet")}),
+		"application/json", map[string]string{"If-Match": current.Header().Get("ETag")})
+	require.Equal(t, http.StatusCreated, attached.Code, attached.Body.String())
+
+	assert.Equal(t, http.StatusOK,
+		c.do(http.MethodGet, treatmentURL+"/"+kind.Medication.Segment(), nil, "", nil).Code)
+
+	detached := c.do(http.MethodDelete, joinURL, nil, "", map[string]string{"If-Match": current.Header().Get("ETag")})
+	assert.Equal(t, http.StatusNoContent, detached.Code, detached.Body.String())
+}
+
+// driveTagsAndSearch walks contracts/tags.md and contracts/search.md's own
+// operations: this phase's other two additions to the endpoint surface,
+// neither of which is one of the fourteen kinds.
+func driveTagsAndSearch(t *testing.T, c *caller) {
+	t.Helper()
+
+	created := c.do(http.MethodPost, "/api/v1/tags", jsonBody(t, map[string]string{"name": "netgate-tag"}),
+		"application/json", nil)
+	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
+
+	assert.Equal(t, http.StatusOK, c.do(http.MethodGet, "/api/v1/tags", nil, "", nil).Code)
+
+	patient := c.do(http.MethodPost, "/api/v1/patients", jsonBody(t, api.PatientCreate{
+		FirstName: "Netgate", LastName: "Search", BirthDate: "2000-01-01",
+	}), "application/json", nil)
+	require.Equal(t, http.StatusCreated, patient.Code, patient.Body.String())
+	patientID := idOf(t, patient.Body.Bytes())
+
+	assert.Equal(t, http.StatusOK,
+		c.do(http.MethodGet, "/api/v1/search?patient="+patientID+"&q=netgate", nil, "", nil).Code)
+}
+
+// driveAuditRetentionPurge runs FR-037's nightly purge directly, under the
+// same trap, rather than waiting for the scheduler: the purge is this
+// phase's one background job with no HTTP request behind it, and it must
+// dial out no more than the request-serving path does (T210a).
+//
+// The scale suite (internal/store/{search,tag,timeline}'s own
+// *_scale_test.go) is not run here: each drives a repository directly
+// against a tests.NewTestApp with no HTTP client, no Sentry transport and no
+// OTel exporter wired, so there is nothing in it capable of a network dial
+// in the first place — wrapping it would prove nothing this test does not
+// already prove more directly.
+func driveAuditRetentionPurge(t *testing.T, instance *apitest.Instance) {
+	t.Helper()
+
+	trail, err := auditstore.New(instance.App)
+	require.NoError(t, err)
+
+	retention, err := auditservice.NewRetention(trail, apitest.AuditRetentionDays, auditservice.SystemClock{})
+	require.NoError(t, err)
+
+	_, err = retention.Purge(t.Context())
+	require.NoError(t, err)
+}
