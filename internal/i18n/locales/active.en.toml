@@ -1193,7 +1193,7 @@ other = "Never started"
 description = "The procedure list page's own <title> and heading"
 other = "Procedures"
 
-[page.symptomListPage.title]
+[page.symptoms.title]
 description = "The symptom list page's own <title> and heading"
 other = "Symptoms"
 

@@ -10,7 +10,7 @@ import (
 templ SymptomList(props SymptomListProps) {
 	<section
 		id={ ids.RecordList(kind.Symptom) }
-		aria-label={ i18n.T(ctx, "page.symptomListPage.title") }
+		aria-label={ i18n.T(ctx, "page.symptoms.title") }
 		class="flex flex-col"
 	>
 		<div class="flex flex-wrap items-center justify-between gap-3">
@@ -18,7 +18,7 @@ templ SymptomList(props SymptomListProps) {
 				id={ ids.RecordListHeading(kind.Symptom) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ i18n.T(ctx, "page.symptomListPage.title") }</h1>
+			>{ i18n.T(ctx, "page.symptoms.title") }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }

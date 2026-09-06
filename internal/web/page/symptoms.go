@@ -27,7 +27,7 @@ const (
 	OpSymptomDetailPage = "symptomDetailPage"
 )
 
-const symptomListTitleID = "page.symptomListPage.title"
+const symptomListTitleID = "page.symptoms.title"
 
 // SymptomHandlers is the symptom pages' contribution to the route table.
 func SymptomHandlers(resolve api.Resolve, patients api.PatientResolve, tags api.TagResolve) (httproute.Handlers, error) {
