@@ -1,0 +1,29 @@
+package records
+
+const linkedRecordsEmpty = "Nothing linked yet."
+
+// LinkedRecords is FR-059's shared rendering for a set of related records:
+// every item names its kind, carries an identifying summary and opens as a
+// real link — never a bare id, which is what a person could not act on.
+templ LinkedRecords(id, title string, items []LinkedRecordItem) {
+	<section id={ id } aria-label={ title } class="flex flex-col gap-2">
+		<h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{ title }</h2>
+		if len(items) == 0 {
+			<p class="text-sm text-slate-500 dark:text-slate-400">{ linkedRecordsEmpty }</p>
+		} else {
+			<ul class="flex flex-col gap-1">
+				for _, item := range items {
+					<li class="flex items-center gap-2">
+						<span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+							{ item.Kind }
+						</span>
+						<a
+							href={ templ.SafeURL(item.Href) }
+							class="text-sm text-teal-800 underline underline-offset-2 hover:text-teal-900 dark:text-teal-400 dark:hover:text-teal-300"
+						>{ item.Summary }</a>
+					</li>
+				}
+			</ul>
+		}
+	</section>
+}

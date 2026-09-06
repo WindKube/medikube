@@ -473,7 +473,7 @@ func handlerTable(
 		return nil, err
 	}
 
-	treatmentPageOps, err := page.TreatmentHandlers(resolve, patientResolve)
+	treatmentPageOps, err := page.TreatmentHandlers(resolve, patientResolve, courseMedicationResolve(app))
 	if err != nil {
 		return nil, err
 	}
@@ -1251,7 +1251,11 @@ func registerDirectory(app core.App) (*practitionersvc.Service, *facilitysvc.Ser
 // no boot-gate ordering problem to solve, so it just builds the service
 // eagerly with its own authorizer and repositories, the same way
 // registerDirectory does for practitioners and facilities.
-func courseMedicationHandlers(app core.App, resolve api.Resolve) (httproute.Handlers, error) {
+// newCourseMedicationService builds the whole stack once, eagerly (this
+// harness has no boot-gate ordering concern the way cmd/medikube's own
+// sync.OnceValues does) — shared by the API operations and the treatment
+// page, which both need the same service rather than two copies of it.
+func newCourseMedicationService(app core.App) (*coursemedicationsvc.Service, error) {
 	secret, err := store.CursorSecret(app, "")
 	if err != nil {
 		return nil, err
@@ -1302,7 +1306,11 @@ func courseMedicationHandlers(app core.App, resolve api.Resolve) (httproute.Hand
 		return nil, err
 	}
 
-	service, err := coursemedicationsvc.New(repository, treatments, medications, authorizer)
+	return coursemedicationsvc.New(repository, treatments, medications, authorizer)
+}
+
+func courseMedicationHandlers(app core.App, resolve api.Resolve) (httproute.Handlers, error) {
+	service, err := newCourseMedicationService(app)
 	if err != nil {
 		return nil, err
 	}
@@ -1311,6 +1319,10 @@ func courseMedicationHandlers(app core.App, resolve api.Resolve) (httproute.Hand
 		Resolve: func() (*coursemedicationsvc.Service, error) { return service, nil },
 		Records: resolve,
 	})
+}
+
+func courseMedicationResolve(app core.App) api.CourseMedicationResolve {
+	return func() (*coursemedicationsvc.Service, error) { return newCourseMedicationService(app) }
 }
 
 func directoryHandlers(practitionerService *practitionersvc.Service, facilityService *facilitysvc.Service) (httproute.Handlers, error) {

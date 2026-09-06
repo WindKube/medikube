@@ -397,7 +397,7 @@ func wired(
 		return nil, err
 	}
 
-	treatmentPages, err := page.TreatmentHandlers(resolve, patients)
+	treatmentPages, err := page.TreatmentHandlers(resolve, patients, courseMedicationFamily(app))
 	if err != nil {
 		return nil, err
 	}

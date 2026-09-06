@@ -1,0 +1,37 @@
+package records
+
+const courseMedicationsEmpty = "No medications attached to this course yet."
+
+// CourseMedications is FR-060/FR-061's rendering: every medication attached
+// to a treatment, with its effective dosage/frequency/etc and, for each,
+// whose value it actually is — the course's own or the medication's default.
+templ CourseMedications(id, title string, rows []CourseMedicationRow) {
+	<section id={ id } aria-label={ title } class="flex flex-col gap-3">
+		<h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{ title }</h2>
+		if len(rows) == 0 {
+			<p class="text-sm text-slate-500 dark:text-slate-400">{ courseMedicationsEmpty }</p>
+		} else {
+			<ul class="flex flex-col gap-4">
+				for _, row := range rows {
+					<li class="rounded-md border border-slate-200 p-3 dark:border-slate-700">
+						<a
+							href={ templ.SafeURL(row.MedicationHref) }
+							class="text-sm font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900 dark:text-teal-400 dark:hover:text-teal-300"
+						>{ row.MedicationName }</a>
+						<dl class="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-[minmax(0,8rem)_minmax(0,1fr)]">
+							for _, field := range row.Fields() {
+								<dt class="text-xs font-medium text-slate-500 dark:text-slate-400">{ field.Label }</dt>
+								<dd class="text-sm text-slate-900 dark:text-slate-100">
+									{ field.Effective.Value }
+									<span class="ml-1 text-xs text-slate-500 dark:text-slate-400">
+										({ courseMedicationSourceLabel(field.Effective.Source) })
+									</span>
+								</dd>
+							}
+						</dl>
+					</li>
+				}
+			</ul>
+		}
+	</section>
+}

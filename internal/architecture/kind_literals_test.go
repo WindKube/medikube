@@ -144,6 +144,15 @@ var kindLiteralExempt = map[string]string{
 	"internal/web/api/coursemedications_test.go": "false positive: the test's own URL helpers build " +
 		"contracts/treatment-medications.md's literal path, `/{id}/medications[/{medicationId}]`, the same way " +
 		"internal/httproute/routes.go's courseMedicationRoutes builds it",
+	"internal/web/page/treatments.go": "false positive: the course-medications section's own title, " +
+		"\"Course medications\", says what the feature is in prose, the same equipment/insurance list-title shape " +
+		"internal/web/page/equipment.go and internal/web/page/insurance.go are already exempted for",
+	"internal/web/views/records/coursemedications_templ.go": "a false positive: templ embeds its own source " +
+		"filename as a literal for its error reporting, and the generated markup's empty-state prose and section " +
+		"title both say \"medications\" because that is what the feature is called, the same shape as the vitals " +
+		"and equipment/insurance _templ.go files above",
+	"internal/web/views/records/coursemedications_templ_test.go": "false positive: the render test's own id and " +
+		"title fixtures (\"course-medications\", \"Course medications\") mirror the production section they test",
 }
 
 func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {
