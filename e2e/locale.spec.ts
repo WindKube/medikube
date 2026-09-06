@@ -139,8 +139,8 @@ test.describe('a Polish account touring the application', () => {
       'SuffixSeparator',
     ) + goString('internal/web/views/shell/props.go', 'ProductName'));
 
-    await assertPolishPage(page, '/tags', polishTitle('page.tagsPage.title'));
-    await assertPolishPage(page, '/search', polishTitle('page.searchPage.title'));
+    await assertPolishPage(page, '/tags', polishTitle('page.tags.title'));
+    await assertPolishPage(page, '/search', polishTitle('page.search.title'));
     await assertPolishPage(page, `/timeline?patient=${patientID}`, polishTitle('nav.timeline'));
   });
 });

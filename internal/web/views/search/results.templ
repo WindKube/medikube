@@ -9,10 +9,10 @@ import "medikube/internal/i18n"
 // no accessible name of its own.
 templ Results(props Props) {
 	<search id="search-page" class="flex flex-col gap-6">
-		<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ i18n.T(ctx, "page.searchPage.title") }</h1>
+		<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">{ i18n.T(ctx, "page.search.title") }</h1>
 		<form method="get" action={ templ.URL(props.FormAction) } class="flex flex-wrap items-center gap-2">
 			<input type="hidden" name="patient" value={ props.PatientID }/>
-			<label for="search-q" class="sr-only">{ i18n.T(ctx, "search.term") }</label>
+			<label for="search-q" class="sr-only">{ i18n.T(ctx, "field.search.term") }</label>
 			<input
 				id="search-q"
 				type="search"
@@ -24,7 +24,7 @@ templ Results(props Props) {
 			<button
 				type="submit"
 				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800"
-			>{ i18n.T(ctx, "page.searchPage.title") }</button>
+			>{ i18n.T(ctx, "page.search.title") }</button>
 		</form>
 		if len(props.Chips) > 0 {
 			<ul aria-label={ i18n.T(ctx, "search.narrowing") } class="flex flex-wrap gap-2">

@@ -10,13 +10,13 @@ import (
 )
 
 templ ProcedureList(props ProcedureListProps) {
-	<section id={ ids.RecordList(kind.Procedure) } aria-label={ i18n.T(ctx, "page.procedureListPage.title") } class="flex flex-col">
+	<section id={ ids.RecordList(kind.Procedure) } aria-label={ i18n.T(ctx, "page.procedures.title") } class="flex flex-col">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<h1
 				id={ ids.RecordListHeading(kind.Procedure) }
 				tabindex="-1"
 				class="text-xl font-semibold text-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
-			>{ i18n.T(ctx, "page.procedureListPage.title") }</h1>
+			>{ i18n.T(ctx, "page.procedures.title") }</h1>
 			if props.CreateHref != "" {
 				<a
 					href={ props.CreateHref }

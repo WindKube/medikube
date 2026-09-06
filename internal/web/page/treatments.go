@@ -27,7 +27,7 @@ const (
 	OpTreatmentDetailPage = "treatmentDetailPage"
 )
 
-const treatmentListTitleID = "page.treatmentListPage.title"
+const treatmentListTitleID = "page.treatments.title"
 
 // TreatmentHandlers is the treatment pages' contribution to the route table,
 // mirroring medications.go's Handlers end to end (T078).
