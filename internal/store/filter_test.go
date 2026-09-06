@@ -616,6 +616,9 @@ var filterDSLExempt = map[string]string{
 		"stored locale or an Accept-Language value). It is not search.Provider.Parse and reads no filter DSL",
 	"internal/web/page/shell_test.go": "the assertions read the rendered document's own <html lang=\"pl\"> " +
 		"attribute (T015), which the literal heuristic cannot tell from a filter comparison. No filter is built here",
+	"internal/web/page/locale_render_test.go": "the same as shell_test.go: the assertions read the rendered " +
+		"document's own <html lang=\"pl\"> and <html lang=\"en\"> attributes (T030), which the literal heuristic " +
+		"cannot tell from a filter comparison. No filter is built here",
 }
 
 // PocketBase's own entry points into its filter DSL. A call to one of these is
