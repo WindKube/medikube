@@ -107,11 +107,7 @@ templ Row(t TagView) {
 	>
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div class="flex items-center gap-2">
-				<span
-					aria-hidden="true"
-					style={ "background-color:" + t.Color }
-					class="inline-block h-3 w-3 rounded-full"
-				></span>
+				<svg aria-hidden="true" viewBox="0 0 10 10" class="h-3 w-3"><circle cx="5" cy="5" r="5" fill={ t.Color }></circle></svg>
 				<span class="font-medium text-slate-900 dark:text-slate-100">{ t.Name }</span>
 				<span class="text-sm text-slate-500 dark:text-slate-400">{ strconv.Itoa(t.UsageCount) + " record(s)" }</span>
 			</div>

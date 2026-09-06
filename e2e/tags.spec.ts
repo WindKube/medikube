@@ -4,6 +4,7 @@
 // already runs contracts/pages.md's seven generic assertions against /tags
 // (it is driven off the application's own route table); this file is the
 // two things only a browser proves about the tag manager itself.
+import { fixtures } from "./fixtures";
 import { open } from "./gate";
 import { expect, test } from "./auth";
 
@@ -16,7 +17,7 @@ test.describe("the tag manager", () => {
   }) => {
     const manager = await open(page, {
       path: "/tags",
-      title: "Tags",
+      title: fixtures.title("Tags"),
       landmark: { role: "region", name: "Tags" },
     });
 
@@ -59,7 +60,7 @@ test.describe("the tag manager", () => {
   }) => {
     const manager = await open(page, {
       path: "/tags",
-      title: "Tags",
+      title: fixtures.title("Tags"),
       landmark: { role: "region", name: "Tags" },
     });
 
