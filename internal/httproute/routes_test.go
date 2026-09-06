@@ -149,7 +149,7 @@ func TestExactlyEightOperationsArePublic(t *testing.T) {
 // contracts/pages.md, "The pages". The landmark strings are what a Playwright
 // getByRole selector contains, so changing one is a breaking change to the gate
 // and has to break this test first.
-func TestTheTableCarriesTheFortyOnePages(t *testing.T) {
+func TestTheTableCarriesTheFortyTwoPages(t *testing.T) {
 	t.Parallel()
 
 	segment := kind.Medication.Segment()
