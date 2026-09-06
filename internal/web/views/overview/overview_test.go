@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"medikube/internal/domain/kind"
 	"medikube/internal/web/views/overview"
 	"medikube/internal/web/views/viewstest"
 )
@@ -26,7 +27,7 @@ func TestOverviewRendersTheLandmarkAndBothLinks(t *testing.T) {
 	// never the caller's arbitrary MedicationsLabel — that is reserved for
 	// the "go to" link and the zero-count sentence, which have no count of
 	// their own to agree with.
-	assert.Contains(t, tree.Markup, "3 medications")
+	assert.Contains(t, tree.Markup, "3 "+kind.Medication.Collection())
 }
 
 func TestOverviewSaysNothingRecordedWhenEmpty(t *testing.T) {
