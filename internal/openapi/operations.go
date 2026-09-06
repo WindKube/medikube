@@ -732,6 +732,32 @@ func operationDocs() map[string]operationDoc {
 			notes:       "PocketBase's own relation cleanup removes the tag from every referencing record; no record is destroyed (FR-066, US7-4).",
 		},
 
+		// contracts/search.md (phase 003, US8)
+		"search": {
+			successStatus: http.StatusOK,
+			successNote:   "The grouped result: one entry per kind holding a match, each independently paged.",
+			successBody:   SearchResponseSchema,
+			errors: []int{
+				http.StatusBadRequest,
+				http.StatusUnauthorized,
+				http.StatusNotFound,
+				http.StatusUnprocessableEntity,
+				http.StatusInternalServerError,
+			},
+			query: []param{
+				requiredParam(stringParam("q", "The search term, 1..200 characters. Never echoed back — `criteria.q_present` "+
+					"reports only whether one was supplied (FR-075).")),
+				requiredParam(stringParam("patient", "The patient being searched. Absent is 400 (FR-070); there is no fallback to the active patient.")),
+				listParam("kinds", "Restrict to these registered path segments. Absent means every registered kind."),
+				limitParam(),
+				stringParam("cursor", "A csv of `kind:token` pairs, one per group being continued — `kind` is the enum spelling "+
+					"each group's own `kind` member carries. A malformed pair, or one naming an unregistered kind, is 400."),
+			},
+			ownerScoped: true,
+			notes: "The index is patient-scoped, so a term matching only another account's records answers `groups: []` with " +
+				"`empty_reason: \"no_matches\"` — byte-identical to a term matching nothing at all (FR-074, SC-004).",
+		},
+
 		// contracts/README.md, "Documented PocketBase-native paths that stay public"
 		"nativeAdminUI":                   nativeDoc("It ships in production, hardened: mandatory superuser MFA, mandatory IP allowlist, every session audited."),
 		"nativeSuperuserAuthWithPassword": nativeDoc("The admin UI's own authentication."),

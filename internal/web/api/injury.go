@@ -82,6 +82,10 @@ type Injury struct {
 	CreatedAt     string   `json:"created_at"`
 }
 
+// GetTags implements records.Tagged so the search index stays in step with
+// this record's tags on write (T164-T177 follow-up).
+func (i *Injury) GetTags() []string { return i.Tags }
+
 // InjuryCreate is the create body. There is no `owner`, no `id` and no
 // timestamps, and every field FR-040 through FR-042 name is optional beyond
 // the patient and the name (clinical.Injury.Validate is what rejects a body

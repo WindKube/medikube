@@ -79,10 +79,16 @@ type Summary struct {
 type Detail struct {
 	Summary
 
-	Note      string `json:"note,omitempty"`
-	Doses     int    `json:"doses,omitempty"`
-	CreatedAt string `json:"created_at"`
+	Note      string   `json:"note,omitempty"`
+	Doses     int      `json:"doses,omitempty"`
+	CreatedAt string   `json:"created_at"`
+	Tags      []string `json:"tags,omitempty"`
 }
+
+// GetTags implements records.Tagged, the same way a real kind's own wire DTO
+// does, so a fake registration can prove the search index's tag-lifecycle
+// path without a real kind's DTO.
+func (d *Detail) GetTags() []string { return d.Tags }
 
 // Create carries no owner and no id, which is how FR-032 is enforced by shape:
 // there is no field a caller could re-attribute a record with.

@@ -84,6 +84,12 @@ var tagInventory = []string{
 	"deleteTag",
 }
 
+// contracts/search.md's one operation (phase 003, US8), kept separate from
+// contractInventory for the same reason directoryInventory is.
+var searchInventory = []string{
+	"search",
+}
+
 // The operations that resolve an id or a kind out of the stored data. For these
 // the authorization rule is not merely "a session is required": another
 // account's id and an id that never existed answer identically (FR-033).
@@ -118,6 +124,7 @@ var ownerScoped = []string{
 	"createTag",
 	"updateTag",
 	"deleteTag",
+	"search",
 }
 
 func TestTheDocumentDeclaresOpenAPI31(t *testing.T) {
@@ -179,6 +186,7 @@ func TestTheAPIOperationsAreExactlyTheContractInventory(t *testing.T) {
 	}
 
 	expected := append(append(append([]string{}, contractInventory...), directoryInventory...), tagInventory...)
+	expected = append(expected, searchInventory...)
 	assert.ElementsMatch(t, append(expected, externals...), found)
 }
 
@@ -190,7 +198,7 @@ func TestEveryOperationIDIsUnique(t *testing.T) {
 
 	loaded := roundTrip(t, generate(t, twoKindInput()))
 
-	assert.Len(t, operationsByID(t, loaded), 57)
+	assert.Len(t, operationsByID(t, loaded), 58)
 }
 
 func TestEveryOperationCarriesItsAuthorizationRule(t *testing.T) {

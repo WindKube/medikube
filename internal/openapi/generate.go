@@ -41,6 +41,12 @@ type Input struct {
 	Routes   []httproute.Route
 	Kinds    []Kind
 	Envelope any
+
+	// SearchResponse is contracts/search.md §2's grouped envelope, reflected
+	// the same way Envelope is (SchemaOf) and for the same reason: this
+	// package cannot import internal/web/api's own type without a cycle
+	// (api already imports openapi for Kind).
+	SearchResponse any
 }
 
 // Documented reports whether a route belongs in api/openapi.json.
@@ -92,6 +98,15 @@ func Generate(in Input) (*openapi3.T, error) {
 	}
 
 	schemas[ErrorEnvelopeSchema] = &openapi3.SchemaRef{Value: envelope}
+
+	if in.SearchResponse != nil {
+		search, searchErr := SchemaOf(in.SearchResponse)
+		if searchErr != nil {
+			return nil, fmt.Errorf("openapi: the search response: %w", searchErr)
+		}
+
+		schemas[SearchResponseSchema] = &openapi3.SchemaRef{Value: search}
+	}
 
 	segments := make([]any, 0, len(in.Kinds))
 	for _, k := range in.Kinds {

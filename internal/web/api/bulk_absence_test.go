@@ -322,9 +322,14 @@ func TestNoPublishedRouteHonoursPocketBasesQueryLanguage(t *testing.T) {
 
 		// listRecords and listRecordsOfKind are the two routes
 		// contracts/medications-rescope.md requires a `?patient=` on; every
-		// other signed-in GET route is unaffected by the rescope.
-		if route.OpID == "listRecords" || route.OpID == "listRecordsOfKind" {
+		// other signed-in GET route is unaffected by the rescope. search is a
+		// third: contracts/search.md requires it too, plus `?q=` so the
+		// probe below has a real term to widen (T167).
+		switch route.OpID {
+		case "listRecords", "listRecordsOfKind":
 			url += "?patient=" + testsupport.AccountAPatientSelfID
+		case api.OpSearch:
+			url += "?patient=" + testsupport.AccountAPatientSelfID + "&q=paracetamol"
 		}
 
 		plain := owner.get(url)

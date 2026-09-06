@@ -73,6 +73,10 @@ type Procedure struct {
 	CreatedAt string   `json:"created_at"`
 }
 
+// GetTags implements records.Tagged so the search index stays in step with
+// this record's tags on write (T164-T177 follow-up).
+func (p *Procedure) GetTags() []string { return p.Tags }
+
 type ProcedureCreate struct {
 	Patient         string  `json:"patient"`
 	Name            string  `json:"name"`

@@ -160,13 +160,45 @@ func fakeKind() openapi.Kind {
 	}
 }
 
+// searchResponseFixture mirrors api.SearchResponse's shape (contracts/search.md
+// §2), the same way errorEnvelopeFixture mirrors web.Envelope's.
+type searchResponseFixture struct {
+	Groups      []searchGroupFixture  `json:"groups"`
+	Criteria    searchCriteriaFixture `json:"criteria"`
+	EmptyReason *string               `json:"empty_reason"`
+}
+
+type searchGroupFixture struct {
+	Kind       string              `json:"kind"`
+	Items      []searchItemFixture `json:"items"`
+	NextCursor *string             `json:"next_cursor"`
+	HasMore    bool                `json:"has_more"`
+}
+
+type searchItemFixture struct {
+	ID         string   `json:"id"`
+	Kind       string   `json:"kind"`
+	Title      string   `json:"title"`
+	Snippet    *string  `json:"snippet"`
+	OccurredOn *string  `json:"occurred_on"`
+	Tags       []string `json:"tags"`
+}
+
+type searchCriteriaFixture struct {
+	QPresent bool     `json:"q_present"`
+	Kinds    []string `json:"kinds"`
+	Tags     []string `json:"tags"`
+	Match    string   `json:"match"`
+}
+
 // twoKindInput is the fixture every gate in this package runs against.
 func twoKindInput() openapi.Input {
 	return openapi.Input{
-		Version:  fixtureVersion,
-		Routes:   httproute.Inventory().Routes(),
-		Kinds:    []openapi.Kind{realKind(), fakeKind()},
-		Envelope: errorEnvelopeFixture{},
+		Version:        fixtureVersion,
+		Routes:         httproute.Inventory().Routes(),
+		Kinds:          []openapi.Kind{realKind(), fakeKind()},
+		Envelope:       errorEnvelopeFixture{},
+		SearchResponse: searchResponseFixture{},
 	}
 }
 

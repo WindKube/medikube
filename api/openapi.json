@@ -3919,6 +3919,124 @@
           "updated_at"
         ],
         "type": "object"
+      },
+      "SearchResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "criteria": {
+            "additionalProperties": false,
+            "properties": {
+              "kinds": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "match": {
+                "type": "string"
+              },
+              "q_present": {
+                "type": "boolean"
+              },
+              "tags": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "kinds",
+              "match",
+              "q_present",
+              "tags"
+            ],
+            "type": "object"
+          },
+          "empty_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "groups": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "has_more": {
+                  "type": "boolean"
+                },
+                "items": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "type": "string"
+                      },
+                      "occurred_on": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "snippet": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "tags": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "title": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "kind",
+                      "occurred_on",
+                      "snippet",
+                      "tags",
+                      "title"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "next_cursor": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "has_more",
+                "items",
+                "kind",
+                "next_cursor"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "criteria",
+          "empty_reason",
+          "groups"
+        ],
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -7043,6 +7161,127 @@
           }
         ],
         "summary": "Partial update. If-Match is required; a mismatch is 412 carrying the current representation."
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "description": "Authorization: requires a session. Owner-scoped: the owner is taken from the stored record or from the authenticated actor and never from a caller-supplied parameter, and anything the signed-in account does not own answers 404 — byte-identical apart from `request_id` to an id that never existed (FR-032, FR-033).\n\nThe index is patient-scoped, so a term matching only another account's records answers `groups: []` with `empty_reason: \"no_matches\"` — byte-identical to a term matching nothing at all (FR-074, SC-004).",
+        "operationId": "search",
+        "parameters": [
+          {
+            "description": "The search term, 1..200 characters. Never echoed back — `criteria.q_present` reports only whether one was supplied (FR-075).",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The patient being searched. Absent is 400 (FR-070); there is no fallback to the active patient.",
+            "in": "query",
+            "name": "patient",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Restrict to these registered path segments. Absent means every registered kind. Comma-separated; whitespace is not trimmed.",
+            "in": "query",
+            "name": "kinds",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size, 1..100.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "A csv of `kind:token` pairs, one per group being continued — `kind` is the enum spelling each group's own `kind` member carries. A malformed pair, or one naming an unregistered kind, is 400.",
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            },
+            "description": "The grouped result: one entry per kind holding a match, each independently paged."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`invalid_token` for a recovery or confirmation token that is expired, already used or tampered with — one code for all three, so no token's former existence is disclosed — or `invalid_cursor` for a forged, tampered or unparseable cursor."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`unauthenticated`. The body names no account and no resource."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`not_found`. On owner-scoped data this is also the answer for a record belonging to somebody else, byte-identical apart from `request_id` to an id that never existed (FR-033)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`validation_failed`, with every offending member reported at once in `fields[]`. An unknown or unexpected member is reported with the field code `unknown_field`."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "`internal_error`. The message is a constant: no internal error string ever reaches a client."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "One search across a named person's records of every kind, grouped and paged per kind."
       }
     },
     "/api/v1/streams/records": {

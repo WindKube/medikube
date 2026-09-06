@@ -149,6 +149,7 @@ func table() []Route {
 	routes = append(routes, healthRoutes()...)
 	routes = append(routes, pageRoutes()...)
 	routes = append(routes, patientPageRoutes()...)
+	routes = append(routes, searchRoutes()...)
 	routes = append(routes, assetRoutes()...)
 	routes = append(routes, externalRoutes()...)
 
@@ -717,6 +718,28 @@ func pageRoutes() []Route {
 			Kind: KindPage, Auth: AuthPublic,
 			Summary:  "Confirm an address from a confirmation link. An expired link answers 200 with the ask-again state.",
 			Landmark: `region[name="Email confirmation"]`, SmokeURL: "/verify-email/" + expiredTokenForSmoke,
+		},
+	}
+}
+
+// contracts/search.md and contracts/pages.md §3: US8's one API operation and
+// its one page. Both require `?patient=`; the page renders an explicit
+// "choose a person" state rather than falling back to the active patient
+// when it is absent (FR-070, US8-3) — the smoke URL below deliberately
+// carries no `?q=`, which is the "before a term is entered" empty state
+// contracts/pages.md §5 seeds on purpose.
+func searchRoutes() []Route {
+	return []Route{
+		{
+			OpID: "search", Method: http.MethodGet, Path: apiBase + "/search",
+			Kind: KindAPI, Auth: AuthUser,
+			Summary: "One search across a named person's records of every kind, grouped and paged per kind.",
+		},
+		{
+			OpID: "searchPage", Method: http.MethodGet, Path: "/search",
+			Kind: KindPage, Auth: AuthUser,
+			Summary:  "contracts/pages.md P: one search over a named person's whole chart.",
+			Landmark: `search`, SmokeURL: "/search?patient=" + seed.AccountAPatientSelfID,
 		},
 	}
 }

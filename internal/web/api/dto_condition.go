@@ -56,6 +56,10 @@ type Condition struct {
 	CreatedAt string   `json:"created_at"`
 }
 
+// GetTags implements records.Tagged so the search index stays in step with
+// this record's tags on write (T164-T177 follow-up).
+func (c *Condition) GetTags() []string { return c.Tags }
+
 type ConditionCreate struct {
 	Patient      string   `json:"patient"`
 	Diagnosis    string   `json:"diagnosis"`

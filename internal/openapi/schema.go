@@ -42,6 +42,11 @@ const (
 	// RecordSummaryPageSchema is contracts/README.md's list envelope around the
 	// summary union. There is one list shape in the whole API.
 	RecordSummaryPageSchema = "RecordSummaryPage"
+
+	// SearchResponseSchema is contracts/search.md §2's grouped envelope — not
+	// RecordSummaryPageSchema, because a grouped search has one cursor per
+	// kind rather than one for the whole page.
+	SearchResponseSchema = "SearchResponse"
 )
 
 // DiscriminatorProperty is the member whose value selects a branch of the

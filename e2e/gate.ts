@@ -17,8 +17,12 @@ const shellLandmarks = [
 ];
 
 export type Landmark = {
-  role: 'region' | 'article' | 'form' | 'main';
-  name: string;
+  // 'search' is the one bare landmark: the native <search> element carries
+  // that ARIA role with no accessible name of its own (contracts/pages.md P,
+  // /search) — every other role here is spelled name="…" the way
+  // contracts/pages.md's own table spells it.
+  role: 'region' | 'article' | 'form' | 'main' | 'search';
+  name?: string;
 };
 
 export type PageCase = {
@@ -124,11 +128,14 @@ export async function open(page: Page, expected: PageCase): Promise<Locator> {
   }
 
   // 3 — the page's own landmark is present AND non-empty.
-  const own = page.getByRole(expected.landmark.role, { name: expected.landmark.name });
-  await expect(own, `${expected.path} is missing ${expected.landmark.role}[name="${expected.landmark.name}"]`).toBeVisible();
+  const landmarkLabel = expected.landmark.name
+    ? `${expected.landmark.role}[name="${expected.landmark.name}"]`
+    : expected.landmark.role;
+  const own = page.getByRole(expected.landmark.role, expected.landmark.name ? { name: expected.landmark.name } : undefined);
+  await expect(own, `${expected.path} is missing ${landmarkLabel}`).toBeVisible();
   expect(
     (await own.innerText()).trim(),
-    `${expected.landmark.role}[name="${expected.landmark.name}"] rendered empty, which passes a presence check and fails the person`,
+    `${landmarkLabel} rendered empty, which passes a presence check and fails the person`,
   ).not.toBe('');
 
   // 4 — the title matches.

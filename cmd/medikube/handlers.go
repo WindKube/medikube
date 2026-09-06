@@ -15,6 +15,7 @@ import (
 	"medikube/internal/domain/access"
 	"medikube/internal/domain/audit"
 	"medikube/internal/domain/identity"
+	"medikube/internal/domain/kind"
 	"medikube/internal/httproute"
 	"medikube/internal/obs"
 	"medikube/internal/platform/pb"
@@ -79,6 +80,7 @@ func operations(
 	app core.App,
 	cfg config.Config,
 	resolve api.Resolve,
+	searchResolve api.SearchResolve,
 	registry *records.Registry,
 	resolveDirectory func() (directoryServices, error),
 	tagResolve api.TagResolve,
@@ -109,7 +111,7 @@ func operations(
 	patientResolve, photoResolve := patientFamily(app, cfg, registry, measurements, tracing)
 
 	// The real ones win. This is the only line each later group touches.
-	served, err := wired(resolve, patientResolve, hub)
+	served, err := wired(resolve, searchResolve, patientResolve, hub)
 	if err != nil {
 		return nil, err
 	}
@@ -321,7 +323,7 @@ func assetHandlers() httproute.Handlers {
 // can be assembled from the kind registry alone. The record family, the two
 // record pages and the Datastar stream are in; the account surface needs the
 // application and is assembled by operations above.
-func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) (httproute.Handlers, error) {
+func wired(resolve api.Resolve, searchResolve api.SearchResolve, patients api.PatientResolve, hub *realtime.Hub) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
 	records, err := api.Handlers(resolve)
@@ -389,6 +391,16 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 		return nil, err
 	}
 
+	searchOps, err := api.SearchHandlers(searchResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	searchPages, err := page.SearchHandlers(searchResolve, patients)
+	if err != nil {
+		return nil, err
+	}
+
 	maps.Copy(table, records)
 	maps.Copy(table, pages)
 	maps.Copy(table, immunizationPages)
@@ -402,6 +414,8 @@ func wired(resolve api.Resolve, patients api.PatientResolve, hub *realtime.Hub) 
 	maps.Copy(table, treatmentPages)
 	maps.Copy(table, familyMemberPages)
 	maps.Copy(table, streams)
+	maps.Copy(table, searchOps)
+	maps.Copy(table, searchPages)
 
 	return table, nil
 }
@@ -561,23 +575,33 @@ func patientFamily(
 // The boot gate calls it before the instance serves anything, so a
 // registration that cannot be built is a boot failure and not a 500 on
 // somebody's first request.
-// The tag service comes out of the same sync.OnceValues as the handler,
-// rather than a second call to registerKinds: registerKinds wires the tag
-// checker into the registry before any kind registers (FR-064), and calling
-// it twice would build a second tag service the checker never sees.
-func recordFamily(app core.App, registry *records.Registry, hub *realtime.Hub) (api.Resolve, api.TagResolve) {
-	type registered struct {
-		handler *records.Handler
-		tags    *tagsvc.Service
-	}
+//
+// recordFamilyResult is the once-built tuple api.Resolve, api.TagResolve and
+// api.SearchResolve each read a part of: sync.OnceValues would need three
+// separate calls to build the handler, the tag service and the search
+// service otherwise, and registerKinds wires the tag checker into the
+// registry before any kind registers (FR-064) — calling it more than once
+// would build a second tag service the checker never sees.
+type recordFamilyResult struct {
+	handler *records.Handler
+	tags    *tagsvc.Service
+	search  *searchsvc.Service
+	kinds   []kind.Kind
+}
 
-	once := sync.OnceValues(func() (registered, error) {
+func recordFamily(app core.App, registry *records.Registry, hub *realtime.Hub) (api.Resolve, api.TagResolve, api.SearchResolve) {
+	once := sync.OnceValues(func() (recordFamilyResult, error) {
 		tags, err := registerKinds(app, registry, hub)
 		if err != nil {
-			return registered{}, err
+			return recordFamilyResult{}, err
 		}
 
-		return registered{handler: records.NewHandler(registry), tags: tags}, nil
+		search, kinds, err := buildSearchService(app, registry, tags)
+		if err != nil {
+			return recordFamilyResult{}, err
+		}
+
+		return recordFamilyResult{handler: records.NewHandler(registry), tags: tags, search: search, kinds: kinds}, nil
 	})
 
 	resolve := func() (*records.Handler, error) {
@@ -592,7 +616,68 @@ func recordFamily(app core.App, registry *records.Registry, hub *realtime.Hub) (
 		return result.tags, err
 	}
 
-	return resolve, tagResolve
+	searchResolve := func() (*searchsvc.Service, []kind.Kind, error) {
+		result, err := once()
+
+		return result.search, result.kinds, err
+	}
+
+	return resolve, tagResolve, searchResolve
+}
+
+// buildSearchService wires US8's read side, once registerKinds has finished:
+// registry.Kinds() is only complete afterwards, and it is what a grouped
+// search's default kind selection and group order both read. tags is the
+// same tag service registerKinds already built — search's own `?tags=`
+// ownership check (T164-T177 follow-up) reuses it rather than building a
+// second one.
+func buildSearchService(app core.App, registry *records.Registry, tags *tagsvc.Service) (*searchsvc.Service, []kind.Kind, error) {
+	secret, err := store.CursorSecret(app, "")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cursors, err := store.NewCursorCodec(secret)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	owners, err := store.NewOwners(app)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	trail, err := auditstore.New(app)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	patientOwners, err := store.NewPatientOwners(app)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	authorizer, err := accessservice.New(owners, accessservice.WithPatients(patientOwners, auditor))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	searchRepo, err := searchstore.New(app, cursors)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	service, err := searchsvc.NewService(searchRepo, searchRepo, authorizer, tags)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return service, registry.Kinds(), nil
 }
 
 // registerKinds is the extension point phases 002 through 006 add a kind to.
@@ -1156,6 +1241,7 @@ func directoryOperations() []string {
 func unimplemented() []string {
 	implemented, err := wired(
 		func() (*records.Handler, error) { return nil, nil },
+		func() (*searchsvc.Service, []kind.Kind, error) { return nil, nil, nil },
 		func() (*patient.Service, error) { return nil, nil },
 		realtime.New(),
 	)

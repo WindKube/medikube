@@ -1,0 +1,91 @@
+package search
+
+// Results is contracts/pages.md P: /search, landmark `search`. It is a bare
+// <search> element — not `region[name="…"]` like every other page's own
+// landmark — because contracts/pages.md spells this one's landmark literally
+// as `search`, and the native <search> element carries that ARIA role with
+// no accessible name of its own.
+templ Results(props Props) {
+	<search id="search-page" class="flex flex-col gap-6">
+		<h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Search</h1>
+		<form method="get" action={ templ.URL(props.FormAction) } class="flex flex-wrap items-center gap-2">
+			<input type="hidden" name="patient" value={ props.PatientID }/>
+			<label for="search-q" class="sr-only">Search term</label>
+			<input
+				id="search-q"
+				type="search"
+				name="q"
+				value={ props.Query }
+				placeholder="Search this person's records"
+				class="min-w-64 rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900"
+			/>
+			<button
+				type="submit"
+				class="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800"
+			>Search</button>
+		</form>
+		if len(props.Chips) > 0 {
+			<ul aria-label="Narrowing" class="flex flex-wrap gap-2">
+				for _, chip := range props.Chips {
+					<li>
+						<a
+							href={ templ.URL(chip.Href) }
+							class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-800 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+						>{ chip.Label } <span aria-hidden="true">✕</span></a>
+					</li>
+				}
+			</ul>
+		}
+		if props.NoPatient {
+			<div role="status" class="rounded-lg border border-dashed border-slate-300 px-6 py-12 text-center dark:border-slate-700">
+				<p class="text-base font-medium text-slate-900 dark:text-slate-100">Choose a person</p>
+				<p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Pick who to search using the switcher above.</p>
+			</div>
+		} else if props.NoTerm {
+			<div role="status" class="rounded-lg border border-dashed border-slate-300 px-6 py-12 text-center dark:border-slate-700">
+				<p class="text-base font-medium text-slate-900 dark:text-slate-100">Search this person's chart</p>
+				<p class="mt-1 text-sm text-slate-600 dark:text-slate-400">Type a term above to find something in their records.</p>
+			</div>
+		} else if props.EmptyReason == "no_records" {
+			<div role="status" class="rounded-lg border border-dashed border-slate-300 px-6 py-12 text-center dark:border-slate-700">
+				<p class="text-base font-medium text-slate-900 dark:text-slate-100">Nothing recorded yet</p>
+				<p class="mt-1 text-sm text-slate-600 dark:text-slate-400">This person has no records of any kind yet.</p>
+			</div>
+		} else if props.EmptyReason == "no_matches" {
+			<div role="status" class="rounded-lg border border-dashed border-slate-300 px-6 py-12 text-center dark:border-slate-700">
+				<p class="text-base font-medium text-slate-900 dark:text-slate-100">Nothing matched that</p>
+				<p class="mt-1 text-sm text-slate-600 dark:text-slate-400">No records matched this search.</p>
+				if props.ClearHref != "" {
+					<a
+						href={ templ.URL(props.ClearHref) }
+						class="mt-2 inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
+					>Clear narrowing</a>
+				}
+			</div>
+		} else {
+			for _, group := range props.Groups {
+				<section aria-label={ group.Label } class="flex flex-col gap-2">
+					<h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">{ group.Label }</h2>
+					<ul class="flex flex-col gap-1">
+						for _, item := range group.Items {
+							<li class="flex items-baseline justify-between gap-3 border-b border-slate-200 py-2 last:border-b-0 dark:border-slate-800">
+								<a href={ templ.URL(item.Href) } class="text-teal-800 underline underline-offset-2 hover:text-teal-900 dark:text-teal-300">
+									{ item.Title }
+								</a>
+								if item.OccurredOn != "" {
+									<time datetime={ item.OccurredOn } class="shrink-0 text-sm tabular-nums text-slate-600 dark:text-slate-400">{ item.OccurredOn }</time>
+								}
+							</li>
+						}
+					</ul>
+					if group.LoadMoreHref != "" {
+						<a
+							href={ templ.URL(group.LoadMoreHref) }
+							class="self-start text-sm font-medium text-teal-800 underline underline-offset-2 hover:text-teal-900 dark:text-teal-300"
+						>Load more { group.Label }</a>
+					}
+				</section>
+			}
+		}
+	</search>
+}

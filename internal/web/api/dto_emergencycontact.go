@@ -53,6 +53,10 @@ type EmergencyContact struct {
 	Displaced *DisplacedRef `json:"displaced,omitempty"`
 }
 
+// GetTags implements records.Tagged so the search index stays in step with
+// this record's tags on write (T164-T177 follow-up).
+func (e *EmergencyContact) GetTags() []string { return e.Tags }
+
 type EmergencyContactCreate struct {
 	Patient      string   `json:"patient"`
 	Name         string   `json:"name"`

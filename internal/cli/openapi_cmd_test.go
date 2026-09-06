@@ -33,10 +33,11 @@ const productionOpenAPIDocumentVersion = "0.1.0"
 // than a fixture invented for this package alone.
 func validOpenAPIInput() (openapi.Input, error) {
 	return openapi.Input{
-		Version:  "test",
-		Routes:   httproute.Inventory().Routes(),
-		Kinds:    api.OpenAPIKinds(),
-		Envelope: web.Envelope{},
+		Version:        "test",
+		Routes:         httproute.Inventory().Routes(),
+		Kinds:          api.OpenAPIKinds(),
+		Envelope:       web.Envelope{},
+		SearchResponse: api.SearchResponse{},
 	}, nil
 }
 
@@ -109,10 +110,11 @@ func TestOpenAPIOutputIsByteIdenticalToTheCommittedDocument(t *testing.T) {
 		Stderr: &bytes.Buffer{},
 		OpenAPI: func() (openapi.Input, error) {
 			return openapi.Input{
-				Version:  productionOpenAPIDocumentVersion,
-				Routes:   httproute.Inventory().Routes(),
-				Kinds:    api.OpenAPIKinds(),
-				Envelope: web.Envelope{},
+				Version:        productionOpenAPIDocumentVersion,
+				Routes:         httproute.Inventory().Routes(),
+				Kinds:          api.OpenAPIKinds(),
+				Envelope:       web.Envelope{},
+				SearchResponse: api.SearchResponse{},
 			}, nil
 		},
 	}

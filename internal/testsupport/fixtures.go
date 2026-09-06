@@ -153,6 +153,14 @@ const (
 	AccountATreatmentCount = 3
 )
 
+// Account A's three tags (US7, internal/testsupport/seed/tags.go), applied
+// across one seeded row of every registered kind.
+const (
+	TagChronicID  = "mktagamara00001"
+	TagFollowUpID = "mktagamara00002"
+	TagFlaggedID  = "mktagamara00003"
+)
+
 // AuthToken mints a PocketBase auth token for a seeded account, which is what
 // an HTTP test presents as the caller.
 //

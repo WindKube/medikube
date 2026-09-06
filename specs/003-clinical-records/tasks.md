@@ -396,23 +396,25 @@ and confirm each narrowing is reflected.
 
 ### Tests for User Story 8 ⚠️ write first, confirm red
 
-- [ ] T164 [P] [US8] Failing tests in `internal/domain/search/query_test.go`: `q` required and bounded 1..200; `patient` required; `kinds` validated against the registry; an unknown kind segment is `400 bad_request`
-- [ ] T165 [P] [US8] Failing tests in `internal/service/search/service_test.go`: results grouped by kind, each group carrying its own `next_cursor` and `has_more` (FR-072); only kinds with a match appear; ordering within a group is `occurred_on DESC, id DESC`, nulls last, identical across repeated requests (FR-073); `empty_reason` distinguishes `no_matches` from `no_records` (US8-2)
-- [ ] T166 [P] [US8] Failing tests in `internal/store/search/repo_test.go`: `LIKE` matching over `title` and `body`; `%`, `_` and the escape character in the term are escaped and match literally; **no caller string is ever concatenated into a PocketBase filter expression**; the `(patient, kind, occurred_on, id)` index is used
-- [ ] T167 [P] [US8] Failing authorization tests in `internal/web/api/search_http_test.go`: absent `patient` → `400 patient_required` with no fallback to the active patient (FR-070, US8-3); a term matching only another account's records → `groups: []` with `empty_reason: no_matches`, byte-identical to a nonsense term (FR-074, US8-4, SC-004); an unreachable patient → `404`
-- [ ] T168 [P] [US8] Failing PHI test in `internal/testsupport/phileak/search_test.go`: the search term appears in **no** log line, span attribute, metric label, audit row or Sentry event, and the response `criteria` echoes `q_present` rather than `q` (FR-075, US8-5, SC-012, research D-12)
-- [ ] T169 [P] [US8] Failing index-maintenance tests in `internal/service/search/lifecycle_test.go`: creating any record of any kind writes exactly one index row; updating it replaces the row; deleting it removes the row **in the same commit**; deleting the patient removes every row (FR-087, SC-005)
-- [ ] T170 [P] [US8] Failing scale test in `internal/store/search/scale_test.go` (build tag `scale`): the first page of grouped results returns within 3 s at 50,000 indexed rows, and 100% of the kinds containing a match are represented (SC-003, FR-089)
-- [ ] T171 [P] [US8] Failing templ render tests in `internal/web/views/search/results_templ_test.go`: groups render with per-group "load more", the two empty states are visually distinct, and the narrowing chips are removable (US8-2, FR-071)
+- [x] T164 [P] [US8] Failing tests in `internal/domain/search/query_test.go`: `q` required and bounded 1..200; `patient` required; `kinds` validated against the registry; an unknown kind segment is `400 bad_request`
+- [x] T165 [P] [US8] Failing tests in `internal/service/search/service_test.go`: results grouped by kind, each group carrying its own `next_cursor` and `has_more` (FR-072); only kinds with a match appear; ordering within a group is `occurred_on DESC, id DESC`, nulls last, identical across repeated requests (FR-073); `empty_reason` distinguishes `no_matches` from `no_records` (US8-2)
+- [x] T166 [P] [US8] Failing tests in `internal/store/search/searchkind_test.go`: `LIKE` matching over `title` and `body`; `%`, `_` and the escape character in the term are escaped and match literally; **no caller string is ever concatenated into a PocketBase filter expression**; the `(patient, kind, occurred_on, id)` index is used
+- [x] T167 [P] [US8] Failing authorization tests in `internal/web/api/search_http_test.go`: absent `patient` → `400 patient_required` with no fallback to the active patient (FR-070, US8-3); a term matching only another account's records → `groups: []` with `empty_reason: no_matches`, byte-identical to a nonsense term (FR-074, US8-4, SC-004); an unreachable patient → `404`
+- [x] T168 [P] [US8] Failing PHI test in `internal/testsupport/phileak/exercise_test.go`'s `driveSearch`: the search term appears in **no** log line, span attribute, metric label, audit row or Sentry event, and the response `criteria` echoes `q_present` rather than `q` (FR-075, US8-5, SC-012, research D-12)
+- [x] T169 [P] [US8] Failing index-maintenance tests in `internal/store/search/lifecycle_test.go`: creating any record of any kind writes exactly one index row; updating it replaces the row; deleting it removes the row **in the same commit**; deleting the patient removes every row (FR-087, SC-005)
+- [x] T170 [P] [US8] Failing scale test in `internal/store/search/scale_test.go` (build tag `scale`): the first page of grouped results returns within 3 s at 50,000 indexed rows, and 100% of the kinds containing a match are represented (SC-003, FR-089)
+- [x] T171 [P] [US8] Failing templ render tests in `internal/web/views/search/results_templ_test.go`: groups render with per-group "load more", the two empty states are visually distinct, and the narrowing chips are removable (US8-2, FR-071)
 
 ### Implementation for User Story 8
 
-- [ ] T172 [P] [US8] Implement `internal/domain/search/query.go` — the validated query value object
-- [ ] T173 [P] [US8] Implement `internal/service/search/{service.go,ports.go}` — the read side; the write side already exists from T030
-- [ ] T174 [P] [US8] Implement `internal/store/search/{repo.go,mapper.go}` with the escaped `LIKE` matcher and per-group cursors
-- [ ] T175 [US8] Implement `GET /api/v1/search` in `internal/web/api/search.go` and register it in `internal/httproute` with operation id `search` — one search over every kind of a named person's records (FR-069); declare `SearchFields` for every one of the fourteen registered kinds, covering the identifying details of each kind together with its notes (FR-069) in `internal/records/kinds/*.go` (the registry completeness test from T021 fails until all fourteen are declared)
-- [ ] T176 [US8] Implement `internal/web/views/search/results.templ` and the `/search` page handler in `internal/web/page/search.go` with landmark `search`
-- [ ] T177 [US8] Add `e2e/specs/search.spec.ts` covering `/search` at both viewports, including the no-term state, the `no_matches` state and the `no_records` state; regenerate and commit `api/openapi.json`
+- [x] T172 [P] [US8] Implement `internal/domain/search/query.go` — the validated query value object
+- [x] T173 [P] [US8] Implement `internal/service/search/{service.go,ports.go}` — the read side; the write side already exists from T030
+- [x] T174 [P] [US8] Implement `internal/store/search/{repo.go,mapper.go}` with the escaped `LIKE` matcher and per-group cursors
+- [x] T175 [US8] Implement `GET /api/v1/search` in `internal/web/api/search.go` and register it in `internal/httproute` with operation id `search` — one search over every kind of a named person's records (FR-069); `SearchFields` was already declared for all fourteen registered kinds by prior US1–US7 work on this branch (`internal/records/registry_completeness_test.go` was already green)
+- [x] T176 [US8] Implement `internal/web/views/search/results.templ` and the `/search` page handler in `internal/web/page/search.go` with landmark `search`
+- [x] T177 [US8] Add `e2e/search.spec.ts` covering `/search` at both viewports, including the no-term state, the `no_matches` state and the `no_records` state; regenerate and commit `api/openapi.json`
+
+  `?tags=`/`?match=` narrowing landed once US7 merged (T164-T177 follow-up): `criteria.tags` and `criteria.match` echo the caller's own narrowing, an unknown or foreign tag id is refused before any group is read (contracts/tags.md §5), and the results page renders a removable chip per tag. `?from=`/`?to=`/`?status=` remain out of scope for this story's brief and are not implemented.
 
 **Checkpoint**: US1–US8 demonstrable.
 

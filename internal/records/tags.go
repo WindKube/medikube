@@ -42,6 +42,15 @@ type Taggable interface {
 	TagIDs() (ids []string, supplied bool)
 }
 
+// Tagged is implemented by a kind's detail DTO — what Record.Body carries
+// after a create or an update (research D-11) — to expose the tags stored on
+// it. indexingService reads this to keep search_index.tags in step with the
+// record it was derived from, the same way SearchFields reads title and body
+// off the same value.
+type Tagged interface {
+	GetTags() []string
+}
+
 // TagChecker is the account's tag ownership check (contracts/tags.md §5):
 // every tag id a record patch names must belong to the actor, or the write is
 // refused as domain.ErrNotFound — identical to naming a tag that does not

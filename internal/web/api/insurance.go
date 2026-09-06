@@ -126,6 +126,10 @@ type Insurance struct {
 	Displaced *DisplacedDTO `json:"displaced,omitempty"`
 }
 
+// GetTags implements records.Tagged so the search index stays in step with
+// this record's tags on write (T164-T177 follow-up).
+func (i *Insurance) GetTags() []string { return i.Tags }
+
 // InsuranceCreate is the create body (FR-043): patient, type, company, member
 // name, member id and the effective date are required; everything else is
 // optional at creation.

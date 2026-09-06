@@ -28,10 +28,11 @@ const openAPIDocumentVersion = "0.1.0"
 // document nobody ships.
 func productionInput() openapi.Input {
 	return openapi.Input{
-		Version:  openAPIDocumentVersion,
-		Routes:   httproute.Inventory().Routes(),
-		Kinds:    api.OpenAPIKinds(),
-		Envelope: web.Envelope{},
+		Version:        openAPIDocumentVersion,
+		Routes:         httproute.Inventory().Routes(),
+		Kinds:          api.OpenAPIKinds(),
+		Envelope:       web.Envelope{},
+		SearchResponse: api.SearchResponse{},
 	}
 }
 

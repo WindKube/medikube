@@ -83,6 +83,10 @@ type Vitals struct {
 	Display Display `json:"display"`
 }
 
+// GetTags implements records.Tagged so the search index stays in step with
+// this record's tags on write (T164-T177 follow-up).
+func (v *Vitals) GetTags() []string { return v.Tags }
+
 type VitalsCreate struct {
 	Patient            string   `json:"patient"`
 	RecordedAt         string   `json:"recorded_at"`
