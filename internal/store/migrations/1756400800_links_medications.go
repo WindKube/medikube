@@ -49,17 +49,17 @@ func linksMedicationsUp(app core.App) error {
 	for _, target := range []kind.Kind{kind.Allergy, kind.Condition} {
 		name := target.Collection()
 
-		collection, err := app.FindCollectionByNameOrId(name)
-		if err != nil {
-			return fmt.Errorf("finding %s: %w", name, err)
+		collection, findErr := app.FindCollectionByNameOrId(name)
+		if findErr != nil {
+			return fmt.Errorf("finding %s: %w", name, findErr)
 		}
 
 		collection.Fields.Add(&core.RelationField{
 			Name: linksFieldMedications, MaxSelect: maxLinkedMedications, CollectionId: medications.Id,
 		})
 
-		if err := app.Save(collection); err != nil {
-			return fmt.Errorf("adding %s.%s: %w", name, linksFieldMedications, err)
+		if saveErr := app.Save(collection); saveErr != nil {
+			return fmt.Errorf("adding %s.%s: %w", name, linksFieldMedications, saveErr)
 		}
 	}
 
