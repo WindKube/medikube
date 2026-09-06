@@ -80,7 +80,7 @@ Each task: replace every literal phrase in its files with `i18n.T(ctx, "<id>")` 
 - [x] T027 [P] [US1] Counts and durations: every "N records", "N days", "expires in N days" phrase becomes `i18n.N` with `one/few/many/other` in `pl`; a unit test lists the ids and renders 1, 2, 5, 22 (FR-008, US1-5)
 - [x] T028 [US1] After T020–T027: `task test:i18n` passes with zero surplus/missing ids; grep gate `scripts/check-i18n-literals.sh` (added to `task lint:i18n`, run by `task lint`) fails on any `>[A-Z][a-z]+[ a-z]*<` or `placeholder="[A-Z]` / `aria-label="[A-Z]` literal in `internal/web/views/**/*.templ`, allow-listed only for user-data slots — prove it fails on one reintroduced literal (FR-005, US1-2)
 - [ ] T029 [US1] Review pass of `active.pl.toml` by a Polish speaker recorded in the PR (declension of kind names in context, formal/informal register consistent — use the impersonal/formal register throughout, imperatives for actions: "Zapisz", "Usuń") (FR-015) — consistency pass done; native review pending; see `specs/007-localisation/polish-review.md`
-- [x] T030 [US1] HTTP test `internal/web/page/locale_render_test.go`: for every registered page route's smoke URL, a Polish account's HTML contains none of the English page titles and none of the English nav labels; user data in the seed (diagnoses, names) is present verbatim (US1-2, US1-3, SC-001)
+- [x] T030 [US1] HTTP test `internal/web/page/locale_render_test.go`: for every registered page route's smoke URL, a Polish account's HTML contains none of the English page titles and none of the English nav labels; user data in the seed (diagnoses, names) is present verbatim (FR-006, US1-2, US1-3, SC-001)
 - [x] T031 [US1] HTTP test: a refused save for a Polish account carries Polish field explanations for the same field set as the English refusal (US1-4)
 - [x] T032 [US1] `e2e/locale.spec.ts`: for one representative page per family (settings, patients list, a record list, a record detail, tags, search, timeline) as a Polish account: `html[lang="pl"]`, title in Polish, zero console errors, zero English nav labels; both viewports (FR-016, US1-2, US1-6, SC-001)
 
@@ -108,11 +108,11 @@ Each task: replace every literal phrase in its files with `i18n.T(ctx, "<id>")` 
 
 ## Phase 6: Polish & cross-cutting
 
-- [ ] T041 [P] `internal/testsupport/phileak/exercise.go` [EDIT]: drive one Polish-account page and one `PATCH /me` locale change; assertion unchanged (FR-013; constitution VII)
-- [ ] T042 [P] `docs/pocketbase-upgrade-checklist.md` and `CLAUDE.md` [EDIT]: "Localisation (phase 007)" — no literal English in templ, `i18n.T(ctx, ...)` only, ids never contain English, `task test:i18n`, how to add a language, what is never translated (FR-005, FR-012)
-- [ ] T043 [P] `e2e/routes.gate.spec.ts` unchanged and green in English; `e2e/fixtures.ts` `title()` unchanged; confirm no e2e spec asserts a Polish string except `locale*.spec.ts` (FR-016)
-- [ ] T044 `api/openapi.json` regenerated only if `Failure.message` description changed ("in the caller's language"); `task openapi:check` (FR-012)
-- [ ] T045 Traceability: every FR-001..FR-017 and SC-001..SC-006 and every US scenario cited on a task above; scenario list: US1-1..8, US2-1..4, US3-1..5 (FR-017, SC-006)
+- [x] T041 [P] `internal/testsupport/phileak/exercise.go` [EDIT]: drive one Polish-account page and one `PATCH /me` locale change; assertion unchanged (FR-013; constitution VII)
+- [x] T042 [P] `docs/pocketbase-upgrade-checklist.md` and `CLAUDE.md` [EDIT]: "Localisation (phase 007)" — no literal English in templ, `i18n.T(ctx, ...)` only, ids never contain English, `task test:i18n`, how to add a language, what is never translated (FR-005, FR-012)
+- [x] T043 [P] `e2e/routes.gate.spec.ts` unchanged and green in English; `e2e/fixtures.ts` `title()` unchanged; confirm no e2e spec asserts a Polish string except `locale*.spec.ts` (FR-016)
+- [x] T044 `api/openapi.json` regenerated only if `Failure.message` description changed ("in the caller's language"); `task openapi:check` (FR-012)
+- [x] T045 Traceability: every FR-001..FR-017 and SC-001..SC-006 and every US scenario cited on a task above; scenario list: US1-1..8, US2-1..4, US3-1..5 (FR-017, SC-006)
 
 ---
 
