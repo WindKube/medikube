@@ -43,10 +43,11 @@ const openAPIDocumentVersion = "0.1.0"
 
 func openAPIInput() (openapi.Input, error) {
 	return openapi.Input{
-		Version:  openAPIDocumentVersion,
-		Routes:   httproute.Inventory().Routes(),
-		Kinds:    api.OpenAPIKinds(),
-		Envelope: web.Envelope{},
+		Version:        openAPIDocumentVersion,
+		Routes:         httproute.Inventory().Routes(),
+		Kinds:          api.OpenAPIKinds(),
+		Envelope:       web.Envelope{},
+		SearchResponse: api.SearchResponse{},
 	}, nil
 }
 

@@ -46,6 +46,39 @@ type Ref struct {
 	OccurredOn domain.Date
 }
 
+// Hit is one matched row of a grouped search result (US8): everything
+// contracts/search.md's item needs, read straight off the index. Unlike Ref,
+// which exists only so a caller that already knows how can hydrate the rest,
+// a Hit carries its own title and tags — a search result names what it
+// found, rather than making the caller re-fetch the record to render one
+// line. It is still never logged: the title is PHI the same way the term is.
+type Hit struct {
+	Kind       kind.Kind
+	RecordID   string
+	Title      string
+	TagIDs     []string
+	OccurredOn domain.Date
+}
+
+// Searcher is US8's read side: one kind, one term, one page of it, ordered
+// occurred_on DESC, id DESC, nulls last (FR-073). Every group in a grouped
+// search result is one call.
+type Searcher interface {
+	SearchKind(
+		ctx context.Context, patientID string, k kind.Kind, term string, limit int, cursor string,
+	) (domain.Page[Hit], error)
+}
+
+// Counter answers whether a patient has any indexed rows at all, ignoring
+// the term — what tells a grouped search apart "no_matches" (rows exist,
+// none matched) from "no_records" (there is nothing to match against yet),
+// US8 scenario 2. Reader already declares this shape; Counter is named
+// separately because a caller wiring only the grouped search needs nothing
+// else Reader promises.
+type Counter interface {
+	Count(ctx context.Context, patientID string, kinds []kind.Kind) (int, error)
+}
+
 // Reader is the read side of the unified search index: phase 003's cross-kind
 // list pages search_index directly, ordered by occurred_on (most recent
 // first, absent last) with id as the keyset tiebreaker, because no per-kind

@@ -294,6 +294,13 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 	patientResolve := api.PatientResolve(func() (*patient.Service, error) { return patientService, nil })
 	photoResolve := api.PatientPhotoResolve(func() (*patient.Service, api.PhotoServer, error) { return patientService, photos, nil })
 
+	searchService, searchKinds, err := buildSearchService(app, searchRepo, registry)
+	if err != nil {
+		return nil, err
+	}
+
+	searchResolve := api.SearchResolve(func() (*searchsvc.Service, []kind.Kind, error) { return searchService, searchKinds, nil })
+
 	accounts, err := api.NewAccounts(app, api.AccountsConfig{
 		RegistrationOpen: chosen.registrationOpen,
 		SessionTTL:       SessionTTL,
@@ -321,7 +328,7 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 		return nil, err
 	}
 
-	table, err := handlerTable(resolve, patientResolve, photoResolve, hub, chosen, accounts, directoryOps, tagOps)
+	table, err := handlerTable(resolve, patientResolve, photoResolve, searchResolve, hub, chosen, accounts, directoryOps, tagOps)
 	if err != nil {
 		return nil, err
 	}
@@ -384,6 +391,7 @@ func handlerTable(
 	resolve api.Resolve,
 	patientResolve api.PatientResolve,
 	photoResolve api.PatientPhotoResolve,
+	searchResolve api.SearchResolve,
 	hub *realtime.Hub,
 	chosen settings,
 	accounts *api.Accounts,
@@ -521,6 +529,16 @@ func handlerTable(
 		return nil, err
 	}
 
+	searchOps, err := api.SearchHandlers(searchResolve)
+	if err != nil {
+		return nil, err
+	}
+
+	searchPageOps, err := page.SearchHandlers(searchResolve, patientResolve)
+	if err != nil {
+		return nil, err
+	}
+
 	assets := httproute.Handlers{
 		"assetAppCSS":     web.ServeAppCSS,
 		"assetDatastarJS": web.ServeDatastarJS,
@@ -530,7 +548,7 @@ func handlerTable(
 		recordOps, pageOps, symptomPageOps, vitalsPageOps, encounterPageOps, procedurePageOps, treatmentPageOps,
 		familyMemberPageOps, streamOps, accountOps, accountPages, overviewPage, assets,
 		patientOps, photoOps, activePatientOps, patientPages, directoryOps, injuryPageOps, immunizationPageOps,
-		insurancePageOps, equipmentPageOps, tagOps,
+		insurancePageOps, equipmentPageOps, tagOps, searchOps, searchPageOps,
 	}
 
 	for _, group := range groups {
@@ -1074,6 +1092,52 @@ func registerKinds(
 	}
 
 	return registry, patientService, photos, searchRepo, tagService, nil
+}
+
+// buildSearchService wires US8's read side around the write-side repository
+// registerKinds already built, mirroring cmd/medikube's own buildSearchService.
+func buildSearchService(app core.App, searchRepo *searchstore.Repo, registry *records.Registry) (*searchsvc.Service, []kind.Kind, error) {
+	owners, err := store.NewOwners(app)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	trail, err := auditstore.New(app)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	secret, err := store.CursorSecret(app, "")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	codec, err := store.NewCursorCodec(secret)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	patientRepo, err := patientstore.New(app, codec)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	authorizer, err := accessservice.New(owners, accessservice.WithPatients(patientRepo, auditor))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	service, err := searchsvc.NewService(searchRepo, searchRepo, authorizer)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return service, registry.Kinds(), nil
 }
 
 // registerDirectory builds the two directory services this instance serves —

@@ -51,6 +51,13 @@ var indexSchema = store.NewSchema(Collection,
 	store.Column{Name: fieldKind},
 	store.Column{Name: fieldRecordID},
 	store.Column{Name: fieldOccurredOn},
+	// title and body are narrowable and never orderable: US8's term match is
+	// the disjunction store.ContainsAny builds over the two, and FilterOnly
+	// keeps either out of every ordering and every keyset boundary — the same
+	// reason a drug name never travels in a cursor (filter.go's own doc on
+	// Column.FilterOnly).
+	store.Column{Name: fieldTitle, FilterOnly: true, Searchable: true},
+	store.Column{Name: fieldBody, FilterOnly: true, Searchable: true},
 )
 
 // Repo is search.Repository — and search.Reader — against a real instance.
@@ -62,6 +69,8 @@ type Repo struct {
 var (
 	_ search.Repository = (*Repo)(nil)
 	_ search.Reader     = (*Repo)(nil)
+	_ search.Searcher   = (*Repo)(nil)
+	_ search.Counter    = (*Repo)(nil)
 )
 
 // New wires the repository to an instance and to the codec that seals the
@@ -235,7 +244,7 @@ func (r *Repo) Page(
 	var next *string
 
 	if more {
-		token, boundaryErr := r.boundary(patientID, records[len(records)-1], sortKeys)
+		token, boundaryErr := r.boundaryFor(scope(patientID), records[len(records)-1], sortKeys)
 		if boundaryErr != nil {
 			return empty, boundaryErr
 		}
@@ -244,6 +253,112 @@ func (r *Repo) Page(
 	}
 
 	return domain.NewPage(items, next), nil
+}
+
+// SearchKind is US8's per-kind matcher: one page of one kind's rows whose title
+// or body contains term, ordered SortOccurredOn, paged the same keyset way
+// Page is. The term is bound through store.ContainsAny — dbx params, never a
+// concatenated filter string (contracts/search.md §5) — which is what
+// escapes `%`, `_` and the escape character before it ever reaches SQLite.
+func (r *Repo) SearchKind(
+	ctx context.Context, patientID string, k kind.Kind, term string, limit int, cursor string,
+) (domain.Page[search.Hit], error) {
+	var empty domain.Page[search.Hit]
+
+	sortKeys := []domain.SortKey{SortOccurredOn}
+
+	conditions := []store.Condition{
+		store.Equal(fieldPatient, patientID),
+		store.Equal(fieldKind, k.Enum()),
+		store.ContainsAny(term, fieldTitle, fieldBody),
+	}
+
+	listing := store.Query{Conditions: conditions, Sort: sortKeys, Limit: limit}
+
+	scopeKey := searchScope(patientID, k)
+
+	if cursor != "" {
+		after, err := r.cursors.Decode(scopeKey, sortKeys, cursor)
+		if err != nil {
+			return empty, err
+		}
+
+		listing.After = after
+	}
+
+	built, err := indexSchema.Build(listing)
+	if err != nil {
+		return empty, err
+	}
+
+	size := built.Limit
+	built.Limit = size + 1
+
+	var records []*core.Record
+
+	if queryErr := built.Apply(r.app.RecordQuery(Collection)).
+		WithContext(ctx).All(&records); queryErr != nil {
+		return empty, fmt.Errorf("search: matching the index: %w", queryErr)
+	}
+
+	more := len(records) > size
+	if more {
+		records = records[:size]
+	}
+
+	items := make([]search.Hit, 0, len(records))
+
+	for _, record := range records {
+		hit, hitErr := hitFromRecord(record)
+		if hitErr != nil {
+			return empty, hitErr
+		}
+
+		items = append(items, hit)
+	}
+
+	var next *string
+
+	if more {
+		token, boundaryErr := r.boundaryFor(scopeKey, records[len(records)-1], sortKeys)
+		if boundaryErr != nil {
+			return empty, boundaryErr
+		}
+
+		next = &token
+	}
+
+	return domain.NewPage(items, next), nil
+}
+
+// searchScope is the query a per-kind search cursor continues: this index,
+// for this patient, for this one kind's group. It carries no term — the
+// cursor is authenticated encryption over the sort values and the row id
+// (research D-25), the same reasoning scope's own doc gives for the
+// cross-kind list, and a different term submitted against an old cursor
+// simply lands on a boundary that term may not match, which the keyset
+// predicate already answers correctly.
+func searchScope(patientID string, k kind.Kind) string {
+	return Collection + "\x00search\x00" + patientID + "\x00" + k.Enum()
+}
+
+// hitFromRecord reads a stored row into US8's own result shape — title and
+// tags included, unlike refFromRecord's Ref, because a search result names
+// what it found rather than making the caller re-fetch the record to render
+// one line.
+func hitFromRecord(record *core.Record) (search.Hit, error) {
+	occurredOn, err := dateFromRecord(record, fieldOccurredOn)
+	if err != nil {
+		return search.Hit{}, err
+	}
+
+	return search.Hit{
+		Kind:       kind.Kind(record.GetString(fieldKind)),
+		RecordID:   record.GetString(fieldRecordID),
+		Title:      record.GetString(fieldTitle),
+		TagIDs:     record.GetStringSlice(fieldTags),
+		OccurredOn: occurredOn,
+	}, nil
 }
 
 // Count answers how many index rows the same narrowing matches, with no
@@ -287,15 +402,15 @@ func (r *Repo) narrowing(patientID string, kinds []kind.Kind) []store.Condition 
 	return append(conditions, store.OneOf(fieldKind, values...))
 }
 
-// boundary seals the last row of a page into the token the next request hands
-// back.
-func (r *Repo) boundary(patientID string, record *core.Record, sortKeys []domain.SortKey) (string, error) {
+// boundaryFor seals the last row of a page into the token the next request
+// hands back, under whichever scope key that page's cursor is bound to.
+func (r *Repo) boundaryFor(scopeKey string, record *core.Record, sortKeys []domain.SortKey) (string, error) {
 	cursor, err := indexSchema.Boundary(record, sortKeys)
 	if err != nil {
 		return "", err
 	}
 
-	return r.cursors.Encode(scope(patientID), cursor)
+	return r.cursors.Encode(scopeKey, cursor)
 }
 
 // scope is the query a cursor continues: this index, for this patient. Kinds

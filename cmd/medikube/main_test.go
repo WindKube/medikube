@@ -31,6 +31,7 @@ import (
 	"medikube/internal/platform/pb"
 	"medikube/internal/realtime"
 	"medikube/internal/records"
+	searchsvc "medikube/internal/service/search"
 	tagsvc "medikube/internal/service/tag"
 	"medikube/internal/web"
 	"medikube/internal/web/api"
@@ -383,6 +384,7 @@ func TestTheCompositionRootWiresEveryRouteMediKubeServes(t *testing.T) {
 		pb.New(cfg, pb.Options{}),
 		cfg,
 		func() (*records.Handler, error) { return nil, nil },
+		func() (*searchsvc.Service, []kind.Kind, error) { return nil, nil, nil },
 		records.NewRegistry(),
 		func() (directoryServices, error) { return directoryServices{}, nil },
 		func() (*tagsvc.Service, error) { return nil, nil },
