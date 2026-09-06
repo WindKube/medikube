@@ -12,6 +12,13 @@ past an API for them, and they would still break silently.
 
 Pinned at **PocketBase v0.40.1** (`go.mod`). Risk R8, cross-artifact CT-1.
 
+Before touching the pinned version, also re-run
+`internal/records/registry_completeness_test.go` and the per-collection lockdown scenarios in
+`internal/platform/pb/lockdown*_test.go` — neither reaches past a public API the way the entries
+below do, but both assert PocketBase-observable behaviour (every kind's API rules, every
+collection's five rules being nil) that an upgrade can quietly change underneath MediKube without
+touching a single line here.
+
 ## 1. The `pb.App` decorator — the log bridge, request path
 
 **What.** `internal/logging/pbbridge.go` decorates the exported embedded `core.App` field on
@@ -175,6 +182,27 @@ next write rather than at migration time.
 **Check on upgrade.** Read `core/migrations_runner.go`'s transaction wrapping before assuming it is
 unchanged, and run `go test ./internal/store/migrations/...` — the repoint migration's own test
 seeds unattributed medications and asserts the whole batch rolls back together.
+
+## 4d. `RelationField.MaxSelect <= 1` reads as single-valued, not "unlimited"
+
+**What.** Every multi-valued relation in this codebase — every kind's `tags` field, chief among
+them — sets `MaxSelect` to a named constant (`unlimitedTags`) rather than `0`.
+
+**Why there is no public API.** `RelationField.IsMultiple()` treats `MaxSelect <= 1` as a
+single-value relation. `0` does not mean unlimited; it means "at most one", the same as `1`. There
+is no PocketBase constant for "no cap" — the ceiling has to be a real number, chosen large enough
+that no requirement caps it in practice (`internal/store/migrations/1756300000_tags.go`).
+
+**Symptom if an upgrade breaks it.** If a future PocketBase version changes `IsMultiple`'s
+threshold, or starts treating `0` as unlimited after all, a `tags` field silently becomes
+single-valued (or vice versa): a record loses every tag but one on its next save, and no error
+surfaces anywhere near the write.
+
+**Check on upgrade.** `core.RelationField.IsMultiple` still treats `<= 1` as single-valued, and
+`unlimitedTags`'s value is still comfortably above anything a record could carry. Every carrier's
+own test (`medication_tags_test.go`, `family_member_tags_test.go`, `symptom_vitals_tags_test.go`,
+`search_index_test.go`, and their siblings) asserts `MaxSelect == unlimitedTags` with this
+reasoning in the assertion message.
 
 ## 5. Three account behaviours MediKube depends on rather than reimplements
 
