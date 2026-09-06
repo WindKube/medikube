@@ -55,6 +55,7 @@ templ CourseMedicationForm(props CourseMedicationFormProps) {
 		class="mt-2 flex flex-wrap items-end gap-2"
 	>
 		<select
+		id={ props.ID + "-medication" }
 			data-bind={ props.medicationSignal() }
 			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		>
@@ -64,6 +65,7 @@ templ CourseMedicationForm(props CourseMedicationFormProps) {
 			}
 		</select>
 		<input
+			id={ props.ID + "-dosage" }
 			type="text"
 			placeholder="Dosage"
 			aria-label="Dosage"
@@ -71,6 +73,7 @@ templ CourseMedicationForm(props CourseMedicationFormProps) {
 			class="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		/>
 		<input
+			id={ props.ID + "-frequency" }
 			type="text"
 			placeholder="Frequency"
 			aria-label="Frequency"
@@ -78,12 +81,14 @@ templ CourseMedicationForm(props CourseMedicationFormProps) {
 			class="w-28 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		/>
 		<input
+			id={ props.ID + "-started-on" }
 			type="date"
 			aria-label="Started on"
 			data-bind={ props.startedOnSignal() }
 			class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
 		/>
 		<input
+			id={ props.ID + "-ended-on" }
 			type="date"
 			aria-label="Ended on"
 			data-bind={ props.endedOnSignal() }

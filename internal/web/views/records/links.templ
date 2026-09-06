@@ -69,6 +69,7 @@ templ MedicationLinksEditor(props MedicationLinksEditorProps) {
 		>
 			if len(props.Roles) > 1 {
 				<select
+				id={ props.ID + "-role" }
 					data-bind={ props.addRoleSignal() }
 					aria-label="Role"
 					class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
@@ -79,6 +80,7 @@ templ MedicationLinksEditor(props MedicationLinksEditorProps) {
 				</select>
 			}
 			<select
+			id={ props.ID + "-medication" }
 				data-bind={ props.addMedicationSignal() }
 				aria-label="Medication"
 				class="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
