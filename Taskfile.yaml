@@ -209,6 +209,7 @@ tasks:
     cmds:
       - task: lint:go
       - task: lint:datastar
+      - task: lint:i18n
       - task: lint:md
       - task: lint:yaml
       - task: lint:actions
@@ -225,6 +226,11 @@ tasks:
     desc: "Datastar Pro-attribute allowlist over internal/web/views/**/*.templ (T004)"
     cmds:
       - bash scripts/check-datastar-attrs.sh
+
+  lint:i18n:
+    desc: "English-literal gate over internal/web/views/**/*.templ (T028, FR-005)"
+    cmds:
+      - bash scripts/check-i18n-literals.sh
 
   lint:md:
     desc: markdownlint-cli2 over the prose

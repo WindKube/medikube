@@ -77,9 +77,13 @@ type Option struct {
 // path segment, read off the counts the API answered with, because a view that
 // spelled a kind's plural would be the fourth spelling of it and the one
 // nothing checks (research D-05).
+// Holding is one kind's own line in the deletion warning's list of what is
+// destroyed. Text is the whole phrase, already resolved (D-06): the caller
+// knows both the kind and the count, so it is the one place that can pick
+// the CLDR form the number needs (FR-008) — a template splitting it back
+// into a bare count and a label could not.
 type Holding struct {
-	Label string
-	Count int
+	Text string
 }
 
 // SettingsProps is the whole of contracts/pages.md's P6.

@@ -10,9 +10,10 @@ type Props struct {
 	// and the number the API reports cannot differ.
 	MedicationCount int
 
-	// MedicationsLabel is the kind's own plural, read off kind.Medication
-	// rather than spelled here (research D-05): a literal would be the second
-	// place this word could drift from the route table's.
+	// MedicationsLabel is the kind's own translated display name (nav.medications),
+	// used by the "go to" link and the zero-count sentence — the count
+	// sentence itself wraps kind.medication's own plural form instead, so
+	// Polish's few/many/other agree with the number (D-06, FR-008).
 	MedicationsLabel string
 
 	MedicationsHref string

@@ -64,7 +64,7 @@ func TestNarrowingChipsRenderRemovable(t *testing.T) {
 				{ID: "chip-kind", Label: "Injury", ClearOn: "@get('/timeline?patient=p1')"},
 			},
 		},
-		Empty: &shared.EmptyStateProps{ID: "timeline-empty", Title: "Nothing matches"},
+		Empty: &shared.EmptyStateProps{ID: "timeline-empty", TitleID: "empty.nothing_matches"},
 	}
 
 	tree := viewstest.Render(t, timeline.Timeline(props), "div")
@@ -80,7 +80,7 @@ func TestNarrowingChipsRenderRemovable(t *testing.T) {
 func TestEmptyStateRendersInsteadOfGroupsWhenSet(t *testing.T) {
 	t.Parallel()
 
-	props := timeline.Props{Empty: &shared.EmptyStateProps{ID: "timeline-empty", Title: "Nothing matches"}}
+	props := timeline.Props{Empty: &shared.EmptyStateProps{ID: "timeline-empty", TitleID: "empty.nothing_matches"}}
 
 	tree := viewstest.Render(t, timeline.Timeline(props), "div")
 	region := tree.One(t, viewstest.Region(timelineRegion))

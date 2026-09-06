@@ -174,7 +174,7 @@ func (p *patientPages) detail(e *core.RequestEvent, actor access.Actor) error {
 
 	tiles := make([]patients.CountTile, 0, len(chart.Counts))
 	for _, entry := range chart.Counts {
-		tiles = append(tiles, patients.CountTile{Label: entry.Label, Path: entry.Path, Count: entry.Count})
+		tiles = append(tiles, patients.CountTile{Label: web.KindLabel(ctx, entry.Kind), Path: entry.Path, Count: entry.Count})
 	}
 
 	events := make([]patients.ActivityEventView, 0, len(chart.RecentActivity))

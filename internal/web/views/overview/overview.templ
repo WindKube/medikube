@@ -2,7 +2,6 @@ package overview
 
 import (
 	"context"
-	"strconv"
 
 	"medikube/internal/i18n"
 )
@@ -33,14 +32,14 @@ templ Overview(props Props) {
 	</section>
 }
 
+// medicationSummary wraps kind.medication's own plural form (D-06) rather
+// than branching on count itself, so Polish's few/many/other forms agree
+// with the number the way they would nowhere else in this sentence
+// (spec US1-5, FR-008).
 func medicationSummary(ctx context.Context, count int, label string) string {
 	if count == 0 {
 		return i18n.T(ctx, "overview.medication_summary_zero", map[string]any{"Label": label})
 	}
 
-	if count == 1 {
-		return i18n.T(ctx, "overview.medication_summary_one")
-	}
-
-	return i18n.T(ctx, "overview.medication_summary_other", map[string]any{"Count": strconv.Itoa(count), "Label": label})
+	return i18n.T(ctx, "overview.medication_summary", map[string]any{"Kind": i18n.N(ctx, "kind.medication", count)})
 }

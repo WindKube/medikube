@@ -1,0 +1,11 @@
+# scripts/check-i18n-literals.sh's allow-list (T028). One line per allowed
+# hit: `path:line:pattern # reason`. path is relative to the repository root
+# and line is the line the grep hit reported at the time it was allow-listed
+# — a line that moves needs its entry moved with it, which is deliberate: a
+# stale entry silently covering for a different, later literal is worse than
+# a gate that needs a one-line update alongside the edit that provoked it.
+#
+# Nothing is allow-listed today: both literals the gate found (nav.templ's
+# aria-label="Primary" and controls.templ's <option>Not recorded</option>)
+# turned out to be genuine application text and were extracted through
+# i18n.T rather than excused here.

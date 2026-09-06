@@ -112,6 +112,42 @@ other = "a tag under that name already exists"
 description = "500 and any other code this instance does not recognise"
 other = "internal error"
 
+# --- error.field.<code> — a form field's own refusal (T031, US1-4) ---------
+#
+# Only the codes internal/domain/validation.go shares across every entity: a
+# code an entity raises itself (end_before_start, same_as_email, …) carries
+# no generic phrasing that would not just repeat what the domain's own
+# English message already says, so it is left in English rather than forced
+# into one here.
+
+[error.field.required]
+description = "A required field was left empty"
+other = "This is required."
+
+[error.field.invalid_value]
+description = "A field's value is not one MediKube accepts"
+other = "This is not a value MediKube accepts."
+
+[error.field.invalid_date]
+description = "A field's value is not a date MediKube accepts"
+other = "This is not a date MediKube accepts."
+
+[error.field.too_long]
+description = "A field's value is longer than MediKube accepts"
+other = "This is too long."
+
+[error.field.too_short]
+description = "A field's value is shorter than MediKube accepts"
+other = "This is too short."
+
+[error.field.out_of_range]
+description = "A field's numeric value falls outside the range MediKube accepts"
+other = "This is out of the range MediKube accepts."
+
+[error.field.unknown_field]
+description = "A field the request named is not one MediKube recognises"
+other = "MediKube does not recognise this field."
+
 # --- empty ---------------------------------------------------------------
 
 [empty.nothing_recorded]
@@ -272,6 +308,90 @@ other = "Relationship"
 description = "Generic 'Manufacturer' field label, shared across kinds"
 other = "Manufacturer"
 
+[field.reason]
+description = "Encounter's 'Reason for the visit' field label"
+other = "Reason for the visit"
+
+[field.occurred_on]
+description = "Generic 'Date' field label, shared across encounter and procedure"
+other = "Date"
+
+[field.visit_type]
+description = "Encounter's 'Visit type' field label"
+other = "Visit type"
+
+[field.priority]
+description = "Encounter's 'Priority' field label"
+other = "Priority"
+
+[field.assessment]
+description = "Encounter's 'Assessment' field label"
+other = "Assessment"
+
+[field.plan]
+description = "Encounter's 'Plan' field label"
+other = "Plan"
+
+[field.follow_up]
+description = "Encounter's 'Follow-up' field label"
+other = "Follow-up"
+
+[field.duration_minutes]
+description = "Procedure's 'Duration (minutes)' field label"
+other = "Duration (minutes)"
+
+[field.code]
+description = "Generic 'Code' field label, shared across kinds"
+other = "Code"
+
+[field.description]
+description = "Generic 'Description' field label, shared across kinds"
+other = "Description"
+
+[field.outcome]
+description = "Generic 'Outcome' field label, shared across kinds"
+other = "Outcome"
+
+[field.setting]
+description = "Generic 'Setting' field label, shared across kinds"
+other = "Setting"
+
+[field.complications]
+description = "Procedure's 'Complications' field label"
+other = "Complications"
+
+[field.anesthesia]
+description = "Procedure's 'Anesthesia' field label"
+other = "Anesthesia"
+
+[field.anesthesia_notes]
+description = "Procedure's 'Anesthesia notes' field label"
+other = "Anesthesia notes"
+
+[field.expected_outcome]
+description = "Treatment's 'Expected outcome' field label"
+other = "Expected outcome"
+
+[field.related_practitioner]
+description = "Generic 'Practitioner' relation field label, shared across kinds"
+other = "Practitioner"
+
+[field.place_of_care]
+description = "Generic 'Place of care' (facility) relation field label, shared across kinds"
+other = "Place of care"
+
+[field.related_condition]
+description = "Generic 'Related condition' relation field label, shared across kinds"
+other = "Related condition"
+
+[field.related_encounters]
+description = "Generic 'Related visits' (encounters) relation field label, shared across kinds"
+other = "Related visits"
+
+[field.related_equipment]
+description = "Generic 'Related devices' (equipment) relation field label, shared across kinds"
+other = "Related devices"
+
 [field.indication]
 description = "Medication's 'Reason for taking it' field label"
 other = "Reason for taking it"
@@ -329,6 +449,50 @@ other = "Severe"
 [enum.severity.life_threatening]
 description = "Severity vocabulary value: life-threatening"
 other = "Life-threatening"
+
+[enum.visit_type.office]
+description = "Encounter visit-type vocabulary value: office"
+other = "Office visit"
+
+[enum.visit_type.telehealth]
+description = "Encounter visit-type vocabulary value: telehealth"
+other = "Telehealth"
+
+[enum.visit_type.urgent_care]
+description = "Encounter visit-type vocabulary value: urgent_care"
+other = "Urgent care"
+
+[enum.visit_type.emergency]
+description = "Encounter visit-type vocabulary value: emergency"
+other = "Emergency"
+
+[enum.visit_type.inpatient]
+description = "Encounter visit-type vocabulary value: inpatient"
+other = "Inpatient"
+
+[enum.visit_type.follow_up]
+description = "Encounter visit-type vocabulary value: follow_up"
+other = "Follow-up"
+
+[enum.visit_type.annual]
+description = "Encounter visit-type vocabulary value: annual"
+other = "Annual"
+
+[enum.visit_type.other]
+description = "Encounter visit-type vocabulary value: other"
+other = "Other"
+
+[enum.visit_priority.routine]
+description = "Encounter visit-priority vocabulary value: routine"
+other = "Routine"
+
+[enum.visit_priority.urgent]
+description = "Encounter visit-priority vocabulary value: urgent"
+other = "Urgent"
+
+[enum.visit_priority.emergency]
+description = "Encounter visit-priority vocabulary value: emergency"
+other = "Emergency"
 
 [enum.condition_status.active]
 description = "Condition status vocabulary value: active"
@@ -1923,6 +2087,10 @@ other = "This is permanent and cannot be undone. {{.PluralCount}} other records 
 
 # --- a11y ------------------------------------------------------------------
 
+[a11y.primary_nav]
+description = "The primary navigation landmark's accessible name (nav[aria-label])"
+other = "Primary"
+
 [a11y.skip_to_content]
 description = "The skip link at the very top of every page"
 other = "Skip to content"
@@ -2080,8 +2248,13 @@ description = "The dead-confirmation-link offer's own link text"
 other = "Sign in and ask for a new confirmation"
 
 [auth.password_rule_length]
-description = "The published password rule stating the length bounds"
-other = "At least {{.Min}} characters, and at most {{.Max}}."
+description = "The published password rule stating the length bounds. Min/Max already carry their own unit word (auth.password_length_unit, D-06/FR-008), so this message names none of its own."
+other = "At least {{.Min}}, and at most {{.Max}}."
+
+[auth.password_length_unit]
+description = "A count of characters, wrapped into auth.password_rule_length so Polish's few/many/other forms agree with the number (FR-008)"
+one = "{{.PluralCount}} character"
+other = "{{.PluralCount}} characters"
 
 [auth.password_rule_not_email]
 description = "The published password rule: not the account's own email address"
@@ -2184,6 +2357,22 @@ description = "The dark appearance option"
 other = "Dark"
 
 # --- settings (T021 additions) --------------------------------------------
+
+[settings.profile_title]
+description = "The settings page's profile form heading, aria-label and submit-adjacent name"
+other = "Profile"
+
+[settings.password_title]
+description = "The settings page's password-change form heading, aria-label and submit button"
+other = "Change password"
+
+[settings.danger_zone_title]
+description = "The settings page's danger-zone section heading and aria-label"
+other = "Danger zone"
+
+[settings.delete_account_title]
+description = "The settings page's account-deletion form aria-label and submit button"
+other = "Delete account"
 
 [settings.sessions_title]
 description = "The settings page's sessions section heading"
@@ -2671,13 +2860,9 @@ other = "Notes"
 description = "The overview page's summary when the account has no medications yet"
 other = "You have not recorded any {{.Label}} yet."
 
-[overview.medication_summary_one]
-description = "The overview page's summary with exactly one medication"
-other = "You have 1 medication recorded."
-
-[overview.medication_summary_other]
-description = "The overview page's summary with more than one medication"
-other = "You have {{.Count}} {{.Label}} recorded."
+[overview.medication_summary]
+description = "The overview page's summary of how many medications are recorded, wrapping kind.medication's own plural form so Polish's few/many/other forms agree (US1-5, FR-008)"
+other = "You have {{.Kind}} recorded."
 
 [overview.go_to_medications]
 description = "The overview page's link to the medication list"

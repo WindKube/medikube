@@ -82,7 +82,7 @@ func (h *patientHandlers) renderChart(ctx context.Context, actor access.Actor, c
 	counts := make([]CountTile, 0, len(chart.Counts))
 	for _, entry := range chart.Counts {
 		counts = append(counts, CountTile{
-			Kind: entry.Kind.Enum(), Path: entry.Path, Label: entry.Label, Count: entry.Count,
+			Kind: entry.Kind.Enum(), Path: entry.Path, Label: web.KindLabel(ctx, entry.Kind), Count: entry.Count,
 		})
 	}
 

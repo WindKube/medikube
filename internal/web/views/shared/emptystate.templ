@@ -12,15 +12,12 @@ import (
 // so a caller builds one through NothingRecorded or NothingMatches rather than
 // filling the struct by hand.
 //
-// TitleID/BodyID (with Kind interpolated in) are the preferred, translated
-// path NothingRecorded/NothingMatches build; Title/Body/ClearLabel remain as a
-// literal fallback for a caller that fills the struct directly.
+// TitleID/BodyID (with Kind interpolated in) are catalogue message ids;
+// NothingRecorded/NothingMatches are what every caller uses to fill them.
 type EmptyStateProps struct {
 	// ID is the element a list's first row patches away, and the render
 	// target while none has arrived (ids.RecordEmpty).
-	ID    string
-	Title string
-	Body  string
+	ID string
 
 	TitleID string
 	BodyID  string
@@ -29,8 +26,7 @@ type EmptyStateProps struct {
 	// ClearOn is the Datastar expression that resets the narrowing. Empty
 	// means no clear affordance is offered — the "nothing recorded" variant,
 	// where there is no narrowing to blame.
-	ClearOn    string
-	ClearLabel string
+	ClearOn string
 }
 
 // NothingRecorded is FR-008's first state: the kind has no records at all.
@@ -57,26 +53,14 @@ func NothingMatches(id, kindLabel, clearOn string) EmptyStateProps {
 }
 
 func (p EmptyStateProps) resolvedTitle(ctx context.Context) string {
-	if p.TitleID != "" {
-		return i18n.T(ctx, p.TitleID, map[string]any{"Kind": p.Kind})
-	}
-
-	return p.Title
+	return i18n.T(ctx, p.TitleID, map[string]any{"Kind": p.Kind})
 }
 
 func (p EmptyStateProps) resolvedBody(ctx context.Context) string {
-	if p.BodyID != "" {
-		return i18n.T(ctx, p.BodyID, map[string]any{"Kind": p.Kind})
-	}
-
-	return p.Body
+	return i18n.T(ctx, p.BodyID, map[string]any{"Kind": p.Kind})
 }
 
 func (p EmptyStateProps) resolvedClearLabel(ctx context.Context) string {
-	if p.ClearLabel != "" {
-		return p.ClearLabel
-	}
-
 	return i18n.T(ctx, "action.clear_narrowing")
 }
 
