@@ -44,6 +44,7 @@ import (
 	"medikube/internal/records/kinds"
 	accessservice "medikube/internal/service/access"
 	auditservice "medikube/internal/service/audit"
+	coursemedicationsvc "medikube/internal/service/coursemedication"
 	"medikube/internal/service/encounter"
 	"medikube/internal/service/equipment"
 	facilitysvc "medikube/internal/service/facility"
@@ -64,6 +65,7 @@ import (
 	storeallergy "medikube/internal/store/allergy"
 	auditstore "medikube/internal/store/audit"
 	storecondition "medikube/internal/store/condition"
+	coursemedicationstore "medikube/internal/store/coursemedication"
 	storeemergencycontact "medikube/internal/store/emergencycontact"
 	storeencounter "medikube/internal/store/encounter"
 	storeequipment "medikube/internal/store/equipment"
@@ -337,9 +339,14 @@ func Wire(app *tests.TestApp, options ...Option) (*Instance, error) {
 		return nil, err
 	}
 
+	courseMedicationOps, err := courseMedicationHandlers(app, resolve)
+	if err != nil {
+		return nil, err
+	}
+
 	table, err := handlerTable(
 		resolve, patientResolve, photoResolve, searchResolve, hub, chosen, accounts, directoryOps, tagOps,
-		timelineResolve,
+		timelineResolve, courseMedicationOps,
 	)
 	if err != nil {
 		return nil, err
@@ -410,6 +417,7 @@ func handlerTable(
 	directoryOps httproute.Handlers,
 	tagOps httproute.Handlers,
 	timelineResolve page.TimelineResolve,
+	courseMedicationOps httproute.Handlers,
 ) (httproute.Handlers, error) {
 	table := make(httproute.Handlers)
 
@@ -567,6 +575,7 @@ func handlerTable(
 		familyMemberPageOps, streamOps, accountOps, accountPages, overviewPage, assets,
 		patientOps, photoOps, activePatientOps, patientPages, directoryOps, injuryPageOps, immunizationPageOps,
 		insurancePageOps, equipmentPageOps, tagOps, searchOps, searchPageOps, timelinePageOps,
+		courseMedicationOps,
 	}
 
 	for _, group := range groups {
@@ -1233,6 +1242,73 @@ func registerDirectory(app core.App) (*practitionersvc.Service, *facilitysvc.Ser
 // already built — this harness never needs the lazy Resolve indirection
 // cmd/medikube uses, because the instance is already migrated by the time
 // Wire runs.
+// courseMedicationHandlers is cmd/medikube's courseMedicationFamily,
+// built synchronously rather than behind sync.OnceValues: this harness has
+// no boot-gate ordering problem to solve, so it just builds the service
+// eagerly with its own authorizer and repositories, the same way
+// registerDirectory does for practitioners and facilities.
+func courseMedicationHandlers(app core.App, resolve api.Resolve) (httproute.Handlers, error) {
+	secret, err := store.CursorSecret(app, "")
+	if err != nil {
+		return nil, err
+	}
+
+	codec, err := store.NewCursorCodec(secret)
+	if err != nil {
+		return nil, err
+	}
+
+	owners, err := store.NewOwners(app)
+	if err != nil {
+		return nil, err
+	}
+
+	trail, err := auditstore.New(app)
+	if err != nil {
+		return nil, err
+	}
+
+	auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
+	if err != nil {
+		return nil, err
+	}
+
+	patientRepo, err := patientstore.New(app, codec)
+	if err != nil {
+		return nil, err
+	}
+
+	authorizer, err := accessservice.New(owners, accessservice.WithPatients(patientRepo, auditor))
+	if err != nil {
+		return nil, err
+	}
+
+	treatments, err := storetreatment.New(app, codec)
+	if err != nil {
+		return nil, err
+	}
+
+	medications, err := storemedication.New(app, codec)
+	if err != nil {
+		return nil, err
+	}
+
+	repository, err := coursemedicationstore.New(app)
+	if err != nil {
+		return nil, err
+	}
+
+	service, err := coursemedicationsvc.New(repository, treatments, medications, authorizer)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.CourseMedicationHandlers(api.CourseMedicationDeps{
+		Resolve: func() (*coursemedicationsvc.Service, error) { return service, nil },
+		Records: resolve,
+	})
+}
+
 func directoryHandlers(practitionerService *practitionersvc.Service, facilityService *facilitysvc.Service) (httproute.Handlers, error) {
 	practitionerResolve := api.PractitionerResolve(func() (*practitionersvc.Service, error) { return practitionerService, nil })
 	facilityResolve := api.FacilityResolve(func() (*facilitysvc.Service, error) { return facilityService, nil })

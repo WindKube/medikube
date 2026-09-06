@@ -27,6 +27,12 @@ const (
 	MemberSymptomResolvedAt      = "resolved_at"
 	MemberSymptomIsChronic       = "is_chronic"
 	MemberSymptomStatus          = "status"
+
+	// MemberSymptomTreatedByMedications and MemberSymptomCausedByMedications
+	// are FR-032's two distinct medication roles: a medication may appear in
+	// either set, or both, independently.
+	MemberSymptomTreatedByMedications = "treated_by_medications"
+	MemberSymptomCausedByMedications  = "caused_by_medications"
 )
 
 var symptomMembers = []string{
@@ -34,6 +40,7 @@ var symptomMembers = []string{
 	MemberSymptomDurationMinutes, MemberSymptomPainScale, MemberSymptomBodySite,
 	MemberSymptomTriggers, MemberSymptomReliefMethods, MemberSymptomImpact,
 	MemberSymptomResolvedAt, MemberSymptomIsChronic, MemberSymptomStatus,
+	MemberSymptomTreatedByMedications, MemberSymptomCausedByMedications,
 }
 
 // SymptomSummary is FR-031's list row: every episode plus the derived
@@ -68,6 +75,9 @@ type Symptom struct {
 	ResolvedAt      *string  `json:"resolved_at"`
 	IsChronic       bool     `json:"is_chronic"`
 	Tags            []string `json:"tags,omitempty"`
+
+	TreatedByMedications []string `json:"treated_by_medications,omitempty"`
+	CausedByMedications  []string `json:"caused_by_medications,omitempty"`
 }
 
 // GetTags implements records.Tagged so the search index stays in step with
@@ -90,6 +100,9 @@ type SymptomCreate struct {
 	IsChronic       bool     `json:"is_chronic,omitempty"`
 	Status          string   `json:"status,omitempty"`
 	Tags            []string `json:"tags,omitempty"`
+
+	TreatedByMedications []string `json:"treated_by_medications,omitempty"`
+	CausedByMedications  []string `json:"caused_by_medications,omitempty"`
 }
 
 // TagIDs implements records.Taggable: a create always supplies its tags,
@@ -119,6 +132,9 @@ type SymptomPatch struct {
 	// applied tags alone, a non-nil one — including an empty array —
 	// replaces the whole set.
 	Tags *[]string `json:"tags,omitempty"`
+
+	TreatedByMedications []string `json:"treated_by_medications,omitempty"`
+	CausedByMedications  []string `json:"caused_by_medications,omitempty"`
 }
 
 // TagIDs implements records.Taggable.
@@ -181,18 +197,20 @@ func (c SymptomCodec) Detail(s clinical.Symptom) any {
 	}
 
 	return &Symptom{
-		SymptomSummary:  *summary,
-		Patient:         s.PatientID,
-		Category:        string(s.Category),
-		DurationMinutes: s.DurationMinutes,
-		PainScale:       s.PainScale,
-		BodySite:        s.BodySite,
-		Triggers:        orEmptySlice(s.Triggers),
-		ReliefMethods:   orEmptySlice(s.ReliefMethods),
-		Impact:          string(s.Impact),
-		ResolvedAt:      wireClinicalInstantPtr(s.ResolvedAt),
-		IsChronic:       s.IsChronic,
-		Tags:            s.Tags,
+		SymptomSummary:       *summary,
+		Patient:              s.PatientID,
+		Category:             string(s.Category),
+		DurationMinutes:      s.DurationMinutes,
+		PainScale:            s.PainScale,
+		BodySite:             s.BodySite,
+		Triggers:             orEmptySlice(s.Triggers),
+		ReliefMethods:        orEmptySlice(s.ReliefMethods),
+		Impact:               string(s.Impact),
+		ResolvedAt:           wireClinicalInstantPtr(s.ResolvedAt),
+		IsChronic:            s.IsChronic,
+		Tags:                 s.Tags,
+		TreatedByMedications: orEmptySlice(s.TreatedByMedicationIDs),
+		CausedByMedications:  orEmptySlice(s.CausedByMedicationIDs),
 	}
 }
 
@@ -212,21 +230,23 @@ func (SymptomCodec) Draft(body any) (clinical.Symptom, error) {
 	}
 
 	return clinical.Symptom{
-		PatientID:       create.Patient,
-		Name:            create.Name,
-		Category:        clinical.SymptomCategory(create.Category),
-		Severity:        clinical.Severity(create.Severity),
-		OccurredAt:      occurredAt,
-		DurationMinutes: create.DurationMinutes,
-		PainScale:       create.PainScale,
-		BodySite:        create.BodySite,
-		Triggers:        create.Triggers,
-		ReliefMethods:   create.ReliefMethods,
-		Impact:          clinical.SymptomImpact(create.Impact),
-		ResolvedAt:      resolvedAt,
-		IsChronic:       create.IsChronic,
-		Status:          clinical.ConditionStatus(create.Status),
-		Tags:            create.Tags,
+		PatientID:              create.Patient,
+		Name:                   create.Name,
+		Category:               clinical.SymptomCategory(create.Category),
+		Severity:               clinical.Severity(create.Severity),
+		OccurredAt:             occurredAt,
+		DurationMinutes:        create.DurationMinutes,
+		PainScale:              create.PainScale,
+		BodySite:               create.BodySite,
+		Triggers:               create.Triggers,
+		ReliefMethods:          create.ReliefMethods,
+		Impact:                 clinical.SymptomImpact(create.Impact),
+		ResolvedAt:             resolvedAt,
+		IsChronic:              create.IsChronic,
+		Status:                 clinical.ConditionStatus(create.Status),
+		Tags:                   create.Tags,
+		TreatedByMedicationIDs: create.TreatedByMedications,
+		CausedByMedicationIDs:  create.CausedByMedications,
 	}, nil
 }
 
@@ -253,6 +273,14 @@ func (SymptomCodec) Patch(body any) (symptom.Patch, error) {
 		IsChronic:       incoming.IsChronic,
 		Status:          convert[clinical.ConditionStatus](incoming.Status),
 		Tags:            incoming.Tags,
+	}
+
+	if incoming.TreatedByMedications != nil {
+		patch.TreatedByMedicationIDs = &incoming.TreatedByMedications
+	}
+
+	if incoming.CausedByMedications != nil {
+		patch.CausedByMedicationIDs = &incoming.CausedByMedications
 	}
 
 	if err := orderedSymptomRefusal(&invalid); err != nil {

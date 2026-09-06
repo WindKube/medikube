@@ -279,6 +279,8 @@ func recordIDFor(opID string) string {
 		return testsupport.AccountAPractitionerID
 	case "getFacility":
 		return testsupport.AccountAFacilityPracticeID
+	case "listCourseMedications":
+		return testsupport.TreatmentNameOnlyID
 	default:
 		return testsupport.NameOnlyMedicationID
 	}

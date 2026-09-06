@@ -24,6 +24,7 @@ import (
 	"medikube/internal/records/kinds"
 	accessservice "medikube/internal/service/access"
 	auditservice "medikube/internal/service/audit"
+	coursemedicationsvc "medikube/internal/service/coursemedication"
 	"medikube/internal/service/encounter"
 	"medikube/internal/service/equipment"
 	facilitysvc "medikube/internal/service/facility"
@@ -44,6 +45,7 @@ import (
 	allergystore "medikube/internal/store/allergy"
 	auditstore "medikube/internal/store/audit"
 	conditionstore "medikube/internal/store/condition"
+	coursemedicationstore "medikube/internal/store/coursemedication"
 	emergencycontactstore "medikube/internal/store/emergencycontact"
 	encounterstore "medikube/internal/store/encounter"
 	equipmentstore "medikube/internal/store/equipment"
@@ -263,6 +265,18 @@ func operations(
 
 	maps.Copy(table, practitionerOps)
 	maps.Copy(table, facilityOps)
+
+	// contracts/treatment-medications.md (US6): the one payload-carrying join,
+	// wired the same lazy way as the directory above.
+	courseMedicationOps, err := api.CourseMedicationHandlers(api.CourseMedicationDeps{
+		Resolve: courseMedicationFamily(app),
+		Records: resolve,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(table, courseMedicationOps)
 
 	// contracts/pages.md P3-P6, the same four resolvers as the JSON operations
 	// above.
@@ -659,6 +673,71 @@ func recordFamily(
 	return resolve, tagResolve, searchResolve, timelineResolve
 }
 
+// courseMedicationFamily resolves the treatment_medications service, once, on
+// first use — the same reason recordFamily is a function: its repository
+// needs the cursor codec, which is keyed from a secret the migrations have
+// only just created.
+//
+// It builds its own authorizer and repositories rather than sharing
+// registerKinds', the same way patientFamily and directoryFamily each build
+// their own: every family here is a self-contained resolver, not a shared
+// mutable state the composition root would otherwise have to sequence.
+func courseMedicationFamily(app core.App) api.CourseMedicationResolve {
+	return sync.OnceValues(func() (*coursemedicationsvc.Service, error) {
+		secret, err := store.CursorSecret(app, "")
+		if err != nil {
+			return nil, err
+		}
+
+		cursors, err := store.NewCursorCodec(secret)
+		if err != nil {
+			return nil, err
+		}
+
+		owners, err := store.NewOwners(app)
+		if err != nil {
+			return nil, err
+		}
+
+		trail, err := auditstore.New(app)
+		if err != nil {
+			return nil, err
+		}
+
+		auditor, err := auditservice.New(trail, auditservice.WithRequestID(obs.CorrelationID))
+		if err != nil {
+			return nil, err
+		}
+
+		patientOwners, err := store.NewPatientOwners(app)
+		if err != nil {
+			return nil, err
+		}
+
+		authorizer, err := accessservice.New(owners, accessservice.WithPatients(patientOwners, auditor))
+		if err != nil {
+			return nil, err
+		}
+
+		treatments, err := treatmentstore.New(app, cursors)
+		if err != nil {
+			return nil, err
+		}
+
+		medications, err := medicationstore.New(app, cursors)
+		if err != nil {
+			return nil, err
+		}
+
+		repository, err := coursemedicationstore.New(app)
+		if err != nil {
+			return nil, err
+		}
+
+		return coursemedicationsvc.New(repository, treatments, medications, authorizer)
+	})
+}
+
 // buildSearchService wires US8's read side, once registerKinds has finished:
 // registry.Kinds() is only complete afterwards, and it is what a grouped
 // search's default kind selection and group order both read. tags is the
@@ -860,7 +939,7 @@ func registerKinds(app core.App, registry *records.Registry, hub *realtime.Hub) 
 
 	linkResolver, err := linkstore.NewResolver(app)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	allergyViews, err := page.NewAllergyViews()
@@ -1285,6 +1364,14 @@ func directoryOperations() []string {
 	}
 }
 
+// courseMedicationOperations is contracts/treatment-medications.md's three,
+// wired directly in operations() the same way directoryOperations' group is.
+func courseMedicationOperations() []string {
+	return []string{
+		api.OpListCourseMedications, api.OpUpsertCourseMedication, api.OpDeleteCourseMedication,
+	}
+}
+
 // unimplemented lists, sorted, the operations still answered by the stub.
 //
 // It resolves nothing: the handler table's shape is decided by which groups
@@ -1327,6 +1414,10 @@ func unimplemented() []string {
 	implemented[page.OpOverviewPage] = nil
 
 	for _, opID := range directoryOperations() {
+		implemented[opID] = nil
+	}
+
+	for _, opID := range courseMedicationOperations() {
 		implemented[opID] = nil
 	}
 

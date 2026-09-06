@@ -60,6 +60,11 @@ func TestTheTableCarriesTheTwentyNineDocumentedOperations(t *testing.T) {
 		{"updateRecord", http.MethodPatch, "/api/v1/records/{kind}/{id}", httproute.KindAPI, httproute.AuthUser},
 		{"deleteRecord", http.MethodDelete, "/api/v1/records/{kind}/{id}", httproute.KindAPI, httproute.AuthUser},
 		{"streamRecords", http.MethodGet, "/api/v1/streams/records", httproute.KindStream, httproute.AuthUser},
+		// contracts/treatment-medications.md (US6): the one payload-carrying
+		// join, nested under the treatment it belongs to.
+		{"listCourseMedications", http.MethodGet, "/api/v1/records/treatments/{id}/medications", httproute.KindAPI, httproute.AuthUser},
+		{"upsertCourseMedication", http.MethodPut, "/api/v1/records/treatments/{id}/medications/{medicationId}", httproute.KindAPI, httproute.AuthUser},
+		{"deleteCourseMedication", http.MethodDelete, "/api/v1/records/treatments/{id}/medications/{medicationId}", httproute.KindAPI, httproute.AuthUser},
 		{"healthz", http.MethodGet, "/api/v1/healthz", httproute.KindAPI, httproute.AuthPublic},
 		{"readyz", http.MethodGet, "/api/v1/readyz", httproute.KindAPI, httproute.AuthPublic},
 		{"requestPasswordReset", http.MethodPost, "/api/v1/auth/password-reset", httproute.KindAPI, httproute.AuthPublic},
@@ -101,7 +106,7 @@ func TestTheTableCarriesTheTwentyNineDocumentedOperations(t *testing.T) {
 		// registered kind.
 		{"search", http.MethodGet, "/api/v1/search", httproute.KindAPI, httproute.AuthUser},
 	}
-	require.Len(t, want, 47)
+	require.Len(t, want, 50)
 
 	byOpID := inventoryByOpID(t)
 

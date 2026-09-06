@@ -129,6 +129,21 @@ var kindLiteralExempt = map[string]string{
 	"internal/store/migrations/applied_set_test.go": "a false positive: the registered-set literal " +
 		"\"1756400410_symptom_vitals_tags.go\" is the migration's own filename, and vitals is a mass " +
 		"noun whose collection spelling it necessarily contains",
+	"internal/web/api/dto_allergy.go": "FR-017's `medications` multi-relation (data-model §8 migration 17) is " +
+		"named after the collection it points to, the same reason treatment.go is exempted above; the JSON member " +
+		"name is literal by construction and cannot call Segment() or Collection()",
+	"internal/web/api/dto_condition.go": "the same `medications` multi-relation on conditions, the same reason " +
+		"dto_allergy.go is exempted",
+	"internal/web/api/symptom.go": "FR-032's two role fields, `treated_by_medications` and " +
+		"`caused_by_medications` (data-model §8 migration 17), are named after the collection they point to with a " +
+		"role prefix; the JSON member names are literal by construction and cannot call Segment() or Collection()",
+	"internal/architecture/authz_coverage_test.go": "false positive: routeShape and pathShape recognise the " +
+		"course-medication join's own path suffix, `/{id}/medications` and `/{id}/medications/{medicationId}` " +
+		"(contracts/treatment-medications.md), which is not one of the generic /{kind}/{id} shapes and so is " +
+		"spelled literally the same way internal/httproute/routes.go already spells it",
+	"internal/web/api/coursemedications_test.go": "false positive: the test's own URL helpers build " +
+		"contracts/treatment-medications.md's literal path, `/{id}/medications[/{medicationId}]`, the same way " +
+		"internal/httproute/routes.go's courseMedicationRoutes builds it",
 }
 
 func TestNoFileOutsideTheKindTableSpellsAKindSegmentOrCollection(t *testing.T) {

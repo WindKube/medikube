@@ -29,6 +29,7 @@ var conditionMembers = []string{
 	MemberSNOMEDCode,
 	MemberNotes,
 	MemberPractitioner,
+	MemberMedications,
 }
 
 type ConditionSummary struct {
@@ -55,6 +56,8 @@ type Condition struct {
 	Practitioner string  `json:"practitioner,omitempty"`
 	Notes        string  `json:"notes,omitempty"`
 
+	Medications []string `json:"medications,omitempty"`
+
 	Tags      []string `json:"tags"`
 	CreatedAt string   `json:"created_at"`
 }
@@ -75,6 +78,8 @@ type ConditionCreate struct {
 	Notes        string   `json:"notes,omitempty"`
 	Practitioner *string  `json:"practitioner,omitempty"`
 	Tags         []string `json:"tags,omitempty"`
+
+	Medications []string `json:"medications,omitempty"`
 }
 
 // TagIDs implements records.Taggable: a create always supplies its tags,
@@ -96,7 +101,8 @@ type ConditionPatch struct {
 	// Tags is replace-set (FR-064, FR-065): a nil pointer leaves the
 	// applied tags alone, a non-nil one — including an empty array —
 	// replaces the whole set.
-	Tags *[]string `json:"tags,omitempty"`
+	Tags        *[]string `json:"tags,omitempty"`
+	Medications []string  `json:"medications,omitempty"`
 }
 
 // TagIDs implements records.Taggable.
@@ -170,6 +176,7 @@ func (c ConditionCodec) Detail(cond clinical.Condition) any {
 		Practitioner:     cond.PractitionerID,
 		Notes:            cond.Notes,
 		Tags:             nonNil(cond.Tags),
+		Medications:      cond.MedicationIDs,
 		CreatedAt:        wireInstant(cond.CreatedAt),
 	}
 }
@@ -201,6 +208,7 @@ func (ConditionCodec) Draft(body any) (clinical.Condition, error) {
 		Notes:          create.Notes,
 		PractitionerID: deref(create.Practitioner),
 		Tags:           create.Tags,
+		MedicationIDs:  create.Medications,
 	}, nil
 }
 
@@ -223,6 +231,10 @@ func (ConditionCodec) Patch(body any) (condition.Patch, error) {
 		Notes:        incoming.Notes,
 		Practitioner: incoming.Practitioner,
 		Tags:         incoming.Tags,
+	}
+
+	if incoming.Medications != nil {
+		patch.MedicationIDs = &incoming.Medications
 	}
 
 	if err := sortFieldOrder(&invalid, conditionMembers); err != nil {
