@@ -39,16 +39,16 @@ test.describe("the timeline", () => {
     page,
   }) => {
     const url = new URL(timelinePath(), "http://localhost");
-    url.searchParams.set("kind", "insurance");
+    url.searchParams.set("kind", "family-history");
 
     await page.goto(url.pathname + url.search);
 
     const region = page.getByRole("region", { name: "Timeline" });
     await expect(region).toBeVisible();
 
-    const chip = page.locator("#timeline-criteria-kind-insurance");
+    const chip = page.locator("#timeline-criteria-kind-family_member");
     await expect(chip).toBeVisible();
-    await expect(chip).toContainText("insurance");
+    await expect(chip).toContainText(/family/i);
 
     const empty = page.locator("#timeline-empty");
     await expect(empty).toBeVisible();

@@ -70,7 +70,7 @@ func (a *Adapter) List(ctx context.Context, actor access.Actor, query records.Qu
 	page, err := a.service.List(ctx, actor, Query{
 		PatientID: query.PatientID,
 		Search:    query.Search,
-		Statuses:  statuses(query.Filters[FilterStatus]),
+		Statuses:  statusesOf(query.Filters),
 		Tags:      query.Filters[records.FilterTags],
 		Match:     matchOf(query.Filters[records.FilterMatch]),
 		Sort:      query.Sort,
@@ -156,6 +156,26 @@ const SeedFixtureID = "medication-01"
 // statuses converts the `?status=` values without judging them. An unpublished
 // value is refused by the service against its own vocabulary, so that the
 // refusal is raised once, in the layer that publishes the list.
+func statusesOf(filters map[string][]string) []clinical.TherapyStatus {
+	active := filters[FilterActive]
+	if len(active) == 0 {
+		return statuses(filters[FilterStatus])
+	}
+
+	if active[0] == "true" {
+		return []clinical.TherapyStatus{clinical.TherapyStatusActive}
+	}
+
+	inactive := make([]clinical.TherapyStatus, 0, len(clinical.TherapyStatuses()))
+	for _, status := range clinical.TherapyStatuses() {
+		if status != clinical.TherapyStatusActive {
+			inactive = append(inactive, status)
+		}
+	}
+
+	return inactive
+}
+
 func statuses(values []string) []clinical.TherapyStatus {
 	if len(values) == 0 {
 		return nil
@@ -255,6 +275,11 @@ func Register(registry *records.Registry, wiring Wiring) error {
 			Name:    FilterStatus,
 			Kind:    records.FilterEnum,
 			Allowed: therapyStatusStrings(),
+		},
+		FilterActive: {
+			Name:    FilterActive,
+			Kind:    records.FilterEnum,
+			Allowed: []string{"true", "false"},
 		},
 	}
 
